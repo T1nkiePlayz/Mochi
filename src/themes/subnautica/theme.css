@@ -1,6 +1,10 @@
-.app-shell {
-  background:
-    radial-gradient(circle at 75% -10%, rgba(85,198,210,.18), transparent 32%),
-    radial-gradient(circle at 20% 110%, rgba(34,117,139,.12), transparent 30%),
-    var(--mochi-background);
-}
+/* Subnautica 2.0 — underwater glass and instrument-panel depth. */
+.app-shell{background:radial-gradient(circle at 70% -5%,rgba(94,219,229,.22),transparent 32%),radial-gradient(circle at 20% 115%,rgba(21,103,125,.2),transparent 34%),linear-gradient(180deg,#041016,#061a22 60%,#041116);}
+.sidebar{background:linear-gradient(180deg,rgba(7,26,34,.88),rgba(3,16,22,.96));backdrop-filter:blur(var(--mochi-blur));}
+.sidebar:after{content:"";position:absolute;right:-1px;top:0;bottom:0;width:1px;background:linear-gradient(180deg,transparent,var(--mochi-accent),transparent);opacity:.35;}
+.nav-item,.piko-nav-item{border:1px solid transparent;border-radius:var(--mochi-radius-md);}
+.nav-item.active{background:linear-gradient(90deg,var(--mochi-accent-soft),rgba(0,0,0,0));border-color:rgba(94,219,229,.18);box-shadow:0 0 22px rgba(94,219,229,.08),inset 2px 0 var(--mochi-accent);}
+.game-card,.tofu-card,.new-tofu-card,.settings-group,.theme-card{background:linear-gradient(145deg,rgba(15,48,57,.86),rgba(6,25,32,.88));backdrop-filter:blur(14px);box-shadow:var(--mochi-shadow-card);}
+.hero-card{border-radius:var(--mochi-hero-radius);box-shadow:0 0 45px rgba(94,219,229,.08),var(--mochi-shadow-card);}
+.play-button{box-shadow:0 0 24px rgba(94,219,229,.2);}
+.modal-backdrop{background:rgba(1,12,17,.72);backdrop-filter:blur(7px);}
