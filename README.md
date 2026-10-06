@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./public/mochi.svg" alt="Mochi logo" width="220">
+  <img src="./public/mochi.png" alt="Mochi logo" width="220">
 </p>
 
 <h1 align="center">Mochi</h1>
