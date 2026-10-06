@@ -1,40 +1,71 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "dungeons",
   "name": "Minecraft Dungeons",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "author": "Side Quest Games",
-  "description": "Warm ember, stone and obsidian tones.",
+  "description": "Warm dungeon stone, ember light, carved panels and adventure-map framing.",
   "colors": {
-    "background": "#100d0d",
-    "backgroundElevated": "#171211",
-    "surface": "#211817",
-    "surfaceRaised": "#2b211e",
-    "surfaceHover": "#3b2924",
-    "border": "#4b332d",
-    "borderStrong": "#68473b",
-    "text": "#f0e6df",
-    "textStrong": "#ffffff",
-    "textMuted": "#b19a8e",
-    "textFaint": "#78655c",
-    "accent": "#dc8b4e",
-    "accentStrong": "#f0aa68",
-    "accentText": "#1b0d05",
-    "accentSoft": "rgba(220,139,78,.14)",
-    "success": "#91c67e",
-    "warning": "#e5b25f",
-    "danger": "#df7468",
-    "shadow": "rgba(0,0,0,.44)"
+    "background": "#100b0a",
+    "backgroundElevated": "#17100e",
+    "surface": "#211714",
+    "surfaceRaised": "#2d211b",
+    "surfaceHover": "#402d24",
+    "border": "#53372d",
+    "borderStrong": "#765040",
+    "text": "#f4e8df",
+    "textStrong": "#fffaf5",
+    "textMuted": "#bda296",
+    "textFaint": "#806c62",
+    "accent": "#e59a57",
+    "accentStrong": "#ffc17c",
+    "accentText": "#241106",
+    "accentSoft": "rgba(229,154,87,.15)",
+    "success": "#92c87f",
+    "warning": "#e7b25f",
+    "danger": "#df776c",
+    "shadow": "rgba(0,0,0,.55)"
   },
   "ui": {
-    "fontBody": ""DM Sans", sans-serif",
-    "fontDisplay": ""Manrope", sans-serif",
+    "fontBody": "\"DM Sans\", sans-serif",
+    "fontDisplay": "\"Manrope\", sans-serif",
     "radiusSm": "5px",
     "radiusMd": "9px",
-    "radiusLg": "12px",
-    "sidebarWidth": "244px",
-    "contentMaxWidth": "1140px",
+    "radiusLg": "14px",
+    "sidebarWidth": "250px",
+    "contentMaxWidth": "1160px",
     "density": "1"
   },
-  "assets": {}
+  "typography": {
+    "bodyLineHeight": "1.5",
+    "headingWeight": "850",
+    "labelWeight": "750",
+    "mono": "\"JetBrains Mono\", monospace"
+  },
+  "layout": {
+    "contentPadding": "44px 52px 28px",
+    "topbarHeight": "70px",
+    "cardGap": "12px",
+    "sectionGap": "28px"
+  },
+  "effects": {
+    "shadowSoft": "0 8px 24px rgba(0,0,0,.25)",
+    "shadowCard": "0 10px 0 rgba(0,0,0,.14), 0 28px 65px rgba(0,0,0,.30)",
+    "blur": "8px",
+    "transition": "160ms ease-out"
+  },
+  "components": {
+    "buttonHeight": "38px",
+    "inputHeight": "38px",
+    "cardRadius": "7px",
+    "heroRadius": "10px",
+    "glass": "rgba(31,22,19,.82)"
+  },
+  "icons": {
+    "library": "assets/icons-library.svg",
+    "settings": "assets/icons-settings.svg",
+    "play": "assets/icons-play.svg",
+    "plus": "assets/icons-plus.svg",
+    "mods": "assets/icons-mods.svg"
+  }
 }
