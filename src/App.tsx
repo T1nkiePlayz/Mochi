@@ -20,6 +20,8 @@ import {
   WifiOff,
   X,
   Palette,
+  FileJson,
+  FolderOpen,
   RefreshCw,
   ShieldCheck,
   KeyRound,
@@ -33,7 +35,6 @@ import type { ImportedGame, ImportSourceId } from "./lib/sources";
 import { isCloudConfigured, supabase } from "./lib/supabase";
 import { pullLibrary, pushLibrary } from "./lib/cloud";
 import type { Piko, Tofu } from "./models";
-import type { ThemeId } from "./models";
 import { lookupIgdbGame, lookupIgdbGames, type IgdbGame, type IgdbSettings } from "./lib/igdb";
 import {
   chooseGameTarget,
@@ -46,6 +47,7 @@ import {
   type PlatformCapabilities,
 } from "./lib/platform";
 import { enrollTotp, getVerifiedTotpFactor, registerPasskey, sendMagicLink, signInWithPasskey, signInWithProvider, verifyEmailToken, verifyMfaCode } from "./lib/auth";
+import { importThemeFile, importThemeFolder, useThemeEngine } from "./lib/theme";
 
 const navItems = [
   { label: "Library", icon: Library },
@@ -58,13 +60,6 @@ const storedPikosKey = "mochi:pikos";
 const storedSettingsKey = "mochi:settings";
 const setupCompleteKey = "mochi:setup-complete";
 const importSourcesKey = "mochi:import-sources";
-const themeOptions: Array<{ id: ThemeId; label: string; description: string }> = [
-  { id: "mochi", label: "Mochi", description: "Quiet charcoal and mint" },
-  { id: "minecraft", label: "Minecraft", description: "Overworld greens and earth" },
-  { id: "subnautica", label: "Subnautica", description: "Deep ocean blues" },
-  { id: "dungeons", label: "Minecraft Dungeons", description: "Ember and obsidian" },
-];
-
 function App() {
   const [library, setLibrary] = useState<Piko[]>(() => {
     try {
@@ -92,9 +87,6 @@ function App() {
   const [flatpakPickerOpen, setFlatpakPickerOpen] = useState(false);
   const [flatpaks, setFlatpaks] = useState<FlatpakApp[]>([]);
   const [flatpakBusy, setFlatpakBusy] = useState(false);
-  const [theme, setTheme] = useState<ThemeId>(() => {
-    try { return (JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}").theme as ThemeId) || "mochi"; } catch { return "mochi"; }
-  });
   const [settings, setSettings] = useState<IgdbSettings>(() => {
     try { return JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}").igdb ?? { clientId: "", token: "", apiKey: "" }; } catch { return { clientId: "", token: "", apiKey: "" }; }
   });
@@ -119,13 +111,14 @@ function App() {
     isCloudConfigured ? "offline" : "offline",
   );
   const syncInitialized = useRef(false);
+  const { themes, theme, setTheme, reloadThemes, configInfo } = useThemeEngine();
 
   useEffect(() => {
     window.localStorage.setItem(storedPikosKey, JSON.stringify(library));
   }, [library]);
   useEffect(() => {
-    window.localStorage.setItem(storedSettingsKey, JSON.stringify({ theme, igdb: settings, ...behavior }));
-  }, [theme, settings, behavior]);
+    window.localStorage.setItem(storedSettingsKey, JSON.stringify({ igdb: settings, ...behavior }));
+  }, [settings, behavior]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -512,6 +505,7 @@ function App() {
     window.localStorage.removeItem(storedSettingsKey);
     window.localStorage.removeItem(setupCompleteKey);
     window.localStorage.removeItem(importSourcesKey);
+    window.localStorage.removeItem("mochi:theme");
     window.location.reload();
   };
 
@@ -556,7 +550,7 @@ function App() {
   if (!selectedPiko || !selectedTofu) return null;
 
   return (
-    <div className={`app-shell theme-${theme}`}>
+    <div className="app-shell">
       <aside className="sidebar">
         <button className="sidebar-account" onClick={user ? () => setActiveNav("Settings") : () => setShowAuth(true)}><AccountAvatar user={user} size={36} /><span><strong>{user?.user_metadata?.user_name || user?.user_metadata?.preferred_username || user?.email?.split("@")[0] || "Guest"}</strong><small>{user ? "Mochi account" : "Sign in to Mochi"}</small></span><ChevronDown size={14} /></button>
         <div className="brand">
@@ -686,7 +680,21 @@ function App() {
               <div className="settings-intro"><p className="eyebrow">Preferences</p><h2>Make Mochi yours.</h2><p>These settings are stored locally on this device. Cloud sync can be enabled later without changing your library.</p></div>
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>Appearance</strong><span>Personalize the launcher</span></div>
-                <div className="theme-grid">{themeOptions.map((option) => <button key={option.id} className={`theme-card ${theme === option.id ? "selected" : ""}`} onClick={() => setTheme(option.id)}><Palette size={16} /><strong>{option.label}</strong><small>{option.description}</small></button>)}</div>
+                <div className="theme-grid">
+                  {themes.map((option) => (
+                    <button key={option.id} className={"theme-card " + (theme === option.id ? "selected" : "")} onClick={() => void setTheme(option.id)}>
+                      <Palette size={16} />
+                      <strong>{option.name}</strong>
+                      <small>{option.description || "Mochi theme"}</small>
+                      <small className="theme-card-meta">{option.source === "builtin" ? "Built-in" : "v" + option.version + " · " + (option.author || "User theme")}</small>
+                    </button>
+                  ))}
+                </div>
+                <div className="theme-actions">
+                  <button className="secondary-button" onClick={() => void importThemeFile().then((result) => { if (result) void reloadThemes(); }).catch((error) => setLaunchError(error instanceof Error ? error.message : String(error)))}><FileJson size={14} /> Import theme file</button>
+                  <button className="secondary-button" onClick={() => void importThemeFolder().then((result) => { if (result) void reloadThemes(); }).catch((error) => setLaunchError(error instanceof Error ? error.message : String(error)))}><FolderOpen size={14} /> Import theme folder</button>
+                </div>
+                {configInfo && <div className="theme-config-path"><span>Theme directory</span><code>{configInfo.themesPath}</code></div>}
               </div>
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>IGDB</strong><span>Global app setting</span></div>

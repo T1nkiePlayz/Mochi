@@ -21,4 +21,3 @@ export type Piko = {
   tofus: Tofu[];
 };
 
-export type ThemeId = "mochi" | "minecraft" | "subnautica" | "dungeons";

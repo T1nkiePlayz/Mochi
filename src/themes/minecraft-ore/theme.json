@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "minecraft-ore",
+  "name": "Minecraft Ore",
+  "version": "1.0.0",
+  "author": "Side Quest Games",
+  "description": "A blocky, mineral-rich theme inspired by Minecraft's underground palette.",
+  "colors": {
+    "background": "#090c0a",
+    "backgroundElevated": "#101510",
+    "surface": "#151a15",
+    "surfaceRaised": "#1d241c",
+    "surfaceHover": "#283027",
+    "border": "#394036",
+    "borderStrong": "#596451",
+    "text": "#e8eee3",
+    "textStrong": "#ffffff",
+    "textMuted": "#9aa694",
+    "textFaint": "#687263",
+    "accent": "#7bd45d",
+    "accentStrong": "#9be87d",
+    "accentText": "#071006",
+    "accentSoft": "rgba(123,212,93,.14)",
+    "success": "#7ed36a",
+    "warning": "#e4ad58",
+    "danger": "#e26d5a",
+    "shadow": "rgba(0,0,0,.42)"
+  },
+  "ui": {
+    "fontBody": "Inter, "DM Sans", sans-serif",
+    "fontDisplay": "Inter, "DM Sans", sans-serif",
+    "radiusSm": "2px",
+    "radiusMd": "3px",
+    "radiusLg": "5px",
+    "sidebarWidth": "252px",
+    "contentMaxWidth": "1160px",
+    "density": "1"
+  },
+  "assets": {
+    "brand": "assets/ore.svg"
+  }
+}

@@ -1,0 +1,4 @@
+/* Mochi built-in theme. Keep custom rules here intentionally small; tokens do the heavy lifting. */
+.app-shell {
+  background: radial-gradient(circle at 75% -20%, color-mix(in srgb, var(--mochi-accent) 10%, transparent), transparent 34%), var(--mochi-background);
+}
