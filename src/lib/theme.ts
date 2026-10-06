@@ -264,8 +264,20 @@ export function useThemeEngine() {
         if (cancelled) return;
         setConfigInfo(info);
         const stored = window.localStorage.getItem("mochi:theme");
-        const selected = info.selectedTheme || stored || "mochi";
+        let legacyTheme = stored;
+        if (!legacyTheme) {
+          try {
+            const legacySettings = JSON.parse(window.localStorage.getItem("mochi:settings") || "{}");
+            legacyTheme = typeof legacySettings.theme === "string" ? legacySettings.theme : null;
+          } catch {
+            legacyTheme = null;
+          }
+        }
+        const selected = legacyTheme || info.selectedTheme || "mochi";
         setThemeState(selected);
+        if (legacyTheme && legacyTheme !== info.selectedTheme) {
+          await setTheme(legacyTheme);
+        }
         const available = await listThemes();
         if (cancelled) return;
         setThemes(available);
