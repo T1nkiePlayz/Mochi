@@ -22,7 +22,7 @@ Game sources are kept separate from operating-system adapters. This prevents the
 Linux currently provides read-only discovery/import adapters for:
 
 - Flatpak
-- Steam, including installed Steam library manifests
+- Steam, including installed games and non-Steam shortcuts, including installed Steam library manifests
 - Heroic Games Launcher
 - Lutris
 - Bottles
