@@ -1,7 +1,8 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 export type IgdbSettings = {
   clientId: string;
-  token: string;
-  apiKey?: string;
+  clientSecret: string;
 };
 
 export type IgdbGame = {
@@ -14,29 +15,17 @@ export type IgdbGame = {
   first_release_date?: number;
 };
 
-const endpoint = "https://api.igdb.com/v4/games";
-
-async function searchIgdbGames(name: string, settings: IgdbSettings, limit: number): Promise<IgdbGame[]> {
-  const credential = settings.token || settings.apiKey;
-  if (!name.trim() || !settings.clientId.trim() || !credential?.trim()) return [];
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Client-ID": settings.clientId.trim(),
-      Authorization: settings.token ? `Bearer ${settings.token.trim()}` : settings.apiKey!.trim(),
-      "Content-Type": "text/plain",
-    },
-    body: `search "${name.replace(/"/g, '\\"')}"; fields name,summary,cover.url,artworks.url,genres.name,first_release_date; limit ${Math.max(1, Math.min(limit, 10))};`,
+export async function lookupIgdbGames(client: SupabaseClient, name: string): Promise<IgdbGame[]> {
+  if (!name.trim()) return [];
+  const { data, error } = await client.functions.invoke("store-provider-credentials", {
+    body: { action: "igdb-search", query: name.trim(), limit: 6 },
   });
-  if (!response.ok) throw new Error(`IGDB metadata request failed (${response.status})`);
-  return (await response.json()) as IgdbGame[];
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return (data?.games ?? []) as IgdbGame[];
 }
 
-export async function lookupIgdbGames(name: string, settings: IgdbSettings): Promise<IgdbGame[]> {
-  return searchIgdbGames(name, settings, 6);
-}
-
-export async function lookupIgdbGame(name: string, settings: IgdbSettings): Promise<IgdbGame | null> {
-  const games = await searchIgdbGames(name, settings, 1);
+export async function lookupIgdbGame(client: SupabaseClient, name: string): Promise<IgdbGame | null> {
+  const games = await lookupIgdbGames(client, name);
   return games[0] ?? null;
 }
