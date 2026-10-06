@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import type { User } from "@supabase/supabase-js";
 import {
   Bell,
@@ -71,6 +72,10 @@ function App() {
   const [showCustomGame, setShowCustomGame] = useState(false);
   const [addGameStep, setAddGameStep] = useState<"form" | "igdb">("form");
   const [pendingGame, setPendingGame] = useState<{ name: string; executablePath: string; candidates: IgdbGame[] } | null>(null);
+  const [launchType, setLaunchType] = useState<"file" | "flatpak" | "custom">("file");
+  const [flatpakPickerOpen, setFlatpakPickerOpen] = useState(false);
+  const [flatpaks, setFlatpaks] = useState<Array<{ id: string; name: string; category: "Games" | "Other" }>>([]);
+  const [flatpakBusy, setFlatpakBusy] = useState(false);
   const [theme, setTheme] = useState<ThemeId>(() => {
     try { return (JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}").theme as ThemeId) || "mochi"; } catch { return "mochi"; }
   });
@@ -217,6 +222,38 @@ function App() {
     );
     setSelectedTofuId(tofu.id);
     setShowNewTofu(false);
+  };
+
+  const loadFlatpaks = async () => {
+    setFlatpakBusy(true);
+    try {
+      const installed = await invoke<Array<{ id: string; name: string; category: "Games" | "Other" }>>("list_flatpaks");
+      setFlatpaks(installed);
+      setFlatpakPickerOpen(true);
+    } catch (error) {
+      setLaunchError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setFlatpakBusy(false);
+    }
+  };
+
+  const chooseGameFile = async () => {
+    try {
+      const selected = await open({
+        multiple: false,
+        directory: false,
+        title: "Choose game executable or launcher",
+      });
+      if (typeof selected === "string") {
+        const input = document.querySelector<HTMLInputElement>('input[name="executablePath"]');
+        if (input) {
+          input.value = selected;
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      }
+    } catch (error) {
+      setLaunchError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   const addGameToLibrary = (name: string, executablePath: string, metadata: IgdbGame | null) => {
@@ -574,22 +611,50 @@ function App() {
       </main>
 
       {showAddPiko && <div className="modal-backdrop" onClick={() => setShowAddPiko(false)}><div className="modal" onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><p className="eyebrow">Expand your library</p><h2>Add a Piko</h2></div><button className="icon-button" onClick={() => setShowAddPiko(false)}><X size={17} /></button></div><p className="modal-description">Connect an installed game or add a custom game to start managing its Tofus in Mochi.</p><div className="add-options"><button disabled><Gamepad2 size={18} /><span><strong>Detect installed games</strong><small>Native scanning is coming soon</small></span><ChevronDown size={15} /></button><button onClick={() => setShowCustomGame(true)}><Plus size={18} /><span><strong>Add a custom game</strong><small>Save a name and executable path locally</small></span><ChevronDown size={15} /></button></div></div></div>}
-      {showCustomGame && <div className="modal-backdrop" onClick={() => setShowCustomGame(false)}><form className="modal igdb-selection-modal" onSubmit={addCustomGame} onClick={(event) => event.stopPropagation()}>
-        <div className="modal-header"><div><p className="eyebrow">{addGameStep === "igdb" ? "Confirm game identity" : "Local library"}</p><h2>{addGameStep === "igdb" ? "Is this the right game?" : "Add custom game"}</h2></div><button className="icon-button" type="button" onClick={() => { setShowCustomGame(false); setAddGameStep("form"); setPendingGame(null); }}><X size={17} /></button></div>
-        {addGameStep === "form" ? <>
-          <p className="modal-description">Add the game and its launcher target. If your global IGDB credentials are configured, Mochi will search IGDB before adding it so you can confirm the artwork and game identity.</p>
-          <div className="form-fields"><label>Game name<input name="name" autoFocus placeholder="e.g. Hollow Knight" required /></label><label>Launch target<input name="executablePath" placeholder="/path/to/game, .desktop, script, or Flatpak app ID" required /></label></div>
-          <button className="play-button form-submit" type="submit" disabled={igdbBusy}>{igdbBusy ? <><RefreshCw size={16} className="spin" /> Searching IGDB...</> : settings.clientId.trim() && (settings.token.trim() || settings.apiKey?.trim()) ? <>Next <ChevronDown size={16} /></> : <><Plus size={16} /> Add game</>}</button>
-        </> : <>
-          <p className="modal-description">{pendingGame?.candidates.length ? "Mochi found these matches. Approve the best match to use its artwork, description and categories." : "Mochi could not find a confident match. You can add the game without IGDB metadata."}</p>
-          <div className="igdb-candidates">{pendingGame?.candidates.map((game) => {
-            const art = game.cover?.url?.replace("t_thumb", "t_1080p") || game.artworks?.[0]?.url?.replace("t_thumb", "t_1080p");
-            return <button type="button" className="igdb-candidate" key={game.id ?? game.name} onClick={() => approveIgdbGame(game)}><div className="igdb-candidate-art" style={{ backgroundImage: art ? `url('${art}')` : undefined }} /><div className="igdb-candidate-copy"><strong>{game.name}</strong><small>{game.genres?.map((g) => g.name).join(" · ") || "Genre unknown"}</small>{game.summary && <p>{game.summary}</p>}</div><ChevronDown size={16} /></button>;
-          })}</div>
-          <div className="igdb-selection-actions"><button type="button" className="secondary-button" onClick={() => setAddGameStep("form")}>Back</button><button type="button" className="play-button" onClick={() => approveIgdbGame(null)}>Add without IGDB</button></div>
-        </>}
-      </form></div>}
-      {showNewTofu && <div className="modal-backdrop" onClick={() => setShowNewTofu(false)}><form className="modal" onSubmit={addTofu} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><p className="eyebrow">New environment for {selectedPiko.name}</p><h2>Create a Tofu</h2></div><button className="icon-button" type="button" onClick={() => setShowNewTofu(false)}><X size={17} /></button></div><p className="modal-description">Give this environment its own version and runtime. You can configure mods after it is created.</p><div className="form-fields"><label>Name<input name="name" autoFocus placeholder="e.g. Creative" required /></label><label>Game version<input name="version" placeholder="e.g. 1.21.1" required /></label><label>Runtime<select name="runtime" defaultValue="Native"><option>Native</option><option>Vanilla</option><option>Fabric</option><option>SMAPI</option><option>Wine / Proton</option></select></label></div><button className="play-button form-submit" type="submit"><Plus size={16} /> Create Tofu</button></form></div>}
+            {showCustomGame && <div className="modal-backdrop" onClick={() => setShowCustomGame(false)}>
+        <form className="modal igdb-selection-modal" onSubmit={addCustomGame} onClick={(event) => event.stopPropagation()}>
+          <div className="modal-header"><div><p className="eyebrow">{addGameStep === "igdb" ? "Confirm game identity" : "Local library"}</p><h2>{addGameStep === "igdb" ? "Is this the right game?" : "Add custom game"}</h2></div><button className="icon-button" type="button" onClick={() => { setShowCustomGame(false); setAddGameStep("form"); setPendingGame(null); }}><X size={17} /></button></div>
+          {addGameStep === "form" ? <>
+            <p className="modal-description">Choose how Mochi should launch this game. File selection uses the native Tauri file dialog, which is preferable to trying to use xdg-open as a file picker on Linux/Wayland.</p>
+            <div className="form-fields">
+              <label>Game name<input name="name" autoFocus placeholder="e.g. Hollow Knight" required /></label>
+              <label>Launch method
+                <select value={launchType} onChange={(event) => setLaunchType(event.target.value as "file" | "flatpak" | "custom")}>
+                  <option value="file">Choose file</option>
+                  <option value="flatpak">Flatpak</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </label>
+              {launchType === "file" && <div className="launch-target-picker"><button type="button" className="secondary-button file-picker-button" onClick={chooseGameFile}>Choose executable / launcher file</button><input name="executablePath" className="visually-hidden-input" tabIndex={-1} aria-hidden="true" required /></div>}
+              {launchType === "flatpak" && <div className="flatpak-input-row"><button type="button" className="secondary-button" onClick={loadFlatpaks} disabled={flatpakBusy}>{flatpakBusy ? <><RefreshCw size={15} className="spin" /> Loading...</> : <><Grid2X2 size={15} /> Choose installed Flatpak</>}</button><input name="executablePath" placeholder="org.company.game" autoComplete="off" required /></div>}
+              {launchType === "custom" && <input name="executablePath" placeholder="Custom path, Flatpak ID, or supported launch target" autoComplete="off" required />}
+            </div>
+            <button className="play-button form-submit" type="submit" disabled={igdbBusy}>{igdbBusy ? <><RefreshCw size={16} className="spin" /> Searching IGDB...</> : settings.clientId.trim() && (settings.token.trim() || settings.apiKey?.trim()) ? <>Next <ChevronDown size={16} /></> : <><Plus size={16} /> Add game</>}</button>
+          </> : <>
+            <p className="modal-description">{pendingGame?.candidates.length ? "Mochi found these matches. Approve the best match to use its artwork, description and categories." : "Mochi could not find a confident match. You can add the game without IGDB metadata."}</p>
+            <div className="igdb-candidates">{pendingGame?.candidates.map((game) => {
+              const art = game.cover?.url?.replace("t_thumb", "t_1080p") || game.artworks?.[0]?.url?.replace("t_thumb", "t_1080p");
+              return <button type="button" className="igdb-candidate" key={game.id ?? game.name} onClick={() => approveIgdbGame(game)}><div className="igdb-candidate-art" style={{ backgroundImage: art ? `url('${art}')` : undefined }} /><div className="igdb-candidate-copy"><strong>{game.name}</strong><small>{game.genres?.map((g) => g.name).join(" · ") || "Genre unknown"}</small>{game.summary && <p>{game.summary}</p>}</div><ChevronDown size={16} /></button>;
+            })}</div>
+            <div className="igdb-selection-actions"><button type="button" className="secondary-button" onClick={() => setAddGameStep("form")}>Back</button><button type="button" className="play-button" onClick={() => approveIgdbGame(null)}>Add without IGDB</button></div>
+          </>}
+        </form>
+      </div>}
+      {flatpakPickerOpen && <div className="modal-backdrop" onClick={() => setFlatpakPickerOpen(false)}>
+        <div className="modal flatpak-picker-modal" onClick={(event) => event.stopPropagation()}>
+          <div className="modal-header"><div><p className="eyebrow">Installed applications</p><h2>Choose a Flatpak</h2></div><button className="icon-button" type="button" onClick={() => setFlatpakPickerOpen(false)}><X size={17} /></button></div>
+          <p className="modal-description">Games are shown first. Everything else is grouped separately.</p>
+          {(["Games", "Other"] as const).map((category) => {
+            const items = flatpaks.filter((flatpak) => flatpak.category === category);
+            return items.length ? <section className="flatpak-group" key={category}><div className="flatpak-group-heading"><strong>{category}</strong><span>{items.length}</span></div><div className="flatpak-list">{items.map((flatpak) => <button type="button" className="flatpak-item" key={flatpak.id} onClick={() => {
+              const input = document.querySelector<HTMLInputElement>('input[name="executablePath"]');
+              if (input) { input.value = `flatpak://${flatpak.id}`; input.dispatchEvent(new Event("input", { bubbles: true })); }
+              setFlatpakPickerOpen(false);
+            }}><span><strong>{flatpak.name}</strong><small>{flatpak.id}</small></span><ChevronDown size={15} /></button>)}</div></section> : null;
+          })}
+          {!flatpaks.length && <div className="empty-state flatpak-empty"><Gamepad2 size={22} /><p>No installed Flatpaks were found.</p></div>}
+        </div>
+      </div>}
       {showAuth && <div className="modal-backdrop" onClick={() => setShowAuth(false)}><form className="modal auth-modal" onSubmit={authenticate} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div className="auth-brand"><MochiLogo size={30} /><div><p className="eyebrow">Mochi Cloud</p><h2>{authMode === "sign-in" ? "Welcome back." : "Create your account."}</h2></div></div><button className="icon-button" type="button" onClick={() => setShowAuth(false)}><X size={17} /></button></div><p className="modal-description">{authMode === "sign-in" ? "Sign in to sync your library metadata across devices." : "Your games stay local. Your Mochi metadata can follow you."}</p><div className="form-fields"><label>Email<input name="email" type="email" placeholder="you@example.com" required /></label><label>Password<input name="password" type="password" minLength={6} placeholder="At least 6 characters" required /></label></div>{authError && <p className="auth-error">{authError}</p>} {mfaRequired ? <><p className="modal-description">{mfaMessage}</p><input className="mfa-input" inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="123456" maxLength={6} /><button className="play-button form-submit" type="button" disabled={authBusy || mfaCode.length !== 6} onClick={completeMfa}>{authBusy ? "Verifying..." : "Verify code"}</button></> : <><button className="play-button form-submit" disabled={authBusy} type="submit">{authBusy ? "Connecting..." : authMode === "sign-in" ? "Sign in" : "Create account"}</button><div className="auth-provider-row"><button type="button" className="secondary-button" onClick={() => signInWithProvider(supabase!, "github")}><Github size={15}/> GitHub</button><button type="button" className="secondary-button" onClick={handlePasskey}><KeyRound size={15}/> Passkey</button></div><button type="button" className="switch-auth" onClick={() => sendMagicLink(supabase!, String((document.querySelector('input[name="email"]') as HTMLInputElement)?.value || ""))}>Email me a magic link</button><button className="switch-auth" type="button" onClick={() => { setAuthMode(authMode === "sign-in" ? "sign-up" : "sign-in"); setAuthError(""); }}>{authMode === "sign-in" ? "New to Mochi? Create an account" : "Already have an account? Sign in"}</button></>}</form></div>}
     </div>
   );
