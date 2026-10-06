@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useState, type ComponentType, type CSSProperties } from "react";
 import type { LucideProps } from "lucide-react";
 
 function iconVariable(name: string): string {
@@ -21,7 +21,7 @@ export function MochiIcon({ name, fallback: Fallback, size = 16, ...props }: Pro
   const variable = "--mochi-icon-" + iconVariable(name);
   return (
     <span className="mochi-icon-wrap" aria-hidden="true">
-      <span className="mochi-icon-custom" style={{ "--mochi-icon-image": "var(" + variable + ", none)" } as React.CSSProperties} />
+      <span className="mochi-icon-custom" style={{ "--mochi-icon-image": "var(" + variable + ", none)" } as CSSProperties} />
       <Fallback size={size} {...props} />
     </span>
   );
