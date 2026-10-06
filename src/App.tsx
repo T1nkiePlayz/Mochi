@@ -182,13 +182,7 @@ function App() {
     window.localStorage.setItem(setupCompleteKey, "true");
     window.localStorage.setItem(importSourcesKey, JSON.stringify(sources));
     setShowFirstLaunchSetup(false);
-    void detectImportSources().then(setDetectedImportSources).catch(() => undefined);
   };
-
-  useEffect(() => {
-    if (showFirstLaunchSetup) return;
-    void detectImportSources().then(setDetectedImportSources).catch(() => setDetectedImportSources([]));
-  }, [showFirstLaunchSetup]);
 
   const selectedPiko = library.find((piko) => piko.id === selectedPikoId) ?? library[0] ?? {
     id: "__empty",
