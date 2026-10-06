@@ -597,7 +597,11 @@ function App() {
     if (supabase) await supabase.auth.signOut();
   };
 
-  if (showFirstLaunchSetup) {\n    return <FirstLaunchSetup settings={settings} setSettings={setSettings} onSignIn={() => setShowAuth(true)} onFinish={finishFirstLaunchSetup} />;\n  }\n\n  if (!selectedPiko || !selectedTofu) return null;
+  if (showFirstLaunchSetup) {
+    return <FirstLaunchSetup settings={settings} setSettings={setSettings} onSignIn={() => setShowAuth(true)} onFinish={finishFirstLaunchSetup} />;
+  }
+
+  if (!selectedPiko || !selectedTofu) return null;
 
   return (
     <div className={`app-shell theme-${theme}`}>
