@@ -107,3 +107,10 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 .import-game-list{display:grid;gap:6px;max-height:360px;overflow:auto;padding-right:3px;margin-top:12px}.import-game-row{display:flex;align-items:center;gap:10px;width:100%;padding:10px 11px;border:1px solid #292c36;border-radius:9px;color:#dfe1e7;background:#14161d;text-align:left}.import-game-row:hover,.import-game-row.selected{border-color:#514278;background:#191721}.import-game-row>span:nth-child(2){display:grid;gap:3px;min-width:0;flex:1}.import-game-row strong{font-size:11px}.import-game-row small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6f7481;font-size:9px}
 /* Theme engine controls these values at runtime. Theme cards and config locations remain themeable too. */
 .theme-card-meta{grid-column:2;color:var(--mochi-text-faint,#606675)!important;font-size:9px}.theme-actions{display:flex;flex-wrap:wrap;gap:8px;padding:0 17px 15px}.theme-actions .secondary-button{font-size:10px}.theme-config-path{display:grid;gap:5px;padding:12px 17px 15px;border-top:1px solid var(--mochi-border,#292d37);color:var(--mochi-text-muted,#858b9b);font-size:9px}.theme-config-path code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mochi-text-faint,#606675);font:9px monospace}@media(max-width:700px){.theme-actions{display:grid;grid-template-columns:1fr}}
+
+/* Themeable logical icons */
+.mochi-icon-wrap { position: relative; display: inline-grid; place-items: center; width: 1em; height: 1em; flex: 0 0 auto; }
+.mochi-icon-wrap > svg { display: block; }
+.mochi-icon-custom { position: absolute; inset: 0; display: none; width: 100%; height: 100%; background: currentColor; -webkit-mask-image: var(--mochi-icon-image); mask-image: var(--mochi-icon-image); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-position: center; mask-position: center; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+.mochi-icon-wrap:has(.mochi-icon-custom[style*="url"]) > .mochi-icon-custom { display: block; }
+.mochi-icon-wrap:has(.mochi-icon-custom[style*="url"]) > svg { visibility: hidden; }
