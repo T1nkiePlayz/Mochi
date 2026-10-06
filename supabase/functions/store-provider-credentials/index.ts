@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
     if (body.action === "delete") {
       const secretId = existing.rows[0]?.secret_id;
       if (secretId) {
-        await connection.queryObject("select vault.delete_secret($1::uuid)", [secretId]);
+        await connection.queryObject("delete from vault.secrets where id = $1::uuid", [secretId]);
         await connection.queryObject(
           "delete from mochi_private.user_credentials where user_id = $1 and provider = $2",
           [user.id, body.provider],
