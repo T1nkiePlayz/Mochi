@@ -680,7 +680,21 @@ function App() {
               <div className="settings-intro"><p className="eyebrow">Preferences</p><h2>Make Mochi yours.</h2><p>These settings are stored locally on this device. Cloud sync can be enabled later without changing your library.</p></div>
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>Appearance</strong><span>Personalize the launcher</span></div>
-                <div className="theme-grid">{themeOptions.map((option) => <button key={option.id} className={`theme-card ${theme === option.id ? "selected" : ""}`} onClick={() => setTheme(option.id)}><Palette size={16} /><strong>{option.label}</strong><small>{option.description}</small></button>)}</div>
+                <div className="theme-grid">
+                  {themes.map((option) => (
+                    <button key={option.id} className={"theme-card " + (theme === option.id ? "selected" : "")} onClick={() => void setTheme(option.id)}>
+                      <Palette size={16} />
+                      <strong>{option.name}</strong>
+                      <small>{option.description || "Mochi theme"}</small>
+                      <small className="theme-card-meta">{option.source === "builtin" ? "Built-in" : "v" + option.version + " · " + (option.author || "User theme")}</small>
+                    </button>
+                  ))}
+                </div>
+                <div className="theme-actions">
+                  <button className="secondary-button" onClick={() => void importThemeFile().then((result) => { if (result) void reloadThemes(); }).catch((error) => setLaunchError(error instanceof Error ? error.message : String(error)))}><FileJson size={14} /> Import theme file</button>
+                  <button className="secondary-button" onClick={() => void importThemeFolder().then((result) => { if (result) void reloadThemes(); }).catch((error) => setLaunchError(error instanceof Error ? error.message : String(error)))}><FolderOpen size={14} /> Import theme folder</button>
+                </div>
+                {configInfo && <div className="theme-config-path"><span>Theme directory</span><code>{configInfo.themesPath}</code></div>}
               </div>
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>IGDB</strong><span>Global app setting</span></div>
