@@ -26,6 +26,8 @@ import {
   Github,
 } from "lucide-react";
 import { MochiLogo } from "./components/MochiLogo";
+import { FirstLaunchSetup } from "./components/FirstLaunchSetup";
+import { detectImportSources, type DetectedImportSource, type ImportSourceId } from "./lib/sources";
 import { isCloudConfigured, supabase } from "./lib/supabase";
 import { pullLibrary, pushLibrary } from "./lib/cloud";
 import type { Piko, Tofu } from "./models";
@@ -52,6 +54,8 @@ const navItems = [
 
 const storedPikosKey = "mochi:pikos";
 const storedSettingsKey = "mochi:settings";
+const setupCompleteKey = "mochi:setup-complete";
+const importSourcesKey = "mochi:import-sources";
 const themeOptions: Array<{ id: ThemeId; label: string; description: string }> = [
   { id: "mochi", label: "Mochi", description: "Quiet charcoal and mint" },
   { id: "minecraft", label: "Minecraft", description: "Overworld greens and earth" },
@@ -107,6 +111,9 @@ function App() {
   const [mfaFactorId, setMfaFactorId] = useState("");
   const [mfaMessage, setMfaMessage] = useState("");
   const [authNotice, setAuthNotice] = useState("");
+  const [showFirstLaunchSetup, setShowFirstLaunchSetup] = useState(() => window.localStorage.getItem(setupCompleteKey) !== "true");
+  const [detectedImportSources, setDetectedImportSources] = useState<DetectedImportSource[]>([]);
+  const [showImportPicker, setShowImportPicker] = useState(false);
   const [syncState, setSyncState] = useState<"offline" | "syncing" | "synced" | "error">(
     isCloudConfigured ? "offline" : "offline",
   );
@@ -170,6 +177,18 @@ function App() {
         setSyncState("error");
       });
   }, [library, user]);
+
+  const finishFirstLaunchSetup = (sources: ImportSourceId[]) => {
+    window.localStorage.setItem(setupCompleteKey, "true");
+    window.localStorage.setItem(importSourcesKey, JSON.stringify(sources));
+    setShowFirstLaunchSetup(false);
+    void detectImportSources().then(setDetectedImportSources).catch(() => undefined);
+  };
+
+  useEffect(() => {
+    if (showFirstLaunchSetup) return;
+    void detectImportSources().then(setDetectedImportSources).catch(() => setDetectedImportSources([]));
+  }, [showFirstLaunchSetup]);
 
   const selectedPiko = library.find((piko) => piko.id === selectedPikoId) ?? library[0] ?? {
     id: "__empty",
@@ -445,7 +464,7 @@ function App() {
     if (supabase) await supabase.auth.signOut();
   };
 
-  if (!selectedPiko || !selectedTofu) return null;
+  if (showFirstLaunchSetup) {\n    return <FirstLaunchSetup settings={settings} setSettings={setSettings} onSignIn={() => setShowAuth(true)} onFinish={finishFirstLaunchSetup} />;\n  }\n\n  if (!selectedPiko || !selectedTofu) return null;
 
   return (
     <div className={`app-shell theme-${theme}`}>
@@ -616,7 +635,7 @@ function App() {
         </div>
       </main>
 
-      {showAddPiko && <div className="modal-backdrop" onClick={() => setShowAddPiko(false)}><div className="modal" onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><p className="eyebrow">Expand your library</p><h2>Add a Piko</h2></div><button className="icon-button" onClick={() => setShowAddPiko(false)}><X size={17} /></button></div><p className="modal-description">Connect an installed game or add a custom game to start managing its Tofus in Mochi.</p><div className="add-options"><button disabled><Gamepad2 size={18} /><span><strong>Detect installed games</strong><small>Native scanning is coming soon</small></span><ChevronDown size={15} /></button><button onClick={() => { setShowCustomGame(true); setAddGameStep("form"); setPendingGame(null); setLaunchType("file"); setLaunchTarget(""); }}><Plus size={18} /><span><strong>Add a custom game</strong><small>Save a name and executable path locally</small></span><ChevronDown size={15} /></button></div></div></div>}
+      {showAddPiko && <div className="modal-backdrop" onClick={() => setShowAddPiko(false)}><div className="modal" onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><p className="eyebrow">Expand your library</p><h2>Add a Piko</h2></div><button className="icon-button" onClick={() => setShowAddPiko(false)}><X size={17} /></button></div><p className="modal-description">Connect an installed game or add a custom game to start managing its Tofus in Mochi.</p><div className="add-options"><button onClick={() => { setShowImportPicker(true); setShowAddPiko(false); }}><Library size={18} /><span><strong>Import from another platform</strong><small>Bring games in from an installed launcher</small></span><ChevronDown size={15} /></button><button onClick={() => { setShowCustomGame(true); setAddGameStep("form"); setPendingGame(null); setLaunchType("file"); setLaunchTarget(""); }}><Plus size={18} /><span><strong>Add a custom game</strong><small>Save a name and executable path locally</small></span><ChevronDown size={15} /></button></div></div></div>}
             {showCustomGame && <div className="modal-backdrop" onClick={() => setShowCustomGame(false)}>
         <form className="modal igdb-selection-modal" onSubmit={addCustomGame} onClick={(event) => event.stopPropagation()}>
           <div className="modal-header"><div><p className="eyebrow">{addGameStep === "igdb" ? "Confirm game identity" : "Local library"}</p><h2>{addGameStep === "igdb" ? "Is this the right game?" : "Add custom game"}</h2></div><button className="icon-button" type="button" onClick={() => { setShowCustomGame(false); setAddGameStep("form"); setPendingGame(null); setLaunchTarget(""); }}><X size={17} /></button></div>
@@ -658,6 +677,17 @@ function App() {
             }}><span><strong>{flatpak.name}</strong><small>{flatpak.id}</small></span><ChevronDown size={15} /></button>)}</div></section> : null;
           })}
           {!flatpaks.length && <div className="empty-state flatpak-empty"><Gamepad2 size={22} /><p>No installed Flatpaks were found.</p></div>}
+        </div>
+      </div>}
+      {showImportPicker && <div className="modal-backdrop" onClick={() => setShowImportPicker(false)}>
+        <div className="modal import-picker-modal" onClick={(event) => event.stopPropagation()}>
+          <div className="modal-header"><div><p className="eyebrow">Game sources</p><h2>Import games</h2></div><button className="icon-button" onClick={() => setShowImportPicker(false)}><X size={17} /></button></div>
+          <p className="modal-description">Choose a detected launcher to import its games. Mochi keeps the original launcher responsible for installation, updates and runtime configuration.</p>
+          <div className="import-source-list">
+            {detectedImportSources.filter((source) => source.detected).map((source) => <button type="button" className="import-source-row" key={source.id} onClick={() => { setShowImportPicker(false); setShowAddPiko(false); setLaunchError(`${source.name} import scanning is being prepared. Your existing installation has not been changed.`); }}><span className="import-source-icon"><Gamepad2 size={17} /></span><span><strong>{source.name}</strong><small>{source.gameCount !== null ? `${source.gameCount} detected games` : "Detected on this device"}</small></span><ChevronDown size={15} /></button>)}
+            <button type="button" className="import-source-missing" onClick={() => setShowImportPicker(false)}><span><strong>Platform not showing up?</strong><small>Choose a platform and specify its game library path manually.</small></span><ChevronRight size={16} /></button>
+          </div>
+          {!detectedImportSources.some((source) => source.detected) && <div className="setup-no-sources"><Gamepad2 size={19} /><strong>No supported services detected.</strong><span>Use the manual platform option to configure a library path.</span></div>}
         </div>
       </div>}
       {showAuth && <div className="modal-backdrop" onClick={() => setShowAuth(false)}><form className="modal auth-modal" onSubmit={authenticate} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div className="auth-brand"><MochiLogo size={30} /><div><p className="eyebrow">Mochi Cloud</p><h2>{authMode === "sign-in" ? "Welcome back." : "Create your account."}</h2></div></div><button className="icon-button" type="button" onClick={() => setShowAuth(false)}><X size={17} /></button></div><p className="modal-description">{authMode === "sign-in" ? "Sign in to sync your library metadata across devices." : "Your games stay local. Your Mochi metadata can follow you."}</p><div className="form-fields"><label>Email<input name="email" type="email" placeholder="you@example.com" required /></label><label>Password<input name="password" type="password" minLength={6} placeholder="At least 6 characters" required /></label></div>{authError && <p className="auth-error">{authError}</p>} {mfaRequired ? <><p className="modal-description">{mfaMessage}</p><input className="mfa-input" inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="123456" maxLength={6} /><button className="play-button form-submit" type="button" disabled={authBusy || mfaCode.length !== 6} onClick={completeMfa}>{authBusy ? "Verifying..." : "Verify code"}</button></> : <><button className="play-button form-submit" disabled={authBusy} type="submit">{authBusy ? "Connecting..." : authMode === "sign-in" ? "Sign in" : "Create account"}</button><div className="auth-provider-row"><button type="button" className="secondary-button" onClick={() => signInWithProvider(supabase!, "github")}><Github size={15}/> GitHub</button><button type="button" className="secondary-button" onClick={handlePasskey}><KeyRound size={15}/> Passkey</button></div><button type="button" className="switch-auth" onClick={() => sendMagicLink(supabase!, String((document.querySelector('input[name="email"]') as HTMLInputElement)?.value || ""))}>Email me a magic link</button><button className="switch-auth" type="button" onClick={() => { setAuthMode(authMode === "sign-in" ? "sign-up" : "sign-in"); setAuthError(""); }}>{authMode === "sign-in" ? "New to Mochi? Create an account" : "Already have an account? Sign in"}</button></>}</form></div>}
