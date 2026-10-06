@@ -65,7 +65,6 @@ fn parse_vdf_object(data: &[u8], mut pos: usize, stop_at_end: bool) -> Option<(V
 }
 
 fn scan_steam_shortcuts(h:&Path)->Vec<ImportedGame>{
-    let userdata = h.join(".steam/steam/userdata");
     let roots = [
         h.join(".steam/steam/userdata"),
         h.join(".steam/root/userdata"),
@@ -80,9 +79,8 @@ fn scan_steam_shortcuts(h:&Path)->Vec<ImportedGame>{
             let path=user.path().join("config/shortcuts.vdf");
             let Ok(data)=fs::read(&path) else { continue };
             let Some((top,_))=parse_vdf_object(&data,0,false) else { continue };
-            for (_,shortcut) in top.objects.iter().flat_map(|(k,v)| {
-                if k == "shortcuts" { v.objects.iter() } else { [].iter() }
-            }) {
+            let Some(shortcuts)=top.objects.iter().find(|(k,_)| k=="shortcuts").map(|(_,v)| v) else { continue };
+            for (_,shortcut) in &shortcuts.objects {
                 let Some(name)=shortcut.strings.get("AppName").cloned().filter(|s|!s.trim().is_empty()) else { continue };
                 let appid=shortcut.ints.get("appid").map(|v| *v as i64).or_else(|| shortcut.strings.get("appid").and_then(|v|v.parse::<i64>().ok()));
                 let Some(appid)=appid else { continue };
