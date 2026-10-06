@@ -857,8 +857,6 @@ function App() {
       </div>}
       {showImportPicker && <ImportPicker onClose={() => setShowImportPicker(false)} onImport={addImportedGames} />}
       {showAuth ? authModal : null}
-        </div>
-      </main>
     </div>
   );
 }
