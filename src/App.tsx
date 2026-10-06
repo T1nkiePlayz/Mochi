@@ -3,7 +3,6 @@ import type { User } from "@supabase/supabase-js";
 import {
   Bell,
   ChevronDown,
-  ChevronRight,
   Cloud,
   Download,
   Gamepad2,
@@ -29,7 +28,7 @@ import {
 import { MochiLogo } from "./components/MochiLogo";
 import { FirstLaunchSetup } from "./components/FirstLaunchSetup";
 import { ImportPicker } from "./components/ImportPicker";
-import { detectImportSources, type DetectedImportSource, type ImportSourceId } from "./lib/sources";
+import type { ImportSourceId } from "./lib/sources";
 import { isCloudConfigured, supabase } from "./lib/supabase";
 import { pullLibrary, pushLibrary } from "./lib/cloud";
 import type { Piko, Tofu } from "./models";
@@ -114,7 +113,6 @@ function App() {
   const [mfaMessage, setMfaMessage] = useState("");
   const [authNotice, setAuthNotice] = useState("");
   const [showFirstLaunchSetup, setShowFirstLaunchSetup] = useState(() => window.localStorage.getItem(setupCompleteKey) !== "true");
-  const [detectedImportSources, setDetectedImportSources] = useState<DetectedImportSource[]>([]);
   const [showImportPicker, setShowImportPicker] = useState(false);
   const [syncState, setSyncState] = useState<"offline" | "syncing" | "synced" | "error">(
     isCloudConfigured ? "offline" : "offline",
