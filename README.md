@@ -1,5 +1,3 @@
-# Mochi 🍡
-
 <p align="center">
   <img src="./public/mochi.svg" alt="Mochi logo" width="220">
 </p>
