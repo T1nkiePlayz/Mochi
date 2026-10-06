@@ -90,15 +90,15 @@ function App() {
   const [flatpakPickerOpen, setFlatpakPickerOpen] = useState(false);
   const [flatpaks, setFlatpaks] = useState<FlatpakApp[]>([]);
   const [flatpakBusy, setFlatpakBusy] = useState(false);
-  const [settings, setSettings] = useState<IgdbSettings>(() => {
-    try { return JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}").igdb ?? { clientId: "", token: "", apiKey: "" }; } catch { return { clientId: "", token: "", apiKey: "" }; }
-  });
+  const [settings, setSettings] = useState<IgdbSettings>({ clientId: "", clientSecret: "" });
   const [behavior, setBehavior] = useState(() => {
     try { const stored = JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}"); return { launchOnStartup: Boolean(stored.launchOnStartup), keepOpen: stored.keepOpen !== false }; } catch { return { launchOnStartup: false, keepOpen: true }; }
   });
   const [igdbMessage, setIgdbMessage] = useState("");
   const [nexusApiKey, setNexusApiKey] = useState("");
   const [credentialStatus, setCredentialStatus] = useState({ igdb: false, nexus: false });
+  const [igdbClientId, setIgdbClientId] = useState("");
+  const [igdbClientSecret, setIgdbClientSecret] = useState("");
   const [credentialBusy, setCredentialBusy] = useState<"igdb" | "nexus" | null>(null);
   const [igdbBusy, setIgdbBusy] = useState(false);
   const [launchError, setLaunchError] = useState("");
@@ -123,8 +123,8 @@ function App() {
     window.localStorage.setItem(storedPikosKey, JSON.stringify(library));
   }, [library]);
   useEffect(() => {
-    window.localStorage.setItem(storedSettingsKey, JSON.stringify({ igdb: settings, ...behavior }));
-  }, [settings, behavior]);
+    window.localStorage.setItem(storedSettingsKey, JSON.stringify({ ...behavior }));
+  }, [behavior]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -393,7 +393,7 @@ function App() {
     const executablePath = normalizeLaunchTarget(launchTarget, launchType);
     if (!name || !executablePath) return;
 
-    const hasIgdb = Boolean(settings.clientId.trim() && (settings.token.trim() || settings.apiKey?.trim()));
+    const hasIgdb = Boolean(supabase && user && credentialStatus.igdb);
     if (!hasIgdb) {
       addGameToLibrary(name, executablePath, null);
       return;
@@ -401,7 +401,7 @@ function App() {
 
     setIgdbBusy(true);
     try {
-      const candidates = await lookupIgdbGames(name, settings);
+      const candidates = await lookupIgdbGames(supabase!, name);
       setPendingGame({ name, executablePath, candidates });
       setAddGameStep("igdb");
     } catch (error) {
@@ -438,10 +438,10 @@ function App() {
       return;
     }
     const secret = provider === "igdb"
-      ? JSON.stringify({ clientId: settings.clientId.trim(), token: settings.token.trim(), apiKey: settings.apiKey?.trim() || "" })
+      ? JSON.stringify({ clientId: igdbClientId.trim(), clientSecret: igdbClientSecret.trim() })
       : nexusApiKey.trim();
-    if (provider === "igdb" && (!settings.clientId.trim() || !settings.token.trim())) {
-      setIgdbMessage("Enter your IGDB Client ID and access token first.");
+    if (provider === "igdb" && (!igdbClientId.trim() || !igdbClientSecret.trim())) {
+      setIgdbMessage("Enter your IGDB Client ID and Client Secret first.");
       return;
     }
     if (!secret || secret.length < 8) return;
@@ -462,7 +462,7 @@ function App() {
     setIgdbMessage("");
     setIgdbBusy(true);
     try {
-      const result = await lookupIgdbGame(selectedPiko.name, settings);
+      const result = await lookupIgdbGame(supabase!, selectedPiko.name);
       if (!result) { setIgdbMessage("Add an IGDB client ID and token below first."); return; }
       const artworkUrl = result.cover?.url?.replace("t_thumb", "t_1080p") || result.artworks?.[0]?.url?.replace("t_thumb", "t_1080p");
       setLibrary((current) => current.map((piko) => piko.id === selectedPiko.id ? {
@@ -751,18 +751,18 @@ function App() {
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>IGDB</strong><span>Global app setting</span></div>
                 <div className="igdb-form">
-                  <p>Credentials are never sent to Mochi or Supabase. They are used directly by your browser for optional artwork lookup.</p>
-                  <label>Client ID<input value={settings.clientId} onChange={(event) => setSettings({ ...settings, clientId: event.target.value })} placeholder="Your IGDB client ID" /></label>
-                  <label>Bearer token<input type="password" value={settings.token} onChange={(event) => setSettings({ ...settings, token: event.target.value })} placeholder="Twitch OAuth token" /></label>
-                  <label>API key (alternative)<input type="password" value={settings.apiKey || ""} onChange={(event) => setSettings({ ...settings, apiKey: event.target.value })} placeholder="Optional API key" /></label>
-                  <p className="metadata-note">These credentials are global to Mochi. New games automatically search IGDB for artwork, description and genre.</p>
+                  <p>IGDB uses your Twitch developer application's Client ID and Client Secret. Mochi securely stores these credentials in your account and exchanges the secret for a temporary access token on the backend.</p>
+                  <label>Client ID<input value={igdbClientId} onChange={(event) => setIgdbClientId(event.target.value)} placeholder="Your Twitch application Client ID" /></label>
+                  <label>Client Secret<input type="password" value={igdbClientSecret} onChange={(event) => setIgdbClientSecret(event.target.value)} placeholder="Your Twitch application Client Secret" /></label>
+                  <p className="metadata-note">You do not need to create or paste a bearer token or separate API key. Your Twitch application name is only an identifier in the Twitch developer dashboard.</p>
+                  <p className="metadata-note">Sign in to Mochi before saving. New games can then use IGDB for artwork, descriptions, genres, and release information without exposing your Client Secret to the launcher.</p>
                   {igdbMessage && <small className="metadata-note">{igdbMessage}</small>}
                 </div>
               </div>
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>Mod & metadata providers</strong><span>Credentials are encrypted with Supabase Vault</span></div>
                 <div className="provider-credential-card">
-                  <div className="provider-credential-heading"><div><strong>IGDB</strong><small>Store the Client ID and token with your Mochi account.</small></div><span className={credentialStatus.igdb ? "credential-status saved" : "credential-status"}>{credentialStatus.igdb ? "Saved" : "Not saved"}</span></div>
+                  <div className="provider-credential-heading"><div><strong>IGDB</strong><small>Store your Twitch Client ID and Client Secret securely with your Mochi account.</small></div><span className={credentialStatus.igdb ? "credential-status saved" : "credential-status"}>{credentialStatus.igdb ? "Saved" : "Not saved"}</span></div>
                   <button className="secondary-button" onClick={() => void saveCredential("igdb")} disabled={credentialBusy !== null}>{credentialBusy === "igdb" ? <><MochiIcon name="refresh" fallback={RefreshCw} size={14} className="spin" /> Saving...</> : <><MochiIcon name="cloud" fallback={Cloud} size={14} /> Save IGDB securely</>}</button>
                 </div>
                 <div className="provider-credential-card">
@@ -814,7 +814,7 @@ function App() {
               {launchType === "flatpak" && <div className="flatpak-input-row"><button type="button" className="secondary-button" onClick={loadFlatpaks} disabled={flatpakBusy}>{flatpakBusy ? <><MochiIcon name="refresh" fallback={RefreshCw} size={15} className="spin" /> Loading...</> : <><MochiIcon name="installed" fallback={Grid2X2} size={15} /> Choose installed Flatpak</>}</button><input value={launchTarget} onChange={(event) => setLaunchTarget(event.target.value)} placeholder="org.company.game" autoComplete="off" required /></div>}
               {launchType === "custom" && <input value={launchTarget} onChange={(event) => setLaunchTarget(event.target.value)} placeholder="Custom path, Flatpak ID, or supported launch target" autoComplete="off" required />}
             </div>
-            <button className="play-button form-submit" type="submit" disabled={igdbBusy}>{igdbBusy ? <><MochiIcon name="refresh" fallback={RefreshCw} size={16} className="spin" /> Searching IGDB...</> : settings.clientId.trim() && (settings.token.trim() || settings.apiKey?.trim()) ? <>Next <MochiIcon name="chevron" fallback={ChevronDown} size={16} /></> : <><MochiIcon name="plus" fallback={Plus} size={16} /> Add game</>}</button>
+            <button className="play-button form-submit" type="submit" disabled={igdbBusy}>{igdbBusy ? <><MochiIcon name="refresh" fallback={RefreshCw} size={16} className="spin" /> Searching IGDB...</> : hasIgdb ? <>Next <MochiIcon name="chevron" fallback={ChevronDown} size={16} /></> : <><MochiIcon name="plus" fallback={Plus} size={16} /> Add game</>}</button>
           </> : <>
             <p className="modal-description">{pendingGame?.candidates.length ? "Mochi found these matches. Approve the best match to use its artwork, description and categories." : "Mochi could not find a confident match. You can add the game without IGDB metadata."}</p>
             <div className="igdb-candidates">{pendingGame?.candidates.map((game) => {
