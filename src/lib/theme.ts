@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 
@@ -230,4 +231,62 @@ export async function importThemeFolder(): Promise<ThemeDescriptor | null> {
   });
   if (typeof selected !== "string") return null;
   return invoke<ThemeDescriptor>("import_theme", { sourcePath: selected });
+}
+
+
+export function useThemeEngine() {
+  const [themes, setThemes] = useState<ThemeDescriptor[]>(getBuiltinThemes);
+  const [theme, setThemeState] = useState("mochi");
+  const [configInfo, setConfigInfo] = useState<{ configPath: string; themesPath: string; selectedTheme: string } | null>(null);
+
+  const reloadThemes = async () => {
+    const nextThemes = await listThemes();
+    setThemes(nextThemes);
+    return nextThemes;
+  };
+
+  const selectTheme = async (themeId: string) => {
+    setThemeState(themeId);
+    await setTheme(themeId);
+    const descriptor = (await listThemes()).find((candidate) => candidate.id === themeId);
+    if (descriptor) {
+      const loaded = await loadTheme(descriptor);
+      applyTheme(loaded);
+    }
+    setThemes(await listThemes());
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const info = await getThemeConfig();
+        if (cancelled) return;
+        setConfigInfo(info);
+        const stored = window.localStorage.getItem("mochi:theme");
+        const selected = info.selectedTheme || stored || "mochi";
+        setThemeState(selected);
+        const available = await listThemes();
+        if (cancelled) return;
+        setThemes(available);
+        const descriptor = available.find((candidate) => candidate.id === selected) ?? available[0];
+        if (descriptor) {
+          setThemeState(descriptor.id);
+          applyTheme(await loadTheme(descriptor));
+        }
+      } catch {
+        const stored = window.localStorage.getItem("mochi:theme") || "mochi";
+        const available = getBuiltinThemes();
+        const descriptor = available.find((candidate) => candidate.id === stored) ?? available[0];
+        setThemes(available);
+        setThemeState(descriptor.id);
+        applyTheme(await loadTheme(descriptor));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { themes, theme, setTheme: selectTheme, reloadThemes, configInfo };
 }
