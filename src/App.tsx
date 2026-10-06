@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
 import type { User } from "@supabase/supabase-js";
 import {
   Bell,
@@ -33,6 +31,16 @@ import { pullLibrary, pushLibrary } from "./lib/cloud";
 import type { Piko, Tofu } from "./models";
 import type { ThemeId } from "./models";
 import { lookupIgdbGame, lookupIgdbGames, type IgdbGame, type IgdbSettings } from "./lib/igdb";
+import {
+  chooseGameTarget,
+  getPlatformCapabilities,
+  launchGame,
+  listInstalledFlatpaks,
+  normalizeLaunchTarget,
+  type FlatpakApp,
+  type LaunchMethodId,
+  type PlatformCapabilities,
+} from "./lib/platform";
 import { enrollTotp, getVerifiedTotpFactor, registerPasskey, sendMagicLink, signInWithPasskey, signInWithProvider, verifyMfaCode } from "./lib/auth";
 
 const navItems = [
@@ -72,9 +80,11 @@ function App() {
   const [showCustomGame, setShowCustomGame] = useState(false);
   const [addGameStep, setAddGameStep] = useState<"form" | "igdb">("form");
   const [pendingGame, setPendingGame] = useState<{ name: string; executablePath: string; candidates: IgdbGame[] } | null>(null);
-  const [launchType, setLaunchType] = useState<"file" | "flatpak" | "custom">("file");
+  const [launchType, setLaunchType] = useState<LaunchMethodId>("file");
+  const [launchTarget, setLaunchTarget] = useState("");
+  const [platformCapabilities, setPlatformCapabilities] = useState<PlatformCapabilities | null>(null);
   const [flatpakPickerOpen, setFlatpakPickerOpen] = useState(false);
-  const [flatpaks, setFlatpaks] = useState<Array<{ id: string; name: string; category: "Games" | "Other" }>>([]);
+  const [flatpaks, setFlatpaks] = useState<FlatpakApp[]>([]);
   const [flatpakBusy, setFlatpakBusy] = useState(false);
   const [theme, setTheme] = useState<ThemeId>(() => {
     try { return (JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}").theme as ThemeId) || "mochi"; } catch { return "mochi"; }
@@ -195,7 +205,7 @@ function App() {
     }
     setLaunchError("");
     setIsLaunching(true);
-    try { await invoke("launch_game", { launchTarget: selectedPiko.executablePath }); }
+    try { await launchGame(selectedPiko.executablePath); }
     catch (error) { setLaunchError(error instanceof Error ? error.message : String(error)); }
     finally { setIsLaunching(false); }
   };
@@ -227,7 +237,7 @@ function App() {
   const loadFlatpaks = async () => {
     setFlatpakBusy(true);
     try {
-      const installed = await invoke<Array<{ id: string; name: string; category: "Games" | "Other" }>>("list_flatpaks");
+      const installed = await listInstalledFlatpaks();
       setFlatpaks(installed);
       setFlatpakPickerOpen(true);
     } catch (error) {
@@ -239,22 +249,18 @@ function App() {
 
   const chooseGameFile = async () => {
     try {
-      const selected = await open({
-        multiple: false,
-        directory: false,
-        title: "Choose game executable or launcher",
-      });
-      if (typeof selected === "string") {
-        const input = document.querySelector<HTMLInputElement>('input[name="executablePath"]');
-        if (input) {
-          input.value = selected;
-          input.dispatchEvent(new Event("input", { bubbles: true }));
-        }
-      }
+      const selected = await chooseGameTarget();
+      if (selected) setLaunchTarget(selected);
     } catch (error) {
       setLaunchError(error instanceof Error ? error.message : String(error));
     }
   };
+
+  useEffect(() => {
+    void getPlatformCapabilities().then(setPlatformCapabilities).catch((error) => {
+      console.warn("Mochi platform capabilities unavailable", error);
+    });
+  }, []);
 
   const addGameToLibrary = (name: string, executablePath: string, metadata: IgdbGame | null) => {
     const artworkUrl = metadata?.cover?.url?.replace("t_thumb", "t_1080p") || metadata?.artworks?.[0]?.url?.replace("t_thumb", "t_1080p");
@@ -279,7 +285,7 @@ function App() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const name = String(form.get("name") || "").trim();
-    const executablePath = String(form.get("executablePath") || "").trim();
+    const executablePath = normalizeLaunchTarget(launchTarget, launchType);
     if (!name || !executablePath) return;
 
     const hasIgdb = Boolean(settings.clientId.trim() && (settings.token.trim() || settings.apiKey?.trim()));
@@ -610,24 +616,24 @@ function App() {
         </div>
       </main>
 
-      {showAddPiko && <div className="modal-backdrop" onClick={() => setShowAddPiko(false)}><div className="modal" onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><p className="eyebrow">Expand your library</p><h2>Add a Piko</h2></div><button className="icon-button" onClick={() => setShowAddPiko(false)}><X size={17} /></button></div><p className="modal-description">Connect an installed game or add a custom game to start managing its Tofus in Mochi.</p><div className="add-options"><button disabled><Gamepad2 size={18} /><span><strong>Detect installed games</strong><small>Native scanning is coming soon</small></span><ChevronDown size={15} /></button><button onClick={() => setShowCustomGame(true)}><Plus size={18} /><span><strong>Add a custom game</strong><small>Save a name and executable path locally</small></span><ChevronDown size={15} /></button></div></div></div>}
+      {showAddPiko && <div className="modal-backdrop" onClick={() => setShowAddPiko(false)}><div className="modal" onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><p className="eyebrow">Expand your library</p><h2>Add a Piko</h2></div><button className="icon-button" onClick={() => setShowAddPiko(false)}><X size={17} /></button></div><p className="modal-description">Connect an installed game or add a custom game to start managing its Tofus in Mochi.</p><div className="add-options"><button disabled><Gamepad2 size={18} /><span><strong>Detect installed games</strong><small>Native scanning is coming soon</small></span><ChevronDown size={15} /></button><button onClick={() => { setShowCustomGame(true); setAddGameStep("form"); setPendingGame(null); setLaunchType("file"); setLaunchTarget(""); }}><Plus size={18} /><span><strong>Add a custom game</strong><small>Save a name and executable path locally</small></span><ChevronDown size={15} /></button></div></div></div>}
             {showCustomGame && <div className="modal-backdrop" onClick={() => setShowCustomGame(false)}>
         <form className="modal igdb-selection-modal" onSubmit={addCustomGame} onClick={(event) => event.stopPropagation()}>
-          <div className="modal-header"><div><p className="eyebrow">{addGameStep === "igdb" ? "Confirm game identity" : "Local library"}</p><h2>{addGameStep === "igdb" ? "Is this the right game?" : "Add custom game"}</h2></div><button className="icon-button" type="button" onClick={() => { setShowCustomGame(false); setAddGameStep("form"); setPendingGame(null); }}><X size={17} /></button></div>
+          <div className="modal-header"><div><p className="eyebrow">{addGameStep === "igdb" ? "Confirm game identity" : "Local library"}</p><h2>{addGameStep === "igdb" ? "Is this the right game?" : "Add custom game"}</h2></div><button className="icon-button" type="button" onClick={() => { setShowCustomGame(false); setAddGameStep("form"); setPendingGame(null); setLaunchTarget(""); }}><X size={17} /></button></div>
           {addGameStep === "form" ? <>
             <p className="modal-description">Choose how Mochi should launch this game. File selection uses the native Tauri file dialog, which is preferable to trying to use xdg-open as a file picker on Linux/Wayland.</p>
             <div className="form-fields">
               <label>Game name<input name="name" autoFocus placeholder="e.g. Hollow Knight" required /></label>
               <label>Launch method
-                <select value={launchType} onChange={(event) => setLaunchType(event.target.value as "file" | "flatpak" | "custom")}>
-                  <option value="file">Choose file</option>
-                  <option value="flatpak">Flatpak</option>
-                  <option value="custom">Custom</option>
+                <select value={launchType} onChange={(event) => setLaunchType(event.target.value as LaunchMethodId)}>
+                  {(platformCapabilities?.launchMethods ?? ["file", "flatpak", "custom"]).map((method) => (
+                    <option value={method} key={method}>{method === "file" ? "Choose file" : method === "flatpak" ? "Flatpak" : "Custom"}</option>
+                  ))}
                 </select>
               </label>
-              {launchType === "file" && <div className="launch-target-picker"><button type="button" className="secondary-button file-picker-button" onClick={chooseGameFile}>Choose executable / launcher file</button><input name="executablePath" className="visually-hidden-input" tabIndex={-1} aria-hidden="true" required /></div>}
-              {launchType === "flatpak" && <div className="flatpak-input-row"><button type="button" className="secondary-button" onClick={loadFlatpaks} disabled={flatpakBusy}>{flatpakBusy ? <><RefreshCw size={15} className="spin" /> Loading...</> : <><Grid2X2 size={15} /> Choose installed Flatpak</>}</button><input name="executablePath" placeholder="org.company.game" autoComplete="off" required /></div>}
-              {launchType === "custom" && <input name="executablePath" placeholder="Custom path, Flatpak ID, or supported launch target" autoComplete="off" required />}
+              {launchType === "file" && <div className="launch-target-picker"><button type="button" className="secondary-button file-picker-button" onClick={chooseGameFile}>Choose executable / launcher file</button></div>}
+              {launchType === "flatpak" && <div className="flatpak-input-row"><button type="button" className="secondary-button" onClick={loadFlatpaks} disabled={flatpakBusy}>{flatpakBusy ? <><RefreshCw size={15} className="spin" /> Loading...</> : <><Grid2X2 size={15} /> Choose installed Flatpak</>}</button><input value={launchTarget} onChange={(event) => setLaunchTarget(event.target.value)} placeholder="org.company.game" autoComplete="off" required /></div>}
+              {launchType === "custom" && <input value={launchTarget} onChange={(event) => setLaunchTarget(event.target.value)} placeholder="Custom path, Flatpak ID, or supported launch target" autoComplete="off" required />}
             </div>
             <button className="play-button form-submit" type="submit" disabled={igdbBusy}>{igdbBusy ? <><RefreshCw size={16} className="spin" /> Searching IGDB...</> : settings.clientId.trim() && (settings.token.trim() || settings.apiKey?.trim()) ? <>Next <ChevronDown size={16} /></> : <><Plus size={16} /> Add game</>}</button>
           </> : <>
@@ -647,8 +653,7 @@ function App() {
           {(["Games", "Other"] as const).map((category) => {
             const items = flatpaks.filter((flatpak) => flatpak.category === category);
             return items.length ? <section className="flatpak-group" key={category}><div className="flatpak-group-heading"><strong>{category}</strong><span>{items.length}</span></div><div className="flatpak-list">{items.map((flatpak) => <button type="button" className="flatpak-item" key={flatpak.id} onClick={() => {
-              const input = document.querySelector<HTMLInputElement>('input[name="executablePath"]');
-              if (input) { input.value = `flatpak://${flatpak.id}`; input.dispatchEvent(new Event("input", { bubbles: true })); }
+              setLaunchTarget(`flatpak://${flatpak.id}`);
               setFlatpakPickerOpen(false);
             }}><span><strong>{flatpak.name}</strong><small>{flatpak.id}</small></span><ChevronDown size={15} /></button>)}</div></section> : null;
           })}
