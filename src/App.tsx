@@ -33,39 +33,6 @@ import type { ThemeId } from "./models";
 import { lookupIgdbGame, type IgdbSettings } from "./lib/igdb";
 import { enrollTotp, getVerifiedTotpFactor, registerPasskey, sendMagicLink, signInWithPasskey, signInWithProvider, verifyMfaCode } from "./lib/auth";
 
-const defaultPikos: Piko[] = [
-  {
-    id: "minecraft",
-    name: "Minecraft",
-    description: "Build, explore, and make your own adventure.",
-    accent: "#80b7a4",
-    artwork:
-      "linear-gradient(145deg, rgba(27, 75, 73, .2), rgba(11, 22, 25, .94)), url('https://images.unsplash.com/photo-1627856013091-fed6e4e30025?auto=format&fit=crop&w=1200&q=85')",
-    tofus: [
-      { id: "performance", name: "Performance", version: "1.21.1", runtime: "Fabric", mods: 18, status: "Ready" },
-      { id: "vanilla", name: "Vanilla", version: "1.21.1", runtime: "Vanilla", mods: 0, status: "Ready" },
-    ],
-  },
-  {
-    id: "hytale",
-    name: "Hytale",
-    description: "A block game adventure waiting to begin.",
-    accent: "#e0a96d",
-    artwork:
-      "linear-gradient(145deg, rgba(114, 69, 39, .1), rgba(31, 18, 16, .94)), url('https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=85')",
-    tofus: [{ id: "main", name: "Main", version: "Early access", runtime: "Native", mods: 0, status: "Ready" }],
-  },
-  {
-    id: "stardew",
-    name: "Stardew Valley",
-    description: "A quiet life, a new farm, and a lot to discover.",
-    accent: "#d48b9b",
-    artwork:
-      "linear-gradient(145deg, rgba(108, 50, 69, .18), rgba(32, 15, 24, .94)), url('https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1200&q=85')",
-    tofus: [{ id: "modded", name: "Modded", version: "1.6.8", runtime: "SMAPI", mods: 42, status: "Ready" }],
-  },
-];
-
 const navItems = [
   { label: "Library", icon: Library },
   { label: "Installed", icon: Grid2X2 },
@@ -185,9 +152,15 @@ function App() {
       });
   }, [library, user]);
 
-  const selectedPiko = library.find((piko) => piko.id === selectedPikoId) ?? library[0];
-  const selectedTofu =
-    selectedPiko.tofus.find((tofu) => tofu.id === selectedTofuId) ?? selectedPiko.tofus[0];
+  const selectedPiko = library.find((piko) => piko.id === selectedPikoId) ?? library[0] ?? {
+    id: "__empty",
+    name: "No Pikos yet",
+    description: "Add a game to start building your library.",
+    accent: "#a99ad6",
+    artwork: "linear-gradient(145deg, rgba(73,57,103,.35), rgba(20,16,29,.96))",
+    tofus: [{ id: "default", name: "Default", version: "Local", runtime: "Native", mods: 0, status: "Ready" as const }],
+  };
+  const selectedTofu = selectedPiko.tofus.find((tofu) => tofu.id === selectedTofuId) ?? selectedPiko.tofus[0];
   const visiblePikos = useMemo(
     () => library.filter((piko) => piko.name.toLowerCase().includes(search.toLowerCase())),
     [library, search],
@@ -464,7 +437,9 @@ function App() {
             <button className="secondary-button" onClick={() => setShowAddPiko(true)}><Plus size={16} /> Add Piko</button>
           </section>
 
-          {activeNav === "Library" ? (
+          {activeNav === "Library" && library.length === 0 ? (
+            <div className="empty-state"><div className="empty-icon"><Gamepad2 size={23} /></div><h2>Your Mochi library is empty.</h2><p>Mochi starts clean. Add a game when you are ready.</p><button className="secondary-button" onClick={() => setShowAddPiko(true)}><Plus size={16} /> Add Piko</button></div>
+          ) : activeNav === "Library" ? (
             <>
               <section className="hero-card" style={{ backgroundImage: selectedPiko.artwork }}>
                 <div className="hero-copy">
