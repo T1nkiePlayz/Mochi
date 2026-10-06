@@ -21,6 +21,9 @@ import {
   X,
   Palette,
   RefreshCw,
+  ShieldCheck,
+  KeyRound,
+  Github,
 } from "lucide-react";
 import { MochiLogo } from "./components/MochiLogo";
 import { isCloudConfigured, supabase } from "./lib/supabase";
@@ -28,8 +31,9 @@ import { pullLibrary, pushLibrary } from "./lib/cloud";
 import type { Piko, Tofu } from "./models";
 import type { ThemeId } from "./models";
 import { lookupIgdbGame, type IgdbSettings } from "./lib/igdb";
+import { enrollTotp, getVerifiedTotpFactor, registerPasskey, sendMagicLink, signInWithPasskey, signInWithProvider, verifyMfaCode } from "./lib/auth";
 
-const pikos: Piko[] = [
+const defaultPikos: Piko[] = [
   {
     id: "minecraft",
     name: "Minecraft",
@@ -82,9 +86,9 @@ function App() {
   const [library, setLibrary] = useState<Piko[]>(() => {
     try {
       const stored = window.localStorage.getItem(storedPikosKey);
-      return stored ? (JSON.parse(stored) as Piko[]) : pikos;
+      return stored ? (JSON.parse(stored) as Piko[]) : [];
     } catch {
-      return pikos;
+      return [];
     }
   });
   const [activeNav, setActiveNav] = useState("Library");
@@ -112,6 +116,11 @@ function App() {
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [authError, setAuthError] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaFactorId, setMfaFactorId] = useState("");
+  const [mfaMessage, setMfaMessage] = useState("");
+  const [authNotice, setAuthNotice] = useState("");
   const [syncState, setSyncState] = useState<"offline" | "syncing" | "synced" | "error">(
     isCloudConfigured ? "offline" : "offline",
   );
@@ -254,6 +263,81 @@ function App() {
     } finally { setIgdbBusy(false); }
   };
 
+  const startMfaChallenge = async () => {
+    if (!supabase) return;
+    try {
+      const factor = await getVerifiedTotpFactor(supabase);
+      if (!factor) return;
+      setMfaFactorId(factor.id);
+      setMfaRequired(true);
+      setMfaMessage("Enter the 6-digit code from your authenticator app.");
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Unable to start MFA.");
+    }
+  };
+
+  const completeMfa = async () => {
+    if (!supabase || !mfaFactorId || !mfaCode) return;
+    setAuthBusy(true);
+    try {
+      await verifyMfaCode(supabase, mfaFactorId, mfaCode);
+      setMfaRequired(false);
+      setMfaCode("");
+      setMfaMessage("");
+      setShowAuth(false);
+    } catch (error) {
+      setMfaMessage(error instanceof Error ? error.message : "Invalid authentication code.");
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const handlePasskey = async () => {
+    if (!supabase) return;
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      await signInWithPasskey(supabase);
+      setShowAuth(false);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Passkey sign-in failed.");
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const addPasskey = async () => {
+    if (!supabase || !user) return;
+    setAuthBusy(true);
+    try {
+      const { error } = await registerPasskey(supabase);
+      if (error) throw error;
+      setAuthNotice("Passkey added successfully.");
+    } catch (error) {
+      setAuthNotice(error instanceof Error ? error.message : "Passkey registration failed.");
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const addAuthenticator = async () => {
+    if (!supabase || !user) return;
+    setAuthBusy(true);
+    try {
+      const { data, error } = await enrollTotp(supabase);
+      if (error) throw error;
+      if (data?.totp?.qr_code) {
+        setAuthNotice("Scan the QR code returned by Supabase, then verify the code in the next step.");
+        setMfaFactorId(data.id);
+        setMfaMessage(data.totp.secret ? `Secret: ${data.totp.secret}` : "Authenticator factor created.");
+      }
+    } catch (error) {
+      setAuthNotice(error instanceof Error ? error.message : "Unable to enroll an authenticator.");
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
   const resetLocalData = () => {
     window.localStorage.removeItem(storedPikosKey);
     window.localStorage.removeItem(storedSettingsKey);
@@ -274,8 +358,18 @@ function App() {
         : await supabase.auth.signUp({ email, password });
     if (result.error) {
       setAuthError(result.error.message);
-    } else {
+    } else if (authMode === "sign-up") {
+      setAuthNotice("Account created. Check your email if confirmation is enabled.");
       setShowAuth(false);
+    } else {
+      const factor = await getVerifiedTotpFactor(supabase);
+      if (factor) {
+        setMfaFactorId(factor.id);
+        setMfaRequired(true);
+        setMfaMessage("MFA is enabled on this account. Enter your authenticator code.");
+      } else {
+        setShowAuth(false);
+      }
     }
     setAuthBusy(false);
   };
@@ -432,6 +526,10 @@ function App() {
                 <label className="setting-row"><span><strong>Keep launcher open</strong><small>Minimize to the system tray when a game starts.</small></span><input className="toggle" checked={behavior.keepOpen} onChange={(event) => setBehavior({ ...behavior, keepOpen: event.target.checked })} type="checkbox" /></label>
               </div>
               <div className="settings-group">
+                <div className="settings-group-heading"><strong>Security</strong><span>Protect your Mochi account</span></div>
+                {user && <div className="security-actions"><button className="secondary-button" onClick={addPasskey} disabled={authBusy}><KeyRound size={15}/> Add passkey</button><button className="secondary-button" onClick={addAuthenticator} disabled={authBusy}><ShieldCheck size={15}/> Enable authenticator</button>{authNotice && <small className="metadata-note">{authNotice}</small>}{mfaMessage && <small className="metadata-note">{mfaMessage}</small>}</div>}
+              </div>
+              <div className="settings-group">
                 <div className="settings-group-heading"><strong>Data & privacy</strong><span>Local-first storage</span></div>
                 <div className="setting-row"><span><strong>Library location</strong><small>Your game metadata is saved in this browser profile.</small></span><code>~/.config/mochi</code></div>
                 <button className="setting-row setting-button" onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}><span><strong>Advanced settings</strong><small>Diagnostics and developer options.</small></span><ChevronDown className={showAdvancedSettings ? "rotate" : ""} size={16} /></button>
@@ -449,7 +547,7 @@ function App() {
       {showAddPiko && <div className="modal-backdrop" onClick={() => setShowAddPiko(false)}><div className="modal" onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><p className="eyebrow">Expand your library</p><h2>Add a Piko</h2></div><button className="icon-button" onClick={() => setShowAddPiko(false)}><X size={17} /></button></div><p className="modal-description">Connect an installed game or add a custom game to start managing its Tofus in Mochi.</p><div className="add-options"><button disabled><Gamepad2 size={18} /><span><strong>Detect installed games</strong><small>Native scanning is coming soon</small></span><ChevronDown size={15} /></button><button onClick={() => setShowCustomGame(true)}><Plus size={18} /><span><strong>Add a custom game</strong><small>Save a name and executable path locally</small></span><ChevronDown size={15} /></button></div></div></div>}
       {showCustomGame && <div className="modal-backdrop" onClick={() => setShowCustomGame(false)}><form className="modal" onSubmit={addCustomGame} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><p className="eyebrow">Local library</p><h2>Add custom game</h2></div><button className="icon-button" type="button" onClick={() => setShowCustomGame(false)}><X size={17} /></button></div><p className="modal-description">Mochi stores this entry only in local app storage. The executable path is ready for the native launcher integration.</p><div className="form-fields"><label>Game name<input name="name" autoFocus placeholder="e.g. Hollow Knight" required /></label><label>Executable path<input name="executablePath" placeholder="/Applications/Game/Game.exe" required /></label></div><button className="play-button form-submit" type="submit"><Plus size={16} /> Add game</button></form></div>}
       {showNewTofu && <div className="modal-backdrop" onClick={() => setShowNewTofu(false)}><form className="modal" onSubmit={addTofu} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><p className="eyebrow">New environment for {selectedPiko.name}</p><h2>Create a Tofu</h2></div><button className="icon-button" type="button" onClick={() => setShowNewTofu(false)}><X size={17} /></button></div><p className="modal-description">Give this environment its own version and runtime. You can configure mods after it is created.</p><div className="form-fields"><label>Name<input name="name" autoFocus placeholder="e.g. Creative" required /></label><label>Game version<input name="version" placeholder="e.g. 1.21.1" required /></label><label>Runtime<select name="runtime" defaultValue="Native"><option>Native</option><option>Vanilla</option><option>Fabric</option><option>SMAPI</option><option>Wine / Proton</option></select></label></div><button className="play-button form-submit" type="submit"><Plus size={16} /> Create Tofu</button></form></div>}
-      {showAuth && <div className="modal-backdrop" onClick={() => setShowAuth(false)}><form className="modal auth-modal" onSubmit={authenticate} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div className="auth-brand"><MochiLogo size={30} /><div><p className="eyebrow">Mochi Cloud</p><h2>{authMode === "sign-in" ? "Welcome back." : "Create your account."}</h2></div></div><button className="icon-button" type="button" onClick={() => setShowAuth(false)}><X size={17} /></button></div><p className="modal-description">{authMode === "sign-in" ? "Sign in to sync your library metadata across devices." : "Your games stay local. Your Mochi metadata can follow you."}</p><div className="form-fields"><label>Email<input name="email" type="email" placeholder="you@example.com" required /></label><label>Password<input name="password" type="password" minLength={6} placeholder="At least 6 characters" required /></label></div>{authError && <p className="auth-error">{authError}</p>}<button className="play-button form-submit" disabled={authBusy} type="submit">{authBusy ? "Connecting..." : authMode === "sign-in" ? "Sign in" : "Create account"}</button><button className="switch-auth" type="button" onClick={() => { setAuthMode(authMode === "sign-in" ? "sign-up" : "sign-in"); setAuthError(""); }}>{authMode === "sign-in" ? "New to Mochi? Create an account" : "Already have an account? Sign in"}</button></form></div>}
+      {showAuth && <div className="modal-backdrop" onClick={() => setShowAuth(false)}><form className="modal auth-modal" onSubmit={authenticate} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div className="auth-brand"><MochiLogo size={30} /><div><p className="eyebrow">Mochi Cloud</p><h2>{authMode === "sign-in" ? "Welcome back." : "Create your account."}</h2></div></div><button className="icon-button" type="button" onClick={() => setShowAuth(false)}><X size={17} /></button></div><p className="modal-description">{authMode === "sign-in" ? "Sign in to sync your library metadata across devices." : "Your games stay local. Your Mochi metadata can follow you."}</p><div className="form-fields"><label>Email<input name="email" type="email" placeholder="you@example.com" required /></label><label>Password<input name="password" type="password" minLength={6} placeholder="At least 6 characters" required /></label></div>{authError && <p className="auth-error">{authError}</p>} {mfaRequired ? <><p className="modal-description">{mfaMessage}</p><input className="mfa-input" inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="123456" maxLength={6} /><button className="play-button form-submit" type="button" disabled={authBusy || mfaCode.length !== 6} onClick={completeMfa}>{authBusy ? "Verifying..." : "Verify code"}</button></> : <><button className="play-button form-submit" disabled={authBusy} type="submit">{authBusy ? "Connecting..." : authMode === "sign-in" ? "Sign in" : "Create account"}</button><div className="auth-provider-row"><button type="button" className="secondary-button" onClick={() => signInWithProvider(supabase!, "github")}><Github size={15}/> GitHub</button><button type="button" className="secondary-button" onClick={handlePasskey}><KeyRound size={15}/> Passkey</button></div><button type="button" className="switch-auth" onClick={() => sendMagicLink(supabase!, String((document.querySelector('input[name="email"]') as HTMLInputElement)?.value || ""))}>Email me a magic link</button><button className="switch-auth" type="button" onClick={() => { setAuthMode(authMode === "sign-in" ? "sign-up" : "sign-in"); setAuthError(""); }}>{authMode === "sign-in" ? "New to Mochi? Create an account" : "Already have an account? Sign in"}</button></>}</form></div>}
     </div>
   );
 }
