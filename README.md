@@ -111,6 +111,10 @@ Mochi provides one interface for several launch styles while leaving the actual 
 
 Adding a file-based game uses the Tauri native file dialog. This gives the desktop application a proper native selection flow instead of depending on browser-style file handling.
 
+### Steam library and shortcut import
+
+On Linux, Mochi imports installed Steam games from Steam library manifests and also discovers **non-Steam games added to Steam as shortcuts**. Non-Steam shortcuts remain Steam-owned launch targets, so Mochi starts them through Steam instead of bypassing Steam's launch context.
+
 ### Flatpak discovery
 
 On Linux, Mochi can discover installed Flatpak applications and display them in a selection interface. Applications are currently grouped into:
@@ -422,7 +426,7 @@ The roadmap is intentionally evolutionary rather than a promise of fixed release
 - [x] Account authentication foundation
 - [x] Cloud metadata synchronization foundation
 - [x] Native installed-game source discovery and import
-- [x] Flatpak, Steam, Heroic, Lutris, Bottles and itch.io Linux integrations
+- [x] Flatpak, Steam (including non-Steam shortcuts), Heroic, Lutris, Bottles and itch.io Linux integrations
 - [ ] Full Tofu management
 - [ ] Game process management
 - [ ] Runtime management
