@@ -260,6 +260,10 @@ Rust handles operations that require native operating-system access, including:
 
 Platform-specific implementations live under src-tauri/src/platform/.
 
+### Game source adapters
+
+Game-source discovery is intentionally separate from operating-system support. Linux source integrations live under src-tauri/src/sources/ and currently cover Flatpak, Steam, Heroic Games Launcher, Lutris, Bottles, and itch.io. Mochi reads existing local launcher state without modifying or uninstalling the source installation, then stores a launch target that hands execution back to the source launcher where appropriate. This keeps Wine/Proton prefixes, Steam runtime behavior, launcher authentication, and source-specific configuration owned by the original platform.
+
 The current structure separates Linux, macOS, and unsupported-platform behavior. This makes future platform work easier to reason about and avoids scattering operating-system checks across unrelated components.
 
 ## Platform support
@@ -393,7 +397,7 @@ Mochi is not yet a finished replacement for dedicated game stores or specialised
 
 Current limitations include:
 
-- Native installed-game detection is still being developed.
+- Source-specific game discovery is currently Linux-first; macOS source ingestion remains future work.
 - Tofu management is early-stage.
 - Game process lifecycle management is not complete.
 - Runtime management is not yet a complete system.
@@ -417,7 +421,8 @@ The roadmap is intentionally evolutionary rather than a promise of fixed release
 - [x] Optional IGDB metadata lookup
 - [x] Account authentication foundation
 - [x] Cloud metadata synchronization foundation
-- [ ] Native installed-game detection
+- [x] Native installed-game source discovery and import
+- [x] Flatpak, Steam, Heroic, Lutris, Bottles and itch.io Linux integrations
 - [ ] Full Tofu management
 - [ ] Game process management
 - [ ] Runtime management
