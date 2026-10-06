@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import type { User } from "@supabase/supabase-js";
 import {
   Bell,
@@ -59,8 +60,8 @@ function App() {
     }
   });
   const [activeNav, setActiveNav] = useState("Library");
-  const [selectedPikoId, setSelectedPikoId] = useState("minecraft");
-  const [selectedTofuId, setSelectedTofuId] = useState("performance");
+  const [selectedPikoId, setSelectedPikoId] = useState("");
+  const [selectedTofuId, setSelectedTofuId] = useState("");
   const [search, setSearch] = useState("");
   const [showAddPiko, setShowAddPiko] = useState(false);
   const [showNewTofu, setShowNewTofu] = useState(false);
@@ -79,6 +80,7 @@ function App() {
   });
   const [igdbMessage, setIgdbMessage] = useState("");
   const [igdbBusy, setIgdbBusy] = useState(false);
+  const [launchError, setLaunchError] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [authError, setAuthError] = useState("");
@@ -165,15 +167,30 @@ function App() {
     () => library.filter((piko) => piko.name.toLowerCase().includes(search.toLowerCase())),
     [library, search],
   );
+  const groupedPikos = useMemo(() => {
+    const groups = new Map<string, Piko[]>();
+    visiblePikos.forEach((piko) => {
+      const category = piko.categories?.[0] || "Other";
+      groups.set(category, [...(groups.get(category) ?? []), piko]);
+    });
+    return [...groups.entries()].sort(([x], [y]) => x.localeCompare(y));
+  }, [visiblePikos]);
 
   const selectPiko = (piko: Piko) => {
     setSelectedPikoId(piko.id);
     setSelectedTofuId(piko.tofus[0].id);
   };
 
-  const launchGame = () => {
+  const launchGame = async () => {
+    if (selectedPiko.id === "__empty" || !selectedPiko.executablePath) {
+      setLaunchError("This game does not have an executable path. Add or edit the game to set its executable.");
+      return;
+    }
+    setLaunchError("");
     setIsLaunching(true);
-    window.setTimeout(() => setIsLaunching(false), 1800);
+    try { await invoke("launch_game", { executablePath: selectedPiko.executablePath }); }
+    catch (error) { setLaunchError(error instanceof Error ? error.message : String(error)); }
+    finally { setIsLaunching(false); }
   };
 
   const addTofu = (event: FormEvent<HTMLFormElement>) => {
@@ -200,23 +217,27 @@ function App() {
     setShowNewTofu(false);
   };
 
-  const addCustomGame = (event: FormEvent<HTMLFormElement>) => {
+  const addCustomGame = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const name = String(form.get("name") || "").trim();
     const executablePath = String(form.get("executablePath") || "").trim();
     if (!name || !executablePath) return;
+    setIgdbBusy(true);
+    let metadata: Awaited<ReturnType<typeof lookupIgdbGame>> = null;
+    try { metadata = await lookupIgdbGame(name, settings); } catch (error) { console.warn("IGDB lookup failed", error); }
+    const artworkUrl = metadata?.cover?.url?.replace("t_thumb", "t_1080p") || metadata?.artworks?.[0]?.url?.replace("t_thumb", "t_1080p");
     const piko: Piko = {
-      id: `custom-${Date.now()}`, name, executablePath, source: "custom",
-      description: "Custom game added to your local library.",
-      accent: "#a99ad6", artwork: "linear-gradient(145deg, rgba(73,57,103,.35), rgba(20,16,29,.96))",
+      id: `custom-${Date.now()}`, name: metadata?.name || name, executablePath, source: "custom",
+      categories: metadata?.genres?.map((genre) => genre.name) ?? ["Other"],
+      description: metadata?.summary || "Custom game added to your local library.",
+      accent: "#a99ad6", artworkUrl,
+      artwork: artworkUrl ? `linear-gradient(145deg, rgba(10,15,20,.12), rgba(11,15,20,.88)), url('${artworkUrl}')` : "linear-gradient(145deg, rgba(73,57,103,.35), rgba(20,16,29,.96))",
       tofus: [{ id: "default", name: "Default", version: "Local", runtime: "Native", mods: 0, status: "Ready" }],
     };
     setLibrary((current) => [...current, piko]);
-    setSelectedPikoId(piko.id);
-    setSelectedTofuId("default");
-    setShowCustomGame(false);
-    setShowAddPiko(false);
+    setSelectedPikoId(piko.id); setSelectedTofuId("default");
+    setShowCustomGame(false); setShowAddPiko(false); setIgdbBusy(false);
   };
 
   const lookupArtwork = async () => {
@@ -441,6 +462,9 @@ function App() {
             <div className="empty-state"><div className="empty-icon"><Gamepad2 size={23} /></div><h2>Your Mochi library is empty.</h2><p>Mochi starts clean. Add a game when you are ready.</p><button className="secondary-button" onClick={() => setShowAddPiko(true)}><Plus size={16} /> Add Piko</button></div>
           ) : activeNav === "Library" ? (
             <>
+              <section className="library-grid-view">
+                {groupedPikos.map(([category, games]) => <div className="library-category" key={category}><div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div><div className="game-card-grid">{games.map((piko) => <button className={`game-card ${selectedPiko.id === piko.id ? "selected" : ""}`} key={piko.id} onClick={() => selectPiko(piko)}><div className="game-card-art" style={{ backgroundImage: piko.artwork }}><span className="game-card-play"><Play size={15} fill="currentColor"/></span></div><div className="game-card-copy"><strong>{piko.name}</strong><small>{piko.categories?.join(" · ") || "Other"}</small></div></button>)}</div></div>)}
+              </section>
               <section className="hero-card" style={{ backgroundImage: selectedPiko.artwork }}>
                 <div className="hero-copy">
                   <span className="hero-kicker"><span className="live-dot" /> Last played recently</span>
@@ -449,7 +473,7 @@ function App() {
                   <div className="hero-actions">
                     <button className="play-button" onClick={launchGame}><Play size={16} fill="currentColor" /> {isLaunching ? "Launching..." : "Play"}</button>
                     {selectedPiko.source === "custom" && <span className="metadata-note">{selectedPiko.executablePath}</span>}
-                    <button className="icon-button dark-button" aria-label="More options"><MoreHorizontal size={19} /></button>
+                    <button className="icon-button dark-button" aria-label="More options"><MoreHorizontal size={19} /></button>{launchError && <span className="metadata-note">{launchError}</span>}
                   </div>
                 </div>
                 <div className="hero-meta"><span>Last played</span><strong>Yesterday, 8:42 PM</strong></div>
@@ -485,13 +509,13 @@ function App() {
                 <div className="theme-grid">{themeOptions.map((option) => <button key={option.id} className={`theme-card ${theme === option.id ? "selected" : ""}`} onClick={() => setTheme(option.id)}><Palette size={16} /><strong>{option.label}</strong><small>{option.description}</small></button>)}</div>
               </div>
               <div className="settings-group">
-                <div className="settings-group-heading"><strong>IGDB metadata</strong><span>Stored only on this device</span></div>
+                <div className="settings-group-heading"><strong>IGDB</strong><span>Global app setting</span></div>
                 <div className="igdb-form">
                   <p>Credentials are never sent to Mochi or Supabase. They are used directly by your browser for optional artwork lookup.</p>
                   <label>Client ID<input value={settings.clientId} onChange={(event) => setSettings({ ...settings, clientId: event.target.value })} placeholder="Your IGDB client ID" /></label>
                   <label>Bearer token<input type="password" value={settings.token} onChange={(event) => setSettings({ ...settings, token: event.target.value })} placeholder="Twitch OAuth token" /></label>
                   <label>API key (alternative)<input type="password" value={settings.apiKey || ""} onChange={(event) => setSettings({ ...settings, apiKey: event.target.value })} placeholder="Optional API key" /></label>
-                  <button className="secondary-button" onClick={lookupArtwork} disabled={igdbBusy}><RefreshCw size={14} className={igdbBusy ? "spin" : ""} /> {igdbBusy ? "Looking up..." : `Lookup ${selectedPiko.name}`}</button>
+                  <p className="metadata-note">These credentials are global to Mochi. New games automatically search IGDB for artwork, description and genre.</p>
                   {igdbMessage && <small className="metadata-note">{igdbMessage}</small>}
                 </div>
               </div>
