@@ -60,13 +60,6 @@ const storedPikosKey = "mochi:pikos";
 const storedSettingsKey = "mochi:settings";
 const setupCompleteKey = "mochi:setup-complete";
 const importSourcesKey = "mochi:import-sources";
-const themeOptions: Array<{ id: ThemeId; label: string; description: string }> = [
-  { id: "mochi", label: "Mochi", description: "Quiet charcoal and mint" },
-  { id: "minecraft", label: "Minecraft", description: "Overworld greens and earth" },
-  { id: "subnautica", label: "Subnautica", description: "Deep ocean blues" },
-  { id: "dungeons", label: "Minecraft Dungeons", description: "Ember and obsidian" },
-];
-
 function App() {
   const [library, setLibrary] = useState<Piko[]>(() => {
     try {
@@ -94,9 +87,6 @@ function App() {
   const [flatpakPickerOpen, setFlatpakPickerOpen] = useState(false);
   const [flatpaks, setFlatpaks] = useState<FlatpakApp[]>([]);
   const [flatpakBusy, setFlatpakBusy] = useState(false);
-  const [theme, setTheme] = useState<ThemeId>(() => {
-    try { return (JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}").theme as ThemeId) || "mochi"; } catch { return "mochi"; }
-  });
   const [settings, setSettings] = useState<IgdbSettings>(() => {
     try { return JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}").igdb ?? { clientId: "", token: "", apiKey: "" }; } catch { return { clientId: "", token: "", apiKey: "" }; }
   });
@@ -121,13 +111,14 @@ function App() {
     isCloudConfigured ? "offline" : "offline",
   );
   const syncInitialized = useRef(false);
+  const { themes, theme, setTheme, reloadThemes, configInfo } = useThemeEngine();
 
   useEffect(() => {
     window.localStorage.setItem(storedPikosKey, JSON.stringify(library));
   }, [library]);
   useEffect(() => {
-    window.localStorage.setItem(storedSettingsKey, JSON.stringify({ theme, igdb: settings, ...behavior }));
-  }, [theme, settings, behavior]);
+    window.localStorage.setItem(storedSettingsKey, JSON.stringify({ igdb: settings, ...behavior }));
+  }, [settings, behavior]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -514,6 +505,7 @@ function App() {
     window.localStorage.removeItem(storedSettingsKey);
     window.localStorage.removeItem(setupCompleteKey);
     window.localStorage.removeItem(importSourcesKey);
+    window.localStorage.removeItem("mochi:theme");
     window.location.reload();
   };
 
@@ -558,7 +550,7 @@ function App() {
   if (!selectedPiko || !selectedTofu) return null;
 
   return (
-    <div className={`app-shell theme-${theme}`}>
+    <div className="app-shell">
       <aside className="sidebar">
         <button className="sidebar-account" onClick={user ? () => setActiveNav("Settings") : () => setShowAuth(true)}><AccountAvatar user={user} size={36} /><span><strong>{user?.user_metadata?.user_name || user?.user_metadata?.preferred_username || user?.email?.split("@")[0] || "Guest"}</strong><small>{user ? "Mochi account" : "Sign in to Mochi"}</small></span><ChevronDown size={14} /></button>
         <div className="brand">
