@@ -1,0 +1,457 @@
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import type { User } from "@supabase/supabase-js";
+import {
+  Bell,
+  ChevronDown,
+  Cloud,
+  Download,
+  Gamepad2,
+  Grid2X2,
+  Library,
+  Menu,
+  MoreHorizontal,
+  Play,
+  Plus,
+  Search,
+  Settings,
+  SlidersHorizontal,
+  Sparkles,
+  UserRound,
+  WifiOff,
+  X,
+  Palette,
+  RefreshCw,
+} from "lucide-react";
+import { MochiLogo } from "./components/MochiLogo";
+import { isCloudConfigured, supabase } from "./lib/supabase";
+import { pullLibrary, pushLibrary } from "./lib/cloud";
+import type { Piko, Tofu } from "./models";
+import type { ThemeId } from "./models";
+import { lookupIgdbGame, type IgdbSettings } from "./lib/igdb";
+
+const pikos: Piko[] = [
+  {
+    id: "minecraft",
+    name: "Minecraft",
+    description: "Build, explore, and make your own adventure.",
+    accent: "#80b7a4",
+    artwork:
+      "linear-gradient(145deg, rgba(27, 75, 73, .2), rgba(11, 22, 25, .94)), url('https://images.unsplash.com/photo-1627856013091-fed6e4e30025?auto=format&fit=crop&w=1200&q=85')",
+    tofus: [
+      { id: "performance", name: "Performance", version: "1.21.1", runtime: "Fabric", mods: 18, status: "Ready" },
+      { id: "vanilla", name: "Vanilla", version: "1.21.1", runtime: "Vanilla", mods: 0, status: "Ready" },
+    ],
+  },
+  {
+    id: "hytale",
+    name: "Hytale",
+    description: "A block game adventure waiting to begin.",
+    accent: "#e0a96d",
+    artwork:
+      "linear-gradient(145deg, rgba(114, 69, 39, .1), rgba(31, 18, 16, .94)), url('https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=85')",
+    tofus: [{ id: "main", name: "Main", version: "Early access", runtime: "Native", mods: 0, status: "Ready" }],
+  },
+  {
+    id: "stardew",
+    name: "Stardew Valley",
+    description: "A quiet life, a new farm, and a lot to discover.",
+    accent: "#d48b9b",
+    artwork:
+      "linear-gradient(145deg, rgba(108, 50, 69, .18), rgba(32, 15, 24, .94)), url('https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1200&q=85')",
+    tofus: [{ id: "modded", name: "Modded", version: "1.6.8", runtime: "SMAPI", mods: 42, status: "Ready" }],
+  },
+];
+
+const navItems = [
+  { label: "Library", icon: Library },
+  { label: "Installed", icon: Grid2X2 },
+  { label: "Discover", icon: Sparkles },
+  { label: "Downloads", icon: Download },
+];
+
+const storedPikosKey = "mochi:pikos";
+const storedSettingsKey = "mochi:settings";
+const themeOptions: Array<{ id: ThemeId; label: string; description: string }> = [
+  { id: "mochi", label: "Mochi", description: "Quiet charcoal and mint" },
+  { id: "minecraft", label: "Minecraft", description: "Overworld greens and earth" },
+  { id: "subnautica", label: "Subnautica", description: "Deep ocean blues" },
+  { id: "dungeons", label: "Minecraft Dungeons", description: "Ember and obsidian" },
+];
+
+function App() {
+  const [library, setLibrary] = useState<Piko[]>(() => {
+    try {
+      const stored = window.localStorage.getItem(storedPikosKey);
+      return stored ? (JSON.parse(stored) as Piko[]) : pikos;
+    } catch {
+      return pikos;
+    }
+  });
+  const [activeNav, setActiveNav] = useState("Library");
+  const [selectedPikoId, setSelectedPikoId] = useState("minecraft");
+  const [selectedTofuId, setSelectedTofuId] = useState("performance");
+  const [search, setSearch] = useState("");
+  const [showAddPiko, setShowAddPiko] = useState(false);
+  const [showNewTofu, setShowNewTofu] = useState(false);
+  const [isLaunching, setIsLaunching] = useState(false);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [showCustomGame, setShowCustomGame] = useState(false);
+  const [theme, setTheme] = useState<ThemeId>(() => {
+    try { return (JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}").theme as ThemeId) || "mochi"; } catch { return "mochi"; }
+  });
+  const [settings, setSettings] = useState<IgdbSettings>(() => {
+    try { return JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}").igdb ?? { clientId: "", token: "", apiKey: "" }; } catch { return { clientId: "", token: "", apiKey: "" }; }
+  });
+  const [behavior, setBehavior] = useState(() => {
+    try { const stored = JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}"); return { launchOnStartup: Boolean(stored.launchOnStartup), keepOpen: stored.keepOpen !== false }; } catch { return { launchOnStartup: false, keepOpen: true }; }
+  });
+  const [igdbMessage, setIgdbMessage] = useState("");
+  const [igdbBusy, setIgdbBusy] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
+  const [authError, setAuthError] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [syncState, setSyncState] = useState<"offline" | "syncing" | "synced" | "error">(
+    isCloudConfigured ? "offline" : "offline",
+  );
+  const syncInitialized = useRef(false);
+
+  useEffect(() => {
+    window.localStorage.setItem(storedPikosKey, JSON.stringify(library));
+  }, [library]);
+  useEffect(() => {
+    window.localStorage.setItem(storedSettingsKey, JSON.stringify({ theme, igdb: settings, ...behavior }));
+  }, [theme, settings, behavior]);
+
+  useEffect(() => {
+    if (!supabase) return;
+    void supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!supabase || !user) {
+      syncInitialized.current = false;
+      setSyncState("offline");
+      return;
+    }
+
+    let cancelled = false;
+    const client = supabase;
+    setSyncState("syncing");
+    void pullLibrary(client, user.id)
+      .then(async (cloudLibrary) => {
+        if (cancelled) return;
+        if (cloudLibrary.length) {
+          setLibrary(cloudLibrary);
+        } else {
+          await pushLibrary(client, user.id, library);
+        }
+        syncInitialized.current = true;
+        setSyncState("synced");
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        console.error("Mochi cloud sync failed", error);
+        setSyncState("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!supabase || !user || !syncInitialized.current) return;
+    const client = supabase;
+    setSyncState("syncing");
+    void pushLibrary(client, user.id, library)
+      .then(() => setSyncState("synced"))
+      .catch((error: unknown) => {
+        console.error("Mochi cloud sync failed", error);
+        setSyncState("error");
+      });
+  }, [library, user]);
+
+  const selectedPiko = library.find((piko) => piko.id === selectedPikoId) ?? library[0];
+  const selectedTofu =
+    selectedPiko.tofus.find((tofu) => tofu.id === selectedTofuId) ?? selectedPiko.tofus[0];
+  const visiblePikos = useMemo(
+    () => library.filter((piko) => piko.name.toLowerCase().includes(search.toLowerCase())),
+    [library, search],
+  );
+
+  const selectPiko = (piko: Piko) => {
+    setSelectedPikoId(piko.id);
+    setSelectedTofuId(piko.tofus[0].id);
+  };
+
+  const launchGame = () => {
+    setIsLaunching(true);
+    window.setTimeout(() => setIsLaunching(false), 1800);
+  };
+
+  const addTofu = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const name = String(form.get("name") || "").trim();
+    const version = String(form.get("version") || "").trim();
+    const runtime = String(form.get("runtime") || "").trim();
+    if (!name || !version || !runtime) return;
+
+    const tofu: Tofu = {
+      id: `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`,
+      name,
+      version,
+      runtime,
+      mods: 0,
+      status: "Ready",
+    };
+
+    setLibrary((current) =>
+      current.map((piko) => (piko.id === selectedPiko.id ? { ...piko, tofus: [...piko.tofus, tofu] } : piko)),
+    );
+    setSelectedTofuId(tofu.id);
+    setShowNewTofu(false);
+  };
+
+  const addCustomGame = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const name = String(form.get("name") || "").trim();
+    const executablePath = String(form.get("executablePath") || "").trim();
+    if (!name || !executablePath) return;
+    const piko: Piko = {
+      id: `custom-${Date.now()}`, name, executablePath, source: "custom",
+      description: "Custom game added to your local library.",
+      accent: "#a99ad6", artwork: "linear-gradient(145deg, rgba(73,57,103,.35), rgba(20,16,29,.96))",
+      tofus: [{ id: "default", name: "Default", version: "Local", runtime: "Native", mods: 0, status: "Ready" }],
+    };
+    setLibrary((current) => [...current, piko]);
+    setSelectedPikoId(piko.id);
+    setSelectedTofuId("default");
+    setShowCustomGame(false);
+    setShowAddPiko(false);
+  };
+
+  const lookupArtwork = async () => {
+    setIgdbMessage("");
+    setIgdbBusy(true);
+    try {
+      const result = await lookupIgdbGame(selectedPiko.name, settings);
+      if (!result) { setIgdbMessage("Add an IGDB client ID and token below first."); return; }
+      const artworkUrl = result.cover?.url?.replace("t_thumb", "t_1080p") || result.artworks?.[0]?.url?.replace("t_thumb", "t_1080p");
+      setLibrary((current) => current.map((piko) => piko.id === selectedPiko.id ? {
+        ...piko, description: result.summary || piko.description, artworkUrl,
+        artwork: artworkUrl ? `linear-gradient(145deg, rgba(10,15,20,.2), rgba(11,15,20,.94)), url('${artworkUrl}')` : piko.artwork,
+      } : piko));
+      setIgdbMessage(artworkUrl ? "Artwork and metadata updated locally." : "Game found, but no artwork was provided.");
+    } catch (error) {
+      setIgdbMessage(error instanceof Error ? error.message : "IGDB metadata is unavailable right now.");
+    } finally { setIgdbBusy(false); }
+  };
+
+  const resetLocalData = () => {
+    window.localStorage.removeItem(storedPikosKey);
+    window.localStorage.removeItem(storedSettingsKey);
+    window.location.reload();
+  };
+
+  const authenticate = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!supabase) return;
+    setAuthBusy(true);
+    setAuthError("");
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") || "").trim();
+    const password = String(form.get("password") || "");
+    const result =
+      authMode === "sign-in"
+        ? await supabase.auth.signInWithPassword({ email, password })
+        : await supabase.auth.signUp({ email, password });
+    if (result.error) {
+      setAuthError(result.error.message);
+    } else {
+      setShowAuth(false);
+    }
+    setAuthBusy(false);
+  };
+
+  const signOut = async () => {
+    if (supabase) await supabase.auth.signOut();
+  };
+
+  if (!selectedPiko || !selectedTofu) return null;
+
+  return (
+    <div className={`app-shell theme-${theme}`}>
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-mark"><MochiLogo size={30} /></div>
+          <div>
+            <strong>Mochi</strong>
+            <span>Your games, your way.</span>
+          </div>
+        </div>
+
+        <nav className="primary-nav" aria-label="Main navigation">
+          {navItems.map(({ label, icon: Icon }) => (
+            <button
+              className={`nav-item ${activeNav === label ? "active" : ""}`}
+              key={label}
+              onClick={() => setActiveNav(label)}
+            >
+              <Icon size={17} strokeWidth={1.8} />
+              <span>{label}</span>
+              {label === "Downloads" && <span className="nav-badge">2</span>}
+            </button>
+          ))}
+        </nav>
+
+        <div className="sidebar-section">
+          <div className="section-label">
+            <span>Your Pikos</span>
+            <button className="icon-button tiny" aria-label="Add Piko" onClick={() => setShowAddPiko(true)}>
+              <Plus size={14} />
+            </button>
+          </div>
+          <div className="piko-list">
+            {visiblePikos.map((piko) => (
+              <button
+                className={`piko-nav-item ${selectedPiko.id === piko.id ? "selected" : ""}`}
+                key={piko.id}
+                onClick={() => selectPiko(piko)}
+              >
+                <span className="piko-dot" style={{ background: piko.accent }} />
+                <span>{piko.name}</span>
+                <span className="tofu-count">{piko.tofus.length}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="sidebar-bottom">
+          <button className={`nav-item ${activeNav === "Settings" ? "active" : ""}`} onClick={() => setActiveNav("Settings")}>
+            <Settings size={17} strokeWidth={1.8} />
+            <span>Settings</span>
+          </button>
+          <button className="sync-status" onClick={() => setShowAuth(true)}>
+            <div className="status-icon"><WifiOff size={14} /></div>
+            <div><strong>{user ? (syncState === "syncing" ? "Syncing..." : syncState === "error" ? "Sync error" : "Cloud ready") : "Local mode"}</strong><span>{user ? user.email : isCloudConfigured ? "Cloud sync is off" : "Connect Supabase to sync"}</span></div>
+            <span className="icon-button tiny" aria-hidden="true"><ChevronDown size={13} /></span>
+          </button>
+        </div>
+      </aside>
+
+      <main className="main-content">
+        <header className="topbar">
+          <button className="mobile-menu icon-button" aria-label="Open menu"><Menu size={18} /></button>
+          <div className="breadcrumb"><span>Library</span><span className="breadcrumb-slash">/</span><strong>{selectedPiko.name}</strong></div>
+          <div className="topbar-actions">
+            <label className="search-box">
+              <Search size={16} />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search your library" />
+              {search && <button className="clear-search" onClick={() => setSearch("")}><X size={13} /></button>}
+              {!search && <kbd>⌘ K</kbd>}
+            </label>
+            <button className="icon-button" aria-label="Notifications"><Bell size={17} /></button>
+            <button className="avatar" aria-label={user ? "Sign out" : "Sign in"} onClick={user ? signOut : () => setShowAuth(true)}>
+              {user ? (user.email?.slice(0, 1).toUpperCase() ?? "U") : "A"}
+            </button>
+          </div>
+        </header>
+
+        <div className="content">
+          <section className="page-heading">
+            <div><p className="eyebrow">Your collection</p><h1>{activeNav === "Library" ? "Good evening, Ashton." : activeNav}</h1></div>
+            <button className="secondary-button" onClick={() => setShowAddPiko(true)}><Plus size={16} /> Add Piko</button>
+          </section>
+
+          {activeNav === "Library" ? (
+            <>
+              <section className="hero-card" style={{ backgroundImage: selectedPiko.artwork }}>
+                <div className="hero-copy">
+                  <span className="hero-kicker"><span className="live-dot" /> Last played recently</span>
+                  <h2>{selectedPiko.name}</h2>
+                  <p>{selectedPiko.description}</p>
+                  <div className="hero-actions">
+                    <button className="play-button" onClick={launchGame}><Play size={16} fill="currentColor" /> {isLaunching ? "Launching..." : "Play"}</button>
+                    {selectedPiko.source === "custom" && <span className="metadata-note">{selectedPiko.executablePath}</span>}
+                    <button className="icon-button dark-button" aria-label="More options"><MoreHorizontal size={19} /></button>
+                  </div>
+                </div>
+                <div className="hero-meta"><span>Last played</span><strong>Yesterday, 8:42 PM</strong></div>
+              </section>
+
+              <section className="tofu-section">
+                <div className="section-heading"><div><p className="eyebrow">Environments</p><h3>Your Tofus</h3></div><button className="text-button"><SlidersHorizontal size={15} /> Manage</button></div>
+                <div className="tofu-grid">
+                  {selectedPiko.tofus.map((tofu) => (
+                    <button className={`tofu-card ${selectedTofu.id === tofu.id ? "active" : ""}`} key={tofu.id} onClick={() => setSelectedTofuId(tofu.id)}>
+                      <div className="tofu-card-top"><span className="tofu-symbol">🧊</span><span className={`ready-status ${tofu.status === "Ready" ? "" : "attention"}`}><span />{tofu.status}</span></div>
+                      <strong>{tofu.name}</strong>
+                      <span className="tofu-details">{tofu.version} <i /> {tofu.runtime}</span>
+                      <span className="tofu-mods">{tofu.mods ? `${tofu.mods} mods installed` : "No mods installed"}</span>
+                    </button>
+                  ))}
+                  <button className="new-tofu-card" onClick={() => setShowNewTofu(true)}><Plus size={17} /><span>New Tofu</span><small>Set up another environment</small></button>
+                </div>
+              </section>
+
+              <section className="details-strip">
+                <div><span className="detail-label">Selected Tofu</span><strong>🧊 {selectedTofu.name}</strong></div>
+                <div><span className="detail-label">Runtime</span><strong>{selectedTofu.runtime} <span className="muted">· {selectedTofu.version}</span></strong></div>
+                <div><span className="detail-label">Install location</span><strong className="path-text">~/Games/{selectedPiko.name.replace(" ", "")}</strong></div>
+                <button className="icon-button"><Settings size={16} /></button>
+              </section>
+            </>
+          ) : activeNav === "Settings" ? (
+            <section className="settings-page">
+              <div className="settings-intro"><p className="eyebrow">Preferences</p><h2>Make Mochi yours.</h2><p>These settings are stored locally on this device. Cloud sync can be enabled later without changing your library.</p></div>
+              <div className="settings-group">
+                <div className="settings-group-heading"><strong>Appearance</strong><span>Personalize the launcher</span></div>
+                <div className="theme-grid">{themeOptions.map((option) => <button key={option.id} className={`theme-card ${theme === option.id ? "selected" : ""}`} onClick={() => setTheme(option.id)}><Palette size={16} /><strong>{option.label}</strong><small>{option.description}</small></button>)}</div>
+              </div>
+              <div className="settings-group">
+                <div className="settings-group-heading"><strong>IGDB metadata</strong><span>Stored only on this device</span></div>
+                <div className="igdb-form">
+                  <p>Credentials are never sent to Mochi or Supabase. They are used directly by your browser for optional artwork lookup.</p>
+                  <label>Client ID<input value={settings.clientId} onChange={(event) => setSettings({ ...settings, clientId: event.target.value })} placeholder="Your IGDB client ID" /></label>
+                  <label>Bearer token<input type="password" value={settings.token} onChange={(event) => setSettings({ ...settings, token: event.target.value })} placeholder="Twitch OAuth token" /></label>
+                  <label>API key (alternative)<input type="password" value={settings.apiKey || ""} onChange={(event) => setSettings({ ...settings, apiKey: event.target.value })} placeholder="Optional API key" /></label>
+                  <button className="secondary-button" onClick={lookupArtwork} disabled={igdbBusy}><RefreshCw size={14} className={igdbBusy ? "spin" : ""} /> {igdbBusy ? "Looking up..." : `Lookup ${selectedPiko.name}`}</button>
+                  {igdbMessage && <small className="metadata-note">{igdbMessage}</small>}
+                </div>
+              </div>
+              <div className="settings-group">
+                <div className="settings-group-heading"><strong>General</strong><span>Launcher behavior</span></div>
+                <label className="setting-row"><span><strong>Launch Mochi on startup</strong><small>Open the launcher when you sign in to your computer.</small></span><input className="toggle" checked={behavior.launchOnStartup} onChange={(event) => setBehavior({ ...behavior, launchOnStartup: event.target.checked })} type="checkbox" /></label>
+                <label className="setting-row"><span><strong>Keep launcher open</strong><small>Minimize to the system tray when a game starts.</small></span><input className="toggle" checked={behavior.keepOpen} onChange={(event) => setBehavior({ ...behavior, keepOpen: event.target.checked })} type="checkbox" /></label>
+              </div>
+              <div className="settings-group">
+                <div className="settings-group-heading"><strong>Data & privacy</strong><span>Local-first storage</span></div>
+                <div className="setting-row"><span><strong>Library location</strong><small>Your game metadata is saved in this browser profile.</small></span><code>~/.config/mochi</code></div>
+                <button className="setting-row setting-button" onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}><span><strong>Advanced settings</strong><small>Diagnostics and developer options.</small></span><ChevronDown className={showAdvancedSettings ? "rotate" : ""} size={16} /></button>
+                {showAdvancedSettings && <div className="advanced-note">Native game detection and process controls will appear here when the Tauri backend is connected.</div>}
+              </div>
+              <button className="reset-button" onClick={resetLocalData}>Reset local library and settings</button>
+            </section>
+          ) : (
+            <div className="empty-state"><div className="empty-icon"><Gamepad2 size={23} /></div><h2>{activeNav} is ready when you are.</h2><p>This part of Mochi is taking shape. Your local library remains available offline.</p><button className="secondary-button" onClick={() => setActiveNav("Library")}><Library size={16} /> Back to library</button></div>
+          )}
+          <footer><span>Mochi v0.1.0 · Local-first by design</span><span><Cloud size={13} /> Cloud sync unavailable</span></footer>
+        </div>
+      </main>
+
+      {showAddPiko && <div className="modal-backdrop" onClick={() => setShowAddPiko(false)}><div className="modal" onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><p className="eyebrow">Expand your library</p><h2>Add a Piko</h2></div><button className="icon-button" onClick={() => setShowAddPiko(false)}><X size={17} /></button></div><p className="modal-description">Connect an installed game or add a custom game to start managing its Tofus in Mochi.</p><div className="add-options"><button disabled><Gamepad2 size={18} /><span><strong>Detect installed games</strong><small>Native scanning is coming soon</small></span><ChevronDown size={15} /></button><button onClick={() => setShowCustomGame(true)}><Plus size={18} /><span><strong>Add a custom game</strong><small>Save a name and executable path locally</small></span><ChevronDown size={15} /></button></div></div></div>}
+      {showCustomGame && <div className="modal-backdrop" onClick={() => setShowCustomGame(false)}><form className="modal" onSubmit={addCustomGame} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><p className="eyebrow">Local library</p><h2>Add custom game</h2></div><button className="icon-button" type="button" onClick={() => setShowCustomGame(false)}><X size={17} /></button></div><p className="modal-description">Mochi stores this entry only in local app storage. The executable path is ready for the native launcher integration.</p><div className="form-fields"><label>Game name<input name="name" autoFocus placeholder="e.g. Hollow Knight" required /></label><label>Executable path<input name="executablePath" placeholder="/Applications/Game/Game.exe" required /></label></div><button className="play-button form-submit" type="submit"><Plus size={16} /> Add game</button></form></div>}
+      {showNewTofu && <div className="modal-backdrop" onClick={() => setShowNewTofu(false)}><form className="modal" onSubmit={addTofu} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><p className="eyebrow">New environment for {selectedPiko.name}</p><h2>Create a Tofu</h2></div><button className="icon-button" type="button" onClick={() => setShowNewTofu(false)}><X size={17} /></button></div><p className="modal-description">Give this environment its own version and runtime. You can configure mods after it is created.</p><div className="form-fields"><label>Name<input name="name" autoFocus placeholder="e.g. Creative" required /></label><label>Game version<input name="version" placeholder="e.g. 1.21.1" required /></label><label>Runtime<select name="runtime" defaultValue="Native"><option>Native</option><option>Vanilla</option><option>Fabric</option><option>SMAPI</option><option>Wine / Proton</option></select></label></div><button className="play-button form-submit" type="submit"><Plus size={16} /> Create Tofu</button></form></div>}
+      {showAuth && <div className="modal-backdrop" onClick={() => setShowAuth(false)}><form className="modal auth-modal" onSubmit={authenticate} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div className="auth-brand"><MochiLogo size={30} /><div><p className="eyebrow">Mochi Cloud</p><h2>{authMode === "sign-in" ? "Welcome back." : "Create your account."}</h2></div></div><button className="icon-button" type="button" onClick={() => setShowAuth(false)}><X size={17} /></button></div><p className="modal-description">{authMode === "sign-in" ? "Sign in to sync your library metadata across devices." : "Your games stay local. Your Mochi metadata can follow you."}</p><div className="form-fields"><label>Email<input name="email" type="email" placeholder="you@example.com" required /></label><label>Password<input name="password" type="password" minLength={6} placeholder="At least 6 characters" required /></label></div>{authError && <p className="auth-error">{authError}</p>}<button className="play-button form-submit" disabled={authBusy} type="submit">{authBusy ? "Connecting..." : authMode === "sign-in" ? "Sign in" : "Create account"}</button><button className="switch-auth" type="button" onClick={() => { setAuthMode(authMode === "sign-in" ? "sign-up" : "sign-in"); setAuthError(""); }}>{authMode === "sign-in" ? "New to Mochi? Create an account" : "Already have an account? Sign in"}</button></form></div>}
+    </div>
+  );
+}
+
+export default App;
