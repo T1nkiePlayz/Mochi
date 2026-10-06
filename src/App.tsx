@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import {
   Bell,
   ChevronDown,
+  ChevronRight,
   Cloud,
   Download,
   Gamepad2,
@@ -27,6 +28,7 @@ import {
 } from "lucide-react";
 import { MochiLogo } from "./components/MochiLogo";
 import { FirstLaunchSetup } from "./components/FirstLaunchSetup";
+import { ImportPicker } from "./components/ImportPicker";
 import { detectImportSources, type DetectedImportSource, type ImportSourceId } from "./lib/sources";
 import { isCloudConfigured, supabase } from "./lib/supabase";
 import { pullLibrary, pushLibrary } from "./lib/cloud";
@@ -679,17 +681,10 @@ function App() {
           {!flatpaks.length && <div className="empty-state flatpak-empty"><Gamepad2 size={22} /><p>No installed Flatpaks were found.</p></div>}
         </div>
       </div>}
-      {showImportPicker && <div className="modal-backdrop" onClick={() => setShowImportPicker(false)}>
-        <div className="modal import-picker-modal" onClick={(event) => event.stopPropagation()}>
-          <div className="modal-header"><div><p className="eyebrow">Game sources</p><h2>Import games</h2></div><button className="icon-button" onClick={() => setShowImportPicker(false)}><X size={17} /></button></div>
-          <p className="modal-description">Choose a detected launcher to import its games. Mochi keeps the original launcher responsible for installation, updates and runtime configuration.</p>
-          <div className="import-source-list">
-            {detectedImportSources.filter((source) => source.detected).map((source) => <button type="button" className="import-source-row" key={source.id} onClick={() => { setShowImportPicker(false); setShowAddPiko(false); setLaunchError(`${source.name} import scanning is being prepared. Your existing installation has not been changed.`); }}><span className="import-source-icon"><Gamepad2 size={17} /></span><span><strong>{source.name}</strong><small>{source.gameCount !== null ? `${source.gameCount} detected games` : "Detected on this device"}</small></span><ChevronDown size={15} /></button>)}
-            <button type="button" className="import-source-missing" onClick={() => setShowImportPicker(false)}><span><strong>Platform not showing up?</strong><small>Choose a platform and specify its game library path manually.</small></span><ChevronRight size={16} /></button>
-          </div>
-          {!detectedImportSources.some((source) => source.detected) && <div className="setup-no-sources"><Gamepad2 size={19} /><strong>No supported services detected.</strong><span>Use the manual platform option to configure a library path.</span></div>}
-        </div>
-      </div>}
+      {showImportPicker && <ImportPicker onClose={() => setShowImportPicker(false)} onImport={(source, libraryPath) => {
+        setShowImportPicker(false);
+        setLaunchError(libraryPath ? `${source} library selected: ${libraryPath}. Game scanning will be connected to this source next.` : `${source} detected. Game scanning will be connected to this source next.`);
+      }} />}
       {showAuth && <div className="modal-backdrop" onClick={() => setShowAuth(false)}><form className="modal auth-modal" onSubmit={authenticate} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div className="auth-brand"><MochiLogo size={30} /><div><p className="eyebrow">Mochi Cloud</p><h2>{authMode === "sign-in" ? "Welcome back." : "Create your account."}</h2></div></div><button className="icon-button" type="button" onClick={() => setShowAuth(false)}><X size={17} /></button></div><p className="modal-description">{authMode === "sign-in" ? "Sign in to sync your library metadata across devices." : "Your games stay local. Your Mochi metadata can follow you."}</p><div className="form-fields"><label>Email<input name="email" type="email" placeholder="you@example.com" required /></label><label>Password<input name="password" type="password" minLength={6} placeholder="At least 6 characters" required /></label></div>{authError && <p className="auth-error">{authError}</p>} {mfaRequired ? <><p className="modal-description">{mfaMessage}</p><input className="mfa-input" inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="123456" maxLength={6} /><button className="play-button form-submit" type="button" disabled={authBusy || mfaCode.length !== 6} onClick={completeMfa}>{authBusy ? "Verifying..." : "Verify code"}</button></> : <><button className="play-button form-submit" disabled={authBusy} type="submit">{authBusy ? "Connecting..." : authMode === "sign-in" ? "Sign in" : "Create account"}</button><div className="auth-provider-row"><button type="button" className="secondary-button" onClick={() => signInWithProvider(supabase!, "github")}><Github size={15}/> GitHub</button><button type="button" className="secondary-button" onClick={handlePasskey}><KeyRound size={15}/> Passkey</button></div><button type="button" className="switch-auth" onClick={() => sendMagicLink(supabase!, String((document.querySelector('input[name="email"]') as HTMLInputElement)?.value || ""))}>Email me a magic link</button><button className="switch-auth" type="button" onClick={() => { setAuthMode(authMode === "sign-in" ? "sign-up" : "sign-in"); setAuthError(""); }}>{authMode === "sign-in" ? "New to Mochi? Create an account" : "Already have an account? Sign in"}</button></>}</form></div>}
     </div>
   );
