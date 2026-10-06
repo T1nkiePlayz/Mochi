@@ -30,7 +30,7 @@ import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { FirstLaunchSetup } from "./components/FirstLaunchSetup";
 import { ImportPicker } from "./components/ImportPicker";
-import type { ImportSourceId } from "./lib/sources";
+import type { ImportedGame } from "./lib/sources";
 import { isCloudConfigured, supabase } from "./lib/supabase";
 import { pullLibrary, pushLibrary } from "./lib/cloud";
 import type { Piko, Tofu } from "./models";
@@ -396,6 +396,39 @@ function App() {
     setAddGameStep("form");
     setShowCustomGame(false);
     setShowAddPiko(false);
+  };
+
+  const addImportedGames = (games: ImportedGame[]) => {
+    const now = Date.now();
+    setLibrary((current) => {
+      const next = [...current];
+      for (const imported of games) {
+        const duplicate = next.find((piko) => piko.name.trim().toLowerCase() === imported.name.trim().toLowerCase());
+        if (duplicate) continue;
+        const piko: Piko = {
+          id: `imported-${imported.source}-${imported.id.replace(/[^a-zA-Z0-9_-]/g, "-")}-${now}`,
+          name: imported.name,
+          description: `Imported from ${imported.source}. The original launcher remains responsible for the installation and runtime.`,
+          accent: "#a99ad6",
+          artwork: "linear-gradient(145deg, rgba(73,57,103,.35), rgba(20,16,29,.96))",
+          executablePath: imported.launchTarget,
+          source: "custom",
+          sourceId: imported.source,
+          categories: ["Other"],
+          tofus: [{ id: "default", name: "Default", version: "Imported", runtime: imported.source, mods: 0, status: "Ready" }],
+        };
+        next.push(piko);
+      }
+      return next;
+    });
+    if (games[0]) {
+      const first = games[0];
+      const id = `imported-${first.source}-${first.id.replace(/[^a-zA-Z0-9_-]/g, "-")}-${now}`;
+      setSelectedPikoId(id);
+      setSelectedTofuId("default");
+    }
+    setShowAddPiko(false);
+    setShowImportPicker(false);
   };
 
   const addCustomGame = async (event: FormEvent<HTMLFormElement>) => {
@@ -778,10 +811,7 @@ function App() {
           {!flatpaks.length && <div className="empty-state flatpak-empty"><Gamepad2 size={22} /><p>No installed Flatpaks were found.</p></div>}
         </div>
       </div>}
-      {showImportPicker && <ImportPicker onClose={() => setShowImportPicker(false)} onImport={(source, libraryPath) => {
-        setShowImportPicker(false);
-        setLaunchError(libraryPath ? `${source} library selected: ${libraryPath}. Game scanning will be connected to this source next.` : `${source} detected. Game scanning will be connected to this source next.`);
-      }} />}
+      {showImportPicker && <ImportPicker onClose={() => setShowImportPicker(false)} onImport={addImportedGames} />}
       {showAuth && <div className="modal-backdrop" onClick={() => setShowAuth(false)}><form className="modal auth-modal" onSubmit={authenticate} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div className="auth-brand"><img src="/mochi.png" alt="Mochi" /><div><p className="eyebrow">Mochi Cloud</p><h2>{authMode === "sign-in" ? "Welcome back." : "Create your account."}</h2></div></div><button className="icon-button" type="button" onClick={() => setShowAuth(false)}><X size={17} /></button></div><p className="modal-description">{authMode === "sign-in" ? "Sign in to sync your library metadata across devices." : "Your games stay local. Your Mochi metadata can follow you."}</p><div className="form-fields"><label>Email<input name="email" type="email" placeholder="you@example.com" required /></label><label>Password<input name="password" type="password" minLength={6} placeholder="At least 6 characters" required /></label></div>{authError && <p className="auth-error">{authError}</p>} {mfaRequired ? <><p className="modal-description">{mfaMessage}</p><input className="mfa-input" inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="123456" maxLength={6} /><button className="play-button form-submit" type="button" disabled={authBusy || mfaCode.length !== 6} onClick={completeMfa}>{authBusy ? "Verifying..." : "Verify code"}</button></> : <><button className="play-button form-submit" disabled={authBusy} type="submit">{authBusy ? "Connecting..." : authMode === "sign-in" ? "Sign in" : "Create account"}</button><div className="auth-provider-row"><button type="button" className="secondary-button" onClick={() => signInWithProvider(supabase!, "github")}><Github size={15}/> GitHub</button><button type="button" className="secondary-button" onClick={handlePasskey}><KeyRound size={15}/> Passkey</button></div><button type="button" className="switch-auth" onClick={() => sendMagicLink(supabase!, String((document.querySelector('input[name="email"]') as HTMLInputElement)?.value || ""))}>Email me a magic link</button><button className="switch-auth" type="button" onClick={() => { setAuthMode(authMode === "sign-in" ? "sign-up" : "sign-in"); setAuthError(""); }}>{authMode === "sign-in" ? "New to Mochi? Create an account" : "Already have an account? Sign in"}</button></>}</form></div>}
     </div>
   );
