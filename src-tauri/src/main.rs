@@ -23,6 +23,9 @@ fn detect_import_sources() -> Vec<sources::DetectedImportSource> {
     sources::detect_import_sources()
 }
 
+#[tauri::command]
+fn scan_import_games(source:String)->Vec<sources::ImportedGame>{sources::scan_import_games(source.trim())}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -31,7 +34,8 @@ fn main() {
             launch_game,
             list_flatpaks,
             get_platform_capabilities,
-            detect_import_sources
+            detect_import_sources,
+            scan_import_games
         ])
         .run(tauri::generate_context!())
         .expect("error while running Mochi");
