@@ -45,3 +45,24 @@ export async function registerPasskey(client: SupabaseClient) {
 export async function signInWithPasskey(client: SupabaseClient) {
   return client.auth.signInWithPasskey();
 }
+
+
+export async function verifyEmailToken(client: SupabaseClient, url: string) {
+  const parsed = new URL(url);
+  if (parsed.protocol !== "mochi:" || parsed.pathname !== "/auth/verify") {
+    throw new Error("Invalid Mochi verification link.");
+  }
+
+  const tokenHash = parsed.searchParams.get("token_hash");
+  const type = parsed.searchParams.get("type");
+  if (!tokenHash || type !== "email") {
+    throw new Error("This verification link is missing the information needed to confirm your email.");
+  }
+
+  const { error } = await client.auth.verifyOtp({
+    token_hash: tokenHash,
+    type: "email",
+  });
+  if (error) throw error;
+  return true;
+}
