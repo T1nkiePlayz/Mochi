@@ -16,6 +16,7 @@ export type Piko = {
   artworkUrl?: string;
   executablePath?: string;
   source?: "built-in" | "custom";
+  sourceId?: "flatpak" | "heroic" | "steam" | "lutris" | "bottles" | "itch";
   categories?: string[];
   tofus: Tofu[];
 };
