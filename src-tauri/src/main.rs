@@ -10,20 +10,39 @@ fn launch_game(launch_target: String) -> Result<(), String> {
     #[cfg(target_os = "linux")]
     {
         if target.ends_with(".desktop") {
-            std::process::Command::new("xdg-open")
-                .arg(target)
+            std::process::Command::new("gio")
+                .args(["launch", target])
                 .spawn()
+                .or_else(|_| std::process::Command::new("xdg-open").arg(target).spawn())
                 .map(|_| ())
-                .map_err(|e| format!("Failed to open .desktop file: {e}"))
+                .map_err(|e| format!("Failed to launch .desktop file: {e}"))
         } else if let Some(app_id) = target.strip_prefix("flatpak://") {
             launch_flatpak(app_id.trim())
         } else if let Some(app_id) = target.strip_prefix("flatpak run ") {
             launch_flatpak(app_id.trim())
+        } else if target.ends_with(".sh") || target.ends_with(".bash") {
+            std::process::Command::new("sh")
+                .arg(target)
+                .spawn()
+                .map(|_| ())
+                .map_err(|e| format!("Failed to launch shell script: {e}"))
+        } else if target.ends_with(".py") {
+            std::process::Command::new("python3")
+                .arg(target)
+                .spawn()
+                .map(|_| ())
+                .map_err(|e| format!("Failed to launch Python script: {e}"))
+        } else if target.ends_with(".js") {
+            std::process::Command::new("node")
+                .arg(target)
+                .spawn()
+                .map(|_| ())
+                .map_err(|e| format!("Failed to launch JavaScript script: {e}"))
         } else {
             std::process::Command::new(target)
                 .spawn()
                 .map(|_| ())
-                .map_err(|e| format!("Failed to launch game/script: {e}"))
+                .map_err(|e| format!("Failed to launch game or executable script: {e}"))
         }
     }
 
