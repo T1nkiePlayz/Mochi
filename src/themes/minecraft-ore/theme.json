@@ -1,40 +1,72 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "minecraft-ore",
   "name": "Minecraft Ore",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "author": "Side Quest Games",
-  "description": "A blocky, mineral-rich theme inspired by Minecraft's underground palette.",
+  "description": "Hard-edged stone panels, ore seams, pixel geometry and underground green.",
   "colors": {
-    "background": "#090c0a",
-    "backgroundElevated": "#101510",
-    "surface": "#151a15",
-    "surfaceRaised": "#1d241c",
-    "surfaceHover": "#283027",
-    "border": "#394036",
-    "borderStrong": "#596451",
-    "text": "#e8eee3",
+    "background": "#080b09",
+    "backgroundElevated": "#0e130f",
+    "surface": "#151b15",
+    "surfaceRaised": "#1e281d",
+    "surfaceHover": "#2b3828",
+    "border": "#3b4738",
+    "borderStrong": "#596a50",
+    "text": "#e8f0e4",
     "textStrong": "#ffffff",
-    "textMuted": "#9aa694",
-    "textFaint": "#687263",
-    "accent": "#7bd45d",
-    "accentStrong": "#9be87d",
-    "accentText": "#071006",
-    "accentSoft": "rgba(123,212,93,.14)",
-    "success": "#7ed36a",
-    "warning": "#e4ad58",
-    "danger": "#e26d5a",
-    "shadow": "rgba(0,0,0,.42)"
+    "textMuted": "#9baa96",
+    "textFaint": "#667461",
+    "accent": "#86dc69",
+    "accentStrong": "#a8ee89",
+    "accentText": "#071007",
+    "accentSoft": "rgba(134,220,105,.14)",
+    "success": "#7fd46b",
+    "warning": "#e6ad58",
+    "danger": "#e27361",
+    "shadow": "rgba(0,0,0,.52)"
   },
   "ui": {
-    "fontBody": "Inter, "DM Sans", sans-serif",
-    "fontDisplay": "Inter, "DM Sans", sans-serif",
+    "fontBody": "Inter, \"DM Sans\", sans-serif",
+    "fontDisplay": "Inter, \"DM Sans\", sans-serif",
     "radiusSm": "2px",
     "radiusMd": "3px",
     "radiusLg": "5px",
-    "sidebarWidth": "252px",
-    "contentMaxWidth": "1160px",
-    "density": "1"
+    "sidebarWidth": "258px",
+    "contentMaxWidth": "1180px",
+    "density": "0.98"
+  },
+  "typography": {
+    "bodyLineHeight": "1.45",
+    "headingWeight": "900",
+    "labelWeight": "800",
+    "mono": "\"JetBrains Mono\", monospace"
+  },
+  "layout": {
+    "contentPadding": "42px 50px 26px",
+    "topbarHeight": "66px",
+    "cardGap": "10px",
+    "sectionGap": "26px"
+  },
+  "effects": {
+    "shadowSoft": "0 5px 0 rgba(0,0,0,.22)",
+    "shadowCard": "0 8px 0 rgba(0,0,0,.22), 0 22px 50px rgba(0,0,0,.28)",
+    "blur": "0px",
+    "transition": "120ms steps(2,end)"
+  },
+  "components": {
+    "buttonHeight": "36px",
+    "inputHeight": "36px",
+    "cardRadius": "3px",
+    "heroRadius": "4px",
+    "glass": "rgba(17,23,17,.94)"
+  },
+  "icons": {
+    "library": "assets/icons-library.svg",
+    "settings": "assets/icons-settings.svg",
+    "play": "assets/icons-play.svg",
+    "plus": "assets/icons-plus.svg",
+    "mods": "assets/icons-mods.svg"
   },
   "assets": {
     "brand": "assets/ore.svg"
