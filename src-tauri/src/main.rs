@@ -24,7 +24,7 @@ fn detect_import_sources() -> Vec<sources::DetectedImportSource> {
 }
 
 #[tauri::command]
-fn scan_import_games(source:String)->Vec<sources::ImportedGame>{sources::scan_import_games(source.trim())}
+fn scan_import_games(source:String, library_path:Option<String>)->Vec<sources::ImportedGame>{sources::scan_import_games(source.trim(),library_path)}
 
 fn main() {
     tauri::Builder::default()
