@@ -108,3 +108,5 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 .avatar-button{display:grid;place-items:center;padding:0;border:0;border-radius:50%;background:transparent}
 .avatar-button .account-avatar{transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease}
 .avatar-button:hover .account-avatar{border-color:#7560b6;transform:translateY(-1px);box-shadow:0 5px 18px rgba(124,92,255,.2)}
+
+.import-game-list{display:grid;gap:6px;max-height:360px;overflow:auto;padding-right:3px;margin-top:12px}.import-game-row{display:flex;align-items:center;gap:10px;width:100%;padding:10px 11px;border:1px solid #292c36;border-radius:9px;color:#dfe1e7;background:#14161d;text-align:left}.import-game-row:hover,.import-game-row.selected{border-color:#514278;background:#191721}.import-game-row>span:nth-child(2){display:grid;gap:3px;min-width:0;flex:1}.import-game-row strong{font-size:11px}.import-game-row small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6f7481;font-size:9px}
