@@ -49,7 +49,7 @@ export async function signInWithPasskey(client: SupabaseClient) {
 
 export async function verifyEmailToken(client: SupabaseClient, url: string) {
   const parsed = new URL(url);
-  if (parsed.protocol !== "mochi:" || parsed.pathname !== "/auth/verify") {
+  if (parsed.protocol !== "mochi:" || parsed.hostname !== "auth" || parsed.pathname !== "/verify") {
     throw new Error("Invalid Mochi verification link.");
   }
 
