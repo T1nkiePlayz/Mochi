@@ -10,6 +10,7 @@ type PikoRow = {
   artwork: string | null;
   executable_path: string | null;
   source: "built-in" | "custom";
+  categories: string[] | null;
 };
 
 type TofuRow = {
@@ -25,7 +26,7 @@ type TofuRow = {
 export async function pullLibrary(client: SupabaseClient, userId: string): Promise<Piko[]> {
   const { data: pikoRows, error: pikoError } = await client
     .from("pikos")
-    .select("id, local_id, name, description, accent, artwork, executable_path, source")
+    .select("id, local_id, name, description, accent, artwork, executable_path, source, categories")
     .eq("user_id", userId)
     .order("created_at");
   if (pikoError) throw pikoError;
@@ -61,6 +62,7 @@ export async function pullLibrary(client: SupabaseClient, userId: string): Promi
     artwork: piko.artwork ?? "",
     executablePath: piko.executable_path ?? undefined,
     source: piko.source,
+    categories: piko.categories ?? [],
     tofus: tofusByPiko.get(piko.id) ?? [],
   }));
 }
@@ -78,6 +80,7 @@ export async function pushLibrary(client: SupabaseClient, userId: string, librar
         artwork: piko.artwork,
         executable_path: piko.executablePath ?? null,
         source: piko.source ?? "built-in",
+        categories: piko.categories ?? [],
       })),
       { onConflict: "user_id,local_id" },
     )
