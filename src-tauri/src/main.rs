@@ -26,6 +26,7 @@ fn detect_import_sources() -> Vec<sources::DetectedImportSource> {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_deep_link::init())
         .invoke_handler(tauri::generate_handler![
             launch_game,
             list_flatpaks,
