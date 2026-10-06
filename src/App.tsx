@@ -421,6 +421,8 @@ function App() {
   const resetLocalData = () => {
     window.localStorage.removeItem(storedPikosKey);
     window.localStorage.removeItem(storedSettingsKey);
+    window.localStorage.removeItem(setupCompleteKey);
+    window.localStorage.removeItem(importSourcesKey);
     window.location.reload();
   };
 
