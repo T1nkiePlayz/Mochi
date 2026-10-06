@@ -1,40 +1,71 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "subnautica",
   "name": "Subnautica",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "author": "Side Quest Games",
-  "description": "Deep ocean blues and bioluminescent cyan.",
+  "description": "A submerged interface of deep blue glass, sonar rings and bioluminescent cyan.",
   "colors": {
-    "background": "#071117",
-    "backgroundElevated": "#0a1920",
-    "surface": "#0d2028",
-    "surfaceRaised": "#12303a",
-    "surfaceHover": "#17404b",
-    "border": "#1c4852",
-    "borderStrong": "#2b6873",
-    "text": "#e2f5f5",
+    "background": "#041016",
+    "backgroundElevated": "#071a22",
+    "surface": "#0a222b",
+    "surfaceRaised": "#0f3039",
+    "surfaceHover": "#17434d",
+    "border": "#1c4f5a",
+    "borderStrong": "#2b7380",
+    "text": "#e2f8f8",
     "textStrong": "#ffffff",
-    "textMuted": "#82a9af",
-    "textFaint": "#52757d",
-    "accent": "#55c6d2",
-    "accentStrong": "#79e5ef",
-    "accentText": "#061316",
-    "accentSoft": "rgba(85,198,210,.13)",
-    "success": "#6dd7a5",
-    "warning": "#e2bd67",
-    "danger": "#e27f75",
-    "shadow": "rgba(0,0,0,.42)"
+    "textMuted": "#83b2b9",
+    "textFaint": "#527983",
+    "accent": "#5edbe5",
+    "accentStrong": "#8af0f5",
+    "accentText": "#041316",
+    "accentSoft": "rgba(94,219,229,.13)",
+    "success": "#6ed9a7",
+    "warning": "#e8c06c",
+    "danger": "#e68176",
+    "shadow": "rgba(0,0,0,.55)"
   },
   "ui": {
-    "fontBody": ""DM Sans", sans-serif",
-    "fontDisplay": ""Manrope", sans-serif",
-    "radiusSm": "6px",
-    "radiusMd": "10px",
-    "radiusLg": "15px",
-    "sidebarWidth": "240px",
-    "contentMaxWidth": "1120px",
+    "fontBody": "\"DM Sans\", sans-serif",
+    "fontDisplay": "\"Manrope\", sans-serif",
+    "radiusSm": "10px",
+    "radiusMd": "16px",
+    "radiusLg": "22px",
+    "sidebarWidth": "238px",
+    "contentMaxWidth": "1160px",
     "density": "1"
   },
-  "assets": {}
+  "typography": {
+    "bodyLineHeight": "1.6",
+    "headingWeight": "800",
+    "labelWeight": "700",
+    "mono": "\"JetBrains Mono\", monospace"
+  },
+  "layout": {
+    "contentPadding": "48px 54px 30px",
+    "topbarHeight": "74px",
+    "cardGap": "16px",
+    "sectionGap": "34px"
+  },
+  "effects": {
+    "shadowSoft": "0 12px 45px rgba(0,0,0,.25)",
+    "shadowCard": "0 20px 70px rgba(0,0,0,.32)",
+    "blur": "24px",
+    "transition": "240ms cubic-bezier(.2,.8,.2,1)"
+  },
+  "components": {
+    "buttonHeight": "40px",
+    "inputHeight": "40px",
+    "cardRadius": "18px",
+    "heroRadius": "26px",
+    "glass": "rgba(8,28,35,.68)"
+  },
+  "icons": {
+    "library": "assets/icons-library.svg",
+    "settings": "assets/icons-settings.svg",
+    "play": "assets/icons-play.svg",
+    "plus": "assets/icons-plus.svg",
+    "mods": "assets/icons-mods.svg"
+  }
 }
