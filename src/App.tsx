@@ -28,6 +28,7 @@ import {
   Github,
 } from "lucide-react";
 import { AccountAvatar } from "./components/AccountAvatar";
+import { ModrinthManager } from "./components/ModrinthManager";
 import { MochiIcon } from "./components/MochiIcon";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { FirstLaunchSetup } from "./components/FirstLaunchSetup";
@@ -263,6 +264,10 @@ function App() {
   const selectPiko = (piko: Piko) => {
     setSelectedPikoId(piko.id);
     setSelectedTofuId(piko.tofus[0].id);
+  };
+
+  const updateSelectedTofu = (patch: Partial<Tofu>) => {
+    setLibrary(current => current.map(piko => piko.id === selectedPiko.id ? { ...piko, tofus: piko.tofus.map(tofu => tofu.id === selectedTofu.id ? { ...tofu, ...patch } : tofu) } : piko));
   };
 
   const launchGame = async () => {
@@ -716,9 +721,11 @@ function App() {
               <section className="details-strip">
                 <div><span className="detail-label">Selected Tofu</span><strong>🧊 {selectedTofu.name}</strong></div>
                 <div><span className="detail-label">Runtime</span><strong>{selectedTofu.runtime} <span className="muted">· {selectedTofu.version}</span></strong></div>
-                <div><span className="detail-label">Install location</span><strong className="path-text">~/Games/{selectedPiko.name.replace(" ", "")}</strong></div>
+                <div><span className="detail-label">Install location</span><strong className="path-text">{selectedTofu.path || "~/Games/" + selectedPiko.name.replace(" ", "")}</strong></div>
                 <button className="icon-button"><MochiIcon name="settings" fallback={Settings} size={16} /></button>
               </section>
+
+              <ModrinthManager tofu={selectedTofu} onPathChange={(path) => updateSelectedTofu({ path })} />
             </>
           ) : activeNav === "Settings" ? (
             <section className="settings-page">
