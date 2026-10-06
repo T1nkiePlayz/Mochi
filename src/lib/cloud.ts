@@ -8,6 +8,8 @@ type PikoRow = {
   description: string;
   accent: string;
   artwork: string | null;
+  executable_path: string | null;
+  source: "built-in" | "custom";
 };
 
 type TofuRow = {
@@ -23,7 +25,7 @@ type TofuRow = {
 export async function pullLibrary(client: SupabaseClient, userId: string): Promise<Piko[]> {
   const { data: pikoRows, error: pikoError } = await client
     .from("pikos")
-    .select("id, local_id, name, description, accent, artwork")
+    .select("id, local_id, name, description, accent, artwork, executable_path, source")
     .eq("user_id", userId)
     .order("created_at");
   if (pikoError) throw pikoError;
@@ -72,6 +74,8 @@ export async function pushLibrary(client: SupabaseClient, userId: string, librar
         description: piko.description,
         accent: piko.accent,
         artwork: piko.artwork,
+        executable_path: piko.executablePath ?? null,
+        source: piko.source ?? "built-in",
       })),
       { onConflict: "user_id,local_id" },
     )
@@ -90,6 +94,12 @@ export async function pushLibrary(client: SupabaseClient, userId: string, librar
       status: tofu.status,
     })),
   );
+  const { error: deletePikosError } = await client
+    .from("pikos")
+    .delete()
+    .eq("user_id", userId)
+    .not("local_id", "in", `(${library.map((piko) => `"${piko.id.replace(/"/g, '""')}"`).join(",") || '""'})`);
+  if (deletePikosError) throw deletePikosError;
   if (!tofuRows.length) return;
 
   const { error: tofuError } = await client
