@@ -413,6 +413,8 @@ function App() {
     }
   };
 
+  const hasIgdb = Boolean(igdbClientId.trim() && igdbClientSecret.trim());
+
   const approveIgdbGame = (metadata: IgdbGame | null) => {
     if (!pendingGame) return;
     addGameToLibrary(pendingGame.name, pendingGame.executablePath, metadata);
@@ -860,3 +862,4 @@ function App() {
     </div>
   );
 }
+export default App;
