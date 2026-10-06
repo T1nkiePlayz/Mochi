@@ -34,7 +34,7 @@ import { lookupIgdbGame, lookupIgdbGames, type IgdbGame, type IgdbSettings } fro
 import {
   chooseGameTarget,
   getPlatformCapabilities,
-  launchGame,
+  launchGame as launchGameTarget,
   listInstalledFlatpaks,
   normalizeLaunchTarget,
   type FlatpakApp,
@@ -205,7 +205,7 @@ function App() {
     }
     setLaunchError("");
     setIsLaunching(true);
-    try { await launchGame(selectedPiko.executablePath); }
+    try { await launchGameTarget(selectedPiko.executablePath); }
     catch (error) { setLaunchError(error instanceof Error ? error.message : String(error)); }
     finally { setIsLaunching(false); }
   };
