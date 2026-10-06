@@ -16,6 +16,7 @@ export type Piko = {
   artworkUrl?: string;
   executablePath?: string;
   source?: "built-in" | "custom";
+  categories?: string[];
   tofus: Tofu[];
 };
 
