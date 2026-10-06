@@ -1,0 +1,6 @@
+.app-shell {
+  background:
+    radial-gradient(circle at 75% -10%, rgba(85,198,210,.18), transparent 32%),
+    radial-gradient(circle at 20% 110%, rgba(34,117,139,.12), transparent 30%),
+    var(--mochi-background);
+}
