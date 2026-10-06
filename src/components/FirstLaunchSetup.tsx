@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, ChevronRight, Gamepad2, KeyRound, Library, LoaderCircle, LogIn, RefreshCw, SkipForward, Sparkles, UserRound } from "lucide-react";
-import { MochiLogo } from "./MochiLogo";
 import type { IgdbSettings } from "../lib/igdb";
 import { detectImportSources, type DetectedImportSource, type ImportSourceId } from "../lib/sources";
 
@@ -75,7 +74,7 @@ export function FirstLaunchSetup({ settings, setSettings, onSignIn, onFinish }: 
 
         {step === "welcome" && (
           <section className="setup-welcome setup-page">
-            <div className="setup-logo"><MochiLogo size={54} /></div>
+            <div className="setup-logo"><img src="/mochi.png" alt="Mochi" /></div>
             <p className="setup-welcome-line">Welcome</p>
             <p className="setup-to">to</p>
             <h1 className="mochi-wordmark">Mochi</h1>
