@@ -86,6 +86,11 @@ export function FirstLaunchSetup({
     } else onFinish([], []);
   };
 
+  const previous = () => {
+    const index = steps.indexOf(step);
+    if (index > 0) setStep(steps[index - 1]);
+  };
+
   const toggleSource = (id: ImportSourceId) => {
     setSelectedSources((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
   };
