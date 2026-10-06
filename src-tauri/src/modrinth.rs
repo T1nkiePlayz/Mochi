@@ -32,7 +32,7 @@ pub fn set_mod_file_enabled(path: String, enabled: bool) -> Result<(), String> {
     let p = validate_path(&path)?;
     let name = p.file_name().ok_or("Invalid content filename.")?.to_string_lossy().to_string();
     let target = if enabled && name.ends_with(".disabled") { p.with_file_name(name.trim_end_matches(".disabled")) }
-        else if !enabled && !name.ends_with(".disabled") { p.with_file_name(format!("{name}.disabled")) } else { p };
+        else if !enabled && !name.ends_with(".disabled") { p.with_file_name(format!("{name}.disabled")) } else { p.clone() };
     if target != p { fs::rename(&p, &target).map_err(|e| format!("Unable to change content state: {e}"))?; }
     Ok(())
 }
