@@ -5,18 +5,20 @@ export type IgdbSettings = {
 };
 
 export type IgdbGame = {
+  id?: number;
   name: string;
   summary?: string;
   cover?: { url?: string };
   artworks?: Array<{ url?: string }>;
   genres?: Array<{ name: string }>;
+  first_release_date?: number;
 };
 
 const endpoint = "https://api.igdb.com/v4/games";
 
-export async function lookupIgdbGame(name: string, settings: IgdbSettings): Promise<IgdbGame | null> {
+async function searchIgdbGames(name: string, settings: IgdbSettings, limit: number): Promise<IgdbGame[]> {
   const credential = settings.token || settings.apiKey;
-  if (!name.trim() || !settings.clientId.trim() || !credential?.trim()) return null;
+  if (!name.trim() || !settings.clientId.trim() || !credential?.trim()) return [];
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -24,9 +26,17 @@ export async function lookupIgdbGame(name: string, settings: IgdbSettings): Prom
       Authorization: settings.token ? `Bearer ${settings.token.trim()}` : settings.apiKey!.trim(),
       "Content-Type": "text/plain",
     },
-    body: `search "${name.replace(/"/g, '\\"')}"; fields name,summary,cover.url,artworks.url,genres.name; limit 1;`,
+    body: `search "${name.replace(/"/g, '\\"')}"; fields name,summary,cover.url,artworks.url,genres.name,first_release_date; limit ${Math.max(1, Math.min(limit, 10))};`,
   });
   if (!response.ok) throw new Error(`IGDB metadata request failed (${response.status})`);
-  const games = (await response.json()) as IgdbGame[];
+  return (await response.json()) as IgdbGame[];
+}
+
+export async function lookupIgdbGames(name: string, settings: IgdbSettings): Promise<IgdbGame[]> {
+  return searchIgdbGames(name, settings, 6);
+}
+
+export async function lookupIgdbGame(name: string, settings: IgdbSettings): Promise<IgdbGame | null> {
+  const games = await searchIgdbGames(name, settings, 1);
   return games[0] ?? null;
 }
