@@ -29,7 +29,7 @@ import { AccountAvatar } from "./components/AccountAvatar";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { FirstLaunchSetup } from "./components/FirstLaunchSetup";
 import { ImportPicker } from "./components/ImportPicker";
-import type { ImportedGame } from "./lib/sources";
+import type { ImportedGame, ImportSourceId } from "./lib/sources";
 import { isCloudConfigured, supabase } from "./lib/supabase";
 import { pullLibrary, pushLibrary } from "./lib/cloud";
 import type { Piko, Tofu } from "./models";
