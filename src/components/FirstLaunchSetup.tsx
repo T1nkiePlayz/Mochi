@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, ChevronRight, Gamepad2, KeyRound, Library, LoaderCircle, LogIn, RefreshCw, SkipForward, Sparkles, UserRound } from "lucide-react";
 import type { IgdbSettings } from "../lib/igdb";
-import { detectImportSources, type DetectedImportSource, type ImportSourceId } from "../lib/sources";
+import { detectImportSources, scanImportGames, type DetectedImportSource, type ImportSourceId, type ImportedGame } from "../lib/sources";
 
 type SetupProps = {
   settings: IgdbSettings;
   setSettings: (settings: IgdbSettings) => void;
   onSignIn: () => void;
-  onFinish: (sources: ImportSourceId[]) => void;
+  onFinish: (games: ImportedGame[], sources: ImportSourceId[]) => void;
 };
 
 const steps = ["welcome", "account", "igdb", "imports"] as const;
@@ -43,7 +43,11 @@ export function FirstLaunchSetup({ settings, setSettings, onSignIn, onFinish }: 
         setEntering(false);
       }, 140);
     } else {
-      onFinish(selectedSources);
+      setScanning(true);
+      void Promise.all(selectedSources.map((source) => scanImportGames(source)))
+        .then((results) => onFinish(results.flat(), selectedSources))
+        .catch(() => onFinish([], selectedSources))
+        .finally(() => setScanning(false));
     }
   };
 
@@ -53,10 +57,10 @@ export function FirstLaunchSetup({ settings, setSettings, onSignIn, onFinish }: 
   };
 
   const skip = () => {
-    if (step === "imports") return onFinish([]);
+    if (step === "imports") return onFinish([], []);
     if (step === "igdb") return setStep("imports");
     if (step === "account") return setStep("igdb");
-    onFinish([]);
+    onFinish([], []);
   };
 
   const toggleSource = (id: ImportSourceId) => {
