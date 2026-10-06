@@ -2,134 +2,94 @@
 
 **Your games, your way.**
 
-Mochi is a Linux-first game launcher designed to bring your games, game installations, profiles, and tools together in one place.
+Mochi is a Linux-first game launcher designed to bring games, game installations, profiles, and tools together in one place.
 
 > 🚧 **Early development** — Mochi is not ready for general use yet.
 
 ## What is Mochi?
 
-Mochi is intended to sit above existing game ecosystems rather than replace them. It aims to make managing games and different game environments simple, flexible, and local-first.
+Mochi sits above existing game ecosystems rather than replacing them. It aims to make managing games and different game environments simple, flexible, and local-first.
 
 The project is built around two concepts:
 
 - 🐣 **Piko** — a game managed by Mochi.
 - 🧊 **Tofu** — an individual game instance, profile, environment, runtime, or mod setup for a Piko.
 
-For example:
+## Architecture
 
-```text
-🍡 Mochi
-├── 🐣 Minecraft
-│   ├── 🧊 Vanilla
-│   ├── 🧊 Fabric
-│   └── 🧊 Performance
-├── 🐣 Hytale
-│   └── 🧊 Main
-└── 🐣 My Game
-    └── 🧊 Development
-```
+Mochi keeps platform-specific system behavior behind a small Rust adapter at `src-tauri/src/platform/`.
 
-## Goals
+Each supported platform owns its launch and discovery behavior, while the Tauri command layer and React UI use platform-neutral interfaces. This keeps future macOS work from scattering OS checks throughout the application.
 
-Mochi is being built with the following goals:
+Tauri operations used by React are also wrapped by `src/lib/platform.ts`, keeping native calls out of the main React application.
 
-- 🐧 Linux-first desktop experience
-- 🎮 Simple game discovery and management
-- 🧊 Flexible game instances and profiles
-- ⚙️ Native system and process management
-- 🚀 Reliable game launching
-- 🔌 Integration with existing game platforms and tools
-- 💾 Local-first functionality
-- ☁️ Optional cloud synchronization for metadata and settings
-- 🛠️ Support for both games and development workflows
-- 🪟 Long-term support for Windows and macOS
+### Current platform scope
+
+- 🐧 Linux is the primary supported platform.
+- 🍎 macOS has an isolated platform implementation ready for further development, including application-bundle launching.
+- 🪟 Windows is intentionally out of scope.
 
 ## Technology
 
-Mochi currently uses:
-
-- **Rust** — native backend and system functionality
+- **Rust** — native backend and platform integration
 - **Tauri 2** — desktop application framework
 - **React + TypeScript** — user interface
 - **Vite** — frontend tooling
-- **SQLite** — local application data
 - **Supabase** — optional authentication and cloud metadata
 
 ## Development
 
-### Requirements
+### Environment
 
-For Linux development, Mochi requires a working Rust and Node.js development environment along with the system dependencies required by Tauri.
+Copy `.env.example` to `.env` and fill in your Supabase project values.
 
-### Install dependencies
+### Run
 
 ```bash
 npm install
-```
-
-### Run the web development server
-
-```bash
-npm run dev
-```
-
-### Run Mochi as a desktop application
-
-```bash
 npm run tauri dev
 ```
 
-### Build the frontend
-
-```bash
-npm run build
-```
-
-### Build the desktop application
-
-```bash
-npm run tauri build
-```
+Build the frontend with `npm run build` or the desktop application with `npm run tauri build`.
 
 ## Project structure
 
 ```text
 Mochi/
-├── src/                 # React frontend
-├── src-tauri/           # Rust/Tauri application
-├── supabase/             # Supabase migrations
-├── public/              # Frontend public assets
+├── src/                  # React frontend
+│   ├── components/       # Reusable UI components
+│   └── lib/              # Auth, cloud, IGDB, and platform adapters
+├── src-tauri/            # Tauri/Rust application
+│   └── src/platform/     # OS-specific native behavior
+├── supabase/             # Database migrations
+├── .env.example          # Environment variable template
 ├── package.json
 └── README.md
 ```
 
 ## Development status
 
-Mochi is currently in its foundation stage. Current work is focused on turning the existing interface into a fully functional native desktop launcher.
+Mochi is still in its foundation stage. Current work focuses on the local-first launcher core, account system, game metadata, and native game launching.
 
 Planned areas include:
 
-- [ ] Native Tauri application shell
-- [ ] Native system information
-- [ ] Game detection
+- [ ] Native game detection
 - [ ] Piko management
 - [ ] Tofu management
 - [ ] Game process management
-- [ ] Game launching
 - [ ] Runtime management
 - [ ] Mod and profile management
-- [ ] Platform integrations
+- [ ] More Linux integrations
+- [ ] Complete macOS support and release pipeline
 - [ ] Cloud metadata synchronization
 - [ ] Linux distribution packages
-- [ ] AppImage releases
-- [ ] Windows support
-- [ ] macOS support
+- [ ] macOS App/DMG releases
 
 ## Philosophy
 
 Mochi is built around the idea that **your games should belong to you, not your launcher**.
 
-The launcher should make managing games easier without locking them into one ecosystem. Local installations should remain useful even when cloud services are unavailable, while optional cloud features can make metadata and settings easier to synchronize.
+The launcher should make managing games easier without locking them into one ecosystem. Local installations should remain useful when cloud services are unavailable, while optional cloud features can make metadata and settings easier to synchronize.
 
 ## License
 
