@@ -190,7 +190,7 @@ function App() {
     }
     setLaunchError("");
     setIsLaunching(true);
-    try { await invoke("launch_game", { executablePath: selectedPiko.executablePath }); }
+    try { await invoke("launch_game", { launchTarget: selectedPiko.executablePath }); }
     catch (error) { setLaunchError(error instanceof Error ? error.message : String(error)); }
     finally { setIsLaunching(false); }
   };
