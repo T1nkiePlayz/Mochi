@@ -59,6 +59,8 @@ export async function pullLibrary(client: SupabaseClient, userId: string): Promi
     description: piko.description,
     accent: piko.accent,
     artwork: piko.artwork ?? "",
+    executablePath: piko.executable_path ?? undefined,
+    source: piko.source,
     tofus: tofusByPiko.get(piko.id) ?? [],
   }));
 }
@@ -101,6 +103,18 @@ export async function pushLibrary(client: SupabaseClient, userId: string, librar
     .not("local_id", "in", `(${library.map((piko) => `"${piko.id.replace(/"/g, '""')}"`).join(",") || '""'})`);
   if (deletePikosError) throw deletePikosError;
   if (!tofuRows.length) return;
+
+  for (const piko of library) {
+    const cloudPikoId = cloudIds.get(piko.id);
+    if (!cloudPikoId) continue;
+    const localIds = piko.tofus.map((tofu) => tofu.id);
+    const { error: staleTofusError } = await client
+      .from("tofus")
+      .delete()
+      .eq("piko_id", cloudPikoId)
+      .not("local_id", "in", `(${localIds.map((id) => `"${id.replace(/"/g, '""')}"`).join(",") || '""'})`);
+    if (staleTofusError) throw staleTofusError;
+  }
 
   const { error: tofuError } = await client
     .from("tofus")
