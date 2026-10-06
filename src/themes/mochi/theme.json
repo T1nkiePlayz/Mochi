@@ -1,40 +1,71 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "mochi",
   "name": "Mochi",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "author": "Side Quest Games",
-  "description": "The default Mochi interface.",
+  "description": "Soft glass, calm mint highlights and a deliberately quiet launcher surface.",
   "colors": {
-    "background": "#0d0f14",
-    "backgroundElevated": "#11141b",
-    "surface": "#15171d",
-    "surfaceRaised": "#1b1e26",
-    "surfaceHover": "#20242c",
-    "border": "#292d37",
-    "borderStrong": "#3a404c",
-    "text": "#edeef2",
-    "textStrong": "#f5f6f8",
-    "textMuted": "#858b9b",
-    "textFaint": "#606675",
-    "accent": "#bedcc9",
-    "accentStrong": "#8fbea7",
-    "accentText": "#132020",
-    "accentSoft": "rgba(140,197,169,.12)",
-    "success": "#80b39a",
-    "warning": "#d8a36e",
-    "danger": "#c98278",
-    "shadow": "rgba(0,0,0,.30)"
+    "background": "#0b0f0e",
+    "backgroundElevated": "#101714",
+    "surface": "#141d19",
+    "surfaceRaised": "#1b2822",
+    "surfaceHover": "#24332b",
+    "border": "#2a3a32",
+    "borderStrong": "#3b5146",
+    "text": "#edf5f0",
+    "textStrong": "#ffffff",
+    "textMuted": "#91a69a",
+    "textFaint": "#607369",
+    "accent": "#b9dbc8",
+    "accentStrong": "#84b69f",
+    "accentText": "#102019",
+    "accentSoft": "rgba(185,219,200,.12)",
+    "success": "#7fc6a0",
+    "warning": "#e2b36b",
+    "danger": "#dc8278",
+    "shadow": "rgba(0,0,0,.42)"
   },
   "ui": {
-    "fontBody": ""DM Sans", sans-serif",
-    "fontDisplay": ""Manrope", sans-serif",
-    "radiusSm": "7px",
-    "radiusMd": "9px",
-    "radiusLg": "13px",
-    "sidebarWidth": "240px",
-    "contentMaxWidth": "1120px",
+    "fontBody": "\"DM Sans\", sans-serif",
+    "fontDisplay": "\"Manrope\", sans-serif",
+    "radiusSm": "8px",
+    "radiusMd": "12px",
+    "radiusLg": "18px",
+    "sidebarWidth": "246px",
+    "contentMaxWidth": "1160px",
     "density": "1"
   },
-  "assets": {}
+  "typography": {
+    "bodyLineHeight": "1.55",
+    "headingWeight": "800",
+    "labelWeight": "700",
+    "mono": "\"JetBrains Mono\", monospace"
+  },
+  "layout": {
+    "contentPadding": "46px 54px 28px",
+    "topbarHeight": "72px",
+    "cardGap": "14px",
+    "sectionGap": "30px"
+  },
+  "effects": {
+    "shadowSoft": "0 10px 35px rgba(0,0,0,.18)",
+    "shadowCard": "0 18px 55px rgba(0,0,0,.20)",
+    "blur": "18px",
+    "transition": "180ms cubic-bezier(.2,.7,.2,1)"
+  },
+  "components": {
+    "buttonHeight": "38px",
+    "inputHeight": "38px",
+    "cardRadius": "18px",
+    "heroRadius": "24px",
+    "glass": "rgba(18,27,23,.72)"
+  },
+  "icons": {
+    "library": "assets/icons-library.svg",
+    "settings": "assets/icons-settings.svg",
+    "play": "assets/icons-play.svg",
+    "plus": "assets/icons-plus.svg",
+    "mods": "assets/icons-mods.svg"
+  }
 }
