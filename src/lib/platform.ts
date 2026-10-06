@@ -30,6 +30,11 @@ export async function listInstalledFlatpaks(): Promise<FlatpakApp[]> {
   return invoke<FlatpakApp[]>("list_flatpaks");
 }
 
+export async function chooseGameLibraryPath(): Promise<string | null> {
+  const selected = await open({ multiple: false, directory: true, title: "Choose game library" });
+  return typeof selected === "string" ? selected : null;
+}
+
 export async function chooseGameTarget(): Promise<string | null> {
   const selected = await open({
     multiple: false,
