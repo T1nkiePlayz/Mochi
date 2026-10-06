@@ -9,6 +9,7 @@ use std::{
 use tauri::{AppHandle, Manager};
 
 const CONFIG_FILE: &str = "config.json";
+const MAX_THEME_ASSET_BYTES: usize = 10 * 1024 * 1024;
 const THEMES_DIR: &str = "themes";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,6 +27,16 @@ pub struct ThemeManifest {
     pub colors: BTreeMap<String, String>,
     #[serde(default)]
     pub ui: BTreeMap<String, String>,
+    #[serde(default)]
+    pub typography: BTreeMap<String, String>,
+    #[serde(default)]
+    pub layout: BTreeMap<String, String>,
+    #[serde(default)]
+    pub effects: BTreeMap<String, String>,
+    #[serde(default)]
+    pub components: BTreeMap<String, String>,
+    #[serde(default)]
+    pub icons: BTreeMap<String, String>,
     #[serde(default)]
     pub assets: BTreeMap<String, String>,
 }
@@ -158,11 +169,21 @@ fn mime_type(path: &Path) -> &'static str {
 
 fn load_assets(root: &Path, manifest: &ThemeManifest) -> Result<BTreeMap<String, String>, String> {
     let mut result = BTreeMap::new();
-    for (logical_name, relative_path) in &manifest.assets {
+    let mut declared_assets = manifest.assets.clone();
+    for (logical_name, relative_path) in &manifest.icons {
+        declared_assets.insert("icon:".to_owned() + logical_name, relative_path.clone());
+    }
+
+    for (logical_name, relative_path) in &declared_assets {
         let relative = safe_relative_path(relative_path)?;
         let path = root.join(&relative);
         if !path.is_file() {
             return Err(format!("Theme asset '{relative_path}' was not found."));
+        }
+        let metadata = fs::metadata(&path)
+            .map_err(|error| format!("Unable to inspect theme asset '{relative_path}': {error}"))?;
+        if metadata.len() > MAX_THEME_ASSET_BYTES as u64 {
+            return Err(format!("Theme asset '{relative_path}' exceeds the 10 MiB limit."));
         }
         let bytes = fs::read(&path)
             .map_err(|error| format!("Unable to read theme asset '{relative_path}': {error}"))?;
