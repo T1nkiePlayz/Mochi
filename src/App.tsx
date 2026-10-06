@@ -129,6 +129,7 @@ function App() {
 
   useEffect(() => {
     if (!supabase) return;
+    const client = supabase;
 
     let unlisten: (() => void) | undefined;
 
@@ -148,7 +149,7 @@ function App() {
       setAuthError("");
       setAuthNotice("Verifying your email with Mochi…");
 
-      void verifyEmailToken(supabase, verificationUrl)
+      void verifyEmailToken(client, verificationUrl)
         .then(() => {
           setAuthNotice("Email verified successfully. Your Mochi account is ready.");
         })
@@ -174,55 +175,6 @@ function App() {
       .catch((error) => {
         console.warn("Mochi deep-link listener failed", error);
       });
-
-    return () => {
-      unlisten?.();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!supabase) return;
-
-    let unlisten: (() => void) | undefined;
-
-    const handleDeepLinks = (urls: string[]) => {
-      const verificationUrl = urls.find((url) => {
-        try {
-          const parsed = new URL(url);
-          return parsed.protocol === "mochi:" && parsed.hostname === "auth" && parsed.pathname === "/verify";
-        } catch {
-          return false;
-        }
-      });
-      if (!verificationUrl) return;
-
-      setShowAuth(true);
-      setAuthBusy(true);
-      setAuthError("");
-      setAuthNotice("Verifying your email with Mochi…");
-
-      void verifyEmailToken(supabase, verificationUrl)
-        .then(() => {
-          setAuthNotice("Email verified successfully. Your Mochi account is ready.");
-        })
-        .catch((error) => {
-          setAuthError(error instanceof Error ? error.message : "Email verification failed.");
-          setAuthNotice("");
-        })
-        .finally(() => setAuthBusy(false));
-    };
-
-    void getCurrent()
-      .then((urls) => {
-        if (urls) handleDeepLinks(urls);
-      })
-      .catch((error) => console.warn("Mochi deep-link startup check failed", error));
-
-    void onOpenUrl((urls) => handleDeepLinks(urls))
-      .then((removeListener) => {
-        unlisten = removeListener;
-      })
-      .catch((error) => console.warn("Mochi deep-link listener failed", error));
 
     return () => {
       unlisten?.();
