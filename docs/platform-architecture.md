@@ -15,6 +15,32 @@ The Tauri commands in `main.rs` are deliberately thin. They validate the command
 
 When adding a new platform, create a new adapter module and add one `cfg(target_os = "...")` branch in `mod.rs`. Do not put OS-specific process commands in React components or shared application logic.
 
+## Game source architecture
+
+Game sources are kept separate from operating-system adapters. This prevents the project from becoming an OS × launcher matrix.
+
+Linux currently provides read-only discovery/import adapters for:
+
+- Flatpak
+- Steam, including installed Steam library manifests
+- Heroic Games Launcher
+- Lutris
+- Bottles
+- itch.io
+
+Source discovery reads the source's existing local state and produces a normalized ImportedGame record containing a stable source ID, display name, install path when available, and a source-aware launch target. Mochi does not take over installation, updates, authentication, Wine/Proton prefixes, or source configuration.
+
+Launch targets are handed back to the owning source where appropriate:
+
+- Steam → steam://rungameid/...
+- Heroic → heroic://launch?...
+- Lutris → lutris:rungameid/...
+- Bottles → bottles:run/...
+- itch.io → itch-setup --run-game ...
+- Flatpak → flatpak run ...
+
+The Linux implementation lives under src-tauri/src/sources/linux.rs, while src/lib/sources.ts provides the frontend boundary. Other operating systems can implement the same source contract later without changing the React import UI.
+
 ## Frontend platform adapter
 
 `src/lib/platform.ts` is the frontend boundary for native operations:
