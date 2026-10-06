@@ -189,7 +189,7 @@ function App() {
       const verificationUrl = urls.find((url) => {
         try {
           const parsed = new URL(url);
-          return parsed.protocol === "mochi:" && parsed.pathname === "/auth/verify";
+          return parsed.protocol === "mochi:" && parsed.hostname === "auth" && parsed.pathname === "/verify";
         } catch {
           return false;
         }
