@@ -215,6 +215,7 @@ export function applyTheme(theme: LoadedTheme): () => void {
 
   document.documentElement.dataset.mochiTheme = theme.id;
   document.documentElement.style.colorScheme = "dark";
+  window.dispatchEvent(new Event("mochi-theme-changed"));
 
   return () => {
     document.getElementById(styleId)?.remove();
