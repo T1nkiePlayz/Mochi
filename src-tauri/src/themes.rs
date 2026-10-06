@@ -225,7 +225,6 @@ fn copy_directory_recursive(source: &Path, destination: &Path) -> Result<(), Str
     Ok(())
 }
 
-#[tauri::command]
 pub fn get_mochi_config_info(app: AppHandle) -> Result<MochiConfigInfo, String> {
     let (path, value) = ensure_config(&app)?;
     let themes = themes_dir(&app)?;
@@ -242,7 +241,6 @@ pub fn get_mochi_config_info(app: AppHandle) -> Result<MochiConfigInfo, String> 
     })
 }
 
-#[tauri::command]
 pub fn set_mochi_theme(app: AppHandle, theme_id: String) -> Result<(), String> {
     if !valid_id(&theme_id) {
         return Err("Invalid theme ID.".into());
@@ -259,7 +257,6 @@ pub fn set_mochi_theme(app: AppHandle, theme_id: String) -> Result<(), String> {
     write_json_atomic(&path, &value)
 }
 
-#[tauri::command]
 pub fn list_user_themes(app: AppHandle) -> Result<Vec<UserThemeDescriptor>, String> {
     let root = themes_dir(&app)?;
     let mut themes = Vec::new();
@@ -297,7 +294,6 @@ pub fn list_user_themes(app: AppHandle) -> Result<Vec<UserThemeDescriptor>, Stri
     Ok(themes)
 }
 
-#[tauri::command]
 pub fn load_user_theme(app: AppHandle, theme_id: String) -> Result<LoadedUserTheme, String> {
     if !valid_id(&theme_id) {
         return Err("Invalid theme ID.".into());
@@ -307,7 +303,7 @@ pub fn load_user_theme(app: AppHandle, theme_id: String) -> Result<LoadedUserThe
     let folder = root.join(&theme_id);
     let file = root.join(format!("{theme_id}.json"));
     let (theme_root, manifest_path) = if folder.join("theme.json").is_file() {
-        (folder, folder.join("theme.json"))
+        (folder.clone(), folder.join("theme.json"))
     } else if file.is_file() {
         (root.clone(), file)
     } else {
@@ -340,7 +336,6 @@ pub fn load_user_theme(app: AppHandle, theme_id: String) -> Result<LoadedUserThe
     Ok(LoadedUserTheme { manifest, css, assets })
 }
 
-#[tauri::command]
 pub fn import_theme(app: AppHandle, source_path: String) -> Result<UserThemeDescriptor, String> {
     let source = PathBuf::from(source_path);
     if !source.exists() {
