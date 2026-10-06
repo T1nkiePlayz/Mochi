@@ -59,6 +59,11 @@ pub fn launch_game(target: &str) -> Result<(), String> {
         return Err("Launch target is empty.".into());
     }
 
+    if let Some(id)=target.strip_prefix("steam://rungameid/"){return launch_steam(id)}
+    if target.starts_with("heroic://"){return launch_uri(target,"Heroic")}
+    if target.starts_with("lutris:rungameid/"){return launch_lutris(target)}
+    if target.starts_with("bottles:run/"){return launch_uri(target,"Bottles")}
+    if let Some(id)=target.strip_prefix("itch://run-game/"){return launch_itch(id)}
     if target.ends_with(".desktop") {
         std::process::Command::new("gio")
             .args(["launch", target])
@@ -96,3 +101,10 @@ fn launch_flatpak(app_id: &str) -> Result<(), String> {
         .map(|_| ())
         .map_err(|e| format!("Failed to launch Flatpak game: {e}"))
 }
+
+fn launch_uri(t:&str,k:&str)->Result<(),String>{std::process::Command::new("xdg-open").arg(t).spawn().map(|_|()).map_err(|e|format!("Failed to open {k}: {e}"))}
+fn launch_steam(id:&str)->Result<(),String>{if command_exists("steam"){return std::process::Command::new("steam").arg(format!("steam://rungameid/{id}")).spawn().map(|_|()).map_err(|e|e.to_string())}if flatpak_installed("com.valvesoftware.Steam"){return std::process::Command::new("flatpak").args(["run","com.valvesoftware.Steam",&format!("steam://rungameid/{id}")]).spawn().map(|_|()).map_err(|e|e.to_string())}launch_uri(&format!("steam://rungameid/{id}"),"Steam")}
+fn launch_lutris(t:&str)->Result<(),String>{if command_exists("lutris"){return std::process::Command::new("lutris").arg(t).spawn().map(|_|()).map_err(|e|e.to_string())}if flatpak_installed("net.lutris.Lutris"){return std::process::Command::new("flatpak").args(["run","net.lutris.Lutris",t]).spawn().map(|_|()).map_err(|e|e.to_string())}launch_uri(t,"Lutris")}
+fn launch_itch(id:&str)->Result<(),String>{if command_exists("itch-setup"){return std::process::Command::new("itch-setup").args(["--run-game",id]).spawn().map(|_|()).map_err(|e|e.to_string())}if let Some(h)=std::env::var_os("HOME"){let p=std::path::PathBuf::from(h).join(".itch/itch-setup");if p.is_file(){return std::process::Command::new(p).args(["--run-game",id]).spawn().map(|_|()).map_err(|e|e.to_string())}}launch_uri(&format!("itch://install?game_id={id}&launch"),"itch.io")}
+fn command_exists(s:&str)->bool{std::process::Command::new("sh").args(["-c",&format!("command -v {s}")]).output().map(|o|o.status.success()).unwrap_or(false)}
+fn flatpak_installed(s:&str)->bool{std::process::Command::new("flatpak").args(["info",s]).output().map(|o|o.status.success()).unwrap_or(false)}
