@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "dungeons",
+  "name": "Minecraft Dungeons",
+  "version": "1.0.0",
+  "author": "Side Quest Games",
+  "description": "Warm ember, stone and obsidian tones.",
+  "colors": {
+    "background": "#100d0d",
+    "backgroundElevated": "#171211",
+    "surface": "#211817",
+    "surfaceRaised": "#2b211e",
+    "surfaceHover": "#3b2924",
+    "border": "#4b332d",
+    "borderStrong": "#68473b",
+    "text": "#f0e6df",
+    "textStrong": "#ffffff",
+    "textMuted": "#b19a8e",
+    "textFaint": "#78655c",
+    "accent": "#dc8b4e",
+    "accentStrong": "#f0aa68",
+    "accentText": "#1b0d05",
+    "accentSoft": "rgba(220,139,78,.14)",
+    "success": "#91c67e",
+    "warning": "#e5b25f",
+    "danger": "#df7468",
+    "shadow": "rgba(0,0,0,.44)"
+  },
+  "ui": {
+    "fontBody": ""DM Sans", sans-serif",
+    "fontDisplay": ""Manrope", sans-serif",
+    "radiusSm": "5px",
+    "radiusMd": "9px",
+    "radiusLg": "12px",
+    "sidebarWidth": "244px",
+    "contentMaxWidth": "1140px",
+    "density": "1"
+  },
+  "assets": {}
+}
