@@ -57,18 +57,21 @@ Deno.serve(async (req) => {
 
   const connection = await pool.connect();
   try {
+    if (body.action === "status" && !body.provider) {
+      const rows = await connection.queryObject<{ provider: Provider }>(
+        "select provider from mochi_private.user_credentials where user_id = $1 order by provider",
+        [user.id],
+      );
+      return response({ providers: rows.rows.map((row) => row.provider) });
+    }
+
     const existing = await connection.queryObject<{ secret_id: string }>(
       "select secret_id from mochi_private.user_credentials where user_id = $1 and provider = $2",
       [user.id, body.provider],
     );
 
     if (body.action === "status") {
-      if (body.provider) return response({ provider: body.provider, configured: existing.rows.length > 0 });
-      const rows = await connection.queryObject<{ provider: Provider }>(
-        "select provider from mochi_private.user_credentials where user_id = $1 order by provider",
-        [user.id],
-      );
-      return response({ providers: rows.rows.map((row) => row.provider) });
+      return response({ provider: body.provider, configured: existing.rows.length > 0 });
     }
 
     if (body.action === "set") {
