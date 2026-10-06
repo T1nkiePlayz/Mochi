@@ -11,9 +11,13 @@ type Props = LucideProps & {
 };
 
 export function MochiIcon({ name, fallback: Fallback, size = 16, ...props }: Props) {
-  const [, refresh] = useState(0);
+  const [customUrl, setCustomUrl] = useState("");
   useEffect(() => {
-    const update = () => refresh((value) => value + 1);
+    const update = () => {
+      const value = getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
+      setCustomUrl(value);
+    };
+    update();
     window.addEventListener("mochi-theme-changed", update);
     return () => window.removeEventListener("mochi-theme-changed", update);
   }, []);
