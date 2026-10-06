@@ -9,7 +9,7 @@ Platform-specific native behavior lives in `src-tauri/src/platform/`.
 - `mod.rs` — shared types and the platform dispatch boundary.
 - `linux.rs` — Linux launch targets and installed Flatpak discovery.
 - `macos.rs` — macOS-specific launch behavior and application bundles.
-- `other.rs` — safe fallback for platforms that are not explicitly supported.
+- `unsupported.rs` — safe fallback for platforms that are not explicitly supported.
 
 The Tauri commands in `main.rs` are deliberately thin. They validate the command boundary and delegate immediately to the platform adapter.
 
