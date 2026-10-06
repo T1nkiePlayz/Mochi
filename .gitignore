@@ -1,6 +1,15 @@
 node_modules/
 dist/
 src-tauri/target/
-.env
-.env.*
-!.env.example
+
+# Tauri bundles
+*.AppImage
+*.deb
+*.rpm
+*.dmg
+*.msi
+*.exe
+
+# OS/editor files
+.DS_Store
+Thumbs.db
