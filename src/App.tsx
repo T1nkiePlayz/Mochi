@@ -20,6 +20,8 @@ import {
   WifiOff,
   X,
   Palette,
+  FileJson,
+  FolderOpen,
   RefreshCw,
   ShieldCheck,
   KeyRound,
@@ -33,7 +35,6 @@ import type { ImportedGame, ImportSourceId } from "./lib/sources";
 import { isCloudConfigured, supabase } from "./lib/supabase";
 import { pullLibrary, pushLibrary } from "./lib/cloud";
 import type { Piko, Tofu } from "./models";
-import type { ThemeId } from "./models";
 import { lookupIgdbGame, lookupIgdbGames, type IgdbGame, type IgdbSettings } from "./lib/igdb";
 import {
   chooseGameTarget,
@@ -46,6 +47,7 @@ import {
   type PlatformCapabilities,
 } from "./lib/platform";
 import { enrollTotp, getVerifiedTotpFactor, registerPasskey, sendMagicLink, signInWithPasskey, signInWithProvider, verifyEmailToken, verifyMfaCode } from "./lib/auth";
+import { importThemeFile, importThemeFolder, useThemeEngine } from "./lib/theme";
 
 const navItems = [
   { label: "Library", icon: Library },
