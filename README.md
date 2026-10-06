@@ -11,6 +11,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/github/last-commit/T1nkiePlayz/Mochi?style=flat-square" alt="Last commit">
+  <img src="https://github.com/T1nkiePlayz/Mochi/actions/workflows/ci.yml/badge.svg" alt="Mochi CI">
   <img src="https://img.shields.io/github/issues/T1nkiePlayz/Mochi?style=flat-square" alt="Issues">
   <img src="https://img.shields.io/badge/platform-Linux%20%7C%20macOS-informational?style=flat-square" alt="Platforms">
   <img src="https://img.shields.io/badge/status-early%20development-orange?style=flat-square" alt="Early development">
@@ -28,6 +29,7 @@
 - [IGDB metadata](#igdb-metadata)
 - [Local-first storage](#local-first-storage)
 - [Accounts and cloud sync](#accounts-and-cloud-sync)
+- [First-launch setup and importing](#first-launch-setup-and-importing)
 - [Architecture](#architecture)
 - [Platform support](#platform-support)
 - [Technology stack](#technology-stack)
@@ -134,7 +136,59 @@ Mochi includes multiple visual themes and stores launcher preferences locally. S
 
 ### Account integration
 
-An optional account allows library metadata to be synchronised. The account system is separate from the local launch mechanism, so signing in does not mean that game installations are uploaded.
+An optional Mochi account allows library metadata to be synchronised. The account system is separate from the local launch mechanism, so signing in does not mean that game installations are uploaded.
+
+Supported authentication flows currently include:
+
+- Google sign-in
+- GitHub sign-in
+- Email magic links
+- Passkeys
+- TOTP-based multi-factor authentication
+
+Mochi also supports custom verification deep links so email verification can return directly to the desktop application.
+
+Account avatars are displayed without requiring Mochi to host image files. Provider avatars are preferred when available, with a Gravatar-derived fallback and a local initial fallback.
+
+## First-launch setup and importing
+
+Mochi includes a guided first-launch experience designed to get a new installation ready without making any step mandatory.
+
+The setup flow covers:
+
+1. **Welcome** — introduces Mochi.
+2. **Account** — optionally signs in to Mochi Cloud.
+3. **IGDB** — optionally configures local IGDB credentials.
+4. **Game imports** — detects supported game sources and lets the user choose which detected sources to scan.
+
+The import system currently supports Linux-first discovery for:
+
+- Flatpak
+- Steam
+- Steam non-Steam shortcuts
+- Heroic Games Launcher
+- Lutris
+- Bottles
+- itch.io
+
+The standalone **Import Games** flow can rescan sources, select individual games, and manually point Mochi at a supported library path when automatic detection does not find a source.
+
+Imports are non-destructive. Mochi does not move, copy, uninstall, or take ownership of the underlying game installation. Instead, it records a source-aware launch target and hands execution back to the original launcher when appropriate.
+
+### Source launch handoff
+
+Source integrations intentionally preserve the original launcher's responsibility for its game runtime:
+
+| Source | Mochi launch handoff |
+| --- | --- |
+| Steam | steam://rungameid/<id> |
+| Heroic | Heroic launch URI |
+| Lutris | lutris:rungameid/<id> |
+| Bottles | bottles:run/<bottle>/<program> |
+| itch.io | itch-setup game launch |
+| Flatpak | Flatpak application ID |
+
+This avoids bypassing source-specific runtime, Proton/Wine, prefix, authentication, overlay, or configuration behavior where the source launcher owns those responsibilities.
 
 ## Launch targets
 
@@ -276,7 +330,7 @@ The current structure separates Linux, macOS, and unsupported-platform behavior.
 
 Linux is Mochi's primary development platform.
 
-The Linux implementation currently has the strongest native integration, including Flatpak discovery and launch support. The project is designed with modern Linux desktop environments and Wayland-based workflows in mind.
+The Linux implementation currently has the strongest native integration, including Flatpak discovery, source import, source-aware launch handoff, and Steam shortcut support. The project is designed with modern Linux desktop environments and Wayland-based workflows in mind.
 
 ### macOS
 
@@ -310,10 +364,13 @@ Windows is intentionally outside the current development scope. Mochi is being d
     │
     ├── src-tauri/
     │   └── src/
-    │       └── platform/     # OS-specific native behavior
+    │       ├── platform/     # OS-specific native behavior
+    │       └── sources/      # Game-source discovery and import adapters
     │
+    ├── docs/                 # Architecture and project documentation
     ├── supabase/             # Database migrations/backend definitions
-    ├── public/               # Static assets
+    ├── public/               # Static assets, including the Mochi logo
+    ├── .github/workflows/    # CI and release automation
     ├── .env.example          # Environment template
     ├── package.json          # Scripts and dependencies
     └── README.md
@@ -371,7 +428,15 @@ This performs TypeScript checking and creates the Vite production build.
 
 ### Desktop application
 
+For development:
+
+    npm run tauri dev
+
+For a production desktop build:
+
     npm run tauri build
+
+GitHub Actions also runs the frontend production build and Rust/Tauri backend check on pushes and pull requests. The release workflow is triggered by version tags beginning with `v`.
 
 Tauri packages the application for the target operating system using the configured release settings.
 
@@ -402,6 +467,8 @@ Mochi is not yet a finished replacement for dedicated game stores or specialised
 Current limitations include:
 
 - Source-specific game discovery is currently Linux-first; macOS source ingestion remains future work.
+- Some source scanners depend on the source launcher's local configuration format or CLI and may require future compatibility work as those launchers evolve.
+- Manual library-path scanning is currently most complete for Steam; source-specific path semantics for the other integrations will continue to mature.
 - Tofu management is early-stage.
 - Game process lifecycle management is not complete.
 - Runtime management is not yet a complete system.
@@ -426,7 +493,17 @@ The roadmap is intentionally evolutionary rather than a promise of fixed release
 - [x] Account authentication foundation
 - [x] Cloud metadata synchronization foundation
 - [x] Native installed-game source discovery and import
+- [x] First-launch setup flow
+- [x] Guided source import picker with per-game selection
 - [x] Flatpak, Steam (including non-Steam shortcuts), Heroic, Lutris, Bottles and itch.io Linux integrations
+- [x] Source-aware launch handoff for imported games
+- [x] Google, GitHub and email authentication
+- [x] Passkey authentication
+- [x] TOTP multi-factor authentication
+- [x] Email verification deep links
+- [x] Account avatars with provider/Gravatar fallback
+- [x] Automated frontend and Tauri backend CI checks
+- [x] Formal platform/source architecture documentation
 - [ ] Full Tofu management
 - [ ] Game process management
 - [ ] Runtime management
