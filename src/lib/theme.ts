@@ -20,6 +20,11 @@ export type ThemeManifest = {
   description?: string;
   colors?: Record<string, string>;
   ui?: Record<string, string>;
+  typography?: Record<string, string>;
+  layout?: Record<string, string>;
+  effects?: Record<string, string>;
+  components?: Record<string, string>;
+  icons?: Record<string, string>;
   assets?: Record<string, string>;
 };
 
@@ -136,11 +141,15 @@ function buildTokenSheet(theme: LoadedTheme): string {
   for (const [key, value] of Object.entries(theme.colors ?? {})) {
     lines.push("  --mochi-" + cssName(key) + ": " + value + ";");
   }
-  for (const [key, value] of Object.entries(theme.ui ?? {})) {
-    lines.push("  --mochi-" + cssName(key) + ": " + value + ";");
+  for (const section of [theme.ui, theme.typography, theme.layout, theme.effects, theme.components]) {
+    for (const [key, value] of Object.entries(section ?? {})) {
+      lines.push("  --mochi-" + cssName(key) + ": " + value + ";");
+    }
   }
   for (const [key, value] of Object.entries(theme.assetUrls ?? {})) {
-    lines.push('  --mochi-asset-' + cssName(key) + ': url("' + value + '");');
+    const prefix = key.startsWith("icon:") ? "mochi-icon-" : "mochi-asset-";
+    const logical = key.startsWith("icon:") ? key.slice(5) : key;
+    lines.push('  --' + prefix + cssName(logical) + ': url("' + value + '");');
   }
   lines.push("}");
   return lines.join("\n");
