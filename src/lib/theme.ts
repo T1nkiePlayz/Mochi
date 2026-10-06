@@ -51,7 +51,11 @@ const assetModules = import.meta.glob("../themes/*/assets/*", {
 
 function builtinAssets(themeId: string, manifest: ThemeManifest): Record<string, string> {
   const result: Record<string, string> = {};
-  for (const [logicalName, relativePath] of Object.entries(manifest.assets ?? {})) {
+  const declarations: Array<[string, string]> = [
+    ...Object.entries(manifest.assets ?? {}),
+    ...Object.entries(manifest.icons ?? {}).map(([name, path]) => ["icon:" + name, path] as [string, string]),
+  ];
+  for (const [logicalName, relativePath] of declarations) {
     const key = "../themes/" + themeId + "/" + relativePath;
     if (assetModules[key]) result[logicalName] = assetModules[key];
   }
