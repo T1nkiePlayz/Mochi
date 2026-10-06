@@ -7,9 +7,13 @@ struct FlatpakApp {
     category: String,
 }
 
-#[cfg(target_os = "linux")]
 #[tauri::command]
 fn list_flatpaks() -> Result<Vec<FlatpakApp>, String> {
+    #[cfg(not(target_os = "linux"))]
+    { return Err("Installed Flatpak discovery is currently supported on Linux only.".into()); }
+
+    #[cfg(target_os = "linux")]
+    {
     let output = std::process::Command::new("flatpak")
         .args(["list", "--app", "--columns=application,name"])
         .output()
@@ -51,6 +55,7 @@ fn list_flatpaks() -> Result<Vec<FlatpakApp>, String> {
 
     apps.sort_by_key(|app| (app.category != "Games", app.name.to_lowercase()));
     Ok(apps)
+    }
 }
 
 #[tauri::command]
