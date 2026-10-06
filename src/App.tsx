@@ -27,7 +27,6 @@ import {
 } from "lucide-react";
 import { AccountAvatar } from "./components/AccountAvatar";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
-import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { FirstLaunchSetup } from "./components/FirstLaunchSetup";
 import { ImportPicker } from "./components/ImportPicker";
 import type { ImportedGame } from "./lib/sources";
