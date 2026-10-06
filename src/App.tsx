@@ -49,6 +49,7 @@ import {
 } from "./lib/platform";
 import { enrollTotp, getVerifiedTotpFactor, registerPasskey, sendMagicLink, signInWithPasskey, signInWithProvider, verifyEmailToken, verifyMfaCode } from "./lib/auth";
 import { importThemeFile, importThemeFolder, useThemeEngine } from "./lib/theme";
+import { getProviderCredentialStatus, saveProviderCredential } from "./lib/providerCredentials";
 
 const navItems = [
   { label: "Library", icon: Library },
@@ -95,6 +96,9 @@ function App() {
     try { const stored = JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}"); return { launchOnStartup: Boolean(stored.launchOnStartup), keepOpen: stored.keepOpen !== false }; } catch { return { launchOnStartup: false, keepOpen: true }; }
   });
   const [igdbMessage, setIgdbMessage] = useState("");
+  const [nexusApiKey, setNexusApiKey] = useState("");
+  const [credentialStatus, setCredentialStatus] = useState({ igdb: false, nexus: false });
+  const [credentialBusy, setCredentialBusy] = useState<"igdb" | "nexus" | null>(null);
   const [igdbBusy, setIgdbBusy] = useState(false);
   const [launchError, setLaunchError] = useState("");
   const [user, setUser] = useState<User | null>(null);
@@ -409,6 +413,46 @@ function App() {
     addGameToLibrary(pendingGame.name, pendingGame.executablePath, metadata);
   };
 
+  useEffect(() => {
+    if (!supabase || !user) {
+      setCredentialStatus({ igdb: false, nexus: false });
+      return;
+    }
+    void Promise.all([
+      getProviderCredentialStatus(supabase, "igdb"),
+      getProviderCredentialStatus(supabase, "nexus"),
+    ]).then(([igdb, nexus]) => setCredentialStatus({ igdb, nexus })).catch((error) => {
+      console.warn("Mochi provider credential status unavailable", error);
+    });
+  }, [user]);
+
+  const saveCredential = async (provider: "igdb" | "nexus") => {
+    if (!supabase || !user) {
+      setAuthNotice("Sign in to save provider credentials securely.");
+      setShowAuth(true);
+      return;
+    }
+    const secret = provider === "igdb"
+      ? JSON.stringify({ clientId: settings.clientId.trim(), token: settings.token.trim(), apiKey: settings.apiKey?.trim() || "" })
+      : nexusApiKey.trim();
+    if (provider === "igdb" && (!settings.clientId.trim() || !settings.token.trim())) {
+      setIgdbMessage("Enter your IGDB Client ID and access token first.");
+      return;
+    }
+    if (!secret || secret.length < 8) return;
+    setCredentialBusy(provider);
+    try {
+      await saveProviderCredential(supabase, provider, secret);
+      setCredentialStatus((current) => ({ ...current, [provider]: true }));
+      if (provider === "nexus") setNexusApiKey("");
+      setIgdbMessage(provider === "igdb" ? "IGDB credentials saved securely to Mochi Vault." : "Nexus Mods key saved securely to Mochi Vault.");
+    } catch (error) {
+      setIgdbMessage(error instanceof Error ? error.message : "Unable to save provider credentials.");
+    } finally {
+      setCredentialBusy(null);
+    }
+  };
+
   const lookupArtwork = async () => {
     setIgdbMessage("");
     setIgdbBusy(true);
@@ -706,6 +750,18 @@ function App() {
                   <label>API key (alternative)<input type="password" value={settings.apiKey || ""} onChange={(event) => setSettings({ ...settings, apiKey: event.target.value })} placeholder="Optional API key" /></label>
                   <p className="metadata-note">These credentials are global to Mochi. New games automatically search IGDB for artwork, description and genre.</p>
                   {igdbMessage && <small className="metadata-note">{igdbMessage}</small>}
+                </div>
+              </div>
+              <div className="settings-group">
+                <div className="settings-group-heading"><strong>Mod & metadata providers</strong><span>Credentials are encrypted with Supabase Vault</span></div>
+                <div className="provider-credential-card">
+                  <div className="provider-credential-heading"><div><strong>IGDB</strong><small>Store the Client ID and token with your Mochi account.</small></div><span className={credentialStatus.igdb ? "credential-status saved" : "credential-status"}>{credentialStatus.igdb ? "Saved" : "Not saved"}</span></div>
+                  <button className="secondary-button" onClick={() => void saveCredential("igdb")} disabled={credentialBusy !== null}>{credentialBusy === "igdb" ? <><MochiIcon name="refresh" fallback={RefreshCw} size={14} className="spin" /> Saving...</> : <><MochiIcon name="cloud" fallback={Cloud} size={14} /> Save IGDB securely</>}</button>
+                </div>
+                <div className="provider-credential-card">
+                  <div className="provider-credential-heading"><div><strong>Nexus Mods</strong><small>Your Nexus API key is stored server-side and is never returned to the launcher.</small></div><span className={credentialStatus.nexus ? "credential-status saved" : "credential-status"}>{credentialStatus.nexus ? "Saved" : "Not saved"}</span></div>
+                  <input type="password" value={nexusApiKey} onChange={(event) => setNexusApiKey(event.target.value)} placeholder={credentialStatus.nexus ? "Enter a new key to replace the saved key" : "Paste your Nexus Mods API key"} />
+                  <button className="secondary-button" onClick={() => void saveCredential("nexus")} disabled={credentialBusy !== null || nexusApiKey.trim().length < 8}>{credentialBusy === "nexus" ? "Saving..." : "Save Nexus key securely"}</button>
                 </div>
               </div>
               <div className="settings-group">
