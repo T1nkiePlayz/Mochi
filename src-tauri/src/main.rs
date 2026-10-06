@@ -70,6 +70,7 @@ fn launch_flatpak(app_id: &str) -> Result<(), String> {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![launch_game])
         .run(tauri::generate_context!())
         .expect("error while running Mochi");
