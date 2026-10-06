@@ -8,6 +8,7 @@ pub struct FlatpakApp {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct PlatformCapabilities {
     pub platform: String,
     pub display_name: String,
