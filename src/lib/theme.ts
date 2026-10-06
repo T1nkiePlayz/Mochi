@@ -20,6 +20,11 @@ export type ThemeManifest = {
   description?: string;
   colors?: Record<string, string>;
   ui?: Record<string, string>;
+  typography?: Record<string, string>;
+  layout?: Record<string, string>;
+  effects?: Record<string, string>;
+  components?: Record<string, string>;
+  icons?: Record<string, string>;
   assets?: Record<string, string>;
 };
 
@@ -46,7 +51,11 @@ const assetModules = import.meta.glob("../themes/*/assets/*", {
 
 function builtinAssets(themeId: string, manifest: ThemeManifest): Record<string, string> {
   const result: Record<string, string> = {};
-  for (const [logicalName, relativePath] of Object.entries(manifest.assets ?? {})) {
+  const declarations: Array<[string, string]> = [
+    ...Object.entries(manifest.assets ?? {}),
+    ...Object.entries(manifest.icons ?? {}).map(([name, path]) => ["icon:" + name, path] as [string, string]),
+  ];
+  for (const [logicalName, relativePath] of declarations) {
     const key = "../themes/" + themeId + "/" + relativePath;
     if (assetModules[key]) result[logicalName] = assetModules[key];
   }
@@ -136,11 +145,15 @@ function buildTokenSheet(theme: LoadedTheme): string {
   for (const [key, value] of Object.entries(theme.colors ?? {})) {
     lines.push("  --mochi-" + cssName(key) + ": " + value + ";");
   }
-  for (const [key, value] of Object.entries(theme.ui ?? {})) {
-    lines.push("  --mochi-" + cssName(key) + ": " + value + ";");
+  for (const section of [theme.ui, theme.typography, theme.layout, theme.effects, theme.components]) {
+    for (const [key, value] of Object.entries(section ?? {})) {
+      lines.push("  --mochi-" + cssName(key) + ": " + value + ";");
+    }
   }
   for (const [key, value] of Object.entries(theme.assetUrls ?? {})) {
-    lines.push('  --mochi-asset-' + cssName(key) + ': url("' + value + '");');
+    const prefix = key.startsWith("icon:") ? "mochi-icon-" : "mochi-asset-";
+    const logical = key.startsWith("icon:") ? key.slice(5) : key;
+    lines.push('  --' + prefix + cssName(logical) + ': url("' + value + '");');
   }
   lines.push("}");
   return lines.join("\n");
@@ -206,6 +219,7 @@ export function applyTheme(theme: LoadedTheme): () => void {
 
   document.documentElement.dataset.mochiTheme = theme.id;
   document.documentElement.style.colorScheme = "dark";
+  window.dispatchEvent(new Event("mochi-theme-changed"));
 
   return () => {
     document.getElementById(styleId)?.remove();

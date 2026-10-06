@@ -1,4 +1,11 @@
-/* Mochi built-in theme. Keep custom rules here intentionally small; tokens do the heavy lifting. */
-.app-shell {
-  background: radial-gradient(circle at 75% -20%, color-mix(in srgb, var(--mochi-accent) 10%, transparent), transparent 34%), var(--mochi-background);
-}
+/* Mochi 2.0 — soft, glassy, calm. */
+.app-shell{background:radial-gradient(circle at 80% -15%,rgba(185,219,200,.12),transparent 30%),radial-gradient(circle at 0% 100%,rgba(82,132,111,.08),transparent 32%),var(--mochi-background);}
+.sidebar{backdrop-filter:blur(var(--mochi-blur));background:linear-gradient(180deg,rgba(18,27,23,.86),rgba(10,15,13,.92));}
+.brand-mark,.account-avatar,.empty-icon{border:1px solid var(--mochi-border-strong);box-shadow:var(--mochi-shadow-soft);}
+.nav-item,.piko-nav-item{border:1px solid transparent;border-radius:var(--mochi-radius-sm);}
+.nav-item.active{background:linear-gradient(90deg,var(--mochi-accent-soft),transparent);border-color:rgba(185,219,200,.12);box-shadow:inset 2px 0 var(--mochi-accent);}
+.game-card,.tofu-card,.new-tofu-card,.settings-group,.theme-card{box-shadow:var(--mochi-shadow-soft);backdrop-filter:blur(10px);}
+.game-card-art{filter:saturate(.92) contrast(.98);}
+.hero-card{border-radius:var(--mochi-hero-radius);box-shadow:var(--mochi-shadow-card);overflow:hidden;}
+.play-button{box-shadow:0 8px 24px rgba(132,182,159,.18);}
+.modal{backdrop-filter:blur(var(--mochi-blur));}

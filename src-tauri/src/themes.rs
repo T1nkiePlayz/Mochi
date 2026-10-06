@@ -9,6 +9,7 @@ use std::{
 use tauri::{AppHandle, Manager};
 
 const CONFIG_FILE: &str = "config.json";
+const MAX_THEME_ASSET_BYTES: usize = 10 * 1024 * 1024;
 const THEMES_DIR: &str = "themes";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,6 +27,16 @@ pub struct ThemeManifest {
     pub colors: BTreeMap<String, String>,
     #[serde(default)]
     pub ui: BTreeMap<String, String>,
+    #[serde(default)]
+    pub typography: BTreeMap<String, String>,
+    #[serde(default)]
+    pub layout: BTreeMap<String, String>,
+    #[serde(default)]
+    pub effects: BTreeMap<String, String>,
+    #[serde(default)]
+    pub components: BTreeMap<String, String>,
+    #[serde(default)]
+    pub icons: BTreeMap<String, String>,
     #[serde(default)]
     pub assets: BTreeMap<String, String>,
 }
@@ -158,11 +169,21 @@ fn mime_type(path: &Path) -> &'static str {
 
 fn load_assets(root: &Path, manifest: &ThemeManifest) -> Result<BTreeMap<String, String>, String> {
     let mut result = BTreeMap::new();
-    for (logical_name, relative_path) in &manifest.assets {
+    let mut declared_assets = manifest.assets.clone();
+    for (logical_name, relative_path) in &manifest.icons {
+        declared_assets.insert("icon:".to_owned() + logical_name, relative_path.clone());
+    }
+
+    for (logical_name, relative_path) in &declared_assets {
         let relative = safe_relative_path(relative_path)?;
         let path = root.join(&relative);
         if !path.is_file() {
             return Err(format!("Theme asset '{relative_path}' was not found."));
+        }
+        let metadata = fs::metadata(&path)
+            .map_err(|error| format!("Unable to inspect theme asset '{relative_path}': {error}"))?;
+        if metadata.len() > MAX_THEME_ASSET_BYTES as u64 {
+            return Err(format!("Theme asset '{relative_path}' exceeds the 10 MiB limit."));
         }
         let bytes = fs::read(&path)
             .map_err(|error| format!("Unable to read theme asset '{relative_path}': {error}"))?;
@@ -204,7 +225,6 @@ fn copy_directory_recursive(source: &Path, destination: &Path) -> Result<(), Str
     Ok(())
 }
 
-#[tauri::command]
 pub fn get_mochi_config_info(app: AppHandle) -> Result<MochiConfigInfo, String> {
     let (path, value) = ensure_config(&app)?;
     let themes = themes_dir(&app)?;
@@ -221,7 +241,6 @@ pub fn get_mochi_config_info(app: AppHandle) -> Result<MochiConfigInfo, String> 
     })
 }
 
-#[tauri::command]
 pub fn set_mochi_theme(app: AppHandle, theme_id: String) -> Result<(), String> {
     if !valid_id(&theme_id) {
         return Err("Invalid theme ID.".into());
@@ -238,7 +257,6 @@ pub fn set_mochi_theme(app: AppHandle, theme_id: String) -> Result<(), String> {
     write_json_atomic(&path, &value)
 }
 
-#[tauri::command]
 pub fn list_user_themes(app: AppHandle) -> Result<Vec<UserThemeDescriptor>, String> {
     let root = themes_dir(&app)?;
     let mut themes = Vec::new();
@@ -276,7 +294,6 @@ pub fn list_user_themes(app: AppHandle) -> Result<Vec<UserThemeDescriptor>, Stri
     Ok(themes)
 }
 
-#[tauri::command]
 pub fn load_user_theme(app: AppHandle, theme_id: String) -> Result<LoadedUserTheme, String> {
     if !valid_id(&theme_id) {
         return Err("Invalid theme ID.".into());
@@ -286,7 +303,7 @@ pub fn load_user_theme(app: AppHandle, theme_id: String) -> Result<LoadedUserThe
     let folder = root.join(&theme_id);
     let file = root.join(format!("{theme_id}.json"));
     let (theme_root, manifest_path) = if folder.join("theme.json").is_file() {
-        (folder, folder.join("theme.json"))
+        (folder.clone(), folder.join("theme.json"))
     } else if file.is_file() {
         (root.clone(), file)
     } else {
@@ -319,7 +336,6 @@ pub fn load_user_theme(app: AppHandle, theme_id: String) -> Result<LoadedUserThe
     Ok(LoadedUserTheme { manifest, css, assets })
 }
 
-#[tauri::command]
 pub fn import_theme(app: AppHandle, source_path: String) -> Result<UserThemeDescriptor, String> {
     let source = PathBuf::from(source_path);
     if !source.exists() {

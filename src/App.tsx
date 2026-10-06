@@ -28,6 +28,7 @@ import {
   Github,
 } from "lucide-react";
 import { AccountAvatar } from "./components/AccountAvatar";
+import { MochiIcon } from "./components/MochiIcon";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { FirstLaunchSetup } from "./components/FirstLaunchSetup";
 import { ImportPicker } from "./components/ImportPicker";
@@ -48,6 +49,7 @@ import {
 } from "./lib/platform";
 import { enrollTotp, getVerifiedTotpFactor, registerPasskey, sendMagicLink, signInWithPasskey, signInWithProvider, verifyEmailToken, verifyMfaCode } from "./lib/auth";
 import { importThemeFile, importThemeFolder, useThemeEngine } from "./lib/theme";
+import { getProviderCredentialStatus, saveProviderCredential } from "./lib/providerCredentials";
 
 const navItems = [
   { label: "Library", icon: Library },
@@ -94,6 +96,9 @@ function App() {
     try { const stored = JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}"); return { launchOnStartup: Boolean(stored.launchOnStartup), keepOpen: stored.keepOpen !== false }; } catch { return { launchOnStartup: false, keepOpen: true }; }
   });
   const [igdbMessage, setIgdbMessage] = useState("");
+  const [nexusApiKey, setNexusApiKey] = useState("");
+  const [credentialStatus, setCredentialStatus] = useState({ igdb: false, nexus: false });
+  const [credentialBusy, setCredentialBusy] = useState<"igdb" | "nexus" | null>(null);
   const [igdbBusy, setIgdbBusy] = useState(false);
   const [launchError, setLaunchError] = useState("");
   const [user, setUser] = useState<User | null>(null);
@@ -408,6 +413,46 @@ function App() {
     addGameToLibrary(pendingGame.name, pendingGame.executablePath, metadata);
   };
 
+  useEffect(() => {
+    if (!supabase || !user) {
+      setCredentialStatus({ igdb: false, nexus: false });
+      return;
+    }
+    void Promise.all([
+      getProviderCredentialStatus(supabase, "igdb"),
+      getProviderCredentialStatus(supabase, "nexus"),
+    ]).then(([igdb, nexus]) => setCredentialStatus({ igdb, nexus })).catch((error) => {
+      console.warn("Mochi provider credential status unavailable", error);
+    });
+  }, [user]);
+
+  const saveCredential = async (provider: "igdb" | "nexus") => {
+    if (!supabase || !user) {
+      setAuthNotice("Sign in to save provider credentials securely.");
+      setShowAuth(true);
+      return;
+    }
+    const secret = provider === "igdb"
+      ? JSON.stringify({ clientId: settings.clientId.trim(), token: settings.token.trim(), apiKey: settings.apiKey?.trim() || "" })
+      : nexusApiKey.trim();
+    if (provider === "igdb" && (!settings.clientId.trim() || !settings.token.trim())) {
+      setIgdbMessage("Enter your IGDB Client ID and access token first.");
+      return;
+    }
+    if (!secret || secret.length < 8) return;
+    setCredentialBusy(provider);
+    try {
+      await saveProviderCredential(supabase, provider, secret);
+      setCredentialStatus((current) => ({ ...current, [provider]: true }));
+      if (provider === "nexus") setNexusApiKey("");
+      setIgdbMessage(provider === "igdb" ? "IGDB credentials saved securely to Mochi Vault." : "Nexus Mods key saved securely to Mochi Vault.");
+    } catch (error) {
+      setIgdbMessage(error instanceof Error ? error.message : "Unable to save provider credentials.");
+    } finally {
+      setCredentialBusy(null);
+    }
+  };
+
   const lookupArtwork = async () => {
     setIgdbMessage("");
     setIgdbBusy(true);
@@ -552,7 +597,7 @@ function App() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <button className="sidebar-account" onClick={user ? () => setActiveNav("Settings") : () => setShowAuth(true)}><AccountAvatar user={user} size={36} /><span><strong>{user?.user_metadata?.user_name || user?.user_metadata?.preferred_username || user?.email?.split("@")[0] || "Guest"}</strong><small>{user ? "Mochi account" : "Sign in to Mochi"}</small></span><ChevronDown size={14} /></button>
+        <button className="sidebar-account" onClick={user ? () => setActiveNav("Settings") : () => setShowAuth(true)}><AccountAvatar user={user} size={36} /><span><strong>{user?.user_metadata?.user_name || user?.user_metadata?.preferred_username || user?.email?.split("@")[0] || "Guest"}</strong><small>{user ? "Mochi account" : "Sign in to Mochi"}</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={14} /></button>
         <div className="brand">
           <div className="brand-mark"><img src="/mochi.png" alt="Mochi" /></div>
           <div>
@@ -579,7 +624,7 @@ function App() {
           <div className="section-label">
             <span>Your Pikos</span>
             <button className="icon-button tiny" aria-label="Add Piko" onClick={() => setShowAddPiko(true)}>
-              <Plus size={14} />
+              <MochiIcon name="plus" fallback={Plus} size={14} />
             </button>
           </div>
           <div className="piko-list">
@@ -599,29 +644,29 @@ function App() {
 
         <div className="sidebar-bottom">
           <button className={`nav-item ${activeNav === "Settings" ? "active" : ""}`} onClick={() => setActiveNav("Settings")}>
-            <Settings size={17} strokeWidth={1.8} />
+            <MochiIcon name="settings" fallback={Settings} size={17} strokeWidth={1.8} />
             <span>Settings</span>
           </button>
           <button className="sync-status" onClick={() => setShowAuth(true)}>
-            <div className="status-icon"><WifiOff size={14} /></div>
+            <div className="status-icon"><MochiIcon name="offline" fallback={WifiOff} size={14} /></div>
             <div><strong>{user ? (syncState === "syncing" ? "Syncing..." : syncState === "error" ? "Sync error" : "Cloud ready") : "Local mode"}</strong><span>{user ? user.email : isCloudConfigured ? "Cloud sync is off" : "Connect Supabase to sync"}</span></div>
-            <span className="icon-button tiny" aria-hidden="true"><ChevronDown size={13} /></span>
+            <span className="icon-button tiny" aria-hidden="true"><MochiIcon name="chevron" fallback={ChevronDown} size={13} /></span>
           </button>
         </div>
       </aside>
 
       <main className="main-content">
         <header className="topbar">
-          <button className="mobile-menu icon-button" aria-label="Open menu"><Menu size={18} /></button>
+          <button className="mobile-menu icon-button" aria-label="Open menu"><MochiIcon name="menu" fallback={Menu} size={18} /></button>
           <div className="breadcrumb"><span>Library</span><span className="breadcrumb-slash">/</span><strong>{selectedPiko.name}</strong></div>
           <div className="topbar-actions">
             <label className="search-box">
-              <Search size={16} />
+              <MochiIcon name="search" fallback={Search} size={16} />
               <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search your library" />
-              {search && <button className="clear-search" onClick={() => setSearch("")}><X size={13} /></button>}
+              {search && <button className="clear-search" onClick={() => setSearch("")}><MochiIcon name="close" fallback={X} size={13} /></button>}
               {!search && <kbd>⌘ K</kbd>}
             </label>
-            <button className="icon-button" aria-label="Notifications"><Bell size={17} /></button>
+            <button className="icon-button" aria-label="Notifications"><MochiIcon name="notifications" fallback={Bell} size={17} /></button>
             <button className="avatar-button" aria-label={user ? "Account menu" : "Sign in"} onClick={user ? () => setActiveNav("Settings") : () => setShowAuth(true)}><AccountAvatar user={user} size={34} /></button>
           </div>
         </header>
@@ -629,15 +674,15 @@ function App() {
         <div className="content">
           <section className="page-heading">
             <div><p className="eyebrow">Your collection</p><h1>{activeNav === "Library" ? "Good evening, Ashton." : activeNav}</h1></div>
-            <button className="secondary-button" onClick={() => setShowAddPiko(true)}><Plus size={16} /> Add Piko</button>
+            <button className="secondary-button" onClick={() => setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> Add Piko</button>
           </section>
 
           {activeNav === "Library" && library.length === 0 ? (
-            <div className="empty-state"><div className="empty-icon"><Gamepad2 size={23} /></div><h2>Your Mochi library is empty.</h2><p>Mochi starts clean. Add a game when you are ready.</p><button className="secondary-button" onClick={() => setShowAddPiko(true)}><Plus size={16} /> Add Piko</button></div>
+            <div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>Your Mochi library is empty.</h2><p>Mochi starts clean. Add a game when you are ready.</p><button className="secondary-button" onClick={() => setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> Add Piko</button></div>
           ) : activeNav === "Library" ? (
             <>
               <section className="library-grid-view">
-                {groupedPikos.map(([category, games]) => <div className="library-category" key={category}><div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div><div className="game-card-grid">{games.map((piko) => <button className={`game-card ${selectedPiko.id === piko.id ? "selected" : ""}`} key={piko.id} onClick={() => selectPiko(piko)}><div className="game-card-art" style={{ backgroundImage: piko.artwork }}><span className="game-card-play"><Play size={15} fill="currentColor"/></span></div><div className="game-card-copy"><strong>{piko.name}</strong><small>{piko.categories?.join(" · ") || "Other"}</small></div></button>)}</div></div>)}
+                {groupedPikos.map(([category, games]) => <div className="library-category" key={category}><div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div><div className="game-card-grid">{games.map((piko) => <button className={`game-card ${selectedPiko.id === piko.id ? "selected" : ""}`} key={piko.id} onClick={() => selectPiko(piko)}><div className="game-card-art" style={{ backgroundImage: piko.artwork }}><span className="game-card-play"><MochiIcon name="play" fallback={Play} size={15} fill="currentColor"/></span></div><div className="game-card-copy"><strong>{piko.name}</strong><small>{piko.categories?.join(" · ") || "Other"}</small></div></button>)}</div></div>)}
               </section>
               <section className="hero-card" style={{ backgroundImage: selectedPiko.artwork }}>
                 <div className="hero-copy">
@@ -645,16 +690,16 @@ function App() {
                   <h2>{selectedPiko.name}</h2>
                   <p>{selectedPiko.description}</p>
                   <div className="hero-actions">
-                    <button className="play-button" onClick={launchGame}><Play size={16} fill="currentColor" /> {isLaunching ? "Launching..." : "Play"}</button>
+                    <button className="play-button" onClick={launchGame}><MochiIcon name="play" fallback={Play} size={16} fill="currentColor" /> {isLaunching ? "Launching..." : "Play"}</button>
                     {selectedPiko.source === "custom" && <span className="metadata-note">{selectedPiko.executablePath}</span>}
-                    <button className="icon-button dark-button" aria-label="More options"><MoreHorizontal size={19} /></button>{launchError && <span className="metadata-note">{launchError}</span>}
+                    <button className="icon-button dark-button" aria-label="More options"><MochiIcon name="more" fallback={MoreHorizontal} size={19} /></button>{launchError && <span className="metadata-note">{launchError}</span>}
                   </div>
                 </div>
                 <div className="hero-meta"><span>Last played</span><strong>Yesterday, 8:42 PM</strong></div>
               </section>
 
               <section className="tofu-section">
-                <div className="section-heading"><div><p className="eyebrow">Environments</p><h3>Your Tofus</h3></div><button className="text-button"><SlidersHorizontal size={15} /> Manage</button></div>
+                <div className="section-heading"><div><p className="eyebrow">Environments</p><h3>Your Tofus</h3></div><button className="text-button"><MochiIcon name="manage" fallback={SlidersHorizontal} size={15} /> Manage</button></div>
                 <div className="tofu-grid">
                   {selectedPiko.tofus.map((tofu) => (
                     <button className={`tofu-card ${selectedTofu.id === tofu.id ? "active" : ""}`} key={tofu.id} onClick={() => setSelectedTofuId(tofu.id)}>
@@ -664,7 +709,7 @@ function App() {
                       <span className="tofu-mods">{tofu.mods ? `${tofu.mods} mods installed` : "No mods installed"}</span>
                     </button>
                   ))}
-                  <button className="new-tofu-card" onClick={() => setShowNewTofu(true)}><Plus size={17} /><span>New Tofu</span><small>Set up another environment</small></button>
+                  <button className="new-tofu-card" onClick={() => setShowNewTofu(true)}><MochiIcon name="plus" fallback={Plus} size={17} /><span>New Tofu</span><small>Set up another environment</small></button>
                 </div>
               </section>
 
@@ -672,7 +717,7 @@ function App() {
                 <div><span className="detail-label">Selected Tofu</span><strong>🧊 {selectedTofu.name}</strong></div>
                 <div><span className="detail-label">Runtime</span><strong>{selectedTofu.runtime} <span className="muted">· {selectedTofu.version}</span></strong></div>
                 <div><span className="detail-label">Install location</span><strong className="path-text">~/Games/{selectedPiko.name.replace(" ", "")}</strong></div>
-                <button className="icon-button"><Settings size={16} /></button>
+                <button className="icon-button"><MochiIcon name="settings" fallback={Settings} size={16} /></button>
               </section>
             </>
           ) : activeNav === "Settings" ? (
@@ -683,7 +728,7 @@ function App() {
                 <div className="theme-grid">
                   {themes.map((option) => (
                     <button key={option.id} className={"theme-card " + (theme === option.id ? "selected" : "")} onClick={() => void setTheme(option.id)}>
-                      <Palette size={16} />
+                      <MochiIcon name="palette" fallback={Palette} size={16} />
                       <strong>{option.name}</strong>
                       <small>{option.description || "Mochi theme"}</small>
                       <small className="theme-card-meta">{option.source === "builtin" ? "Built-in" : "v" + option.version + " · " + (option.author || "User theme")}</small>
@@ -691,8 +736,8 @@ function App() {
                   ))}
                 </div>
                 <div className="theme-actions">
-                  <button className="secondary-button" onClick={() => void importThemeFile().then((result) => { if (result) void reloadThemes(); }).catch((error) => setLaunchError(error instanceof Error ? error.message : String(error)))}><FileJson size={14} /> Import theme file</button>
-                  <button className="secondary-button" onClick={() => void importThemeFolder().then((result) => { if (result) void reloadThemes(); }).catch((error) => setLaunchError(error instanceof Error ? error.message : String(error)))}><FolderOpen size={14} /> Import theme folder</button>
+                  <button className="secondary-button" onClick={() => void importThemeFile().then((result) => { if (result) void reloadThemes(); }).catch((error) => setLaunchError(error instanceof Error ? error.message : String(error)))}><MochiIcon name="theme-file" fallback={FileJson} size={14} /> Import theme file</button>
+                  <button className="secondary-button" onClick={() => void importThemeFolder().then((result) => { if (result) void reloadThemes(); }).catch((error) => setLaunchError(error instanceof Error ? error.message : String(error)))}><MochiIcon name="folder" fallback={FolderOpen} size={14} /> Import theme folder</button>
                 </div>
                 {configInfo && <div className="theme-config-path"><span>Theme directory</span><code>{configInfo.themesPath}</code></div>}
               </div>
@@ -708,33 +753,45 @@ function App() {
                 </div>
               </div>
               <div className="settings-group">
+                <div className="settings-group-heading"><strong>Mod & metadata providers</strong><span>Credentials are encrypted with Supabase Vault</span></div>
+                <div className="provider-credential-card">
+                  <div className="provider-credential-heading"><div><strong>IGDB</strong><small>Store the Client ID and token with your Mochi account.</small></div><span className={credentialStatus.igdb ? "credential-status saved" : "credential-status"}>{credentialStatus.igdb ? "Saved" : "Not saved"}</span></div>
+                  <button className="secondary-button" onClick={() => void saveCredential("igdb")} disabled={credentialBusy !== null}>{credentialBusy === "igdb" ? <><MochiIcon name="refresh" fallback={RefreshCw} size={14} className="spin" /> Saving...</> : <><MochiIcon name="cloud" fallback={Cloud} size={14} /> Save IGDB securely</>}</button>
+                </div>
+                <div className="provider-credential-card">
+                  <div className="provider-credential-heading"><div><strong>Nexus Mods</strong><small>Your Nexus API key is stored server-side and is never returned to the launcher.</small></div><span className={credentialStatus.nexus ? "credential-status saved" : "credential-status"}>{credentialStatus.nexus ? "Saved" : "Not saved"}</span></div>
+                  <input type="password" value={nexusApiKey} onChange={(event) => setNexusApiKey(event.target.value)} placeholder={credentialStatus.nexus ? "Enter a new key to replace the saved key" : "Paste your Nexus Mods API key"} />
+                  <button className="secondary-button" onClick={() => void saveCredential("nexus")} disabled={credentialBusy !== null || nexusApiKey.trim().length < 8}>{credentialBusy === "nexus" ? "Saving..." : "Save Nexus key securely"}</button>
+                </div>
+              </div>
+              <div className="settings-group">
                 <div className="settings-group-heading"><strong>General</strong><span>Launcher behavior</span></div>
                 <label className="setting-row"><span><strong>Launch Mochi on startup</strong><small>Open the launcher when you sign in to your computer.</small></span><input className="toggle" checked={behavior.launchOnStartup} onChange={(event) => setBehavior({ ...behavior, launchOnStartup: event.target.checked })} type="checkbox" /></label>
                 <label className="setting-row"><span><strong>Keep launcher open</strong><small>Minimize to the system tray when a game starts.</small></span><input className="toggle" checked={behavior.keepOpen} onChange={(event) => setBehavior({ ...behavior, keepOpen: event.target.checked })} type="checkbox" /></label>
               </div>
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>Security</strong><span>Protect your Mochi account</span></div>
-                {user && <div className="security-actions"><button className="secondary-button" onClick={addPasskey} disabled={authBusy}><KeyRound size={15}/> Add passkey</button><button className="secondary-button" onClick={addAuthenticator} disabled={authBusy}><ShieldCheck size={15}/> Enable authenticator</button>{authNotice && <small className="metadata-note">{authNotice}</small>}{mfaMessage && <small className="metadata-note">{mfaMessage}</small>}</div>}
+                {user && <div className="security-actions"><button className="secondary-button" onClick={addPasskey} disabled={authBusy}><MochiIcon name="key" fallback={KeyRound} size={15}/> Add passkey</button><button className="secondary-button" onClick={addAuthenticator} disabled={authBusy}><MochiIcon name="security" fallback={ShieldCheck} size={15}/> Enable authenticator</button>{authNotice && <small className="metadata-note">{authNotice}</small>}{mfaMessage && <small className="metadata-note">{mfaMessage}</small>}</div>}
               </div>
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>Data & privacy</strong><span>Local-first storage</span></div>
                 <div className="setting-row"><span><strong>Library location</strong><small>Your game metadata is saved in this browser profile.</small></span><code>~/.config/mochi</code></div>
-                <button className="setting-row setting-button" onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}><span><strong>Advanced settings</strong><small>Diagnostics and developer options.</small></span><ChevronDown className={showAdvancedSettings ? "rotate" : ""} size={16} /></button>
+                <button className="setting-row setting-button" onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}><span><strong>Advanced settings</strong><small>Diagnostics and developer options.</small></span><MochiIcon name="chevron" fallback={ChevronDown} className={showAdvancedSettings ? "rotate" : ""} size={16} /></button>
                 {showAdvancedSettings && <div className="advanced-note">Native game detection and process controls will appear here when the Tauri backend is connected.</div>}
               </div>
               <button className="reset-button" onClick={resetLocalData}>Reset local library and settings</button>
             </section>
           ) : (
-            <div className="empty-state"><div className="empty-icon"><Gamepad2 size={23} /></div><h2>{activeNav} is ready when you are.</h2><p>This part of Mochi is taking shape. Your local library remains available offline.</p><button className="secondary-button" onClick={() => setActiveNav("Library")}><Library size={16} /> Back to library</button></div>
+            <div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>{activeNav} is ready when you are.</h2><p>This part of Mochi is taking shape. Your local library remains available offline.</p><button className="secondary-button" onClick={() => setActiveNav("Library")}><MochiIcon name="library" fallback={Library} size={16} /> Back to library</button></div>
           )}
-          <footer><span>Mochi v0.1.0 · Local-first by design</span><span><Cloud size={13} /> Cloud sync unavailable</span></footer>
+          <footer><span>Mochi v0.1.0 · Local-first by design</span><span><MochiIcon name="cloud" fallback={Cloud} size={13} /> Cloud sync unavailable</span></footer>
         </div>
       </main>
 
-      {showAddPiko && <div className="modal-backdrop" onClick={() => setShowAddPiko(false)}><div className="modal" onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><p className="eyebrow">Expand your library</p><h2>Add a Piko</h2></div><button className="icon-button" onClick={() => setShowAddPiko(false)}><X size={17} /></button></div><p className="modal-description">Connect an installed game or add a custom game to start managing its Tofus in Mochi.</p><div className="add-options"><button onClick={() => { setShowImportPicker(true); setShowAddPiko(false); }}><Library size={18} /><span><strong>Import from another platform</strong><small>Bring games in from an installed launcher</small></span><ChevronDown size={15} /></button><button onClick={() => { setShowCustomGame(true); setAddGameStep("form"); setPendingGame(null); setLaunchType("file"); setLaunchTarget(""); }}><Plus size={18} /><span><strong>Add a custom game</strong><small>Save a name and executable path locally</small></span><ChevronDown size={15} /></button></div></div></div>}
+      {showAddPiko && <div className="modal-backdrop" onClick={() => setShowAddPiko(false)}><div className="modal" onClick={(event) => event.stopPropagation()}><div className="modal-header"><div><p className="eyebrow">Expand your library</p><h2>Add a Piko</h2></div><button className="icon-button" onClick={() => setShowAddPiko(false)}><MochiIcon name="close" fallback={X} size={17} /></button></div><p className="modal-description">Connect an installed game or add a custom game to start managing its Tofus in Mochi.</p><div className="add-options"><button onClick={() => { setShowImportPicker(true); setShowAddPiko(false); }}><MochiIcon name="library" fallback={Library} size={18} /><span><strong>Import from another platform</strong><small>Bring games in from an installed launcher</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={15} /></button><button onClick={() => { setShowCustomGame(true); setAddGameStep("form"); setPendingGame(null); setLaunchType("file"); setLaunchTarget(""); }}><MochiIcon name="plus" fallback={Plus} size={18} /><span><strong>Add a custom game</strong><small>Save a name and executable path locally</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={15} /></button></div></div></div>}
             {showCustomGame && <div className="modal-backdrop" onClick={() => setShowCustomGame(false)}>
         <form className="modal igdb-selection-modal" onSubmit={addCustomGame} onClick={(event) => event.stopPropagation()}>
-          <div className="modal-header"><div><p className="eyebrow">{addGameStep === "igdb" ? "Confirm game identity" : "Local library"}</p><h2>{addGameStep === "igdb" ? "Is this the right game?" : "Add custom game"}</h2></div><button className="icon-button" type="button" onClick={() => { setShowCustomGame(false); setAddGameStep("form"); setPendingGame(null); setLaunchTarget(""); }}><X size={17} /></button></div>
+          <div className="modal-header"><div><p className="eyebrow">{addGameStep === "igdb" ? "Confirm game identity" : "Local library"}</p><h2>{addGameStep === "igdb" ? "Is this the right game?" : "Add custom game"}</h2></div><button className="icon-button" type="button" onClick={() => { setShowCustomGame(false); setAddGameStep("form"); setPendingGame(null); setLaunchTarget(""); }}><MochiIcon name="close" fallback={X} size={17} /></button></div>
           {addGameStep === "form" ? <>
             <p className="modal-description">Choose how Mochi should launch this game. File selection uses the native Tauri file dialog, which is preferable to trying to use xdg-open as a file picker on Linux/Wayland.</p>
             <div className="form-fields">
@@ -747,15 +804,15 @@ function App() {
                 </select>
               </label>
               {launchType === "file" && <div className="launch-target-picker"><button type="button" className="secondary-button file-picker-button" onClick={chooseGameFile}>Choose executable / launcher file</button></div>}
-              {launchType === "flatpak" && <div className="flatpak-input-row"><button type="button" className="secondary-button" onClick={loadFlatpaks} disabled={flatpakBusy}>{flatpakBusy ? <><RefreshCw size={15} className="spin" /> Loading...</> : <><Grid2X2 size={15} /> Choose installed Flatpak</>}</button><input value={launchTarget} onChange={(event) => setLaunchTarget(event.target.value)} placeholder="org.company.game" autoComplete="off" required /></div>}
+              {launchType === "flatpak" && <div className="flatpak-input-row"><button type="button" className="secondary-button" onClick={loadFlatpaks} disabled={flatpakBusy}>{flatpakBusy ? <><MochiIcon name="refresh" fallback={RefreshCw} size={15} className="spin" /> Loading...</> : <><MochiIcon name="installed" fallback={Grid2X2} size={15} /> Choose installed Flatpak</>}</button><input value={launchTarget} onChange={(event) => setLaunchTarget(event.target.value)} placeholder="org.company.game" autoComplete="off" required /></div>}
               {launchType === "custom" && <input value={launchTarget} onChange={(event) => setLaunchTarget(event.target.value)} placeholder="Custom path, Flatpak ID, or supported launch target" autoComplete="off" required />}
             </div>
-            <button className="play-button form-submit" type="submit" disabled={igdbBusy}>{igdbBusy ? <><RefreshCw size={16} className="spin" /> Searching IGDB...</> : settings.clientId.trim() && (settings.token.trim() || settings.apiKey?.trim()) ? <>Next <ChevronDown size={16} /></> : <><Plus size={16} /> Add game</>}</button>
+            <button className="play-button form-submit" type="submit" disabled={igdbBusy}>{igdbBusy ? <><MochiIcon name="refresh" fallback={RefreshCw} size={16} className="spin" /> Searching IGDB...</> : settings.clientId.trim() && (settings.token.trim() || settings.apiKey?.trim()) ? <>Next <MochiIcon name="chevron" fallback={ChevronDown} size={16} /></> : <><MochiIcon name="plus" fallback={Plus} size={16} /> Add game</>}</button>
           </> : <>
             <p className="modal-description">{pendingGame?.candidates.length ? "Mochi found these matches. Approve the best match to use its artwork, description and categories." : "Mochi could not find a confident match. You can add the game without IGDB metadata."}</p>
             <div className="igdb-candidates">{pendingGame?.candidates.map((game) => {
               const art = game.cover?.url?.replace("t_thumb", "t_1080p") || game.artworks?.[0]?.url?.replace("t_thumb", "t_1080p");
-              return <button type="button" className="igdb-candidate" key={game.id ?? game.name} onClick={() => approveIgdbGame(game)}><div className="igdb-candidate-art" style={{ backgroundImage: art ? `url('${art}')` : undefined }} /><div className="igdb-candidate-copy"><strong>{game.name}</strong><small>{game.genres?.map((g) => g.name).join(" · ") || "Genre unknown"}</small>{game.summary && <p>{game.summary}</p>}</div><ChevronDown size={16} /></button>;
+              return <button type="button" className="igdb-candidate" key={game.id ?? game.name} onClick={() => approveIgdbGame(game)}><div className="igdb-candidate-art" style={{ backgroundImage: art ? `url('${art}')` : undefined }} /><div className="igdb-candidate-copy"><strong>{game.name}</strong><small>{game.genres?.map((g) => g.name).join(" · ") || "Genre unknown"}</small>{game.summary && <p>{game.summary}</p>}</div><MochiIcon name="chevron" fallback={ChevronDown} size={16} /></button>;
             })}</div>
             <div className="igdb-selection-actions"><button type="button" className="secondary-button" onClick={() => setAddGameStep("form")}>Back</button><button type="button" className="play-button" onClick={() => approveIgdbGame(null)}>Add without IGDB</button></div>
           </>}
@@ -763,20 +820,20 @@ function App() {
       </div>}
       {flatpakPickerOpen && <div className="modal-backdrop" onClick={() => setFlatpakPickerOpen(false)}>
         <div className="modal flatpak-picker-modal" onClick={(event) => event.stopPropagation()}>
-          <div className="modal-header"><div><p className="eyebrow">Installed applications</p><h2>Choose a Flatpak</h2></div><button className="icon-button" type="button" onClick={() => setFlatpakPickerOpen(false)}><X size={17} /></button></div>
+          <div className="modal-header"><div><p className="eyebrow">Installed applications</p><h2>Choose a Flatpak</h2></div><button className="icon-button" type="button" onClick={() => setFlatpakPickerOpen(false)}><MochiIcon name="close" fallback={X} size={17} /></button></div>
           <p className="modal-description">Games are shown first. Everything else is grouped separately.</p>
           {(["Games", "Other"] as const).map((category) => {
             const items = flatpaks.filter((flatpak) => flatpak.category === category);
             return items.length ? <section className="flatpak-group" key={category}><div className="flatpak-group-heading"><strong>{category}</strong><span>{items.length}</span></div><div className="flatpak-list">{items.map((flatpak) => <button type="button" className="flatpak-item" key={flatpak.id} onClick={() => {
               setLaunchTarget(`flatpak://${flatpak.id}`);
               setFlatpakPickerOpen(false);
-            }}><span><strong>{flatpak.name}</strong><small>{flatpak.id}</small></span><ChevronDown size={15} /></button>)}</div></section> : null;
+            }}><span><strong>{flatpak.name}</strong><small>{flatpak.id}</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={15} /></button>)}</div></section> : null;
           })}
-          {!flatpaks.length && <div className="empty-state flatpak-empty"><Gamepad2 size={22} /><p>No installed Flatpaks were found.</p></div>}
+          {!flatpaks.length && <div className="empty-state flatpak-empty"><MochiIcon name="gamepad" fallback={Gamepad2} size={22} /><p>No installed Flatpaks were found.</p></div>}
         </div>
       </div>}
       {showImportPicker && <ImportPicker onClose={() => setShowImportPicker(false)} onImport={addImportedGames} />}
-      {showAuth && <div className="modal-backdrop" onClick={() => setShowAuth(false)}><form className="modal auth-modal" onSubmit={authenticate} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div className="auth-brand"><img src="/mochi.png" alt="Mochi" /><div><p className="eyebrow">Mochi Cloud</p><h2>{authMode === "sign-in" ? "Welcome back." : "Create your account."}</h2></div></div><button className="icon-button" type="button" onClick={() => setShowAuth(false)}><X size={17} /></button></div><p className="modal-description">{authMode === "sign-in" ? "Sign in to sync your library metadata across devices." : "Your games stay local. Your Mochi metadata can follow you."}</p><div className="form-fields"><label>Email<input name="email" type="email" placeholder="you@example.com" required /></label><label>Password<input name="password" type="password" minLength={6} placeholder="At least 6 characters" required /></label></div>{authError && <p className="auth-error">{authError}</p>} {mfaRequired ? <><p className="modal-description">{mfaMessage}</p><input className="mfa-input" inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="123456" maxLength={6} /><button className="play-button form-submit" type="button" disabled={authBusy || mfaCode.length !== 6} onClick={completeMfa}>{authBusy ? "Verifying..." : "Verify code"}</button></> : <><button className="play-button form-submit" disabled={authBusy} type="submit">{authBusy ? "Connecting..." : authMode === "sign-in" ? "Sign in" : "Create account"}</button><div className="auth-provider-row"><button type="button" className="secondary-button" onClick={() => signInWithProvider(supabase!, "github")}><Github size={15}/> GitHub</button><button type="button" className="secondary-button" onClick={handlePasskey}><KeyRound size={15}/> Passkey</button></div><button type="button" className="switch-auth" onClick={() => sendMagicLink(supabase!, String((document.querySelector('input[name="email"]') as HTMLInputElement)?.value || ""))}>Email me a magic link</button><button className="switch-auth" type="button" onClick={() => { setAuthMode(authMode === "sign-in" ? "sign-up" : "sign-in"); setAuthError(""); }}>{authMode === "sign-in" ? "New to Mochi? Create an account" : "Already have an account? Sign in"}</button></>}</form></div>}
+      {showAuth && <div className="modal-backdrop" onClick={() => setShowAuth(false)}><form className="modal auth-modal" onSubmit={authenticate} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div className="auth-brand"><img src="/mochi.png" alt="Mochi" /><div><p className="eyebrow">Mochi Cloud</p><h2>{authMode === "sign-in" ? "Welcome back." : "Create your account."}</h2></div></div><button className="icon-button" type="button" onClick={() => setShowAuth(false)}><MochiIcon name="close" fallback={X} size={17} /></button></div><p className="modal-description">{authMode === "sign-in" ? "Sign in to sync your library metadata across devices." : "Your games stay local. Your Mochi metadata can follow you."}</p><div className="form-fields"><label>Email<input name="email" type="email" placeholder="you@example.com" required /></label><label>Password<input name="password" type="password" minLength={6} placeholder="At least 6 characters" required /></label></div>{authError && <p className="auth-error">{authError}</p>} {mfaRequired ? <><p className="modal-description">{mfaMessage}</p><input className="mfa-input" inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="123456" maxLength={6} /><button className="play-button form-submit" type="button" disabled={authBusy || mfaCode.length !== 6} onClick={completeMfa}>{authBusy ? "Verifying..." : "Verify code"}</button></> : <><button className="play-button form-submit" disabled={authBusy} type="submit">{authBusy ? "Connecting..." : authMode === "sign-in" ? "Sign in" : "Create account"}</button><div className="auth-provider-row"><button type="button" className="secondary-button" onClick={() => signInWithProvider(supabase!, "github")}><MochiIcon name="github" fallback={Github} size={15}/> GitHub</button><button type="button" className="secondary-button" onClick={handlePasskey}><MochiIcon name="key" fallback={KeyRound} size={15}/> Passkey</button></div><button type="button" className="switch-auth" onClick={() => sendMagicLink(supabase!, String((document.querySelector('input[name="email"]') as HTMLInputElement)?.value || ""))}>Email me a magic link</button><button className="switch-auth" type="button" onClick={() => { setAuthMode(authMode === "sign-in" ? "sign-up" : "sign-in"); setAuthError(""); }}>{authMode === "sign-in" ? "New to Mochi? Create an account" : "Already have an account? Sign in"}</button></>}</form></div>}
     </div>
   );
 }

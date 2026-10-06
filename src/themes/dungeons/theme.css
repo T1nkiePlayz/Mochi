@@ -1,5 +1,11 @@
-.app-shell {
-  background:
-    radial-gradient(circle at 80% 0%, rgba(220,139,78,.13), transparent 34%),
-    var(--mochi-background);
-}
+/* Minecraft Dungeons 2.0 — carved stone, ember light and adventure-map framing. */
+.app-shell{background:radial-gradient(circle at 80% -10%,rgba(229,154,87,.18),transparent 34%),radial-gradient(circle at 15% 100%,rgba(125,61,38,.16),transparent 28%),var(--mochi-background);}
+.sidebar{background:linear-gradient(180deg,#1a1210,#0e0908);border-right-color:var(--mochi-border-strong);}
+.brand-mark,.empty-icon,.account-avatar{border-radius:var(--mochi-radius-sm)!important;border:1px solid var(--mochi-border-strong);box-shadow:inset 0 1px rgba(255,255,255,.05),0 8px 25px rgba(0,0,0,.2);}
+.nav-item,.piko-nav-item{border:1px solid transparent;border-radius:var(--mochi-radius-sm);}
+.nav-item.active{background:linear-gradient(90deg,var(--mochi-accent-soft),transparent);border-color:rgba(229,154,87,.16);box-shadow:inset 3px 0 var(--mochi-accent);}
+.game-card,.tofu-card,.new-tofu-card,.settings-group,.theme-card{background:linear-gradient(145deg,rgba(45,33,27,.92),rgba(26,18,15,.95));box-shadow:var(--mochi-shadow-card);}
+.hero-card{border-radius:var(--mochi-hero-radius);box-shadow:0 10px 0 rgba(0,0,0,.14),var(--mochi-shadow-card);}
+.play-button{box-shadow:0 8px 26px rgba(229,154,87,.18);}
+.section-heading h3:after{content:"";display:block;width:34px;height:2px;margin-top:7px;background:var(--mochi-accent);box-shadow:8px 0 var(--mochi-accent),16px 0 var(--mochi-accent);}
+.modal{border-color:var(--mochi-border-strong);}
