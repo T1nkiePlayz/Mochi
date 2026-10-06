@@ -75,6 +75,10 @@ export function FirstLaunchSetup({
   };
 
   const skip = () => {
+    if (step === "account" && !signedIn) {
+      setStep("imports");
+      return;
+    }
     const index = steps.indexOf(step);
     if (index < steps.length - 1) {
       setEntering(true);
