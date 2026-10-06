@@ -281,10 +281,11 @@ function App() {
       });
   }, [library, user]);
 
-  const finishFirstLaunchSetup = (sources: ImportSourceId[]) => {
+  const finishFirstLaunchSetup = (games: ImportedGame[], sources: ImportSourceId[]) => {
     window.localStorage.setItem(setupCompleteKey, "true");
     window.localStorage.setItem(importSourcesKey, JSON.stringify(sources));
     setShowFirstLaunchSetup(false);
+    if (games.length) addImportedGames(games);
   };
 
   const selectedPiko = library.find((piko) => piko.id === selectedPikoId) ?? library[0] ?? {
