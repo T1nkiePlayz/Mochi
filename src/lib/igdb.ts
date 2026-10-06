@@ -9,6 +9,7 @@ export type IgdbGame = {
   summary?: string;
   cover?: { url?: string };
   artworks?: Array<{ url?: string }>;
+  genres?: Array<{ name: string }>;
 };
 
 const endpoint = "https://api.igdb.com/v4/games";
@@ -23,7 +24,7 @@ export async function lookupIgdbGame(name: string, settings: IgdbSettings): Prom
       Authorization: settings.token ? `Bearer ${settings.token.trim()}` : settings.apiKey!.trim(),
       "Content-Type": "text/plain",
     },
-    body: `search "${name.replace(/"/g, '\\"')}"; fields name,summary,cover.url,artworks.url; limit 1;`,
+    body: `search "${name.replace(/"/g, '\\"')}"; fields name,summary,cover.url,artworks.url,genres.name; limit 1;`,
   });
   if (!response.ok) throw new Error(`IGDB metadata request failed (${response.status})`);
   const games = (await response.json()) as IgdbGame[];
