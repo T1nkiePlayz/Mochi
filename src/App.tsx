@@ -593,26 +593,24 @@ function App() {
     if (supabase) await supabase.auth.signOut();
   };
 
-  const authModal = <div className="modal-backdrop" onClick={() => setShowAuth(false)}><form className="modal auth-modal" onSubmit={authenticate} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div className="auth-brand"><img src="/mochi.png" alt="Mochi" /><div><p className="eyebrow">Mochi Cloud</p><h2>{authMode === "sign-in" ? "Welcome back." : "Create your account."}</h2></div></div><button className="icon-button" type="button" onClick={() => setShowAuth(false)}><MochiIcon name="close" fallback={X} size={17} /></button></div><p className="modal-description">{authMode === "sign-in" ? "Sign in to access your securely stored API credentials and, if you enable it, keep Mochi metadata available across devices." : "Your games stay local. Your Mochi metadata can follow you."}</p><div className="form-fields"><label>Email<input name="email" type="email" placeholder="you@example.com" required /></label><label>Password<input name="password" type="password" minLength={6} placeholder="At least 6 characters" required /></label></div>{authError && <p className="auth-error">{authError}</p>} {mfaRequired ? <><p className="modal-description">{mfaMessage}</p><input className="mfa-input" inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="123456" maxLength={6} /><button className="play-button form-submit" type="button" disabled={authBusy || mfaCode.length !== 6} onClick={completeMfa}>{authBusy ? "Verifying..." : "Verify code"}</button></> : <><button className="play-button form-submit" disabled={authBusy} type="submit">{authBusy ? "Connecting..." : authMode === "sign-in" ? "Sign in" : "Create account"}</button><div className="auth-provider-row"><button type="button" className="secondary-button" onClick={() => signInWithProvider(supabase!, "github")}><MochiIcon name="github" fallback={Github} size={15}/> GitHub</button><button type="button" className="secondary-button" onClick={handlePasskey}><MochiIcon name="key" fallback={KeyRound} size={15}/> Passkey</button></div><button type="button" className="switch-auth" onClick={() => sendMagicLink(supabase!, String((document.querySelector('input[name="email"]') as HTMLInputElement)?.value || ""))}>Email me a magic link</button><button className="switch-auth" type="button" onClick={() => { setAuthMode(authMode === "sign-in" ? "sign-up" : "sign-in"); setAuthError(""); }}>{authMode === "sign-in" ? "New to Mochi? Create an account" : "Already have an account? Sign in"}</button></>}</form></div>}
-    </div>
-  );
-}
-
-export default App;
+  const authModal = <div className="modal-backdrop" onClick={() => setShowAuth(false)}><form className="modal auth-modal" onSubmit={authenticate} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div className="auth-brand"><img src="/mochi.png" alt="Mochi" /><div><p className="eyebrow">Mochi Cloud</p><h2>{authMode === "sign-in" ? "Welcome back." : "Create your account."}</h2></div></div><button className="icon-button" type="button" onClick={() => setShowAuth(false)}><MochiIcon name="close" fallback={X} size={17} /></button></div><p className="modal-description">{authMode === "sign-in" ? "Sign in to access your securely stored API credentials and, if you enable it, keep Mochi metadata available across devices." : "Your games stay local. Your Mochi metadata can follow you."}</p><div className="form-fields"><label>Email<input name="email" type="email" placeholder="you@example.com" required /></label><label>Password<input name="password" type="password" minLength={6} placeholder="At least 6 characters" required /></label></div>{authError && <p className="auth-error">{authError}</p>} {mfaRequired ? <><p className="modal-description">{mfaMessage}</p><input className="mfa-input" inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="123456" maxLength={6} /><button className="play-button form-submit" type="button" disabled={authBusy || mfaCode.length !== 6} onClick={completeMfa}>{authBusy ? "Verifying..." : "Verify code"}</button></> : <><button className="play-button form-submit" disabled={authBusy} type="submit">{authBusy ? "Connecting..." : authMode === "sign-in" ? "Sign in" : "Create account"}</button><div className="auth-provider-row"><button type="button" className="secondary-button" onClick={() => signInWithProvider(supabase!, "github")}><MochiIcon name="github" fallback={Github} size={15}/> GitHub</button><button type="button" className="secondary-button" onClick={handlePasskey}><MochiIcon name="key" fallback={KeyRound} size={15}/> Passkey</button></div><button type="button" className="switch-auth" onClick={() => sendMagicLink(supabase!, String((document.querySelector('input[name="email"]') as HTMLInputElement)?.value || ""))}>Email me a magic link</button><button className="switch-auth" type="button" onClick={() => { setAuthMode(authMode === "sign-in" ? "sign-up" : "sign-in"); setAuthError(""); }}>{authMode === "sign-in" ? "New to Mochi? Create an account" : "Already have an account? Sign in"}</button></>}</form></div>;
 
   if (showFirstLaunchSetup) {
-    return <><FirstLaunchSetup
-      settings={settings}
-      setSettings={setSettings}
-      onSignIn={() => { setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); }}
-      signedIn={Boolean(user)}
-      credentialStatus={credentialStatus}
-      nexusApiKey={nexusApiKey}
-      setNexusApiKey={setNexusApiKey}
-      saveCredential={saveCredential}
-      credentialBusy={credentialBusy}
-      onFinish={finishFirstLaunchSetup}
-    />{showAuth ? authModal : null}</>;
+    return <>
+      <FirstLaunchSetup
+        settings={settings}
+        setSettings={setSettings}
+        onSignIn={() => { setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); }}
+        signedIn={Boolean(user)}
+        credentialStatus={credentialStatus}
+        nexusApiKey={nexusApiKey}
+        setNexusApiKey={setNexusApiKey}
+        saveCredential={saveCredential}
+        credentialBusy={credentialBusy}
+        onFinish={finishFirstLaunchSetup}
+      />
+      {showAuth ? authModal : null}
+    </>;
   }
 
   if (!selectedPiko || !selectedTofu) return null;
