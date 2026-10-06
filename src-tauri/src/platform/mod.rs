@@ -22,7 +22,7 @@ mod linux;
 #[cfg(target_os = "macos")]
 mod macos;
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-mod other;
+mod unsupported;
 
 pub fn launch_game(target: &str) -> Result<(), String> {
     #[cfg(target_os = "linux")]
@@ -32,7 +32,7 @@ pub fn launch_game(target: &str) -> Result<(), String> {
     { macos::launch_game(target) }
 
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-    { other::launch_game(target) }
+    { unsupported::launch_game(target) }
 }
 
 pub fn list_flatpaks() -> Result<Vec<FlatpakApp>, String> {
@@ -43,7 +43,7 @@ pub fn list_flatpaks() -> Result<Vec<FlatpakApp>, String> {
     { macos::list_flatpaks() }
 
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-    { other::list_flatpaks() }
+    { unsupported::list_flatpaks() }
 }
 
 pub fn capabilities() -> PlatformCapabilities {
@@ -54,5 +54,5 @@ pub fn capabilities() -> PlatformCapabilities {
     { macos::capabilities() }
 
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-    { other::capabilities() }
+    { unsupported::capabilities() }
 }
