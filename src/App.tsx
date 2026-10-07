@@ -52,7 +52,7 @@ import {
   type LaunchMethodId,
   type PlatformCapabilities,
 } from "./lib/platform";
-import { enrollTotp, getVerifiedTotpFactor, sendEmailCode, signInWithProvider, verifyEmailCode, verifyEmailToken, verifyMfaCode } from "./lib/auth";
+import { deletePasskey, enrollTotp, getVerifiedTotpFactor, linkAuthIdentity, listPasskeys, registerPasskey, removeTotp, sendEmailCode, signInWithProvider, verifyEmailCode, verifyEmailToken, verifyMfaCode } from "./lib/auth";
 import { importThemeFile, importThemeFolder, useThemeEngine } from "./lib/theme";
 import { getProviderCredentialStatus, saveProviderCredential } from "./lib/providerCredentials";
 
@@ -89,6 +89,9 @@ function App() {
   const [savedAccounts, setSavedAccounts] = useState<Array<{ id: string; username: string; email: string; refreshToken: string }>>(() => { try { return JSON.parse(window.localStorage.getItem("mochi:accounts") || "[]"); } catch { return []; } });
   const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; createdAt: number }>>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [savedAccounts, setSavedAccounts] = useState<Array<{ id: string; username: string; email: string; refreshToken: string }>>(() => { try { return JSON.parse(window.localStorage.getItem("mochi:accounts") || "[]"); } catch { return []; } });
+  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; createdAt: number }>>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [showCustomGame, setShowCustomGame] = useState(false);
   const [addGameStep, setAddGameStep] = useState<"form" | "igdb">("form");
   const [pendingGame, setPendingGame] = useState<{ name: string; executablePath: string; candidates: IgdbGame[] } | null>(null);
@@ -120,6 +123,10 @@ function App() {
   const [mfaFactorId, setMfaFactorId] = useState("");
   const [mfaMessage, setMfaMessage] = useState("");
   const [authNotice, setAuthNotice] = useState("");
+  const [securityFactors, setSecurityFactors] = useState<any[]>([]);
+  const [passkeys, setPasskeys] = useState<any[]>([]);
+  const [securityBusy, setSecurityBusy] = useState(false);
+  const [mfaSetup, setMfaSetup] = useState<{ id: string; qr: string; secret: string } | null>(null);
   const [emailCodeStep, setEmailCodeStep] = useState(false);
   const [emailCode, setEmailCode] = useState("");
   const [emailCodeEmail, setEmailCodeEmail] = useState("");
@@ -130,6 +137,24 @@ function App() {
   );
   const syncInitialized = useRef(false);
   const { themes, theme, setTheme, reloadThemes, configInfo } = useThemeEngine();
+  const currentUsername = user?.user_metadata?.username || user?.user_metadata?.user_name || user?.user_metadata?.preferred_username || user?.email || "Guest";
+  const pushNotification = (title: string, message: string) => {
+    const notification = { id: crypto.randomUUID(), title, message, createdAt: Date.now() };
+    setNotifications((current) => [notification, ...current].slice(0, 20));
+    void import("@tauri-apps/api/core").then(({ invoke }) => invoke("send_system_notification", { title, body: message })).catch(() => {});
+  };
+  const saveAccountSession = (sessionUser: User, refreshToken: string) => {
+    const account = { id: sessionUser.id, username: sessionUser.user_metadata?.username || sessionUser.user_metadata?.user_name || sessionUser.user_metadata?.preferred_username || sessionUser.email || "Guest", email: sessionUser.email || "", refreshToken };
+    setSavedAccounts((current) => { const next = [account, ...current.filter((item) => item.id !== account.id)].slice(0, 5); window.localStorage.setItem("mochi:accounts", JSON.stringify(next)); return next; });
+  };
+  const switchAccount = async (account: { id: string; username: string; email: string; refreshToken: string }) => {
+    if (!supabase || account.id === user?.id) { setShowAccountMenu(false); return; }
+    setAuthBusy(true);
+    try { const { error } = await supabase.auth.setSession({ access_token: "", refresh_token: account.refreshToken }); if (error) throw error; setShowAccountMenu(false); pushNotification("Account switched", "Now using " + account.username + "."); }
+    catch (error) { setAuthError(error instanceof Error ? error.message : "Unable to switch accounts."); setShowAccountMenu(false); setShowAuth(true); }
+    finally { setAuthBusy(false); }
+  };
+  const addAccount = () => { setShowAccountMenu(false); setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); };
 
   useEffect(() => {
     window.localStorage.setItem(storedPikosKey, JSON.stringify(library));
@@ -225,10 +250,8 @@ function App() {
 
   useEffect(() => {
     if (!supabase) return;
-    void supabase.auth.getUser().then(({ data }) => setUser(data.user));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+    void supabase.auth.getSession().then(({ data }) => { setUser(data.session?.user ?? null); if (data.session?.user && data.session.refresh_token) saveAccountSession(data.session.user, data.session.refresh_token); });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => { setUser(session?.user ?? null); if (session?.user && session.refresh_token) saveAccountSession(session.user, session.refresh_token); });
     return () => listener.subscription.unsubscribe();
   }, []);
 
