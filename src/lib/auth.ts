@@ -7,21 +7,6 @@ export async function signInWithProvider(client: SupabaseClient, provider: "goog
   });
 }
 
-export async function sendEmailCode(client: SupabaseClient, email: string) {
-  return client.auth.signInWithOtp({
-    email,
-    options: { shouldCreateUser: true },
-  });
-}
-
-export async function verifyEmailCode(client: SupabaseClient, email: string, token: string) {
-  return client.auth.verifyOtp({
-    email,
-    token,
-    type: "email",
-  });
-}
-
 export async function getVerifiedTotpFactor(client: SupabaseClient) {
   const { data, error } = await client.auth.mfa.listFactors();
   if (error) throw error;
