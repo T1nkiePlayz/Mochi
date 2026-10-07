@@ -54,6 +54,21 @@ export async function signInWithPasskey(client: SupabaseClient) {
   return client.auth.signInWithPasskey();
 }
 
+export async function listPasskeys(client: SupabaseClient) {
+  return client.auth.passkey.list();
+}
+
+export async function deletePasskey(client: SupabaseClient, passkeyId: string) {
+  return client.auth.passkey.delete({ passkeyId });
+}
+
+export async function linkAuthIdentity(client: SupabaseClient, provider: "google" | "github") {
+  return client.auth.linkIdentity({
+    provider,
+    options: { redirectTo: window.location.origin },
+  });
+}
+
 
 export async function verifyEmailToken(client: SupabaseClient, url: string) {
   const parsed = new URL(url);
