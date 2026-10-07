@@ -544,3 +544,5 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 .discover-instance-stats strong{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--mochi-text);}
 .discover-instance-card .secondary-button{align-self:flex-start;margin-top:auto;}
 @media(max-width:700px){.discover-instance-grid{grid-template-columns:1fr;}.discover-instance-stats{grid-template-columns:1fr;}}
+
+.search-box>.mochi-icon-wrap{display:grid!important;place-items:center!important;flex:0 0 16px!important;width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;overflow:hidden}.search-box>.mochi-icon-wrap .mochi-icon-custom{display:block!important;width:100%!important;height:100%!important;background-position:center!important;background-size:contain!important;background-repeat:no-repeat!important}

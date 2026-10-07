@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "id": "stardew-valley",
+  "name": "Stardew Valley",
+  "version": "1.0.0",
+  "author": "Side Quest Games",
+  "description": "A cozy farm-journal interface with paper panels, wooden dividers, soft cards and handcrafted controls.",
+  "colors": {
+    "background": "#182018",
+    "backgroundElevated": "#223022",
+    "surface": "#2c3b29",
+    "surfaceRaised": "#394b31",
+    "surfaceHover": "#4a5f3d",
+    "border": "#65734c",
+    "borderStrong": "#879a62",
+    "text": "#f2e9cf",
+    "textStrong": "#fff9e6",
+    "textMuted": "#c7c09f",
+    "textFaint": "#8d8a70",
+    "accent": "#e6a84e",
+    "accentStrong": "#ffd477",
+    "accentText": "#25170a",
+    "accentSoft": "rgba(230,168,78,.16)",
+    "success": "#86c86b",
+    "warning": "#e6b85c",
+    "danger": "#d96f62",
+    "shadow": "rgba(0,0,0,.48)"
+  },
+  "ui": {
+    "fontBody": "\"DM Sans\",sans-serif",
+    "fontDisplay": "\"Manrope\",sans-serif",
+    "radiusSm": "4px",
+    "radiusMd": "9px",
+    "radiusLg": "14px",
+    "sidebarWidth": "250px",
+    "contentMaxWidth": "1120px",
+    "density": "1"
+  },
+  "typography": {
+    "bodyLineHeight": "1.55",
+    "headingWeight": "800",
+    "labelWeight": "700",
+    "mono": "\"JetBrains Mono\",monospace"
+  },
+  "layout": {
+    "contentPadding": "40px 48px 28px",
+    "topbarHeight": "68px",
+    "cardGap": "14px",
+    "sectionGap": "30px"
+  },
+  "effects": {
+    "shadowSoft": "0 5px 14px rgba(0,0,0,.18)",
+    "shadowCard": "0 9px 0 rgba(0,0,0,.13),0 18px 40px rgba(0,0,0,.22)",
+    "blur": "6px",
+    "transition": "180ms ease-out"
+  },
+  "components": {
+    "buttonHeight": "38px",
+    "inputHeight": "38px",
+    "cardRadius": "10px",
+    "heroRadius": "14px",
+    "glass": "rgba(38,52,32,.82)"
+  },
+  "icons": {
+    "library": "assets/icons-library.svg",
+    "installed": "assets/icons-installed.svg",
+    "discover": "assets/icons-discover.svg",
+    "downloads": "assets/icons-downloads.svg",
+    "play": "assets/icons-play.svg",
+    "plus": "assets/icons-plus.svg",
+    "search": "assets/icons-search.svg",
+    "settings": "assets/icons-settings.svg",
+    "manage": "assets/icons-manage.svg",
+    "palette": "assets/icons-palette.svg",
+    "folder": "assets/icons-folder.svg",
+    "refresh": "assets/icons-refresh.svg",
+    "security": "assets/icons-security.svg",
+    "key": "assets/icons-key.svg",
+    "github": "assets/icons-github.svg",
+    "close": "assets/icons-close.svg",
+    "chevron": "assets/icons-chevron.svg",
+    "more": "assets/icons-more.svg",
+    "gamepad": "assets/icons-gamepad.svg",
+    "cloud": "assets/icons-cloud.svg",
+    "notifications": "assets/icons-notifications.svg",
+    "account": "assets/icons-account.svg",
+    "menu": "assets/icons-menu.svg",
+    "themeFile": "assets/icons-theme-file.svg",
+    "offline": "assets/icons-offline.svg"
+  }
+}
