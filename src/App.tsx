@@ -746,13 +746,10 @@ function App() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <button className="sidebar-account" onClick={user ? () => setActiveNav("Settings") : () => setShowAuth(true)}><span><strong>{user?.user_metadata?.user_name || user?.user_metadata?.preferred_username || user?.email?.split("@")[0] || "Guest"}</strong><small>{user ? "Mochi account" : "Sign in to Mochi"}</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={14} /></button>
-        <div className="brand">
-          <div className="brand-mark"><img src="/mochi.png" alt="Mochi" /></div>
-          <div>
-            <strong>Mochi</strong>
-            <span>Your games, your way.</span>
-          </div>
+        <div className="brand"><div className="brand-mark"><img src="/mochi.png" alt="Mochi" /></div><div><strong>Mochi</strong><span>Your games, your way.</span></div></div>
+        <div className="sidebar-account-wrap">
+          <button className="sidebar-account" aria-expanded={showAccountMenu} onClick={() => setShowAccountMenu((open) => !open)}><AccountAvatar user={user} size={34} /><span><strong>{currentUsername}</strong><small>{user ? "Mochi account" : "Sign in to Mochi"}</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={14} /></button>
+          {showAccountMenu && <div className="account-menu">{savedAccounts.map((account) => <button type="button" key={account.id} className={account.id === user?.id ? "selected" : ""} onClick={() => void switchAccount(account)}><span className="account-menu-avatar">{account.username.slice(0, 1).toUpperCase()}</span><span><strong>{account.username}</strong><small>{account.email}</small></span></button>)}{!user && <button type="button" className="account-menu-add" onClick={addAccount}><Plus size={14} /><span><strong>Sign in</strong><small>Add a Mochi account</small></span></button>}{user && savedAccounts.length < 5 && <button type="button" className="account-menu-add" onClick={addAccount}><Plus size={14} /><span><strong>Add User</strong><small>Sign in to another Mochi account</small></span></button>}{user && <button type="button" className="account-menu-add" onClick={signOut}><span className="account-menu-avatar">↪</span><span><strong>Sign out</strong><small>Keep local Mochi data</small></span></button>}</div>}
         </div>
 
         <nav className="primary-nav" aria-label="Main navigation">
@@ -789,8 +786,7 @@ function App() {
               {search && <button className="clear-search" onClick={() => setSearch("")}><MochiIcon name="close" fallback={X} size={13} /></button>}
               {!search && <kbd>⌘ K</kbd>}
             </label>
-            <button className="icon-button" aria-label="Notifications"><MochiIcon name="notifications" fallback={Bell} size={17} /></button>
-            <button className="avatar-button" aria-label={user ? "Account menu" : "Sign in"} onClick={user ? () => setActiveNav("Settings") : () => setShowAuth(true)}><AccountAvatar user={user} size={34} /></button>
+            <div className="notification-wrap"><button className="icon-button" aria-label="Notifications" aria-expanded={showNotifications} onClick={() => setShowNotifications((open) => !open)}><MochiIcon name="notifications" fallback={Bell} size={17} />{notifications.length > 0 && <span className="notification-dot" />}</button>{showNotifications && <div className="notification-popover"><div className="notification-heading"><strong>Notifications</strong>{notifications.length > 0 && <button type="button" onClick={() => setNotifications([])}>Clear</button>}</div>{notifications.length ? notifications.map((item) => <div className="notification-item" key={item.id}><strong>{item.title}</strong><span>{item.message}</span></div>) : <div className="notification-empty">You’re all caught up.</div>}</div>}</div>
           </div>
         </header>
 
