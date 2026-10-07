@@ -21,6 +21,89 @@ body{image-rendering:auto;}
 .search-box:focus-within{border-color:var(--mochi-accent);}
 .form-fields input,.form-fields select,.igdb-form input,.provider-credential-card input{border-radius:2px;}
 .toggle{border-radius:2px;}
-.settings-page{max-width:1100px;}
-.provider-grid{max-width:900px;}
+.settings-page{max-width:680px;}
+.provider-grid{max-width:100%;}
 .download-empty{background:var(--mochi-surface);}
+
+/* Keep the Ore skin visual while inheriting Mochi's shared settings geometry. */
+[data-mochi-theme="minecraft-ore"] .settings-page{
+  width:min(100%,680px);
+  max-width:680px;
+  margin:0 auto;
+}
+[data-mochi-theme="minecraft-ore"] .settings-group{
+  border-color:#454545;
+  background:#202020;
+  box-shadow:0 3px 0 rgba(0,0,0,.28),0 10px 22px rgba(0,0,0,.18);
+}
+[data-mochi-theme="minecraft-ore"] .settings-group-heading{
+  padding:14px 15px 10px;
+  border-bottom-color:#454545;
+}
+[data-mochi-theme="minecraft-ore"] .setting-row{
+  min-height:58px;
+  padding:13px 15px;
+  border-bottom-color:#454545;
+  color:#e7e7e7;
+}
+[data-mochi-theme="minecraft-ore"] .setting-row:hover{
+  background:#292929;
+}
+[data-mochi-theme="minecraft-ore"] .setting-row strong{color:#fff;}
+[data-mochi-theme="minecraft-ore"] .setting-row small{color:#a7a7a7;}
+[data-mochi-theme="minecraft-ore"] .theme-card{
+  min-height:0;
+  padding:13px;
+  border-color:#454545;
+  background:#202020;
+  box-shadow:0 3px 0 rgba(0,0,0,.28),0 10px 20px rgba(0,0,0,.16);
+}
+[data-mochi-theme="minecraft-ore"] .theme-card:hover,
+[data-mochi-theme="minecraft-ore"] .theme-card.selected{
+  border-color:#7ed321;
+  background:#292929;
+  box-shadow:inset 0 0 0 1px rgba(126,211,33,.35),0 3px 0 rgba(0,0,0,.3),0 10px 22px rgba(0,0,0,.18);
+}
+[data-mochi-theme="minecraft-ore"] .theme-card > .mochi-icon-wrap,
+[data-mochi-theme="minecraft-ore"] .theme-card > svg{
+  width:30px;
+  height:30px;
+  padding:5px;
+  margin:0 0 3px;
+  border:1px solid #454545;
+  background:#171717;
+  color:#9be84f;
+}
+[data-mochi-theme="minecraft-ore"] .theme-card > .mochi-icon-wrap .mochi-icon-custom{
+  width:100%;
+  height:100%;
+}
+[data-mochi-theme="minecraft-ore"] .toggle{
+  width:22px;
+  height:22px;
+  border:2px solid #666;
+  border-radius:2px;
+  background:#171717;
+  box-shadow:inset 0 -2px 0 rgba(0,0,0,.35);
+}
+[data-mochi-theme="minecraft-ore"] .toggle::after{
+  top:3px;
+  left:3px;
+  width:12px;
+  height:12px;
+  border-radius:0;
+  background:transparent;
+}
+[data-mochi-theme="minecraft-ore"] .toggle:checked{
+  border-color:#7ed321;
+  background:#7ed321;
+}
+[data-mochi-theme="minecraft-ore"] .toggle:checked::after{
+  left:3px;
+  background:#101508;
+  clip-path:polygon(14% 48%,0 63%,38% 100%,100% 20%,84% 6%,38% 68%);
+}
+[data-mochi-theme="minecraft-ore"] .secondary-button,
+[data-mochi-theme="minecraft-ore"] .play-button{
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.28),0 2px 0 rgba(0,0,0,.2);
+}
