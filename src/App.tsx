@@ -58,6 +58,7 @@ import { deletePasskey, enrollTotp, getVerifiedTotpFactor, linkAuthIdentity, lis
 import { importThemeFile, importThemeFolder, useThemeEngine } from "./lib/theme";
 import { getProviderCredentialStatus, saveProviderCredential } from "./lib/providerCredentials";
 import { getDownloads } from "./lib/modrinth";
+import { invoke } from "@tauri-apps/api/core";
 
 const navItems = [
   { label: "Library", icon: Library },
@@ -163,7 +164,7 @@ function App() {
   const pushNotification = (title: string, message: string) => {
     const notification = { id: crypto.randomUUID(), title, message, createdAt: Date.now() };
     setNotifications((current) => [notification, ...current].slice(0, 20));
-    void import("@tauri-apps/api/core").then(({ invoke }) => invoke("send_system_notification", { title, body: message })).catch(() => {});
+    void invoke("send_system_notification", { title, body: message })).catch(() => {});
   };
   const saveAccountSession = (sessionUser: User, refreshToken: string) => {
     const username = sessionUser.user_metadata?.username
@@ -202,7 +203,6 @@ function App() {
     try {
       const selected = await openDialog({ title: "Choose Mochi data folder", directory: true, multiple: false });
       if (typeof selected !== "string" || !selected) return;
-      const { invoke } = await import("@tauri-apps/api/core");
       await invoke("move_mochi_config", { destination: selected });
       const info = await invoke<{ configPath: string; themesPath: string; selectedTheme: string }>("get_mochi_config_info");
       setLaunchError("");
@@ -238,7 +238,7 @@ function App() {
   }, [behavior.keepOpen]);
 
   useEffect(() => {
-    void import("@tauri-apps/api/core").then(({ invoke }) => invoke("set_launch_on_startup", { enabled: behavior.launchOnStartup })).catch(() => { /* browser/development mode */ });
+    void invoke("set_launch_on_startup", { enabled: behavior.launchOnStartup })).catch(() => { /* browser/development mode */ });
   }, [behavior.launchOnStartup]);
 
   useEffect(() => {
@@ -424,7 +424,6 @@ function App() {
 
   const refreshPlaytime = async () => {
     try {
-      const { invoke } = await import("@tauri-apps/api/core");
       const entries = await invoke<Array<{ gameId: string; name: string; seconds: number; lastPlayed: number }>>("get_playtime");
       setPlaytime(entries);
     } catch {
@@ -448,7 +447,6 @@ function App() {
     setLaunchError("");
     setIsLaunching(true);
     try {
-      const { invoke } = await import("@tauri-apps/api/core");
       await invoke("launch_game_tracked", {
         gameId: selectedPiko.id,
         name: selectedPiko.name,
@@ -780,7 +778,7 @@ function App() {
     if (!window.confirm("Clear all Mochi app data and return to the welcome screen? Your Mochi account will not be deleted.")) return;
     window.localStorage.clear();
     if (supabase) await supabase.auth.signOut({ scope: "local" });
-    try { await import("@tauri-apps/api/core").then(({ invoke }) => invoke("clear_mochi_app_data")); } catch { /* browser/development mode */ }
+    try { await invoke("clear_mochi_app_data")); } catch { /* browser/development mode */ }
     window.location.reload();
   };
 
