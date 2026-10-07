@@ -577,7 +577,7 @@ function App() {
     const result =
       authMode === "sign-in"
         ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
+        : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: "mochi://auth/verify" } });
     if (result.error) {
       setAuthError(result.error.message);
     } else if (authMode === "sign-up") {
