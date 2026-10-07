@@ -96,7 +96,7 @@ function App() {
   const [flatpakBusy, setFlatpakBusy] = useState(false);
   const [settings, setSettings] = useState<IgdbSettings>({ clientId: "", clientSecret: "" });
   const [behavior, setBehavior] = useState(() => {
-    try { const stored = JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}"); return { launchOnStartup: Boolean(stored.launchOnStartup), keepOpen: stored.keepOpen !== false }; } catch { return { launchOnStartup: false, keepOpen: true }; }
+    try { const stored = JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}"); return { launchOnStartup: Boolean(stored.launchOnStartup), keepOpen: stored.keepOpen !== false, confirmLaunch: stored.confirmLaunch !== false, detailedErrors: Boolean(stored.detailedErrors), experimentalFeatures: Boolean(stored.experimentalFeatures) }; } catch { return { launchOnStartup: false, keepOpen: true }; }
   });
   const [igdbMessage, setIgdbMessage] = useState("");
   const [nexusApiKey, setNexusApiKey] = useState("");
@@ -714,7 +714,7 @@ function App() {
             >
               <Icon size={17} strokeWidth={1.8} />
               <span>{label}</span>
-              {label === "Downloads" && <span className="nav-badge">2</span>}
+
             </button>
           ))}
         </nav>
@@ -746,18 +746,14 @@ function App() {
             <MochiIcon name="settings" fallback={Settings} size={17} strokeWidth={1.8} />
             <span>Settings</span>
           </button>
-          <button className="sync-status" onClick={() => setShowAuth(true)}>
-            <div className="status-icon"><MochiIcon name="offline" fallback={WifiOff} size={14} /></div>
-            <div><strong>{user ? (syncState === "syncing" ? "Syncing..." : syncState === "error" ? "Sync error" : "Cloud ready") : "Local mode"}</strong><span>{user ? user.email : isCloudConfigured ? "Cloud sync is off" : "Connect Supabase to sync"}</span></div>
-            <span className="icon-button tiny" aria-hidden="true"><MochiIcon name="chevron" fallback={ChevronDown} size={13} /></span>
-          </button>
+
         </div>
       </aside>
 
       <main className="main-content">
         <header className="topbar">
           <button className="mobile-menu icon-button" aria-label="Open menu"><MochiIcon name="menu" fallback={Menu} size={18} /></button>
-          <div className="breadcrumb"><span>Library</span><span className="breadcrumb-slash">/</span><strong>{selectedPiko.name}</strong></div>
+          <div className="breadcrumb"><span>Mochi</span><span className="breadcrumb-slash">/</span><strong>{activeNav === "Library" ? selectedPiko.name : activeNav}</strong></div>
           <div className="topbar-actions">
             <label className="search-box">
               <MochiIcon name="search" fallback={Search} size={16} />
@@ -773,7 +769,7 @@ function App() {
         <div className="content">
           <section className="page-heading">
             <div><p className="eyebrow">Your collection</p><h1>{activeNav === "Library" ? "Good evening, Ashton." : activeNav}</h1></div>
-            <button className="secondary-button" onClick={() => setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> Add Piko</button>
+            {activeNav === "Library" && <button className="secondary-button" onClick={() => setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> Add Piko</button>}
           </section>
 
           {activeNav === "Library" && library.length === 0 ? (
