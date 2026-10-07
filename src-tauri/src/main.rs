@@ -9,6 +9,9 @@ mod modrinth;
 fn open_external_url(url: String) -> Result<(), String> { platform::open_external_url(url.trim()) }
 
 #[tauri::command]
+fn set_launch_on_startup(enabled: bool) -> Result<(), String> { platform::set_launch_on_startup(enabled) }
+
+#[tauri::command]
 fn launch_game(launch_target: String) -> Result<(), String> { platform::launch_game(launch_target.trim()) }
 
 #[tauri::command]
