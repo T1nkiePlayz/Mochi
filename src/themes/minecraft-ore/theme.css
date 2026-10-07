@@ -107,3 +107,5 @@ body{image-rendering:auto;}
 [data-mochi-theme="minecraft-ore"] .play-button{
   box-shadow:inset 0 -3px 0 rgba(0,0,0,.28),0 2px 0 rgba(0,0,0,.2);
 }
+
+/* CI verification: keep shared layout ownership explicit for the built-in Ore skin. */
