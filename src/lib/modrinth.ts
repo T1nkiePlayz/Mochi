@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 export type ModrinthProjectType = "mod" | "modpack" | "resourcepack" | "shader";
-export type ModrinthProject = {
+export type ModrinthProjectDetails = ModrinthProject & { body?: string; published?: string; updated?: string; followers?: number; license?: { id?: string; name?: string; url?: string }; issues_url?: string; source_url?: string; wiki_url?: string; discord_url?: string; };\nexport type ModrinthProject = {
   project_id: string; slug: string; title: string; description: string; project_type: ModrinthProjectType;
   downloads: number; icon_url?: string; author?: string; latest_version?: string; categories?: string[]; loaders?: string[];
 };
@@ -25,7 +25,7 @@ export async function searchModrinth(query: string, projectType: ModrinthProject
   return result.hits;
 }
 
-export async function getPopularModrinth(projectType: ModrinthProjectType, gameVersion?: string): Promise<ModrinthProject[]> {
+export async function getModrinthProject(projectId: string): Promise<ModrinthProjectDetails> {\n  return get<ModrinthProjectDetails>(API + "/project/" + encodeURIComponent(projectId));\n}\n\nexport async function getPopularModrinth(projectType: ModrinthProjectType, gameVersion?: string): Promise<ModrinthProject[]> {
   const facets: string[][] = [["project_type:" + projectType]];
   if (gameVersion?.trim()) facets.push(["versions:" + gameVersion.trim()]);
   const params = new URLSearchParams({
