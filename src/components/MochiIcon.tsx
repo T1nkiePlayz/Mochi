@@ -24,7 +24,11 @@ export function MochiIcon({ name, fallback: Fallback, size = 16, ...props }: Pro
   }, [variable]);
 
   return (
-    <span className="mochi-icon-wrap" aria-hidden="true">
+    <span
+      className="mochi-icon-wrap"
+      aria-hidden="true"
+      style={{ width: size, height: size, minWidth: size, minHeight: size, flex: `0 0 ${size}px` }}
+    >
       {customUrl ? (
         <span
           className="mochi-icon-custom"
