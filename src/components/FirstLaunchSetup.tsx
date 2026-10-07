@@ -50,6 +50,7 @@ export function FirstLaunchSetup({
   const detected = useMemo(() => sources.filter((source) => source.detected), [sources]);
   const hasChange =
     step === "welcome" ? false :
+    step === "theme" ? true :
     step === "account" ? signedIn :
     step === "igdb" ? Boolean(credentialStatus.igdb || credentialStatus.nexus || igdbClientId.trim() || igdbClientSecret.trim() || nexusApiKey.trim()) :
     selectedSources.length > 0;
@@ -215,7 +216,7 @@ export function FirstLaunchSetup({
                     </>
                   )}
                   {!credentialStatus.igdb && <button type="button" className="secondary-button" disabled={credentialBusy === "igdb" || !igdbClientId.trim() || !igdbClientSecret.trim()} onClick={() => void saveCredential("igdb")}>{credentialBusy === "igdb" ? "Saving…" : "Save IGDB credentials"}</button>}
-                  {credentialStatus.igdb && <button type="button" className="secondary-button" disabled={credentialBusy === "igdb" || !settings.clientId.trim() || !settings.clientSecret.trim()} onClick={() => void saveCredential("igdb")}>{credentialBusy === "igdb" ? "Saving…" : "Replace IGDB credentials"}</button>}
+                  {credentialStatus.igdb && <button type="button" className="secondary-button" disabled={credentialBusy === "igdb" || !igdbClientId.trim() || !igdbClientSecret.trim()} onClick={() => void saveCredential("igdb")}>{credentialBusy === "igdb" ? "Saving…" : "Replace IGDB credentials"}</button>}
                 </div>
                 <div className={"setup-provider-card " + (credentialStatus.nexus ? "configured" : "")}>
                   <div><strong>Nexus Mods</strong><span>{credentialStatus.nexus ? "Already configured on your Mochi account. The saved key cannot be read back." : "Credential for Nexus Mods content integration."}</span></div>
