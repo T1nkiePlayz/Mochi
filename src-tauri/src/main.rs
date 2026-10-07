@@ -37,8 +37,20 @@ fn import_theme(app: tauri::AppHandle, source_path: String) -> Result<themes::Us
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|_app, argv, _cwd| {
+            println!("Mochi received a new invocation: {argv:?}");
+        }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_deep_link::init())
+        .setup(|app| {
+            #[cfg(target_os = "linux")]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                app.deep_link().register_all()?;
+            }
+            themes::initialize_config(&app.handle())?;
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             launch_game, list_flatpaks, get_platform_capabilities, detect_import_sources, scan_import_games,
             get_mochi_config_info, set_mochi_theme, list_user_themes, load_user_theme, import_theme,
