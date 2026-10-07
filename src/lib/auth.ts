@@ -7,10 +7,18 @@ export async function signInWithProvider(client: SupabaseClient, provider: "goog
   });
 }
 
-export async function sendMagicLink(client: SupabaseClient, email: string) {
+export async function sendEmailCode(client: SupabaseClient, email: string) {
   return client.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: window.location.origin },
+    options: { shouldCreateUser: true },
+  });
+}
+
+export async function verifyEmailCode(client: SupabaseClient, email: string, token: string) {
+  return client.auth.verifyOtp({
+    email,
+    token,
+    type: "email",
   });
 }
 
@@ -44,6 +52,21 @@ export async function registerPasskey(client: SupabaseClient) {
 
 export async function signInWithPasskey(client: SupabaseClient) {
   return client.auth.signInWithPasskey();
+}
+
+export async function listPasskeys(client: SupabaseClient) {
+  return client.auth.passkey.list();
+}
+
+export async function deletePasskey(client: SupabaseClient, passkeyId: string) {
+  return client.auth.passkey.delete({ passkeyId });
+}
+
+export async function linkAuthIdentity(client: SupabaseClient, provider: "google" | "github") {
+  return client.auth.linkIdentity({
+    provider,
+    options: { redirectTo: window.location.origin },
+  });
 }
 
 

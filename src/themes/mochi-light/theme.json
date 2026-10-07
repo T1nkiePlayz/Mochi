@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "id": "mochi-light",
+  "name": "Mochi Light",
+  "version": "1.0.0",
+  "author": "Side Quest Games",
+  "description": "A bright Mochi theme with warm surfaces, soft mint accents and comfortable contrast.",
+  "colors": {
+    "background": "#f4f7f5",
+    "backgroundElevated": "#ffffff",
+    "surface": "#ffffff",
+    "surfaceRaised": "#f7faf8",
+    "surfaceHover": "#edf3ef",
+    "border": "#d9e3dd",
+    "borderStrong": "#bdcdc3",
+    "text": "#34423a",
+    "textStrong": "#18231e",
+    "textMuted": "#718078",
+    "textFaint": "#9aa9a1",
+    "accent": "#4f9271",
+    "accentStrong": "#3d7e5f",
+    "accentText": "#ffffff",
+    "accentSoft": "rgba(79,146,113,.11)",
+    "success": "#39815b",
+    "warning": "#a87324",
+    "danger": "#b9574d",
+    "shadow": "rgba(30,55,43,.14)"
+  },
+  "ui": {
+    "fontBody": "\"DM Sans\", sans-serif",
+    "fontDisplay": "\"Manrope\", sans-serif",
+    "radiusSm": "8px",
+    "radiusMd": "12px",
+    "radiusLg": "18px",
+    "sidebarWidth": "246px",
+    "contentMaxWidth": "1160px",
+    "density": "1"
+  },
+  "typography": {
+    "bodyLineHeight": "1.55",
+    "headingWeight": "800",
+    "labelWeight": "700",
+    "mono": "\"JetBrains Mono\", monospace"
+  },
+  "layout": {
+    "contentPadding": "46px 54px 28px",
+    "topbarHeight": "72px",
+    "cardGap": "14px",
+    "sectionGap": "30px"
+  },
+  "effects": {
+    "shadowSoft": "0 10px 35px rgba(30,55,43,.10)",
+    "shadowCard": "0 18px 55px rgba(30,55,43,.12)",
+    "blur": "18px",
+    "transition": "180ms cubic-bezier(.2,.7,.2,1)"
+  },
+  "icons": {
+    "library": "assets/icons-library.svg",
+    "settings": "assets/icons-settings.svg",
+    "play": "assets/icons-play.svg",
+    "plus": "assets/icons-plus.svg",
+    "mods": "assets/icons-mods.svg"
+  },
+  "components": {
+    "buttonHeight": "38px",
+    "inputHeight": "38px",
+    "cardRadius": "18px",
+    "heroRadius": "24px",
+    "glass": "rgba(255,255,255,.82)"
+  }
+}

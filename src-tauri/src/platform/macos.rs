@@ -38,3 +38,5 @@ pub fn launch_game(target: &str) -> Result<(), String> {
             .map_err(|e| format!("Failed to launch game or executable: {e}"))
     }
 }
+
+pub fn set_launch_on_startup(_enabled: bool) -> Result<(), String> { Err("Launch on startup is not implemented on this platform.".into()) }

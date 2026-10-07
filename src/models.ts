@@ -5,6 +5,7 @@ export type Tofu = {
   runtime: string;
   mods: number;
   status: "Ready" | "Needs attention";
+  path?: string;
 };
 
 export type Piko = {
@@ -20,4 +21,3 @@ export type Piko = {
   categories?: string[];
   tofus: Tofu[];
 };
-

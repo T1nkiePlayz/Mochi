@@ -24,6 +24,21 @@ mod macos;
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
 mod unsupported;
 
+pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        return linux::set_launch_on_startup(enabled);
+    }
+    #[cfg(target_os = "macos")]
+    {
+        return macos::set_launch_on_startup(enabled);
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    {
+        return unsupported::set_launch_on_startup(enabled);
+    }
+}
+
 pub fn launch_game(target: &str) -> Result<(), String> {
     #[cfg(target_os = "linux")]
     { linux::launch_game(target) }
@@ -55,4 +70,32 @@ pub fn capabilities() -> PlatformCapabilities {
 
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     { unsupported::capabilities() }
+}
+
+
+pub fn open_external_url(url: &str) -> Result<(), String> {
+    let trimmed = url.trim();
+    if !(trimmed.starts_with("https://") || trimmed.starts_with("http://") || trimmed.starts_with("mochi://")) {
+        return Err("Only http(s) and Mochi URLs can be opened externally.".into());
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open").arg(trimmed).spawn()
+            .map_err(|error| format!("Unable to open the external URL: {error}"))?;
+        return Ok(());
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open").arg(trimmed).spawn()
+            .map_err(|error| format!("Unable to open the external URL: {error}"))?;
+        return Ok(());
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd").args(["/C", "start", "", trimmed]).spawn()
+            .map_err(|error| format!("Unable to open the external URL: {error}"))?;
+        return Ok(());
+    }
+    #[allow(unreachable_code)]
+    Err("Opening external URLs is not supported on this platform.".into())
 }

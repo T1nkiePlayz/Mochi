@@ -10,7 +10,7 @@ export const supabase =
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
-        },
+          },
       })
     : null;
 
