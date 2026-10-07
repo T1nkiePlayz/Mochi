@@ -8,3 +8,15 @@
 .hero-card{border-radius:var(--mochi-hero-radius);box-shadow:0 0 45px rgba(94,219,229,.08),var(--mochi-shadow-card);}
 .play-button{box-shadow:0 0 24px rgba(94,219,229,.2);}
 .modal-backdrop{background:rgba(1,12,17,.72);backdrop-filter:blur(7px);}
+
+[data-mochi-theme="subnautica"] .sidebar{clip-path:polygon(0 0,100% 0,100% calc(100% - 28px),calc(100% - 14px) 100%,0 100%);box-shadow:12px 0 45px rgba(0,0,0,.25)}
+[data-mochi-theme="subnautica"] .nav-item{position:relative;border:0;border-radius:0!important;margin:5px 0;padding:12px 14px 12px 20px;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%,8px 50%);background:transparent;transition:all .18s ease}
+[data-mochi-theme="subnautica"] .nav-item:hover{background:rgba(94,219,229,.09);transform:translateX(3px)}
+[data-mochi-theme="subnautica"] .nav-item.active{background:linear-gradient(90deg,rgba(94,219,229,.2),rgba(94,219,229,.03));box-shadow:none}
+[data-mochi-theme="subnautica"] .nav-item.active:before{content:"";position:absolute;left:5px;top:9px;bottom:9px;width:2px;background:var(--mochi-accent);box-shadow:0 0 12px var(--mochi-accent)}
+[data-mochi-theme="subnautica"] .nav-item:after{content:"";position:absolute;right:17px;top:50%;width:5px;height:5px;border:1px solid var(--mochi-accent);border-radius:50%;transform:translateY(-50%);opacity:.45}
+[data-mochi-theme="subnautica"] .search-box,[data-mochi-theme="subnautica"] .secondary-button,[data-mochi-theme="subnautica"] .play-button{border-radius:999px!important}
+[data-mochi-theme="subnautica"] .game-card,[data-mochi-theme="subnautica"] .tofu-card,[data-mochi-theme="subnautica"] .new-tofu-card,[data-mochi-theme="subnautica"] .settings-group,[data-mochi-theme="subnautica"] .theme-card{border-radius:4px!important;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px))}
+[data-mochi-theme="subnautica"] .hero-card{border-radius:5px!important;clip-path:polygon(0 0,calc(100% - 24px) 0,100% 24px,100% 100%,24px 100%,0 calc(100% - 24px))}
+[data-mochi-theme="subnautica"] .modal{border-radius:6px!important;clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px))}
+[data-mochi-theme="subnautica"] .form-fields input,[data-mochi-theme="subnautica"] .form-fields select,[data-mochi-theme="subnautica"] .igdb-form input{border-radius:3px!important}
