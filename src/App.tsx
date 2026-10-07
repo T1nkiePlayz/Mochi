@@ -35,6 +35,8 @@ import { AccountAvatar } from "./components/AccountAvatar";
 import { ModrinthManager } from "./components/ModrinthManager";
 import { MochiIcon } from "./components/MochiIcon";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { FirstLaunchSetup } from "./components/FirstLaunchSetup";
 import { ImportPicker } from "./components/ImportPicker";
 import type { ImportedGame, ImportSourceId } from "./lib/sources";
@@ -162,14 +164,46 @@ function App() {
     const account = { id: sessionUser.id, username, email: sessionUser.email || "", refreshToken, avatarUrl: typeof sessionUser.user_metadata?.avatar_url === "string" ? sessionUser.user_metadata.avatar_url : typeof sessionUser.user_metadata?.picture === "string" ? sessionUser.user_metadata.picture : undefined };
     setSavedAccounts((current) => { const next = [account, ...current.filter((item) => item.id !== account.id)].slice(0, 5); window.localStorage.setItem("mochi:accounts", JSON.stringify(next)); return next; });
   };
+  const addAccount = () => { setShowAccountMenu(false); setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); };
+
   const switchAccount = async (account: { id: string; username: string; email: string; refreshToken: string; avatarUrl?: string }) => {
     if (!supabase || account.id === user?.id) { setShowAccountMenu(false); return; }
     setAuthBusy(true);
-    try { const { error } = await supabase.auth.setSession({ access_token: "", refresh_token: account.refreshToken }); if (error) throw error; setShowAccountMenu(false); pushNotification("Account switched", "Now using " + account.username + "."); }
-    catch (error) { setAuthError(error instanceof Error ? error.message : "Unable to switch accounts."); setShowAccountMenu(false); setShowAuth(true); }
-    finally { setAuthBusy(false); }
+    try {
+      const { data, error } = await supabase.auth.refreshSession({ refresh_token: account.refreshToken });
+      if (error || !data.session) throw error ?? new Error("Unable to restore this saved account.");
+      if (data.session.refresh_token) {
+        saveAccountSession(data.session.user, data.session.refresh_token);
+      }
+      setShowAccountMenu(false);
+      pushNotification("Account switched", "Now using " + account.username + ".");
+    } catch (error) {
+      setSavedAccounts((current) => {
+        const next = current.filter((item) => item.id !== account.id);
+        window.localStorage.setItem("mochi:accounts", JSON.stringify(next));
+        return next;
+      });
+      setAuthError(error instanceof Error ? error.message : "Unable to switch accounts. Please sign in again.");
+      setShowAccountMenu(false);
+      setShowAuth(true);
+    } finally { setAuthBusy(false); }
   };
-  const addAccount = () => { setShowAccountMenu(false); setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); };
+
+  const chooseMochiConfigLocation = async () => {
+    try {
+      const selected = await openDialog({ title: "Choose Mochi data folder", directory: true, multiple: false });
+      if (typeof selected !== "string" || !selected) return;
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("move_mochi_config", { destination: selected });
+      const info = await invoke<{ configPath: string; themesPath: string; selectedTheme: string }>("get_mochi_config_info");
+      setLaunchError("");
+      window.dispatchEvent(new Event("mochi-config-changed"));
+      void info;
+      await reloadThemes();
+    } catch (error) {
+      setLaunchError(error instanceof Error ? error.message : String(error));
+    }
+  };
 
   useEffect(() => {
     window.localStorage.setItem(storedPikosKey, JSON.stringify(library));
@@ -183,6 +217,16 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(storedSettingsKey, JSON.stringify({ ...behavior }));
   }, [behavior]);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    void getCurrentWindow().onCloseRequested((event) => {
+      if (!behavior.keepOpen) return;
+      event.preventDefault();
+      void getCurrentWindow().hide();
+    }).then((remove) => { unlisten = remove; }).catch(() => {});
+    return () => { unlisten?.(); };
+  }, [behavior.keepOpen]);
 
   useEffect(() => {
     void import("@tauri-apps/api/core").then(({ invoke }) => invoke("set_launch_on_startup", { enabled: behavior.launchOnStartup })).catch(() => { /* browser/development mode */ });
@@ -807,7 +851,17 @@ function App() {
   };
 
   const signOut = async () => {
-    if (supabase) await supabase.auth.signOut();
+    const currentId = user?.id;
+    if (!supabase) return;
+    if (currentId) {
+      setSavedAccounts((current) => {
+        const next = current.filter((item) => item.id !== currentId);
+        window.localStorage.setItem("mochi:accounts", JSON.stringify(next));
+        return next;
+      });
+    }
+    await supabase.auth.signOut({ scope: "local" });
+    setShowAccountMenu(false);
   };
 
   const authModal = <div className="modal-backdrop" onClick={() => setShowAuth(false)}><form className="modal auth-modal" onSubmit={authenticate} onClick={(event) => event.stopPropagation()}>
@@ -978,12 +1032,12 @@ function App() {
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>Mod & metadata providers</strong><span>Credentials are encrypted with Supabase Vault</span></div>
                 <div className="provider-grid">
-                  {user && <div className="provider-credential-card">
-                    <div className="provider-credential-heading"><div><strong>IGDB</strong><small>Store your Twitch Client ID and Client Secret securely with your Mochi account.</small></div><span className={credentialStatus.igdb ? "credential-status saved" : "credential-status"}>{credentialStatus.igdb ? "Saved" : "Not saved"}</span></div>
-                    <div className="provider-fields"><input value={igdbClientId} onChange={(event) => setIgdbClientId(event.target.value)} placeholder="Twitch Client ID" /><input type="password" value={igdbClientSecret} onChange={(event) => setIgdbClientSecret(event.target.value)} placeholder="Twitch Client Secret" /></div>
+                  <div className="provider-credential-card">
+                    <div className="provider-credential-heading"><div><strong>IGDB</strong><small>Store your Twitch Client ID and Client Secret securely with your Mochi account.</small></div><span className={credentialStatus.igdb ? "credential-status saved" : "credential-status"}>{user && credentialStatus.igdb ? "Saved" : user ? "Not saved" : "Sign in required"}</span></div>
+                    {user ? <><div className="provider-fields"><input value={igdbClientId} onChange={(event) => setIgdbClientId(event.target.value)} placeholder="Twitch Client ID" /><input type="password" value={igdbClientSecret} onChange={(event) => setIgdbClientSecret(event.target.value)} placeholder="Twitch Client Secret" /></div>
                     <button className="secondary-button" onClick={() => void saveCredential("igdb")} disabled={credentialBusy !== null}>{credentialBusy === "igdb" ? "Saving..." : "Save IGDB securely"}</button>
-                    {igdbMessage && <small className="metadata-note">{igdbMessage}</small>}
-                  </div>}
+                    {igdbMessage && <small className="metadata-note">{igdbMessage}</small></> : <button className="secondary-button" onClick={() => { setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); }}><MochiIcon name="account" fallback={UserRound} size={14} /> Sign in to save</button>}
+                  </div>
                   <div className="provider-credential-card">
                     <div className="provider-credential-heading"><div><strong>Nexus Mods</strong><small>Your Nexus API key is stored server-side and is never returned to the launcher.</small></div><span className={credentialStatus.nexus ? "credential-status saved" : "credential-status"}>{credentialStatus.nexus ? "Saved" : "Not saved"}</span></div>
                     {user ? <><input type="password" value={nexusApiKey} onChange={(event) => setNexusApiKey(event.target.value)} placeholder={credentialStatus.nexus ? "Enter a new key to replace the saved key" : "Paste your Nexus Mods API key"} /><button className="secondary-button" onClick={() => void saveCredential("nexus")} disabled={credentialBusy !== null || nexusApiKey.trim().length < 8}>{credentialBusy === "nexus" ? "Saving..." : "Save Nexus securely"}</button></> : <button className="secondary-button" onClick={() => { setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); }}><MochiIcon name="account" fallback={UserRound} size={14} /> Sign in to save</button>}
@@ -1009,7 +1063,7 @@ function App() {
               </div>
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>Data & privacy</strong><span>Local-first storage</span></div>
-                <div className="setting-row"><span><strong>Library location</strong><small>Your game metadata is saved in this browser profile.</small></span><code>~/.config/Mochi</code></div>
+                <div className="setting-row setting-location-row"><span><strong>Library location</strong><small>Your Mochi configuration, themes and launcher data are stored here.</small></span><span className="setting-location-value"><code>{configInfo?.configPath || "Default Mochi location"}</code><button type="button" className="secondary-button" onClick={() => void chooseMochiConfigLocation()}>Change</button></span></div>
                 <button className="setting-row setting-button" onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}><span><strong>Advanced settings</strong><small>Diagnostics and experimental launcher controls.</small></span><MochiIcon name="chevron" fallback={ChevronDown} className={showAdvancedSettings ? "rotate" : ""} size={16} /></button>
                 {showAdvancedSettings && <div className="advanced-settings">
                   <label className="setting-row"><span><strong>Confirm before launching</strong><small>Ask before starting a game.</small></span><input className="toggle" checked={behavior.confirmLaunch} onChange={(event) => setBehavior({ ...behavior, confirmLaunch: event.target.checked })} type="checkbox" /></label>
