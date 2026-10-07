@@ -182,3 +182,27 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 .auth-provider-row-three .secondary-button{width:100%;justify-content:center;}
 .auth-website-row{display:flex;margin-top:10px;}
 .auth-website-row .secondary-button{width:100%;justify-content:center;text-align:center;}
+
+/* Navigation and settings cleanup */
+.sidebar{overflow:hidden;}
+.sidebar-bottom{margin-top:auto;}
+.sidebar-account{flex:0 0 auto;}
+.content{max-width:1220px;}
+.settings-page{width:min(100%,1080px);margin:0 auto;}
+.settings-page .settings-intro{margin-bottom:24px;}
+.settings-group{width:100%;padding:22px 24px;}
+.provider-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:900px;}
+.provider-credential-card{min-width:0;padding:16px;border:1px solid #292d37;border-radius:9px;background:#15171d;}
+.provider-credential-card .secondary-button{margin-top:12px;}
+.provider-fields{display:grid;gap:8px;margin-top:12px;}
+.provider-fields input,.provider-credential-card>input{width:100%;}
+.advanced-settings{display:grid;gap:1px;margin-top:1px;}
+.advanced-settings .setting-row{border-radius:0;}
+.downloads-page{display:grid;gap:22px;}
+.downloads-intro{max-width:720px;}
+.downloads-intro h2{margin:0 0 8px;font:700 26px "Manrope",sans-serif;letter-spacing:-.04em;}
+.downloads-intro p:last-child{margin:0;color:#8b929f;font-size:12px;line-height:1.7;}
+.download-empty{min-height:260px;display:grid;place-items:center;align-content:center;gap:7px;border:1px solid #292d37;border-radius:12px;background:#15171d;text-align:center;}
+.download-empty h3{margin:5px 0 0;color:#e8eaed;font:700 18px "Manrope",sans-serif;}
+.download-empty p{margin:0;color:#777d8a;font-size:12px;}
+@media (max-width:800px){.provider-grid{grid-template-columns:1fr}.settings-page{width:100%}.content{padding-left:28px;padding-right:28px}}
