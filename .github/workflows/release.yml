@@ -16,6 +16,31 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read release notes from tagged commit
+        id: release_notes
+        shell: bash
+        run: |
+          notes="$(git show -s --format='%b' "$GITHUB_SHA")"
+
+          if [[ -z "$(printf '%s' "$notes" | tr -d '[:space:]')" ]]; then
+            notes="## Mochi $GITHUB_REF_NAME
+
+Your games, your way.
+
+### Linux downloads
+- **AppImage** — portable Linux build
+- **DEB** — Debian/Ubuntu-based distributions
+- **RPM** — Fedora/RHEL-based distributions"
+          fi
+
+          {
+            echo 'body<<MOCHI_RELEASE_NOTES'
+            printf '%s\n' "$notes"
+            echo 'MOCHI_RELEASE_NOTES'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Install Linux dependencies
         run: |
@@ -50,14 +75,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Mochi ${{ github.ref_name }}"
-          releaseBody: |
-            ## Mochi ${{ github.ref_name }}
-
-            Your games, your way.
-
-            ### Linux downloads
-            - **AppImage** — portable Linux build
-            - **DEB** — Debian/Ubuntu-based distributions
-            - **RPM** — Fedora/RHEL-based distributions
+          releaseBody: ${{ steps.release_notes.outputs.body }}
           releaseDraft: false
           prerelease: false
