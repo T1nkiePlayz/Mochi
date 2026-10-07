@@ -41,9 +41,7 @@ jobs:
           workspaces: "./src-tauri -> target"
 
       - name: Install frontend dependencies
-        run: |
-          npm install --package-lock-only
-          npm ci
+        run: npm ci
 
       - name: Build and publish release
         uses: tauri-apps/tauri-action@v1
