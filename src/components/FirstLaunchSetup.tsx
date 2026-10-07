@@ -30,7 +30,7 @@ const platformImages: Record<ImportSourceId, string> = {
 };
 
 export function FirstLaunchSetup({
-  settings, setSettings, onSignIn, signedIn, credentialStatus,
+  igdbClientId, setIgdbClientId, igdbClientSecret, setIgdbClientSecret, onSignIn, signedIn, credentialStatus,
   nexusApiKey, setNexusApiKey, saveCredential, credentialBusy, onFinish,
 }: SetupProps) {
   const [step, setStep] = useState<Step>("welcome");
@@ -45,7 +45,7 @@ export function FirstLaunchSetup({
   const hasChange =
     step === "welcome" ? false :
     step === "account" ? signedIn :
-    step === "igdb" ? Boolean(credentialStatus.igdb || credentialStatus.nexus || settings.clientId.trim() || settings.clientSecret.trim() || nexusApiKey.trim()) :
+    step === "igdb" ? Boolean(credentialStatus.igdb || credentialStatus.nexus || igdbClientId.trim() || igdbClientSecret.trim() || nexusApiKey.trim()) :
     selectedSources.length > 0;
 
   useEffect(() => {
@@ -204,11 +204,11 @@ export function FirstLaunchSetup({
                     <div className="setup-provider-configured"><Check size={16} /><strong>Configured</strong><small>Saved securely to your account</small></div>
                   ) : (
                     <>
-                      <label>Client ID<input value={settings.clientId} onChange={(event) => setSettings({ ...settings, clientId: event.target.value })} placeholder="Twitch application Client ID" /></label>
-                      <label>Client Secret<input type="password" value={settings.clientSecret} onChange={(event) => setSettings({ ...settings, clientSecret: event.target.value })} placeholder="Twitch application Client Secret" /></label>
+                      <label>Client ID<input value={igdbClientId} onChange={(event) => setIgdbClientId(event.target.value)} placeholder="Twitch application Client ID" /></label>
+                      <label>Client Secret<input type="password" value={igdbClientSecret} onChange={(event) => setIgdbClientSecret(event.target.value)} placeholder="Twitch application Client Secret" /></label>
                     </>
                   )}
-                  {!credentialStatus.igdb && <button type="button" className="secondary-button" disabled={credentialBusy === "igdb" || !settings.clientId.trim() || !settings.clientSecret.trim()} onClick={() => void saveCredential("igdb")}>{credentialBusy === "igdb" ? "Saving…" : "Save IGDB credentials"}</button>}
+                  {!credentialStatus.igdb && <button type="button" className="secondary-button" disabled={credentialBusy === "igdb" || !igdbClientId.trim() || !igdbClientSecret.trim()} onClick={() => void saveCredential("igdb")}>{credentialBusy === "igdb" ? "Saving…" : "Save IGDB credentials"}</button>}
                   {credentialStatus.igdb && <button type="button" className="secondary-button" disabled={credentialBusy === "igdb" || !settings.clientId.trim() || !settings.clientSecret.trim()} onClick={() => void saveCredential("igdb")}>{credentialBusy === "igdb" ? "Saving…" : "Replace IGDB credentials"}</button>}
                 </div>
                 <div className={"setup-provider-card " + (credentialStatus.nexus ? "configured" : "")}>
