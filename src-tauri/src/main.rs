@@ -50,6 +50,11 @@ fn get_playtime() -> Result<Vec<playtime::PlaytimeEntry>, String> {
 }
 
 #[tauri::command]
+fn get_downloads() -> Vec<modrinth::DownloadEntry> {
+    modrinth::list_downloads()
+}
+
+#[tauri::command]
 fn list_flatpaks() -> Result<Vec<platform::FlatpakApp>, String> { platform::list_flatpaks() }
 
 #[tauri::command]
@@ -104,7 +109,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             send_system_notification, open_external_url, set_launch_on_startup, launch_game, launch_game_tracked, get_playtime, list_flatpaks, get_platform_capabilities, detect_import_sources, scan_import_games,
             get_mochi_config_info, move_mochi_config, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
-            modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::delete_mod_file, modrinth::download_modrinth_file
+            modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::delete_mod_file, modrinth::start_modrinth_download, modrinth::download_modrinth_file, get_downloads
         ])
         .run(tauri::generate_context!())
         .expect("error while running Mochi");
