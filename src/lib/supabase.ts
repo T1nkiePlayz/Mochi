@@ -10,8 +10,7 @@ export const supabase =
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
-          experimental: { passkey: true },
-        },
+          },
       })
     : null;
 
