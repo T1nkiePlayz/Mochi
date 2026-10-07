@@ -11,6 +11,8 @@ import subnauticaCss from "../themes/subnautica/theme.css?raw";
 import dungeonsManifest from "../themes/dungeons/theme.json";
 import dungeonsCss from "../themes/dungeons/theme.css?raw";
 import mochiLightManifest from "../themes/mochi-light/theme.json";
+import stardewValleyManifest from "../themes/stardew-valley/theme.json";
+import stardewValleyCss from "../themes/stardew-valley/theme.css?raw";
 import mochiLightCss from "../themes/mochi-light/theme.css?raw";
 
 export type ThemeManifest = {
@@ -70,6 +72,7 @@ const builtins: Array<{ manifest: ThemeManifest; css: string; assets: Record<str
   { manifest: subnauticaManifest as ThemeManifest, css: subnauticaCss, assets: builtinAssets("subnautica", subnauticaManifest as ThemeManifest) },
   { manifest: dungeonsManifest as ThemeManifest, css: dungeonsCss, assets: builtinAssets("dungeons", dungeonsManifest as ThemeManifest) },
   { manifest: mochiLightManifest as ThemeManifest, css: mochiLightCss, assets: builtinAssets("mochi-light", mochiLightManifest as ThemeManifest) },
+  { manifest: stardewValleyManifest as ThemeManifest, css: stardewValleyCss, assets: builtinAssets("stardew-valley", stardewValleyManifest as ThemeManifest) },
 ];
 
 const builtinsById = new Map(builtins.map((theme) => [theme.manifest.id, theme]));
