@@ -37,7 +37,9 @@ export function AccountAvatar({ user, size = 34, className = "" }: AccountAvatar
   }, [user?.email, size]);
 
   if (!user) {
-    return <span className={`account-avatar ${className}`} style={{ width: size, height: size }} aria-hidden="true">A</span>;
+    return <span className={`account-avatar ${className}`} style={{ width: size, height: size }} aria-hidden="true">
+      <img src={`https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&s=${size * 2}`} alt="" />
+    </span>;
   }
 
   const providerAvatar = typeof user.user_metadata?.avatar_url === "string"
@@ -49,7 +51,7 @@ export function AccountAvatar({ user, size = 34, className = "" }: AccountAvatar
   return (
     <span className={`account-avatar ${className}`} style={{ width: size, height: size }}>
       {(providerAvatar || gravatarUrl) ? (
-        <img src={providerAvatar || gravatarUrl || ""} alt="" referrerPolicy="no-referrer" />
+        <img className="account-avatar-image" src={providerAvatar || gravatarUrl || ""} alt="" referrerPolicy="no-referrer" />
       ) : (
         <span>{user.email?.slice(0, 1).toUpperCase() ?? "U"}</span>
       )}
