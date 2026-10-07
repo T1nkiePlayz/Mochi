@@ -54,6 +54,13 @@
     "blur": "18px",
     "transition": "180ms cubic-bezier(.2,.7,.2,1)"
   },
+  "icons": {
+    "library": "assets/icons-library.svg",
+    "settings": "assets/icons-settings.svg",
+    "play": "assets/icons-play.svg",
+    "plus": "assets/icons-plus.svg",
+    "mods": "assets/icons-mods.svg"
+  },
   "components": {
     "buttonHeight": "38px",
     "inputHeight": "38px",
