@@ -86,7 +86,7 @@ function App() {
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
-  const [savedAccounts, setSavedAccounts] = useState<Array<{ id: string; username: string; email: string; refreshToken: string }>>(() => { try { return (JSON.parse(window.localStorage.getItem("mochi:accounts") || "[]") as Array<{ id: string; username: string; email: string; refreshToken: string }>).slice(0, 5); } catch { return []; } });
+  const [savedAccounts, setSavedAccounts] = useState<Array<{ id: string; username: string; email: string; refreshToken: string; avatarUrl?: string }>>(() => { try { return (JSON.parse(window.localStorage.getItem("mochi:accounts") || "[]") as Array<{ id: string; username: string; email: string; refreshToken: string; avatarUrl?: string }>).slice(0, 5); } catch { return []; } });
   const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; createdAt: number }>>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showCustomGame, setShowCustomGame] = useState(false);
@@ -141,10 +141,10 @@ function App() {
     void import("@tauri-apps/api/core").then(({ invoke }) => invoke("send_system_notification", { title, body: message })).catch(() => {});
   };
   const saveAccountSession = (sessionUser: User, refreshToken: string) => {
-    const account = { id: sessionUser.id, username: sessionUser.user_metadata?.username || sessionUser.user_metadata?.user_name || sessionUser.user_metadata?.preferred_username || sessionUser.email || "Guest", email: sessionUser.email || "", refreshToken };
+    const account = { id: sessionUser.id, username: sessionUser.user_metadata?.username || sessionUser.user_metadata?.user_name || sessionUser.user_metadata?.preferred_username || sessionUser.email || "Guest", email: sessionUser.email || "", refreshToken, avatarUrl: typeof sessionUser.user_metadata?.avatar_url === "string" ? sessionUser.user_metadata.avatar_url : typeof sessionUser.user_metadata?.picture === "string" ? sessionUser.user_metadata.picture : undefined };
     setSavedAccounts((current) => { const next = [account, ...current.filter((item) => item.id !== account.id)].slice(0, 5); window.localStorage.setItem("mochi:accounts", JSON.stringify(next)); return next; });
   };
-  const switchAccount = async (account: { id: string; username: string; email: string; refreshToken: string }) => {
+  const switchAccount = async (account: { id: string; username: string; email: string; refreshToken: string; avatarUrl?: string }) => {
     if (!supabase || account.id === user?.id) { setShowAccountMenu(false); return; }
     setAuthBusy(true);
     try { const { error } = await supabase.auth.setSession({ access_token: "", refresh_token: account.refreshToken }); if (error) throw error; setShowAccountMenu(false); pushNotification("Account switched", "Now using " + account.username + "."); }
@@ -811,7 +811,7 @@ function App() {
         <div className="brand"><div className="brand-mark"><img src="/mochi.png" alt="Mochi" /></div><div><strong>Mochi</strong><span>Your games, your way.</span></div></div>
         <div className="sidebar-account-wrap">
           <button className="sidebar-account" aria-expanded={showAccountMenu} onClick={() => setShowAccountMenu((open) => !open)}><AccountAvatar user={user} size={34} /><span><strong>{currentUsername}</strong><small>{user ? "Mochi account" : "Sign in to Mochi"}</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={14} /></button>
-          {showAccountMenu && <div className="account-menu">{savedAccounts.map((account) => <button type="button" key={account.id} className={account.id === user?.id ? "selected" : ""} onClick={() => void switchAccount(account)}><span className="account-menu-avatar">{account.username.slice(0, 1).toUpperCase()}</span><span><strong>{account.username}</strong><small>{account.email}</small></span></button>)}{!user && <button type="button" className="account-menu-add" onClick={addAccount}><Plus size={14} /><span><strong>Sign in</strong><small>Add a Mochi account</small></span></button>}{user && savedAccounts.length < 5 && <button type="button" className="account-menu-add" onClick={addAccount}><Plus size={14} /><span><strong>Add User</strong><small>Sign in to another Mochi account</small></span></button>}{user && <button type="button" className="account-menu-add" onClick={signOut}><span className="account-menu-avatar">↪</span><span><strong>Sign out</strong><small>Keep local Mochi data</small></span></button>}</div>}
+          {showAccountMenu && <div className="account-menu">{savedAccounts.map((account) => <button type="button" key={account.id} className={account.id === user?.id ? "selected" : ""} onClick={() => void switchAccount(account)}><span className="account-menu-avatar">{account.avatarUrl ? <img src={account.avatarUrl} alt="" referrerPolicy="no-referrer" /> : account.username.slice(0, 1).toUpperCase()}</span><span><strong>{account.username}</strong><small>Mochi account</small></span></button>)}{!user && <button type="button" className="account-menu-add" onClick={addAccount}><Plus size={14} /><span><strong>Sign in</strong><small>Add a Mochi account</small></span></button>}{user && savedAccounts.length < 5 && <button type="button" className="account-menu-add" onClick={addAccount}><Plus size={14} /><span><strong>Add User</strong><small>Sign in to another Mochi account</small></span></button>}{user && <button type="button" className="account-menu-add" onClick={signOut}><span className="account-menu-avatar">↪</span><span><strong>Sign out</strong><small>Keep local Mochi data</small></span></button>}</div>}
         </div>
 
         <nav className="primary-nav" aria-label="Main navigation">
