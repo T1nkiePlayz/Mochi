@@ -148,7 +148,7 @@ pub fn start_modrinth_download(
     tauri::async_runtime::spawn(async move {
         let result: Result<(), String> = async {
             let client = reqwest::Client::new();
-            let response = client.get(parsed).send().await.map_err(|e| format!("Modrinth download failed: {e}"))?;
+            let mut response = client.get(parsed).send().await.map_err(|e| format!("Modrinth download failed: {e}"))?;
             if !response.status().is_success() {
                 return Err(format!("Modrinth download failed ({}).", response.status()));
             }
