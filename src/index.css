@@ -259,3 +259,22 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 .secondary-button svg,.nav-item svg,.empty-state .secondary-button svg{flex:0 0 auto;}
 .empty-icon{display:grid;place-items:center;}
 .empty-icon .mochi-icon-wrap{display:grid;place-items:center;}
+
+
+/* Deterministic component alignment */
+.mochi-icon-wrap{display:inline-grid;place-items:center;flex:0 0 auto;width:auto;height:auto;line-height:0;vertical-align:middle;}
+.mochi-icon-custom{display:block;width:1em;height:1em;background:var(--mochi-icon-image) center/contain no-repeat;}
+.secondary-button,.play-button{line-height:1;min-height:38px;}
+.secondary-button .mochi-icon-wrap,.play-button .mochi-icon-wrap,.nav-item .mochi-icon-wrap{width:16px;height:16px;}
+.empty-icon{display:grid!important;place-items:center!important;}
+.empty-icon>.mochi-icon-wrap{display:grid!important;place-items:center!important;width:23px;height:23px;}
+.account-avatar{width:34px;height:34px;min-width:34px;min-height:34px;aspect-ratio:1/1;overflow:hidden;border-radius:50%;}
+.account-avatar img,.account-avatar-image{display:block;width:100%;height:100%;min-width:100%;min-height:100%;object-fit:cover;object-position:center;border-radius:inherit;}
+.sidebar-account{min-width:0;}
+.sidebar-account>span:nth-child(2){overflow:hidden;}
+.sidebar-account strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.account-menu{min-width:0;}
+.account-menu-avatar{display:grid!important;place-items:center!important;width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;aspect-ratio:1/1!important;overflow:hidden!important;border-radius:50%!important;line-height:1!important;}
+.account-menu-avatar-image{display:block!important;width:100%!important;height:100%!important;min-width:100%!important;min-height:100%!important;object-fit:cover!important;object-position:center!important;border-radius:inherit!important;}
+.account-menu button>span:nth-child(2){overflow:hidden;flex:1;}
+.account-menu strong,.account-menu small{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
