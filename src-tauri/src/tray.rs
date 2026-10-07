@@ -43,7 +43,7 @@ pub fn initialize(app: &mut tauri::App) -> Result<(), tauri::Error> {
     let icon = app
         .default_window_icon()
         .cloned()
-        .ok_or_else(|| tauri::Error::Setup("Mochi has no application icon available for the tray.".into()))?;
+        .expect("Mochi must have a default application icon for the tray");
 
     TrayIconBuilder::with_id("mochi-tray")
         .icon(icon)
