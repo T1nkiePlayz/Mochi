@@ -33,6 +33,7 @@ function GoogleIcon({ size = 15 }: { size?: number }) {
 }
 import { AccountAvatar } from "./components/AccountAvatar";
 import { ModrinthManager } from "./components/ModrinthManager";
+import { ModrinthDiscover } from "./components/ModrinthDiscover";
 import { MochiIcon } from "./components/MochiIcon";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
@@ -56,6 +57,7 @@ import {
 import { deletePasskey, enrollTotp, getVerifiedTotpFactor, linkAuthIdentity, listPasskeys, registerPasskey, removeTotp, sendEmailCode, signInWithProvider, verifyEmailCode, verifyEmailToken, verifyMfaCode } from "./lib/auth";
 import { importThemeFile, importThemeFolder, useThemeEngine } from "./lib/theme";
 import { getProviderCredentialStatus, saveProviderCredential } from "./lib/providerCredentials";
+import { getDownloads } from "./lib/modrinth";
 
 const navItems = [
   { label: "Library", icon: Library },
@@ -141,6 +143,7 @@ function App() {
   const [showFirstLaunchSetup, setShowFirstLaunchSetup] = useState(() => window.localStorage.getItem(setupCompleteKey) !== "true");
   const [showImportPicker, setShowImportPicker] = useState(false);
   const [playtime, setPlaytime] = useState<Array<{ gameId: string; name: string; seconds: number; lastPlayed: number }>>([]);
+  const [downloads, setDownloads] = useState<Array<{ id: string; tofuId: string; tofuName: string; itemName: string; filename: string; downloaded: number; total?: number; status: "downloading" | "completed" | "failed"; error?: string; createdAt: number; finishedAt?: number }>>([]);
   const [syncState, setSyncState] = useState<"offline" | "syncing" | "synced" | "error">(
     isCloudConfigured ? "offline" : "offline",
   );
@@ -420,6 +423,14 @@ function App() {
       setPlaytime(entries);
     } catch {
       // Browser/development mode or an older backend without the playtime service.
+    }
+  };
+
+  const refreshDownloads = async () => {
+    try {
+      setDownloads(await getDownloads());
+    } catch {
+      // Browser/development mode or an older backend without the download service.
     }
   };
 
@@ -1081,8 +1092,32 @@ function App() {
               </div>
               <button className="reset-button" onClick={resetLocalData}>Clear all Mochi app data</button>
             </section>
+          ) : activeNav === "Discover" ? (
+            <ModrinthDiscover tofu={selectedTofu} />
           ) : activeNav === "Downloads" ? (
-            <section className="downloads-page"><div className="downloads-intro"><p className="eyebrow">Activity</p><h2>Downloads</h2><p>Downloads from game content providers will appear here. This will become the central queue for mods, resource packs, shaders, and game files.</p></div><div className="download-empty"><div className="empty-icon"><MochiIcon name="downloads" fallback={Download} size={22} /></div><h3>No active downloads</h3><p>Nothing is downloading right now.</p></div></section>
+            <section className="downloads-page">
+              <div className="downloads-intro"><p className="eyebrow">Activity</p><h2>Downloads</h2><p>Concurrent Modrinth downloads continue while Mochi is hidden in the tray. Completed downloads stay here for 10 minutes.</p></div>
+              {!downloads.length ? <div className="download-empty"><div className="empty-icon"><MochiIcon name="downloads" fallback={Download} size={22} /></div><h3>No active downloads</h3><p>Nothing is downloading right now.</p></div> : (
+                <div className="download-groups">
+                  {[...new Map(downloads.map(download => [download.tofuId, download.tofuName])).entries()].map(([tofuId, tofuName]) => {
+                    const items = downloads.filter(download => download.tofuId === tofuId);
+                    return <section className="download-group" key={tofuId}>
+                      <div className="download-group-heading"><strong>{tofuName}</strong><span>{items.length} {items.length === 1 ? "download" : "downloads"}</span></div>
+                      <div className="download-list">{items.map(download => {
+                        const progress = download.total ? Math.min(100, (download.downloaded / download.total) * 100) : 0;
+                        return <article className="download-row" key={download.id}>
+                          <div className="download-row-copy"><strong>{download.itemName}</strong><small>{download.filename}</small></div>
+                          <div className="download-progress-wrap">
+                            <div className={download.status === "downloading" && !download.total ? "download-progress indeterminate" : "download-progress"}><span style={{ width: download.status === "downloading" && download.total ? progress + "%" : download.status === "completed" ? "100%" : undefined }} /></div>
+                            <small>{download.status === "completed" ? "Completed" : download.status === "failed" ? download.error || "Failed" : download.total ? Math.round(progress) + "% · " + Math.round(download.downloaded / 1024 / 1024) + " / " + Math.round(download.total / 1024 / 1024) + " MiB" : Math.round(download.downloaded / 1024 / 1024) + " MiB downloaded"}</small>
+                          </div>
+                        </article>;
+                      })}</div>
+                    </section>;
+                  })}
+                </div>
+              )}
+            </section>
           ) : (
             <div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>{activeNav} is ready when you are.</h2><p>This part of Mochi is taking shape. Your local library remains available offline.</p><button className="secondary-button" onClick={() => setActiveNav("Library")}><MochiIcon name="library" fallback={Library} size={16} /> Back to library</button></div>
           )}
