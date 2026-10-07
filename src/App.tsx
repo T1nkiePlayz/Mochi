@@ -817,26 +817,18 @@ function App() {
                 {configInfo && <div className="theme-config-path"><span>Theme directory</span><code>{configInfo.themesPath}</code></div>}
               </div>
               <div className="settings-group">
-                <div className="settings-group-heading"><strong>IGDB</strong><span>Global app setting</span></div>
-                <div className="igdb-form">
-                  <p>IGDB uses your Twitch developer application's Client ID and Client Secret. Mochi securely stores these credentials in your account and exchanges the secret for a temporary access token on the backend.</p>
-                  <label>Client ID<input value={igdbClientId} onChange={(event) => setIgdbClientId(event.target.value)} placeholder="Your Twitch application Client ID" /></label>
-                  <label>Client Secret<input type="password" value={igdbClientSecret} onChange={(event) => setIgdbClientSecret(event.target.value)} placeholder="Your Twitch application Client Secret" /></label>
-                  <p className="metadata-note">You do not need to create or paste a bearer token or separate API key. Your Twitch application name is only an identifier in the Twitch developer dashboard.</p>
-                  <p className="metadata-note">Sign in to Mochi before saving. New games can then use IGDB for artwork, descriptions, genres, and release information without exposing your Client Secret to the launcher.</p>
-                  {igdbMessage && <small className="metadata-note">{igdbMessage}</small>}
-                </div>
-              </div>
-              <div className="settings-group">
                 <div className="settings-group-heading"><strong>Mod & metadata providers</strong><span>Credentials are encrypted with Supabase Vault</span></div>
-                <div className="provider-credential-card">
-                  <div className="provider-credential-heading"><div><strong>IGDB</strong><small>Store your Twitch Client ID and Client Secret securely with your Mochi account.</small></div><span className={credentialStatus.igdb ? "credential-status saved" : "credential-status"}>{credentialStatus.igdb ? "Saved" : "Not saved"}</span></div>
-                  <button className="secondary-button" onClick={() => void saveCredential("igdb")} disabled={credentialBusy !== null}>{credentialBusy === "igdb" ? <><MochiIcon name="refresh" fallback={RefreshCw} size={14} className="spin" /> Saving...</> : <><MochiIcon name="cloud" fallback={Cloud} size={14} /> Save IGDB securely</>}</button>
-                </div>
-                <div className="provider-credential-card">
-                  <div className="provider-credential-heading"><div><strong>Nexus Mods</strong><small>Your Nexus API key is stored server-side and is never returned to the launcher.</small></div><span className={credentialStatus.nexus ? "credential-status saved" : "credential-status"}>{credentialStatus.nexus ? "Saved" : "Not saved"}</span></div>
-                  <input type="password" value={nexusApiKey} onChange={(event) => setNexusApiKey(event.target.value)} placeholder={credentialStatus.nexus ? "Enter a new key to replace the saved key" : "Paste your Nexus Mods API key"} />
-                  <button className="secondary-button" onClick={() => void saveCredential("nexus")} disabled={credentialBusy !== null || nexusApiKey.trim().length < 8}>{credentialBusy === "nexus" ? "Saving..." : "Save Nexus key securely"}</button>
+                <div className="provider-grid">
+                  {user && <div className="provider-credential-card">
+                    <div className="provider-credential-heading"><div><strong>IGDB</strong><small>Store your Twitch Client ID and Client Secret securely with your Mochi account.</small></div><span className={credentialStatus.igdb ? "credential-status saved" : "credential-status"}>{credentialStatus.igdb ? "Saved" : "Not saved"}</span></div>
+                    <div className="provider-fields"><input value={igdbClientId} onChange={(event) => setIgdbClientId(event.target.value)} placeholder="Twitch Client ID" /><input type="password" value={igdbClientSecret} onChange={(event) => setIgdbClientSecret(event.target.value)} placeholder="Twitch Client Secret" /></div>
+                    <button className="secondary-button" onClick={() => void saveCredential("igdb")} disabled={credentialBusy !== null}>{credentialBusy === "igdb" ? "Saving..." : "Save IGDB securely"}</button>
+                    {igdbMessage && <small className="metadata-note">{igdbMessage}</small>}
+                  </div>}
+                  <div className="provider-credential-card">
+                    <div className="provider-credential-heading"><div><strong>Nexus Mods</strong><small>Your Nexus API key is stored server-side and is never returned to the launcher.</small></div><span className={credentialStatus.nexus ? "credential-status saved" : "credential-status"}>{credentialStatus.nexus ? "Saved" : "Not saved"}</span></div>
+                    {user ? <><input type="password" value={nexusApiKey} onChange={(event) => setNexusApiKey(event.target.value)} placeholder={credentialStatus.nexus ? "Enter a new key to replace the saved key" : "Paste your Nexus Mods API key"} /><button className="secondary-button" onClick={() => void saveCredential("nexus")} disabled={credentialBusy !== null || nexusApiKey.trim().length < 8}>{credentialBusy === "nexus" ? "Saving..." : "Save Nexus securely"}</button></> : <button className="secondary-button" onClick={() => { setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); }}><MochiIcon name="account" fallback={UserRound} size={14} /> Sign in to save</button>}
+                  </div>
                 </div>
               </div>
               <div className="settings-group">
@@ -851,11 +843,17 @@ function App() {
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>Data & privacy</strong><span>Local-first storage</span></div>
                 <div className="setting-row"><span><strong>Library location</strong><small>Your game metadata is saved in this browser profile.</small></span><code>~/.config/Mochi</code></div>
-                <button className="setting-row setting-button" onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}><span><strong>Advanced settings</strong><small>Diagnostics and developer options.</small></span><MochiIcon name="chevron" fallback={ChevronDown} className={showAdvancedSettings ? "rotate" : ""} size={16} /></button>
-                {showAdvancedSettings && <div className="advanced-note">Native game detection and process controls will appear here when the Tauri backend is connected.</div>}
+                <button className="setting-row setting-button" onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}><span><strong>Advanced settings</strong><small>Diagnostics and experimental launcher controls.</small></span><MochiIcon name="chevron" fallback={ChevronDown} className={showAdvancedSettings ? "rotate" : ""} size={16} /></button>
+                {showAdvancedSettings && <div className="advanced-settings">
+                  <label className="setting-row"><span><strong>Confirm before launching</strong><small>Ask before starting a game.</small></span><input className="toggle" checked={behavior.confirmLaunch} onChange={(event) => setBehavior({ ...behavior, confirmLaunch: event.target.checked })} type="checkbox" /></label>
+                  <label className="setting-row"><span><strong>Detailed launch errors</strong><small>Show extra information when a game fails to launch.</small></span><input className="toggle" checked={behavior.detailedErrors} onChange={(event) => setBehavior({ ...behavior, detailedErrors: event.target.checked })} type="checkbox" /></label>
+                  <label className="setting-row"><span><strong>Experimental features</strong><small>Show unfinished launcher features as they become available.</small></span><input className="toggle" checked={behavior.experimentalFeatures} onChange={(event) => setBehavior({ ...behavior, experimentalFeatures: event.target.checked })} type="checkbox" /></label>
+                </div>}
               </div>
               <button className="reset-button" onClick={resetLocalData}>Clear all Mochi app data</button>
             </section>
+          ) : activeNav === "Downloads" ? (
+            <section className="downloads-page"><div className="downloads-intro"><p className="eyebrow">Activity</p><h2>Downloads</h2><p>Downloads from game content providers will appear here. This will become the central queue for mods, resource packs, shaders, and game files.</p></div><div className="download-empty"><div className="empty-icon"><MochiIcon name="downloads" fallback={Download} size={22} /></div><h3>No active downloads</h3><p>Nothing is downloading right now.</p></div></section>
           ) : (
             <div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>{activeNav} is ready when you are.</h2><p>This part of Mochi is taking shape. Your local library remains available offline.</p><button className="secondary-button" onClick={() => setActiveNav("Library")}><MochiIcon name="library" fallback={Library} size={16} /> Back to library</button></div>
           )}
