@@ -681,8 +681,10 @@ function App() {
   if (showFirstLaunchSetup) {
     return <>
       <FirstLaunchSetup
-        settings={settings}
-        setSettings={setSettings}
+        igdbClientId={igdbClientId}
+        setIgdbClientId={setIgdbClientId}
+        igdbClientSecret={igdbClientSecret}
+        setIgdbClientSecret={setIgdbClientSecret}
         onSignIn={() => { setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); }}
         signedIn={Boolean(user)}
         credentialStatus={credentialStatus}
