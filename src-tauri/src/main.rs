@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::Manager;
+use tauri::{Manager, WindowEvent};
 
 pub(crate) mod platform;
 mod sources;
@@ -105,6 +105,14 @@ fn main() {
             playtime::initialize(app_data_dir).map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error))?;
             modrinth::initialize_downloads();
             tray::initialize(app)?;
+            if let Some(window) = app.get_webview_window("main") {
+                window.on_window_event(|event| {
+                    if let WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = window.hide();
+                    }
+                });
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
