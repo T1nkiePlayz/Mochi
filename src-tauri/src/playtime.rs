@@ -174,6 +174,7 @@ pub fn spawn_session_monitor(app: AppHandle, game_id: String, name: String, proc
         }
 
         let _ = finish(&game_id);
+        let _ = crate::tray::refresh(&app);
         let _ = name;
     });
 }
