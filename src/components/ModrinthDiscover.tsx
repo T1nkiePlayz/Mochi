@@ -21,6 +21,26 @@ const sections: Array<{ type: ModrinthProjectType; title: string; description: s
   { type: "shader", title: "Most Popular Shaders", description: "Popular shaders, sorted by Modrinth downloads." },
 ];
 
+type DiscoveryTab = "instances" | ModrinthProjectType;
+
+const discoveryTabs: Array<{ id: DiscoveryTab; label: string }> = [
+  { id: "instances", label: "Instances" },
+  { id: "mod", label: "Mods" },
+  { id: "modpack", label: "Modpacks" },
+  { id: "resourcepack", label: "Resource Packs" },
+  { id: "shader", label: "Shaders" },
+];
+
+function MinecraftMark({ size = 20 }: { size?: number }) {
+  return <svg className="minecraft-discovery-mark" width={size} height={size} viewBox="0 0 20 20" aria-hidden="true">
+    <path fill="currentColor" d="M2 4 6 2h8l4 2v12l-4 2H6l-4-2V4Z"/>
+    <path fill="#5f8f35" d="M2 4 6 2h8l4 2-4 2H6L2 4Z"/>
+    <path fill="#6b4f2a" d="M2 5.1 6 7h8l4-2v11l-4 2H6l-4-2V5.1Z"/>
+    <path fill="#7aa34a" d="M6 7h8v4H6z"/>
+    <path fill="#4e3a20" d="M4 9h2v2H4zm10 2h2v2h-2zM8 13h2v2H8z"/>
+  </svg>;
+}
+
 function projectTypeLabel(type: ModrinthProjectType) {
   return type === "resourcepack" ? "Resource Pack" : type.charAt(0).toUpperCase() + type.slice(1);
 }
@@ -89,6 +109,8 @@ export function ModrinthDiscover({ tofu, pikos }: Props) {
   const [query, setQuery] = useState("");
   const [details, setDetails] = useState<ModrinthProjectDetails | null>(null);
   const [tofuPicker, setTofuPicker] = useState<ModrinthProject | null>(null);
+  const [tab, setTab] = useState<DiscoveryTab>("mod");
+  const [activeTofuId, setActiveTofuId] = useState(tofu.id);
 
   const refresh = async () => {
     setLoading(true);
@@ -103,6 +125,7 @@ export function ModrinthDiscover({ tofu, pikos }: Props) {
 
   useEffect(() => { void getModrinthGameVersions().then(versions => { setGameVersions(versions); if (tofu.version !== "Local" && versions.includes(tofu.version)) setGameVersion(tofu.version); }).catch(() => setGameVersions(tofu.version === "Local" ? [] : [tofu.version])); }, [tofu.version]);
   useEffect(() => { void refresh(); }, [gameVersion]);
+  useEffect(() => { setActiveTofuId(tofu.id); }, [tofu.id]);
 
   const install = async (project: ModrinthProject, target: Tofu) => {
     if (!target.path) { setMessage("This Tofu does not have an install location yet."); return; }
@@ -127,13 +150,38 @@ export function ModrinthDiscover({ tofu, pikos }: Props) {
 
   return <>
     <section className="modrinth-discover">
-      <div className="discover-header"><div><p className="eyebrow">Modrinth</p><h2>Discover</h2><p>Browse the most popular mods, modpacks, resource packs, and shaders directly from Modrinth.</p></div><button className="secondary-button" onClick={() => void refresh()} disabled={loading}>{loading ? <RefreshCw size={14} className="spin" /> : <RefreshCw size={14} />} Refresh</button></div>
-      <div className="discover-controls"><label className="search-box"><Search size={15} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Filter popular content..." /></label><label className="discover-select-wrap"><span>Minecraft</span><select className="discover-select" value={gameVersion} onChange={event => setGameVersion(event.target.value)}><option value="">All versions</option>{gameVersions.map(version => <option key={version} value={version}>{version}</option>)}</select></label><label className="discover-select-wrap"><span>Loader</span><select className="discover-select" value={loader} onChange={event => setLoader(event.target.value)}><option value="">Any loader</option><option value="fabric">Fabric</option><option value="forge">Forge</option><option value="neoforge">NeoForge</option><option value="quilt">Quilt</option></select></label></div>
+      <div className="discover-header"><div><p className="eyebrow">Discovery</p><h2>Discover Minecraft</h2><p>Browse Minecraft instances and popular community content in one place. More games can be added here later.</p></div><button className="secondary-button" onClick={() => void refresh()} disabled={loading || tab === "instances"}>{loading ? <RefreshCw size={14} className="spin" /> : <RefreshCw size={14} />} Refresh</button></div>
+      <div className="discover-platform-tabs" role="tablist" aria-label="Game discovery">
+        <button className="discover-platform-tab active" type="button" role="tab" aria-selected="true"><MinecraftMark size={22} /><span>Minecraft</span></button>
+      </div>
+      <div className="discover-tabs" role="tablist" aria-label="Minecraft discovery categories">
+        {discoveryTabs.map(item => <button key={item.id} className={tab === item.id ? "active" : ""} type="button" role="tab" aria-selected={tab === item.id} onClick={() => setTab(item.id)}>{item.label}</button>)}
+      </div>
+      <div className="discover-controls">{tab !== "instances" && <><label className="search-box"><Search size={15} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder={"Search " + (sections.find(section => section.type === tab)?.title || "content").toLowerCase() + "..."} /></label><label className="discover-select-wrap"><span>Minecraft</span><select className="discover-select" value={gameVersion} onChange={event => setGameVersion(event.target.value)}><option value="">All versions</option>{gameVersions.map(version => <option key={version} value={version}>{version}</option>)}</select></label>{tab === "mod" && <label className="discover-select-wrap"><span>Loader</span><select className="discover-select" value={loader} onChange={event => setLoader(event.target.value)}><option value="">Any loader</option><option value="fabric">Fabric</option><option value="forge">Forge</option><option value="neoforge">NeoForge</option><option value="quilt">Quilt</option></select></label>}</>}</div>
       {message && <p className="metadata-note">{message}</p>}
-      {loading ? <div className="discover-loading"><RefreshCw size={20} className="spin" /><span>Loading popular projects from Modrinth...</span></div> : <div className="discover-sections">{sections.map(section => {
-        const visible = projects[section.type].filter(matches);
-        return <section className="discover-section" key={section.type}><div className="discover-section-heading"><div><h3>{section.title}</h3><p>{section.description}</p></div><span>{visible.length} projects</span></div><div className="discover-grid">{visible.map((project,index) => <article className="discover-card" key={project.project_id}>{project.icon_url ? <img src={project.icon_url} alt="" className="discover-card-icon" /> : <div className="discover-card-icon fallback"><PackageOpen size={20}/></div>}<div className="discover-card-copy"><div className="discover-card-title"><strong>{index+1}. {project.title}</strong><span>{projectTypeLabel(project.project_type)}</span></div><small>{project.author || "Modrinth creator"} · {project.downloads.toLocaleString()} downloads</small><p>{project.description}</p><div className="discover-card-actions"><button className="secondary-button" onClick={() => void openDetails(project)}><Eye size={13}/> View</button><button className="secondary-button" onClick={() => setTofuPicker(project)} disabled={busyId !== ""}><Download size={13}/> Choose Tofu instance</button></div></div></article>)}</div>{!visible.length&&<div className="discover-empty">No popular {section.type} projects match this filter.</div>}</section>;
-      })}</div>}
+      {tab === "instances" ? (
+        <section className="discover-instances">
+          <div className="discover-section-heading"><div><h3>Minecraft Instances</h3><p>Your Tofu instances are available here as discovery targets.</p></div><span>{pikos.flatMap(piko => piko.tofus || []).length} instance{pikos.flatMap(piko => piko.tofus || []).length === 1 ? "" : "s"}</span></div>
+          {(() => {
+            const instances = pikos.flatMap(piko => (piko.tofus || []).map(instance => ({ ...instance, pikoName: piko.name })));
+            const activeInstance = instances.find(instance => instance.id === activeTofuId) || instances.find(instance => instance.id === tofu.id) || instances[0] || null;
+            return instances.length ? <div className="discover-instance-grid">{instances.map(instance => <article className={`discover-instance-card ${activeInstance?.id === instance.id ? "selected" : ""}`} key={instance.id}>
+              <div className="discover-instance-card-top"><MinecraftMark size={26} /><div><strong>{instance.name}</strong><small>{instance.pikoName} · {instance.version} · {instance.runtime}</small></div>{activeInstance?.id === instance.id && <span>Selected</span>}</div>
+              <div className="discover-instance-stats"><span><strong>Mods</strong>{instance.mods}</span><span><strong>Status</strong>{instance.status}</span><span><strong>Location</strong>{instance.path ? "Configured" : "Not configured"}</span></div>
+              <button className="secondary-button" type="button" onClick={() => { setActiveTofuId(instance.id); setGameVersion(instance.version === "Local" ? "" : instance.version); setLoader(""); setTab("mod"); }}>{activeInstance?.id === instance.id ? "Browse content" : "Use instance"}</button>
+            </article>)}</div> : <div className="discover-empty">No Minecraft instances are configured yet. Add a Tofu instance from your Library to start discovering content.</div>;
+          })()}
+        </section>
+      ) : loading ? <div className="discover-loading"><RefreshCw size={20} className="spin" /><span>Loading popular content from Modrinth...</span></div> : (() => {
+        const contentType = tab === "instances" ? "mod" : tab;
+        const section = sections.find(item => item.type === contentType)!;
+        const visible = projects[contentType].filter(matches);
+        return <div className="discover-sections"><section className="discover-section">
+          <div className="discover-section-heading"><div><h3>{section.title}</h3><p>{section.description}</p></div><span>{visible.length} projects</span></div>
+          <div className="discover-grid">{visible.map((project,index) => <article className="discover-card" key={project.project_id}>{project.icon_url ? <img src={project.icon_url} alt="" className="discover-card-icon" /> : <div className="discover-card-icon fallback"><PackageOpen size={20}/></div>}<div className="discover-card-copy"><div className="discover-card-title"><strong>{index+1}. {project.title}</strong><span>{projectTypeLabel(project.project_type)}</span></div><small>{project.author || "Modrinth creator"} · {project.downloads.toLocaleString()} downloads</small><p>{project.description}</p><div className="discover-card-actions"><button className="secondary-button" onClick={() => void openDetails(project)}><Eye size={13}/> View</button><button className="secondary-button" onClick={() => setTofuPicker(project)} disabled={busyId !== ""}><Download size={13}/> Choose Tofu instance</button></div></div></article>)}</div>
+          {!visible.length && <div className="discover-empty">No popular {projectTypeLabel(contentType)} projects match this filter.</div>}
+        </section></div>;
+      })()}
     </section>
     {details && <ProjectDetails project={details} gameVersion={gameVersion} onClose={() => setDetails(null)} />}
     {tofuPicker && <TofuPicker project={tofuPicker} pikos={pikos} onClose={() => setTofuPicker(null)} onInstall={(target) => { setTofuPicker(null); void install(tofuPicker, target); }} />}
