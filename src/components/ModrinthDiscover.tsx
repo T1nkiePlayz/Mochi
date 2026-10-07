@@ -14,14 +14,69 @@ import type { Piko, Tofu } from "../models";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getNexusGames, getNexusMods, type NexusGame, type NexusMod } from "../lib/nexus";
 
-type Props = { tofu: Tofu; pikos: Piko[] };
-
 const sections: Array<{ type: ModrinthProjectType; title: string; description: string }> = [
   { type: "mod", title: "Most Popular Mods", description: "The most downloaded mods on Modrinth right now." },
   { type: "modpack", title: "Most Popular Modpacks", description: "Popular curated packs ready to add to a Tofu." },
   { type: "resourcepack", title: "Most Popular Resource Packs", description: "Popular resource packs, sorted by Modrinth downloads." },
   { type: "shader", title: "Most Popular Shaders", description: "Popular shaders, sorted by Modrinth downloads." },
 ];
+
+function projectTypeLabel(type: ModrinthProjectType) {
+  return type === "resourcepack" ? "Resource Pack" : type.charAt(0).toUpperCase() + type.slice(1);
+}
+
+function formatDate(value?: string) {
+  if (!value) return "Unknown date";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + " KiB";
+  if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + " MiB";
+  return (bytes / 1024 / 1024 / 1024).toFixed(2) + " GiB";
+}
+
+function renderInline(text: string): ReactNode[] {
+  const parts = text.split(/(\!\[[^\]]*\]\([^\)]+\)|\[[^\]]+\]\([^\)]+\)|\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*]+\*|_[^_]+_)/g);
+  return parts.filter(Boolean).map((part, index) => {
+    const image = part.match(/^!\[([^\]]*)\]\(([^\)]+)\)$/);
+    if (image) return <img key={index} className="project-markdown-image" src={image[2]} alt={image[1]} />;
+    const link = part.match(/^\[([^\]]+)\]\(([^\)]+)\)$/);
+    if (link) return <a key={index} href={link[2]} target="_blank" rel="noreferrer">{link[1]}</a>;
+    if ((part.startsWith("**") && part.endsWith("**")) || (part.startsWith("__") && part.endsWith("__"))) return <strong key={index}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith("`") && part.endsWith("`")) return <code key={index}>{part.slice(1, -1)}</code>;
+    if ((part.startsWith("*") && part.endsWith("*")) || (part.startsWith("_") && part.endsWith("_"))) return <em key={index}>{part.slice(1, -1)}</em>;
+    return <span key={index}>{part}</span>;
+  });
+}
+
+function Markdown({ source }: { source: string }) {
+  const normalized = source.replace(/<center>\s*/gi, "").replace(/<\/center>/gi, "").replace(/<p>\s*<\/p>/gi, "").replace(/<h1[^>]*>(.*?)<\/h1>/gis, "\n# $1\n").replace(/<[^>]+>/g, "");
+  const lines = normalized.split(/\r?\n/);
+  const nodes: ReactNode[] = [];
+  let listItems: string[] = [];
+  const flushList = () => {
+    if (!listItems.length) return;
+    nodes.push(<ul key={nodes.length}>{listItems.map((item, index) => <li key={index}>{renderInline(item)}</li>)}</ul>);
+    listItems = [];
+  };
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    if (!trimmed) { flushList(); return; }
+    const list = trimmed.match(/^[-*+]\s+(.+)/);
+    if (list) { listItems.push(list[1]); return; }
+    flushList();
+    const heading = trimmed.match(/^(#{1,6})\s+(.+)/);
+    if (heading) { const Heading = ("h" + Math.min(heading[1].length + 2, 6)) as keyof JSX.IntrinsicElements; nodes.push(<Heading key={index}>{renderInline(heading[2])}</Heading>); return; }
+    if (/^>\s?/.test(trimmed)) { nodes.push(<blockquote key={index}>{renderInline(trimmed.replace(/^>\s?/, ""))}</blockquote>); return; }
+    if (/^---+$/.test(trimmed)) { nodes.push(<hr key={index} />); return; }
+    if (/^```/.test(trimmed)) return;
+    nodes.push(<p key={index}>{renderInline(trimmed)}</p>);
+  });
+  flushList();
+  return <div className="project-markdown">{nodes}</div>;
+}
 
 type MinecraftTab = ModrinthProjectType;
 type DiscoveryTab = { kind: "minecraft"; category: MinecraftTab } | { kind: "nexus"; game: NexusGame };
