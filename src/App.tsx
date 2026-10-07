@@ -101,6 +101,7 @@ function App() {
   const [igdbMessage, setIgdbMessage] = useState("");
   const [nexusApiKey, setNexusApiKey] = useState("");
   const [credentialStatus, setCredentialStatus] = useState({ igdb: false, nexus: false });
+  const [credentialStatusLoaded, setCredentialStatusLoaded] = useState(false);
   const [igdbClientId, setIgdbClientId] = useState("");
   const [igdbClientSecret, setIgdbClientSecret] = useState("");
   const [credentialBusy, setCredentialBusy] = useState<"igdb" | "nexus" | null>(null);
@@ -466,7 +467,7 @@ function App() {
     void Promise.all([
       getProviderCredentialStatus(supabase, "igdb"),
       getProviderCredentialStatus(supabase, "nexus"),
-    ]).then(([igdb, nexus]) => setCredentialStatus({ igdb, nexus })).catch((error) => {
+    ]).then(([igdb, nexus]) => { setCredentialStatus({ igdb, nexus }); setCredentialStatusLoaded(true); }).catch((error) => {
       console.warn("Mochi provider credential status unavailable", error);
     });
   }, [user]);
