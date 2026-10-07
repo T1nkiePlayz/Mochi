@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 
 type AccountAvatarProps = {
@@ -15,20 +15,31 @@ async function sha256(value: string) {
 
 export function AccountAvatar({ user, size = 34, className = "" }: AccountAvatarProps) {
   const [gravatarUrl, setGravatarUrl] = useState<string | null>(null);
+  const [providerFailed, setProviderFailed] = useState(false);
+  const [gravatarFailed, setGravatarFailed] = useState(false);
+
+  const providerAvatar = useMemo(() => {
+    const avatar = user?.user_metadata?.avatar_url;
+    if (typeof avatar === "string" && avatar.trim()) return avatar.trim();
+    const picture = user?.user_metadata?.picture;
+    return typeof picture === "string" && picture.trim() ? picture.trim() : null;
+  }, [user]);
 
   useEffect(() => {
     let cancelled = false;
-    const email = user?.email?.trim();
+    setProviderFailed(false);
+    setGravatarFailed(false);
+    setGravatarUrl(null);
 
-    if (!email) {
-      setGravatarUrl(null);
-      return;
-    }
+    const email = user?.email?.trim();
+    if (!email) return;
 
     void sha256(email).then((hash) => {
       if (!cancelled) {
-        setGravatarUrl(`https://0.gravatar.com/avatar/${hash}?s=${size * 2}&d=identicon&r=pg`);
+        setGravatarUrl(`https://0.gravatar.com/avatar/${hash}?s=${Math.max(64, size * 2)}&d=identicon&r=pg`);
       }
+    }).catch(() => {
+      if (!cancelled) setGravatarUrl(null);
     });
 
     return () => {
@@ -36,24 +47,40 @@ export function AccountAvatar({ user, size = 34, className = "" }: AccountAvatar
     };
   }, [user?.email, size]);
 
-  if (!user) {
-    return <span className={`account-avatar ${className}`} style={{ width: size, height: size }} aria-hidden="true">
-      <img src={`https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&s=${size * 2}`} alt="" />
-    </span>;
-  }
-
-  const providerAvatar = typeof user.user_metadata?.avatar_url === "string"
-    ? user.user_metadata.avatar_url
-    : typeof user.user_metadata?.picture === "string"
-      ? user.user_metadata.picture
-      : null;
+  const fallbackLetter = user?.email?.trim().slice(0, 1).toUpperCase() ?? "U";
+  const imageUrl = user && !providerFailed ? providerAvatar : null;
+  const secondaryUrl = gravatarUrl && !gravatarFailed ? gravatarUrl : null;
 
   return (
-    <span className={`account-avatar ${className}`} style={{ width: size, height: size }}>
-      {(providerAvatar || gravatarUrl) ? (
-        <img className="account-avatar-image" src={providerAvatar || gravatarUrl || ""} alt="" referrerPolicy="no-referrer" />
+    <span
+      className={`account-avatar ${className}`}
+      style={{ width: size, height: size, minWidth: size, minHeight: size, aspectRatio: "1 / 1" }}
+      aria-hidden={user ? undefined : "true"}
+    >
+      {imageUrl ? (
+        <img
+          className="account-avatar-image"
+          src={imageUrl}
+          alt=""
+          width={size}
+          height={size}
+          referrerPolicy="no-referrer"
+          onError={() => setProviderFailed(true)}
+        />
+      ) : secondaryUrl ? (
+        <img
+          className="account-avatar-image"
+          src={secondaryUrl}
+          alt=""
+          width={size}
+          height={size}
+          referrerPolicy="no-referrer"
+          onError={() => setGravatarFailed(true)}
+        />
+      ) : user ? (
+        <span>{fallbackLetter}</span>
       ) : (
-        <span>{user.email?.slice(0, 1).toUpperCase() ?? "U"}</span>
+        <span>U</span>
       )}
     </span>
   );
