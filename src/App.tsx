@@ -1047,7 +1047,7 @@ function App() {
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>General</strong><span>Launcher behavior</span></div>
                 <label className="setting-row"><span><strong>Launch Mochi on startup</strong><small>Open the launcher when you sign in to your computer.</small></span><input className="toggle" checked={behavior.launchOnStartup} onChange={(event) => setBehavior({ ...behavior, launchOnStartup: event.target.checked })} type="checkbox" /></label>
-                <label className="setting-row"><span><strong>Keep launcher open</strong><small>Minimize to the system tray when a game starts.</small></span><input className="toggle" checked={behavior.keepOpen} onChange={(event) => setBehavior({ ...behavior, keepOpen: event.target.checked })} type="checkbox" /></label>
+                <label className="setting-row"><span><strong>Keep launcher running in tray</strong><small>Closing the window hides Mochi and keeps the system tray service available.</small></span><input className="toggle" checked={behavior.keepOpen} onChange={(event) => setBehavior({ ...behavior, keepOpen: event.target.checked })} type="checkbox" /></label>
               </div>
               <div className="settings-group security-settings-group">
                 <div className="settings-group-heading"><strong>Security</strong><span>Account protection and sign-in methods</span></div>
