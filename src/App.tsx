@@ -96,7 +96,7 @@ function App() {
   const [flatpakBusy, setFlatpakBusy] = useState(false);
   const [settings, setSettings] = useState<IgdbSettings>({ clientId: "", clientSecret: "" });
   const [behavior, setBehavior] = useState(() => {
-    try { const stored = JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}"); return { launchOnStartup: Boolean(stored.launchOnStartup), keepOpen: stored.keepOpen !== false, confirmLaunch: stored.confirmLaunch !== false, detailedErrors: Boolean(stored.detailedErrors), experimentalFeatures: Boolean(stored.experimentalFeatures) }; } catch { return { launchOnStartup: false, keepOpen: true }; }
+    try { const stored = JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}"); return { launchOnStartup: Boolean(stored.launchOnStartup), keepOpen: stored.keepOpen !== false, confirmLaunch: stored.confirmLaunch !== false, detailedErrors: Boolean(stored.detailedErrors), experimentalFeatures: Boolean(stored.experimentalFeatures) }; } catch { return { launchOnStartup: false, keepOpen: true, confirmLaunch: true, detailedErrors: false, experimentalFeatures: false }; }
   });
   const [igdbMessage, setIgdbMessage] = useState("");
   const [nexusApiKey, setNexusApiKey] = useState("");
@@ -132,6 +132,10 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(storedSettingsKey, JSON.stringify({ ...behavior }));
   }, [behavior]);
+
+  useEffect(() => {
+    void import("@tauri-apps/api/core").then(({ invoke }) => invoke("set_launch_on_startup", { enabled: behavior.launchOnStartup })).catch(() => { /* browser/development mode */ });
+  }, [behavior.launchOnStartup]);
 
   useEffect(() => {
     if (!supabase) return;
