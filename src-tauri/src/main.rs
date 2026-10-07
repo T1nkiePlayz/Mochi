@@ -61,7 +61,7 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            open_external_url, set_launch_on_startup, launch_game, list_flatpaks, get_platform_capabilities, detect_import_sources, scan_import_games,
+            send_system_notification, open_external_url, set_launch_on_startup, launch_game, list_flatpaks, get_platform_capabilities, detect_import_sources, scan_import_games,
             get_mochi_config_info, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
             modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::delete_mod_file, modrinth::download_modrinth_file
         ])
