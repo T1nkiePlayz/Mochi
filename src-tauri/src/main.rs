@@ -65,6 +65,9 @@ fn scan_import_games(source:String, library_path:Option<String>)->Vec<sources::I
 fn get_mochi_config_info(app: tauri::AppHandle) -> Result<themes::MochiConfigInfo, String> { themes::get_mochi_config_info(app) }
 
 #[tauri::command]
+fn move_mochi_config(app: tauri::AppHandle, destination: String) -> Result<String, String> { themes::move_config_location(app, destination) }
+
+#[tauri::command]
 fn set_mochi_theme(app: tauri::AppHandle, theme_id: String) -> Result<(), String> { themes::set_mochi_theme(app, theme_id) }
 
 #[tauri::command]
@@ -100,7 +103,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             send_system_notification, open_external_url, set_launch_on_startup, launch_game, launch_game_tracked, get_playtime, list_flatpaks, get_platform_capabilities, detect_import_sources, scan_import_games,
-            get_mochi_config_info, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
+            get_mochi_config_info, move_mochi_config, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
             modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::delete_mod_file, modrinth::download_modrinth_file
         ])
         .run(tauri::generate_context!())
