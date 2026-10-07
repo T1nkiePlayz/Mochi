@@ -492,3 +492,9 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
   min-height:14px!important;
   flex:0 0 14px!important;
 }
+
+/* Connected account actions */
+.security-provider-copy{display:grid;gap:3px;min-width:0;flex:1;}
+.security-provider-copy strong{font-size:11px;color:var(--mochi-text-strong);}
+.security-provider-copy small{color:var(--mochi-text-muted);font-size:9px;}
+.security-provider-action{flex:0 0 auto;min-height:30px;padding:6px 9px;}
