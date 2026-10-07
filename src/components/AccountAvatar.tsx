@@ -36,7 +36,7 @@ export function AccountAvatar({ user, size = 34, className = "" }: AccountAvatar
 
     void sha256(email).then((hash) => {
       if (!cancelled) {
-        setGravatarUrl(`https://0.gravatar.com/avatar/${hash}?s=${Math.max(64, size * 2)}&d=identicon&r=pg`);
+        setGravatarUrl(`https://www.gravatar.com/avatar/${hash}?s=${Math.max(64, size * 2)}&d=mp&r=pg`);
       }
     }).catch(() => {
       if (!cancelled) setGravatarUrl(null);
