@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Download, Eye, PackageOpen, Plus, RefreshCw, Search, X } from "lucide-react";
 import {
   getModrinthGameVersions,
