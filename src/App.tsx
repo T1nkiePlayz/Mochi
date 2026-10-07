@@ -164,7 +164,7 @@ function App() {
   const pushNotification = (title: string, message: string) => {
     const notification = { id: crypto.randomUUID(), title, message, createdAt: Date.now() };
     setNotifications((current) => [notification, ...current].slice(0, 20));
-    void invoke("send_system_notification", { title, body: message })).catch(() => {});
+    void invoke("send_system_notification", { title, body: message }).catch(() => {});
   };
   const saveAccountSession = (sessionUser: User, refreshToken: string) => {
     const username = sessionUser.user_metadata?.username
@@ -238,7 +238,7 @@ function App() {
   }, [behavior.keepOpen]);
 
   useEffect(() => {
-    void invoke("set_launch_on_startup", { enabled: behavior.launchOnStartup })).catch(() => { /* browser/development mode */ });
+    void invoke("set_launch_on_startup", { enabled: behavior.launchOnStartup }).catch(() => { /* browser/development mode */ });
   }, [behavior.launchOnStartup]);
 
   useEffect(() => {
@@ -778,7 +778,7 @@ function App() {
     if (!window.confirm("Clear all Mochi app data and return to the welcome screen? Your Mochi account will not be deleted.")) return;
     window.localStorage.clear();
     if (supabase) await supabase.auth.signOut({ scope: "local" });
-    try { await invoke("clear_mochi_app_data")); } catch { /* browser/development mode */ }
+    try { await invoke("clear_mochi_app_data"); } catch { /* browser/development mode */ }
     window.location.reload();
   };
 
@@ -830,9 +830,8 @@ function App() {
   };
 
   const openWebsiteSignIn = () => {
-    void import("@tauri-apps/api/core").then(({ invoke }) =>
-      invoke("open_external_url", { url: "https://t1nkieplayz.github.io/Mochi-Website/#/signin?app=mochi" })
-    ).catch((error) => setAuthError(error instanceof Error ? error.message : "Unable to open the Mochi website."));
+    void invoke("open_external_url", { url: "https://t1nkieplayz.github.io/Mochi-Website/#/signin?app=mochi" })
+      .catch((error) => setAuthError(error instanceof Error ? error.message : "Unable to open the Mochi website."));
   };
 
   const authenticate = async (event: FormEvent<HTMLFormElement>) => {
