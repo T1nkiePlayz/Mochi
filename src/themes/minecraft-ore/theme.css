@@ -107,3 +107,8 @@ body{image-rendering:auto;}
 [data-mochi-theme="minecraft-ore"] .play-button{
   box-shadow:inset 0 -3px 0 rgba(0,0,0,.28),0 2px 0 rgba(0,0,0,.2);
 }
+
+[data-mochi-theme="minecraft-ore"] .nav-item{min-height:38px;margin:3px 0;padding:8px 10px;border:2px solid #3d3d3d;border-radius:3px!important;background:#1b1b1b;box-shadow:inset 0 -3px 0 rgba(0,0,0,.38),0 2px 0 rgba(0,0,0,.2)}
+[data-mochi-theme="minecraft-ore"] .nav-item:hover{border-color:#666;background:#303030;transform:translateY(-1px)}
+[data-mochi-theme="minecraft-ore"] .nav-item.active{border-color:#7ed321;background:linear-gradient(#343434,#252525);box-shadow:inset 0 0 0 1px rgba(155,232,79,.22),inset 0 -3px 0 rgba(0,0,0,.38),0 2px 0 rgba(0,0,0,.2)}
+[data-mochi-theme="minecraft-ore"] .nav-item.active:before{display:none}
