@@ -439,3 +439,56 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 .tofu-picker-row small{color:var(--mochi-text-muted);font-size:10px;}
 .tofu-picker-row .secondary-button{width:36px;min-width:36px;padding:0;}
 @media(max-width:700px){.project-details-header{padding:17px}.project-details-header img,.project-details-header .discover-card-icon{width:56px;height:56px;flex-basis:56px}.project-info-grid{grid-template-columns:1fr}.project-overview,.project-version-list{padding:17px}.project-tabs{padding:0 17px;}.tofu-picker-window{padding:17px;}.discover-modal-backdrop{padding:14px;}}
+
+
+/* Final icon/avatar containment: generic span rules must never stretch component primitives. */
+.mochi-icon-wrap{
+  display:inline-grid!important;
+  place-items:center!important;
+  flex:0 0 auto!important;
+  line-height:0!important;
+  overflow:hidden;
+}
+.mochi-icon-custom{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  background-position:center!important;
+  background-size:contain!important;
+  background-repeat:no-repeat!important;
+  flex:0 0 auto!important;
+}
+.sidebar-account>.account-avatar{
+  display:grid!important;
+  width:34px!important;
+  height:34px!important;
+  min-width:34px!important;
+  min-height:34px!important;
+  flex:0 0 34px!important;
+  aspect-ratio:1/1!important;
+  overflow:hidden!important;
+}
+.sidebar-account>.account-avatar img,
+.sidebar-account>.account-avatar .account-avatar-image{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:100%!important;
+  min-height:100%!important;
+  max-width:none!important;
+  max-height:none!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  aspect-ratio:1/1!important;
+  flex:0 0 auto!important;
+}
+.sidebar-account>.mochi-icon-wrap{
+  display:grid!important;
+  width:14px!important;
+  height:14px!important;
+  min-width:14px!important;
+  min-height:14px!important;
+  flex:0 0 14px!important;
+}
