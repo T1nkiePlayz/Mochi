@@ -70,8 +70,15 @@ pub struct MochiConfigInfo {
 
 fn config_dir(app: &AppHandle) -> Result<PathBuf, String> {
     app.path()
-        .app_config_dir()
+        .config_dir()
+        .map(|path| path.join("Mochi"))
         .map_err(|error| format!("Unable to resolve Mochi config directory: {error}"))
+}
+
+pub fn initialize_config(app: &AppHandle) -> Result<(), String> {
+    let _ = ensure_config(app)?;
+    let _ = themes_dir(app)?;
+    Ok(())
 }
 
 fn themes_dir(app: &AppHandle) -> Result<PathBuf, String> {
