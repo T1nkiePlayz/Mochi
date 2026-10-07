@@ -408,6 +408,16 @@ export function useThemeEngine() {
 
   useEffect(() => {
     let cancelled = false;
+    const refreshConfigInfo = async () => {
+      try {
+        const info = await getThemeConfig();
+        if (!cancelled) setConfigInfo(info);
+      } catch {
+        // Browser/development mode or an unavailable native backend.
+      }
+    };
+    const onConfigChanged = () => { void refreshConfigInfo(); };
+    window.addEventListener("mochi-config-changed", onConfigChanged);
     void (async () => {
       try {
         const [info, available] = await Promise.all([getThemeConfig(), listThemes()]);
@@ -445,6 +455,7 @@ export function useThemeEngine() {
     })();
     return () => {
       cancelled = true;
+      window.removeEventListener("mochi-config-changed", onConfigChanged);
     };
   }, []);
 
