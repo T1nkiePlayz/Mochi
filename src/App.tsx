@@ -229,16 +229,6 @@ function App() {
   }, [behavior]);
 
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    void getCurrentWindow().onCloseRequested((event) => {
-      if (!behavior.keepOpen) return;
-      event.preventDefault();
-      void getCurrentWindow().hide();
-    }).then((remove) => { unlisten = remove; }).catch(() => {});
-    return () => { unlisten?.(); };
-  }, [behavior.keepOpen]);
-
-  useEffect(() => {
     void invoke("set_launch_on_startup", { enabled: behavior.launchOnStartup }).catch(() => { /* browser/development mode */ });
   }, [behavior.launchOnStartup]);
 
@@ -1097,7 +1087,7 @@ function App() {
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>General</strong><span>Launcher behavior</span></div>
                 <label className="setting-row"><span><strong>Launch Mochi on startup</strong><small>Open the launcher when you sign in to your computer.</small></span><input className="toggle" checked={behavior.launchOnStartup} onChange={(event) => setBehavior({ ...behavior, launchOnStartup: event.target.checked })} type="checkbox" /></label>
-                <label className="setting-row"><span><strong>Keep launcher running in tray</strong><small>Closing the window hides Mochi and keeps the system tray service available.</small></span><input className="toggle" checked={behavior.keepOpen} onChange={(event) => setBehavior({ ...behavior, keepOpen: event.target.checked })} type="checkbox" /></label>
+                <div className="setting-row"><span><strong>System tray service</strong><small>Closing the Mochi window keeps the launcher running in the tray. Use Quit Mochi from the tray menu to fully exit.</small></span><span className="metadata-note">Always active</span></div>
               </div>
               <div className="settings-group security-settings-group">
                 <div className="settings-group-heading"><strong>Security</strong><span>Account protection and sign-in methods</span></div>
