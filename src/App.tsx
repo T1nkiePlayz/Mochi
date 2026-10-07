@@ -1034,9 +1034,17 @@ function App() {
                 <div className="provider-grid">
                   <div className="provider-credential-card">
                     <div className="provider-credential-heading"><div><strong>IGDB</strong><small>Store your Twitch Client ID and Client Secret securely with your Mochi account.</small></div><span className={credentialStatus.igdb ? "credential-status saved" : "credential-status"}>{user && credentialStatus.igdb ? "Saved" : user ? "Not saved" : "Sign in required"}</span></div>
-                    {user ? <><div className="provider-fields"><input value={igdbClientId} onChange={(event) => setIgdbClientId(event.target.value)} placeholder="Twitch Client ID" /><input type="password" value={igdbClientSecret} onChange={(event) => setIgdbClientSecret(event.target.value)} placeholder="Twitch Client Secret" /></div>
-                    <button className="secondary-button" onClick={() => void saveCredential("igdb")} disabled={credentialBusy !== null}>{credentialBusy === "igdb" ? "Saving..." : "Save IGDB securely"}</button>
-                    {igdbMessage && <small className="metadata-note">{igdbMessage}</small></> : <button className="secondary-button" onClick={() => { setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); }}><MochiIcon name="account" fallback={UserRound} size={14} /> Sign in to save</button>}
+                    {user ? (
+                      <>
+                        <div className="provider-fields"><input value={igdbClientId} onChange={(event) => setIgdbClientId(event.target.value)} placeholder="Twitch Client ID" /><input type="password" value={igdbClientSecret} onChange={(event) => setIgdbClientSecret(event.target.value)} placeholder="Twitch Client Secret" /></div>
+                        <button className="secondary-button" onClick={() => void saveCredential("igdb")} disabled={credentialBusy !== null}>{credentialBusy === "igdb" ? "Saving..." : "Save IGDB securely"}</button>
+                        {igdbMessage && <small className="metadata-note">{igdbMessage}</small>}
+                      </>
+                    ) : (
+                      <button className="secondary-button" onClick={() => { setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); }}>
+                        <MochiIcon name="account" fallback={UserRound} size={14} /> Sign in to save
+                      </button>
+                    )}
                   </div>
                   <div className="provider-credential-card">
                     <div className="provider-credential-heading"><div><strong>Nexus Mods</strong><small>Your Nexus API key is stored server-side and is never returned to the launcher.</small></div><span className={credentialStatus.nexus ? "credential-status saved" : "credential-status"}>{credentialStatus.nexus ? "Saved" : "Not saved"}</span></div>
