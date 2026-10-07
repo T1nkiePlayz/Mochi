@@ -75,4 +75,4 @@ Settings provides separate import actions for:
 - Theme file — imports a single theme.json file.
 - Theme folder — imports a complete theme package with its CSS and assets.
 
-The native backend validates the manifest and rejects unsafe theme IDs and asset paths that attempt to escape the theme directory.
+After import, Mochi reloads the available theme list so the new theme can be selected without restarting. The native backend validates the manifest and rejects unsafe theme IDs and asset paths that attempt to escape the theme directory.
