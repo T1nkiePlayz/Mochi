@@ -598,3 +598,6 @@ For the current public legal and privacy information, see the Mochi Website.
 Mochi does not currently declare a final open-source license. Until a license is explicitly added, the source code should not be assumed to be freely reusable, redistributed, or relicensed.
 
 License information will be added as the project approaches its first public release.
+
+
+<!-- verification: connected account action styles -->
