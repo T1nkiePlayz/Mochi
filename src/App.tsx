@@ -48,7 +48,7 @@ import {
   type LaunchMethodId,
   type PlatformCapabilities,
 } from "./lib/platform";
-import { enrollTotp, getVerifiedTotpFactor, registerPasskey, sendMagicLink, signInWithPasskey, signInWithProvider, verifyEmailToken, verifyMfaCode } from "./lib/auth";
+import { enrollTotp, getVerifiedTotpFactor, registerPasskey, sendEmailCode, signInWithPasskey, signInWithProvider, verifyEmailCode, verifyEmailToken, verifyMfaCode } from "./lib/auth";
 import { importThemeFile, importThemeFolder, useThemeEngine } from "./lib/theme";
 import { getProviderCredentialStatus, saveProviderCredential } from "./lib/providerCredentials";
 
@@ -111,6 +111,9 @@ function App() {
   const [mfaFactorId, setMfaFactorId] = useState("");
   const [mfaMessage, setMfaMessage] = useState("");
   const [authNotice, setAuthNotice] = useState("");
+  const [emailCodeStep, setEmailCodeStep] = useState(false);
+  const [emailCode, setEmailCode] = useState("");
+  const [emailCodeEmail, setEmailCodeEmail] = useState("");
   const [showFirstLaunchSetup, setShowFirstLaunchSetup] = useState(() => window.localStorage.getItem(setupCompleteKey) !== "true");
   const [showImportPicker, setShowImportPicker] = useState(false);
   const [syncState, setSyncState] = useState<"offline" | "syncing" | "synced" | "error">(
@@ -510,11 +513,64 @@ function App() {
     if (!supabase) return;
     setAuthBusy(true);
     setAuthError("");
+    setAuthNotice("");
     try {
-      await signInWithPasskey(supabase);
+      const result = await signInWithPasskey(supabase);
+      if (result.error) throw result.error;
+      if (!result.data?.session) throw new Error("Passkey sign-in did not create a session.");
       setShowAuth(false);
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Passkey sign-in failed.");
+      setAuthNotice("If passkeys are not available in this desktop environment, you can use the Mochi website instead.");
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const openWebsiteSignIn = () => {
+    window.open("https://t1nkieplayz.github.io/Mochi-Website/#/signin", "_blank", "noopener,noreferrer");
+  };
+
+  const requestEmailCode = async () => {
+    if (!supabase) return;
+    const emailInput = document.querySelector('input[name="email"]') as HTMLInputElement | null;
+    const email = emailInput?.value.trim() ?? "";
+    if (!email) {
+      emailInput?.reportValidity();
+      setAuthError("Enter your email address first.");
+      return;
+    }
+    setAuthBusy(true);
+    setAuthError("");
+    setAuthNotice("");
+    try {
+      const { error } = await sendEmailCode(supabase, email);
+      if (error) throw error;
+      setEmailCodeEmail(email);
+      setEmailCode("");
+      setEmailCodeStep(true);
+      setAuthNotice("Verification code sent. Check your email.");
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Unable to send the verification code.");
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const submitEmailCode = async () => {
+    if (!supabase || !emailCodeEmail || emailCode.length < 6) return;
+    setAuthBusy(true);
+    setAuthError("");
+    setAuthNotice("");
+    try {
+      const { error } = await verifyEmailCode(supabase, emailCodeEmail, emailCode.trim());
+      if (error) throw error;
+      setEmailCodeStep(false);
+      setEmailCode("");
+      setEmailCodeEmail("");
+      setShowAuth(false);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "That verification code is not valid.");
     } finally {
       setAuthBusy(false);
     }
@@ -595,7 +651,25 @@ function App() {
     if (supabase) await supabase.auth.signOut();
   };
 
-  const authModal = <div className="modal-backdrop" onClick={() => setShowAuth(false)}><form className="modal auth-modal" onSubmit={authenticate} onClick={(event) => event.stopPropagation()}><div className="modal-header"><div className="auth-brand"><img src="/mochi.png" alt="Mochi" /><div><p className="eyebrow">Mochi Cloud</p><h2>{authMode === "sign-in" ? "Welcome back." : "Create your account."}</h2></div></div><button className="icon-button" type="button" onClick={() => setShowAuth(false)}><MochiIcon name="close" fallback={X} size={17} /></button></div><p className="modal-description">{authMode === "sign-in" ? "Sign in to access your securely stored API credentials and, if you enable it, keep Mochi metadata available across devices." : "Your games stay local. Your Mochi metadata can follow you."}</p><div className="form-fields"><label>Email<input name="email" type="email" placeholder="you@example.com" required /></label><label>Password<input name="password" type="password" minLength={6} placeholder="At least 6 characters" required /></label></div>{authError && <p className="auth-error">{authError}</p>} {mfaRequired ? <><p className="modal-description">{mfaMessage}</p><input className="mfa-input" inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="123456" maxLength={6} /><button className="play-button form-submit" type="button" disabled={authBusy || mfaCode.length !== 6} onClick={completeMfa}>{authBusy ? "Verifying..." : "Verify code"}</button></> : <><button className="play-button form-submit" disabled={authBusy} type="submit">{authBusy ? "Connecting..." : authMode === "sign-in" ? "Sign in" : "Create account"}</button><div className="auth-provider-row"><button type="button" className="secondary-button" onClick={() => signInWithProvider(supabase!, "github")}><MochiIcon name="github" fallback={Github} size={15}/> GitHub</button><button type="button" className="secondary-button" onClick={handlePasskey}><MochiIcon name="key" fallback={KeyRound} size={15}/> Passkey</button></div><button type="button" className="switch-auth" onClick={() => sendMagicLink(supabase!, String((document.querySelector('input[name="email"]') as HTMLInputElement)?.value || ""))}>Email me a magic link</button><button className="switch-auth" type="button" onClick={() => { setAuthMode(authMode === "sign-in" ? "sign-up" : "sign-in"); setAuthError(""); }}>{authMode === "sign-in" ? "New to Mochi? Create an account" : "Already have an account? Sign in"}</button></>}</form></div>;
+  const authModal = <div className="modal-backdrop" onClick={() => setShowAuth(false)}><form className="modal auth-modal" onSubmit={authenticate} onClick={(event) => event.stopPropagation()}>
+    <div className="modal-header"><div className="auth-brand"><img src="/mochi.png" alt="Mochi" /><div><p className="eyebrow">Mochi Cloud</p><h2>{emailCodeStep ? "Check your email." : authMode === "sign-in" ? "Welcome back." : "Create your account."}</h2></div></div><button className="icon-button" type="button" onClick={() => setShowAuth(false)}><MochiIcon name="close" fallback={X} size={17} /></button></div>
+    {emailCodeStep ? <>
+      <p className="modal-description">We sent a six-digit verification code to <strong>{emailCodeEmail}</strong>. Enter it below to finish signing in.</p>
+      <div className="form-fields"><label>Verification code<input className="mfa-input" inputMode="numeric" autoComplete="one-time-code" value={emailCode} onChange={(e) => setEmailCode(e.target.value.replace(/\\D/g, "").slice(0, 6))} placeholder="123456" maxLength={6} /></label></div>
+      {authError && <p className="auth-error">{authError}</p>}
+      {authNotice && <p className="auth-notice">{authNotice}</p>}
+      <button className="play-button form-submit" type="button" disabled={authBusy || emailCode.length !== 6} onClick={submitEmailCode}>{authBusy ? "Verifying..." : "Verify and sign in"}</button>
+      <button type="button" className="switch-auth" onClick={() => { setEmailCodeStep(false); setAuthError(""); setAuthNotice(""); }}>Use a different sign-in method</button>
+    </> : <>
+      <p className="modal-description">{authMode === "sign-in" ? "Sign in to access your securely stored API credentials and, if you enable it, keep Mochi metadata available across devices." : "Your games stay local. Your Mochi metadata can follow you."}</p>
+      <div className="form-fields"><label>Email<input name="email" type="email" placeholder="you@example.com" required /></label><label>Password<input name="password" type="password" minLength={6} placeholder="At least 6 characters" required /></label></div>
+      {authError && <p className="auth-error">{authError}</p>}{authNotice && <p className="auth-notice">{authNotice}</p>}
+      {mfaRequired ? <><p className="modal-description">{mfaMessage}</p><input className="mfa-input" inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="123456" maxLength={6} /><button className="play-button form-submit" type="button" disabled={authBusy || mfaCode.length !== 6} onClick={completeMfa}>{authBusy ? "Verifying..." : "Verify code"}</button></> : <><button className="play-button form-submit" disabled={authBusy} type="submit">{authBusy ? "Connecting..." : authMode === "sign-in" ? "Sign in" : "Create account"}</button>
+      <div className="auth-provider-row"><button type="button" className="secondary-button" onClick={() => { setAuthError(""); void signInWithProvider(supabase!, "google").then(({ error }) => { if (error) setAuthError(error.message); }); }}>Google</button><button type="button" className="secondary-button" onClick={() => { setAuthError(""); void signInWithProvider(supabase!, "github").then(({ error }) => { if (error) setAuthError(error.message); }); }}><MochiIcon name="github" fallback={Github} size={15}/> GitHub</button><button type="button" className="secondary-button" onClick={handlePasskey}><MochiIcon name="key" fallback={KeyRound} size={15}/> Passkey</button></div>
+      <div className="auth-provider-row"><button type="button" className="switch-auth" onClick={requestEmailCode}>{authBusy ? "Sending..." : "Email me a verification code"}</button><button type="button" className="secondary-button" onClick={openWebsiteSignIn}>Use website</button></div>
+      <button className="switch-auth" type="button" onClick={() => { setAuthMode(authMode === "sign-in" ? "sign-up" : "sign-in"); setAuthError(""); setAuthNotice(""); }}>{authMode === "sign-in" ? "New to Mochi? Create an account" : "Already have an account? Sign in"}</button></>}
+    </>}
+  </form></div>;
 
   if (showFirstLaunchSetup) {
     return <>
