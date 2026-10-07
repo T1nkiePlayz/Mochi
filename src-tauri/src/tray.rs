@@ -21,21 +21,23 @@ pub fn build_menu(app: &tauri::AppHandle) -> Result<Menu<tauri::Wry>, tauri::Err
     let open = MenuItem::with_id(app, "tray-open", "Open Mochi", true, None::<&str>)?;
     let title = MenuItem::with_id(app, "tray-title", "Most played", false, None::<&str>)?;
 
-    let mut items: Vec<MenuItem<tauri::Wry>> = vec![open, title];
+    let mut builder = tauri::menu::MenuBuilder::new(app);
+    builder = builder.item(&open).item(&title);
     let games = playtime::list().unwrap_or_default();
 
     if games.is_empty() {
-        items.push(MenuItem::with_id(app, "tray-empty", "No games played yet", false, None::<&str>)?);
+        let empty = MenuItem::with_id(app, "tray-empty", "No games played yet", false, None::<&str>)?;
+        builder = builder.item(&empty);
     } else {
         for (index, game) in games.into_iter().take(5).enumerate() {
             let label = format!("{}. {} — {}", index + 1, game.name, format_playtime(game.seconds));
-            items.push(MenuItem::with_id(app, &format!("tray-game-{}", index + 1), label, false, None::<&str>)?);
+            let item = MenuItem::with_id(app, &format!("tray-game-{}", index + 1), label, false, None::<&str>)?;
+            builder = builder.item(&item);
         }
     }
 
-    items.push(MenuItem::with_id(app, "tray-quit", "Quit Mochi", true, None::<&str>)?);
-    let refs: Vec<&MenuItem<tauri::Wry>> = items.iter().collect();
-    Menu::with_items(app, &refs)
+    let quit = MenuItem::with_id(app, "tray-quit", "Quit Mochi", true, None::<&str>)?;
+    builder.item(&quit).build()
 }
 
 pub fn initialize(app: &mut tauri::App) -> Result<(), tauri::Error> {
@@ -74,7 +76,7 @@ pub fn initialize(app: &mut tauri::App) -> Result<(), tauri::Error> {
 pub fn refresh(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
     if let Some(tray) = app.tray_by_id("mochi-tray") {
         let menu = build_menu(app)?;
-        tray.set_menu(&menu)?;
+        tray.set_menu(Some(menu))?;
     }
     Ok(())
 }
