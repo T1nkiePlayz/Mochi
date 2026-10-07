@@ -388,3 +388,13 @@ pub fn import_theme(app: AppHandle, source_path: String) -> Result<UserThemeDesc
         source: "user".into(),
     })
 }
+
+
+pub fn clear_app_data(app: AppHandle) -> Result<(), String> {
+    let root = config_dir(&app)?;
+    if root.exists() {
+        fs::remove_dir_all(&root)
+            .map_err(|error| format!("Unable to clear Mochi app data: {error}"))?;
+    }
+    Ok(())
+}
