@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use tauri::AppHandle;
 use std::{
     collections::{HashMap, HashSet},
     fs,
@@ -98,7 +99,7 @@ pub fn list() -> Result<Vec<PlaytimeEntry>, String> {
     Ok(games)
 }
 
-pub fn start(game_id: String, name: String, target: String, launch: impl FnOnce() -> Result<(), String> + Send + 'static) -> Result<(), String> {
+pub fn start(app: AppHandle, game_id: String, name: String, target: String, launch: impl FnOnce() -> Result<(), String> + Send + 'static) -> Result<(), String> {
     let session_id = game_id.clone();
     let before = process_snapshot_ids();
 
@@ -131,7 +132,7 @@ pub fn start(game_id: String, name: String, target: String, launch: impl FnOnce(
         persist_locked(&guard)?;
     }
 
-    spawn_session_monitor(game_id, name, target, before);
+    spawn_session_monitor(app, game_id, name, target, before);
     Ok(())
 }
 
@@ -158,7 +159,7 @@ pub fn finish(game_id: &str) -> Result<(), String> {
     persist_locked(&guard)
 }
 
-pub fn spawn_session_monitor(game_id: String, name: String, process_target: String, before: HashSet<u32>) {
+pub fn spawn_session_monitor(app: AppHandle, game_id: String, name: String, process_target: String, before: HashSet<u32>) {
     thread::spawn(move || {
         let pid = wait_for_game_process(&process_target, &before);
         if let Some(pid) = pid {
