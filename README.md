@@ -105,6 +105,23 @@ One Piko can therefore have multiple Tofus without duplicating the game's identi
 
 ## Features
 
+### Launcher experience
+
+- Library search across game names, descriptions, and categories, with **Ctrl+K / Cmd+K** focus shortcut.
+- Customizable local themes with theme-defined colors, typography, component tokens, and assets.
+- A dedicated high-contrast light theme with light-specific icon assets.
+- Guided first-launch setup with separated Welcome, account, IGDB, and import stages.
+- Setup navigation with Previous on the left and Next on the right.
+- In-app notification centre with unread indicator and Linux desktop notifications through `notify-send`.
+- Account control beneath the Mochi branding, showing username when available and supporting up to **five saved accounts**.
+
+### Account switching and security
+
+The launcher now mirrors the important account-security controls available in the Mochi Website dashboard. Signed-in users can manage TOTP authenticators, connected Google/GitHub identities, and passkeys without leaving the desktop application. TOTP setup includes QR/manual-secret enrollment and six-digit verification.
+
+The sign-in flow also provides a dedicated, polished two-factor authentication challenge when MFA is required.
+
+
 ### Flexible game launching
 
 Mochi provides one interface for several launch styles while leaving the actual installation under the user's control.
@@ -145,6 +162,8 @@ Supported authentication flows currently include:
 - Email magic links
 - Passkeys
 - TOTP-based multi-factor authentication
+- Connected Google and GitHub identities
+- Local account switching (up to five saved accounts)
 
 Mochi also supports custom verification deep links so email verification can return directly to the desktop application.
 
@@ -500,6 +519,11 @@ The roadmap is intentionally evolutionary rather than a promise of fixed release
 - [x] Google, GitHub and email authentication
 - [x] Passkey authentication
 - [x] TOTP multi-factor authentication
+- [x] Account switching with up to five saved accounts
+- [x] In-app and Linux desktop notifications
+- [x] Library search with keyboard shortcut
+- [x] Theme-aware light-mode contrast and icon assets
+- [x] Launcher security controls mirrored from the Mochi Website
 - [x] Email verification deep links
 - [x] Account avatars with provider/Gravatar fallback
 - [x] Automated frontend and Tauri backend CI checks
