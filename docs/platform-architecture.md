@@ -2,13 +2,17 @@
 
 Mochi intentionally isolates operating-system behavior so adding another supported desktop platform does not require rewriting the React application.
 
+## Architecture
+
+Mochi separates platform behaviour from game-source discovery so new integrations do not become an OS × launcher matrix.
+
 ## Rust platform adapter
 
 Platform-specific native behavior lives in `src-tauri/src/platform/`.
 
 - `mod.rs` — shared types and the platform dispatch boundary.
-- `linux.rs` — Linux launch targets and installed Flatpak discovery.
-- `macos.rs` — macOS-specific launch behavior and application bundles.
+- `linux.rs` — Linux launch targets, Flatpak discovery, and Linux-native launch behaviour.
+- `macos.rs` — macOS-specific launch behaviour, application bundles, and capabilities.
 - `unsupported.rs` — safe fallback for platforms that are not explicitly supported.
 
 The Tauri commands in `main.rs` are deliberately thin. They validate the command boundary and delegate immediately to the platform adapter.
@@ -39,7 +43,7 @@ Launch targets are handed back to the owning source where appropriate:
 - itch.io → itch-setup --run-game ...
 - Flatpak → flatpak run ...
 
-The Linux implementation lives under src-tauri/src/sources/linux.rs, while src/lib/sources.ts provides the frontend boundary. Other operating systems can implement the same source contract later without changing the React import UI.
+The Linux implementation lives under src-tauri/src/sources/linux.rs, while src/lib/sources.ts provides the frontend boundary. The import picker can detect sources, scan them, select individual games, and perform manual library-path scans when automatic detection is unavailable.
 
 ## Frontend platform adapter
 
@@ -50,6 +54,7 @@ The Linux implementation lives under src-tauri/src/sources/linux.rs, while src/l
 - opening the native game-file picker
 - normalizing platform-specific launch targets
 - reading platform capabilities
+- choosing a native game-library folder for manual source scans
 
 React components should call these functions instead of invoking Tauri commands directly.
 
