@@ -10,6 +10,8 @@ import subnauticaManifest from "../themes/subnautica/theme.json";
 import subnauticaCss from "../themes/subnautica/theme.css?raw";
 import dungeonsManifest from "../themes/dungeons/theme.json";
 import dungeonsCss from "../themes/dungeons/theme.css?raw";
+import mochiLightManifest from "../themes/mochi-light/theme.json";
+import mochiLightCss from "../themes/mochi-light/theme.css?raw";
 
 export type ThemeManifest = {
   schemaVersion: 1;
@@ -67,9 +69,17 @@ const builtins: Array<{ manifest: ThemeManifest; css: string; assets: Record<str
   { manifest: minecraftOreManifest as ThemeManifest, css: minecraftOreCss, assets: builtinAssets("minecraft-ore", minecraftOreManifest as ThemeManifest) },
   { manifest: subnauticaManifest as ThemeManifest, css: subnauticaCss, assets: builtinAssets("subnautica", subnauticaManifest as ThemeManifest) },
   { manifest: dungeonsManifest as ThemeManifest, css: dungeonsCss, assets: builtinAssets("dungeons", dungeonsManifest as ThemeManifest) },
+  { manifest: mochiLightManifest as ThemeManifest, css: mochiLightCss, assets: builtinAssets("mochi-light", mochiLightManifest as ThemeManifest) },
 ];
 
 const builtinsById = new Map(builtins.map((theme) => [theme.manifest.id, theme]));
+
+export function getSystemThemeId(): "mochi" | "mochi-light" {
+  if (typeof window !== "undefined" && window.matchMedia) {
+    return window.matchMedia("(prefers-color-scheme: light)").matches ? "mochi-light" : "mochi";
+  }
+  return "mochi";
+}
 
 export function getBuiltinThemes(): ThemeDescriptor[] {
   return builtins.map(({ manifest }) => ({ ...manifest, source: "builtin" }));
@@ -218,7 +228,7 @@ export function applyTheme(theme: LoadedTheme): () => void {
   document.head.appendChild(style);
 
   document.documentElement.dataset.mochiTheme = theme.id;
-  document.documentElement.style.colorScheme = "dark";
+  document.documentElement.style.colorScheme = theme.id === "mochi-light" ? "light" : "dark";
   window.dispatchEvent(new Event("mochi-theme-changed"));
 
   return () => {
@@ -287,7 +297,7 @@ export function useThemeEngine() {
             legacyTheme = null;
           }
         }
-        const selected = legacyTheme || info.selectedTheme || "mochi";
+        const selected = legacyTheme || (window.localStorage.getItem("mochi:setup-complete") === "true" ? info.selectedTheme || "mochi" : getSystemThemeId());
         setThemeState(selected);
         if (legacyTheme && legacyTheme !== info.selectedTheme) {
           await setTheme(legacyTheme);
