@@ -122,13 +122,17 @@ The launcher now mirrors the important account-security controls available in th
 The sign-in flow also provides a dedicated, polished two-factor authentication challenge when MFA is required.
 
 
+### Interactive game setup
+
+When IGDB is configured, adding a custom game searches for several possible matches and shows a dedicated confirmation step. The user can approve the correct game or add it without IGDB metadata.
+
 ### Flexible game launching
 
 Mochi provides one interface for several launch styles while leaving the actual installation under the user's control.
 
-### Native file selection
+### Native file and folder selection
 
-Adding a file-based game uses the Tauri native file dialog. This gives the desktop application a proper native selection flow instead of depending on browser-style file handling.
+Adding a file-based game uses the Tauri native file dialog. The import flow also uses a native folder picker when a source needs a manually supplied library path.
 
 ### Steam library and shortcut import
 
@@ -157,11 +161,11 @@ An optional Mochi account allows library metadata to be synchronised. The accoun
 
 Supported authentication flows currently include:
 
-- Google sign-in
-- GitHub sign-in
-- Email magic links
-- Passkeys
-- TOTP-based multi-factor authentication
+- Email/password authentication
+- Google and GitHub OAuth
+- Email verification
+- Passkey sign-in and registration
+- TOTP authenticator-based multi-factor authentication
 - Connected Google and GitHub identities
 - Local account switching (up to five saved accounts)
 
@@ -257,6 +261,12 @@ Cloud synchronization is an optional layer on top of this local state.
 Mochi's cloud system is **metadata synchronization, not game backup**. Complete game installations, arbitrary files, and the contents of a user's game directories are not uploaded as part of normal library synchronization.
 
 A local launch target can also be machine-specific. A path that works on one computer may need to be configured again on another.
+
+## Security and provider credentials
+
+Mochi supports passkey authentication and TOTP-based MFA. TOTP is the second-factor flow after password authentication; passkeys provide a separate WebAuthn sign-in path.
+
+Supported provider credentials currently include IGDB and Nexus Mods. Provider credentials are handled separately from ordinary Piko/Tofu metadata. The Nexus Mods key is stored server-side and is not returned to the launcher.
 
 ## Accounts and cloud sync
 
@@ -509,15 +519,18 @@ The roadmap is intentionally evolutionary rather than a promise of fixed release
 - [x] Linux Flatpak discovery
 - [x] Native game-target file selection
 - [x] Optional IGDB metadata lookup
+- [x] Interactive IGDB game-match confirmation
 - [x] Account authentication foundation
+- [x] Secure provider credential storage
 - [x] Cloud metadata synchronization foundation
 - [x] Native installed-game source discovery and import
 - [x] First-launch setup flow
 - [x] Guided source import picker with per-game selection
 - [x] Flatpak, Steam (including non-Steam shortcuts), Heroic, Lutris, Bottles and itch.io Linux integrations
 - [x] Source-aware launch handoff for imported games
-- [x] Google, GitHub and email authentication
-- [x] Passkey authentication
+- [x] Google and GitHub OAuth
+- [x] Email/password authentication
+- [x] Passkey authentication and registration
 - [x] TOTP multi-factor authentication
 - [x] Account switching with up to five saved accounts
 - [x] In-app and Linux desktop notifications
