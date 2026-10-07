@@ -14,9 +14,6 @@ export async function detectImportSources(): Promise<DetectedImportSource[]> {
   return invoke<DetectedImportSource[]>("detect_import_sources");
 }
 
-export async function refreshImportSources(): Promise<DetectedImportSource[]> {
-  return detectImportSources();
-}
 
 export type ImportedGame={id:string;name:string;source:ImportSourceId;launchTarget:string;installPath?:string|null};
 export async function scanImportGames(source:ImportSourceId, libraryPath?:string):Promise<ImportedGame[]>{return invoke<ImportedGame[]>("scan_import_games",{source,libraryPath:libraryPath??null})}
