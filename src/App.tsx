@@ -86,7 +86,7 @@ function App() {
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
-  const [savedAccounts, setSavedAccounts] = useState<Array<{ id: string; username: string; email: string; refreshToken: string }>>(() => { try { return JSON.parse(window.localStorage.getItem("mochi:accounts") || "[]"); } catch { return []; } });
+  const [savedAccounts, setSavedAccounts] = useState<Array<{ id: string; username: string; email: string; refreshToken: string }>>(() => { try { return (JSON.parse(window.localStorage.getItem("mochi:accounts") || "[]") as Array<{ id: string; username: string; email: string; refreshToken: string }>).slice(0, 5); } catch { return []; } });
   const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; createdAt: number }>>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [savedAccounts, setSavedAccounts] = useState<Array<{ id: string; username: string; email: string; refreshToken: string }>>(() => { try { return JSON.parse(window.localStorage.getItem("mochi:accounts") || "[]"); } catch { return []; } });
