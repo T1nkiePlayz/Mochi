@@ -70,7 +70,13 @@ const storedPikosKey = "mochi:pikos";
 const storedSettingsKey = "mochi:settings";
 const setupCompleteKey = "mochi:setup-complete";
 const importSourcesKey = "mochi:import-sources";
-function formatBytes(bytes: number) {\n  if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + " KiB";\n  if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + " MiB";\n  return (bytes / 1024 / 1024 / 1024).toFixed(2) + " GiB";\n}\n\nfunction App() {
+function formatBytes(bytes: number) {
+  if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + " KiB";
+  if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + " MiB";
+  return (bytes / 1024 / 1024 / 1024).toFixed(2) + " GiB";
+}
+
+function App() {
   const [library, setLibrary] = useState<Piko[]>(() => {
     try {
       const stored = window.localStorage.getItem(storedPikosKey);
