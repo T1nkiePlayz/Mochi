@@ -108,3 +108,27 @@ fn launch_lutris(t:&str)->Result<(),String>{if command_exists("lutris"){return s
 fn launch_itch(id:&str)->Result<(),String>{if command_exists("itch-setup"){return std::process::Command::new("itch-setup").args(["--run-game",id]).spawn().map(|_|()).map_err(|e|e.to_string())}if let Some(h)=std::env::var_os("HOME"){let p=std::path::PathBuf::from(h).join(".itch/itch-setup");if p.is_file(){return std::process::Command::new(p).args(["--run-game",id]).spawn().map(|_|()).map_err(|e|e.to_string())}}launch_uri(&format!("itch://install?game_id={id}&launch"),"itch.io")}
 fn command_exists(s:&str)->bool{std::process::Command::new("sh").args(["-c",&format!("command -v {s}")]).output().map(|o|o.status.success()).unwrap_or(false)}
 fn flatpak_installed(s:&str)->bool{std::process::Command::new("flatpak").args(["info",s]).output().map(|o|o.status.success()).unwrap_or(false)}
+
+pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> {
+    let home = std::env::var_os("HOME").ok_or("Unable to determine the home directory.")?;
+    let autostart = std::path::PathBuf::from(home).join(".config/autostart");
+    let desktop = autostart.join("mochi.desktop");
+
+    if enabled {
+        std::fs::create_dir_all(&autostart)
+            .map_err(|e| format!("Unable to create autostart directory: {e}"))?;
+        let exe = std::env::current_exe()
+            .map_err(|e| format!("Unable to determine the Mochi executable: {e}"))?;
+        let content = format!(
+            "[Desktop Entry]\nType=Application\nName=Mochi\nComment=Launch Mochi when you sign in\nExec={}\nTerminal=false\nStartupNotify=false\nX-GNOME-Autostart-enabled=true\n",
+            exe.to_string_lossy().replace('\\', "\\\\").replace('"', "\\\"")
+        );
+        std::fs::write(&desktop, content)
+            .map_err(|e| format!("Unable to install Mochi startup entry: {e}"))?;
+    } else if desktop.exists() {
+        std::fs::remove_file(&desktop)
+            .map_err(|e| format!("Unable to remove Mochi startup entry: {e}"))?;
+    }
+
+    Ok(())
+}
