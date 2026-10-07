@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Gamepad2, KeyRound, Library, LoaderCircle, LogIn, RefreshCw, Sparkles, UserRound } from "lucide-react";
 import type { IgdbSettings } from "../lib/igdb";
+import type { ThemeDescriptor } from "../lib/theme";
 import { detectImportSources, scanImportGames, type DetectedImportSource, type ImportSourceId, type ImportedGame } from "../lib/sources";
 
 type SetupProps = {
@@ -16,7 +17,7 @@ type SetupProps = {
   onFinish: (games: ImportedGame[], sources: ImportSourceId[]) => void;
 };
 
-const steps = ["welcome", "account", "igdb", "imports"] as const;
+const steps = ["welcome", "theme", "account", "igdb", "imports"] as const;
 type Step = typeof steps[number];
 
 const platformImages: Record<ImportSourceId, string> = {
@@ -147,10 +148,32 @@ export function FirstLaunchSetup({
           </section>
         )}
 
+        {step === "theme" && (
+          <section className="setup-page setup-theme-page">
+            <div className="setup-icon"><Sparkles size={22} /></div>
+            <p className="eyebrow">Step 1 of 4</p>
+            <h1>Choose your Mochi theme.</h1>
+            <p className="setup-description">Mochi has a dark and light edition. We selected a starting point from your system's light/dark preference, and you can change it any time in Settings.</p>
+            <div className="setup-theme-grid">
+              {themes.filter((option) => option.id === "mochi" || option.id === "mochi-light").map((option) => (
+                <button type="button" key={option.id} className={"setup-theme-card " + (theme === option.id ? "selected" : "")} onClick={() => void setTheme(option.id)}>
+                  <span className={"setup-theme-preview " + option.id}>
+                    <span className="setup-preview-sidebar" />
+                    <span className="setup-preview-content"><i /><b /><em /></span>
+                  </span>
+                  <span className="setup-theme-copy"><strong>{option.name}</strong><small>{option.description}</small></span>
+                  {theme === option.id && <span className="setup-theme-check"><Check size={13} /></span>}
+                </button>
+              ))}
+            </div>
+            <p className="setup-footnote">System detection uses the standard <code>prefers-color-scheme</code> preference exposed to the app by the desktop webview.</p>
+          </section>
+        )}
+
         {step === "account" && (
           <section className="setup-page">
             <div className="setup-icon"><UserRound size={22} /></div>
-            <p className="eyebrow">Step 1 of 3</p>
+            <p className="eyebrow">Step 2 of 4</p>
             <h1>Connect your Mochi account.</h1>
             <p className="setup-description">Signing in gives you access to securely stored provider credentials and optional cloud metadata. Your installed games and files remain on this device.</p>
             <div className="setup-choice">
@@ -166,25 +189,37 @@ export function FirstLaunchSetup({
         {step === "igdb" && (
           <section className="setup-page setup-form-page">
             <div className="setup-icon"><Sparkles size={22} /></div>
-            <p className="eyebrow">Step 2 of 3</p>
+            <p className="eyebrow">Step 3 of 4</p>
             <h1>Connect your game services.</h1>
             <p className="setup-description">Configure the services Mochi can use for game metadata and mod management. Your account must be signed in to securely store these credentials.</p>
             {!signedIn ? (
               <div className="setup-no-sources"><KeyRound size={20} /><strong>API setup skipped.</strong><span>Sign in later from Settings to configure IGDB or Nexus Mods.</span></div>
+            ) : !credentialStatusLoaded ? (
+              <div className="setup-scan-state"><LoaderCircle size={20} className="spin" /><span>Checking your saved provider credentials…</span></div>
             ) : (
               <div className="setup-provider-fields">
-                <div className="setup-provider-card">
-                  <div><strong>IGDB</strong><span>Twitch application credentials for game artwork and metadata.</span></div>
-                  <label>Client ID<input value={settings.clientId} onChange={(event) => setSettings({ ...settings, clientId: event.target.value })} placeholder="Twitch application Client ID" /></label>
-                  <label>Client Secret<input type="password" value={settings.clientSecret} onChange={(event) => setSettings({ ...settings, clientSecret: event.target.value })} placeholder="Twitch application Client Secret" /></label>
-                  {credentialStatus.igdb && <small className="setup-saved-status"><Check size={13} /> IGDB is already configured for this account</small>}
-                  <button type="button" className="secondary-button" disabled={credentialBusy === "igdb" || !settings.clientId.trim() || !settings.clientSecret.trim()} onClick={() => void saveCredential("igdb")}>{credentialBusy === "igdb" ? "Saving…" : credentialStatus.igdb ? "Replace IGDB credentials" : "Save IGDB credentials"}</button>
+                <div className={"setup-provider-card " + (credentialStatus.igdb ? "configured" : "")}>
+                  <div><strong>IGDB</strong><span>{credentialStatus.igdb ? "Already configured on your Mochi account. Credentials cannot be read back." : "Twitch application credentials for game artwork and metadata."}</span></div>
+                  {credentialStatus.igdb ? (
+                    <div className="setup-provider-configured"><Check size={16} /><strong>Configured</strong><small>Saved securely to your account</small></div>
+                  ) : (
+                    <>
+                      <label>Client ID<input value={settings.clientId} onChange={(event) => setSettings({ ...settings, clientId: event.target.value })} placeholder="Twitch application Client ID" /></label>
+                      <label>Client Secret<input type="password" value={settings.clientSecret} onChange={(event) => setSettings({ ...settings, clientSecret: event.target.value })} placeholder="Twitch application Client Secret" /></label>
+                    </>
+                  )}
+                  {!credentialStatus.igdb && <button type="button" className="secondary-button" disabled={credentialBusy === "igdb" || !settings.clientId.trim() || !settings.clientSecret.trim()} onClick={() => void saveCredential("igdb")}>{credentialBusy === "igdb" ? "Saving…" : "Save IGDB credentials"}</button>}
+                  {credentialStatus.igdb && <button type="button" className="secondary-button" disabled={credentialBusy === "igdb" || !settings.clientId.trim() || !settings.clientSecret.trim()} onClick={() => void saveCredential("igdb")}>{credentialBusy === "igdb" ? "Saving…" : "Replace IGDB credentials"}</button>}
                 </div>
-                <div className="setup-provider-card">
-                  <div><strong>Nexus Mods</strong><span>Credential for Nexus Mods content integration.</span></div>
-                  <label>API key<input type="password" value={nexusApiKey} onChange={(event) => setNexusApiKey(event.target.value)} placeholder="Nexus Mods API key" /></label>
-                  {credentialStatus.nexus && <small className="setup-saved-status"><Check size={13} /> Nexus Mods is already configured for this account</small>}
-                  <button type="button" className="secondary-button" disabled={credentialBusy === "nexus" || !nexusApiKey.trim()} onClick={() => void saveCredential("nexus")}>{credentialBusy === "nexus" ? "Saving…" : credentialStatus.nexus ? "Replace Nexus key" : "Save Nexus key"}</button>
+                <div className={"setup-provider-card " + (credentialStatus.nexus ? "configured" : "")}>
+                  <div><strong>Nexus Mods</strong><span>{credentialStatus.nexus ? "Already configured on your Mochi account. The saved key cannot be read back." : "Credential for Nexus Mods content integration."}</span></div>
+                  {credentialStatus.nexus ? (
+                    <div className="setup-provider-configured"><Check size={16} /><strong>Configured</strong><small>Saved securely to your account</small></div>
+                  ) : (
+                    <label>API key<input type="password" value={nexusApiKey} onChange={(event) => setNexusApiKey(event.target.value)} placeholder="Nexus Mods API key" /></label>
+                  )}
+                  {!credentialStatus.nexus && <button type="button" className="secondary-button" disabled={credentialBusy === "nexus" || !nexusApiKey.trim()} onClick={() => void saveCredential("nexus")}>Save Nexus key</button>}
+                  {credentialStatus.nexus && <button type="button" className="secondary-button" disabled={credentialBusy === "nexus" || !nexusApiKey.trim()} onClick={() => void saveCredential("nexus")}>Replace Nexus key</button>}
                 </div>
               </div>
             )}
@@ -195,7 +230,7 @@ export function FirstLaunchSetup({
         {step === "imports" && (
           <section className="setup-page setup-import-page">
             <div className="setup-icon"><Library size={22} /></div>
-            <p className="eyebrow">Step 3 of 3</p>
+            <p className="eyebrow">Step 4 of 4</p>
             <h1>Find your games.</h1>
             <p className="setup-description">Expand a platform to see exactly which games Mochi found. The list is scrollable so large libraries are easy to review.</p>
             {scanning && !detected.length ? (
