@@ -291,10 +291,22 @@ function App() {
     tofus: [{ id: "default", name: "Default", version: "Local", runtime: "Native", mods: 0, status: "Ready" as const }],
   };
   const selectedTofu = selectedPiko.tofus.find((tofu) => tofu.id === selectedTofuId) ?? selectedPiko.tofus[0];
-  const visiblePikos = useMemo(
-    () => library.filter((piko) => piko.name.toLowerCase().includes(search.toLowerCase())),
-    [library, search],
-  );
+  const visiblePikos = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return library;
+    return library.filter((piko) => [piko.name, piko.description, ...(piko.categories ?? [])].some((value) => value?.toLowerCase().includes(query)));
+  }, [library, search]);
+
+  useEffect(() => {
+    const handleSearchShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        document.querySelector<HTMLInputElement>(".search-box input")?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleSearchShortcut);
+    return () => window.removeEventListener("keydown", handleSearchShortcut);
+  }, []);
   const groupedPikos = useMemo(() => {
     const groups = new Map<string, Piko[]>();
     visiblePikos.forEach((piko) => {
