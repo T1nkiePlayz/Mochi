@@ -305,3 +305,51 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
   .setting-location-value{max-width:100%;flex:1;}
   .setting-location-value code{max-width:100%;flex:1;}
 }
+
+
+/* Modrinth discovery and persistent download queue. */
+.modrinth-discover{display:flex;flex-direction:column;gap:22px;}
+.discover-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;}
+.discover-header h2{margin:2px 0 6px;}
+.discover-header p:not(.eyebrow){margin:0;max-width:760px;color:var(--mochi-text-muted);}
+.discover-controls{display:grid;grid-template-columns:minmax(260px,1fr) 180px 150px;gap:10px;}
+.discover-controls .search-box{width:auto;}
+.discover-sections{display:flex;flex-direction:column;gap:24px;}
+.discover-section{display:flex;flex-direction:column;gap:12px;}
+.discover-section-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;}
+.discover-section-heading h3{margin:0 0 4px;font-size:18px;}
+.discover-section-heading p{margin:0;color:var(--mochi-text-muted);font-size:13px;}
+.discover-section-heading>span{color:var(--mochi-text-muted);font-size:12px;white-space:nowrap;}
+.discover-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.discover-card{display:flex;gap:13px;min-width:0;padding:14px;border:1px solid var(--mochi-border);border-radius:12px;background:var(--mochi-surface);}
+.discover-card:hover{border-color:var(--mochi-border-strong);}
+.discover-card-icon{width:52px;height:52px;flex:0 0 52px;border-radius:10px;object-fit:cover;background:var(--mochi-surface-raised);}
+.discover-card-icon.fallback{display:grid;place-items:center;color:var(--mochi-text-muted);}
+.discover-card-copy{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:5px;}
+.discover-card-title{display:flex;align-items:center;gap:8px;min-width:0;width:100%;}
+.discover-card-title strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.discover-card-title span{font-size:10px;padding:3px 6px;border-radius:999px;background:var(--mochi-accent-soft);color:var(--mochi-accent-strong);white-space:nowrap;}
+.discover-card-copy>small{color:var(--mochi-text-muted);}
+.discover-card-copy>p{margin:0;color:var(--mochi-text-muted);font-size:12px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.discover-card-copy .secondary-button{margin-top:4px;}
+.discover-loading,.discover-empty{display:flex;align-items:center;justify-content:center;gap:9px;min-height:140px;border:1px dashed var(--mochi-border);border-radius:12px;color:var(--mochi-text-muted);}
+.download-groups{display:flex;flex-direction:column;gap:14px;}
+.download-group{border:1px solid var(--mochi-border);border-radius:12px;background:var(--mochi-surface);overflow:hidden;}
+.download-group-heading{display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px solid var(--mochi-border);background:var(--mochi-surface-raised);}
+.download-group-heading span{font-size:12px;color:var(--mochi-text-muted);}
+.download-list{display:flex;flex-direction:column;}
+.download-row{display:grid;grid-template-columns:minmax(160px,.45fr) minmax(280px,1fr);align-items:center;gap:18px;padding:13px 15px;border-bottom:1px solid var(--mochi-border);}
+.download-row:last-child{border-bottom:0;}
+.download-row-copy{display:flex;flex-direction:column;min-width:0;gap:3px;}
+.download-row-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.download-row-copy small,.download-progress-wrap small{color:var(--mochi-text-muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.download-progress-wrap{display:flex;flex-direction:column;gap:5px;min-width:0;}
+.download-progress{height:8px;width:100%;border-radius:999px;overflow:hidden;background:var(--mochi-surface-raised);border:1px solid var(--mochi-border);}
+.download-progress span{display:block;height:100%;border-radius:inherit;background:var(--mochi-accent);}
+.download-progress.indeterminate span{width:35%;animation:mochi-download-slide 1.2s ease-in-out infinite;}
+@keyframes mochi-download-slide{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
+@media(max-width:900px){
+  .discover-grid{grid-template-columns:1fr;}
+  .discover-controls{grid-template-columns:1fr;}
+  .download-row{grid-template-columns:1fr;}
+}
