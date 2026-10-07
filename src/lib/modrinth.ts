@@ -28,6 +28,7 @@ export type ModrinthProjectDetails = ModrinthProject & {
   donation_urls?: Array<{ id: string; platform: string; url: string }>;
   gallery?: Array<{ url: string; raw_url?: string; title?: string; description?: string }>;
   team?: string;
+  author_id?: string;
   members?: ModrinthTeamMember[];
 };
 export type ModrinthProject = {
@@ -57,13 +58,11 @@ export async function searchModrinth(query: string, projectType: ModrinthProject
 
 export async function getModrinthProject(projectId: string): Promise<ModrinthProjectDetails> {
   const project = await get<ModrinthProjectDetails>(API + "/project/" + encodeURIComponent(projectId));
-  if (project.team) {
-    try {
-      const members = await get<ModrinthTeamMember[]>(API + "/team/" + encodeURIComponent(project.team) + "/members");
-      return { ...project, members: members.sort((a, b) => (a.ordering ?? 0) - (b.ordering ?? 0)), author: members[0]?.user?.username ?? project.author };
-    } catch {
-      // Project details remain usable if the team endpoint is unavailable.
-    }
+  try {
+    const members = await get<ModrinthTeamMember[]>(API + "/project/" + encodeURIComponent(projectId) + "/members");
+    return { ...project, members: members.sort((a, b) => (a.ordering ?? 0) - (b.ordering ?? 0)) };
+  } catch {
+    // Project details remain usable if the public members endpoint is unavailable.
   }
   return project;
 }
