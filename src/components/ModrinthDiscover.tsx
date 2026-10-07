@@ -173,7 +173,7 @@ export function ModrinthDiscover({ tofu, pikos }: Props) {
           })()}
         </section>
       ) : loading ? <div className="discover-loading"><RefreshCw size={20} className="spin" /><span>Loading popular content from Modrinth...</span></div> : (() => {
-        const contentType = tab === "instances" ? "mod" : tab;
+        const contentType = tab;
         const section = sections.find(item => item.type === contentType)!;
         const visible = projects[contentType].filter(matches);
         return <div className="discover-sections"><section className="discover-section">
