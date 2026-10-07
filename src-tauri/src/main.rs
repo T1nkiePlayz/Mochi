@@ -1,5 +1,6 @@
-use tauri::Manager;
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+use tauri::Manager;
 
 pub(crate) mod platform;
 mod sources;
@@ -93,7 +94,7 @@ fn main() {
             }
             themes::initialize_config(&app.handle())?;
             let app_data_dir = app.path().app_data_dir()?;
-            playtime::initialize(app_data_dir).map_err(|error| tauri::Error::Setup(std::io::Error::new(std::io::ErrorKind::Other, error).into()))?;
+            playtime::initialize(app_data_dir).map_err(|error| tauri::Error::Setup(Box::new(std::io::Error::new(std::io::ErrorKind::Other, error)).into()))?;
             tray::initialize(app)?;
             Ok(())
         })
