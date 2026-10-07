@@ -106,7 +106,7 @@ fn main() {
             modrinth::initialize_downloads();
             tray::initialize(app)?;
             if let Some(window) = app.get_webview_window("main") {
-                window.on_window_event(|event| {
+                window.on_window_event(move |event| {
                     if let WindowEvent::CloseRequested { api, .. } = event {
                         api.prevent_close();
                         let _ = window.hide();
