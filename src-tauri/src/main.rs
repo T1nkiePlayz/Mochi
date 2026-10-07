@@ -4,6 +4,8 @@ pub(crate) mod platform;
 mod sources;
 mod themes;
 mod modrinth;
+mod playtime;
+mod tray;
 
 #[tauri::command]
 fn send_system_notification(title: String, body: String) -> Result<(), String> {
@@ -27,6 +29,23 @@ fn set_launch_on_startup(enabled: bool) -> Result<(), String> { platform::set_la
 
 #[tauri::command]
 fn launch_game(launch_target: String) -> Result<(), String> { platform::launch_game(launch_target.trim()) }
+
+#[tauri::command]
+fn launch_game_tracked(app: tauri::AppHandle, game_id: String, name: String, launch_target: String) -> Result<(), String> {
+    let target = launch_target.trim().to_string();
+    if target.is_empty() {
+        return Err("Launch target is empty.".into());
+    }
+
+    playtime::start(app.clone(), game_id, name, target.clone(), move || platform::launch_game(&target))?;
+    let _ = tray::refresh(&app);
+    Ok(())
+}
+
+#[tauri::command]
+fn get_playtime() -> Result<Vec<playtime::PlaytimeEntry>, String> {
+    playtime::list()
+}
 
 #[tauri::command]
 fn list_flatpaks() -> Result<Vec<platform::FlatpakApp>, String> { platform::list_flatpaks() }
@@ -72,10 +91,13 @@ fn main() {
                 app.deep_link().register_all()?;
             }
             themes::initialize_config(&app.handle())?;
+            let app_data_dir = app.path().app_data_dir()?;
+            playtime::initialize(app_data_dir).map_err(tauri::Error::Setup)?;
+            tray::initialize(app)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            send_system_notification, open_external_url, set_launch_on_startup, launch_game, list_flatpaks, get_platform_capabilities, detect_import_sources, scan_import_games,
+            send_system_notification, open_external_url, set_launch_on_startup, launch_game, launch_game_tracked, get_playtime, list_flatpaks, get_platform_capabilities, detect_import_sources, scan_import_games,
             get_mochi_config_info, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
             modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::delete_mod_file, modrinth::download_modrinth_file
         ])
