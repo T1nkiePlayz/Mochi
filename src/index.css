@@ -498,3 +498,24 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 .security-provider-copy strong{font-size:11px;color:var(--mochi-text-strong);}
 .security-provider-copy small{color:var(--mochi-text-muted);font-size:9px;}
 .security-provider-action{flex:0 0 auto;min-height:30px;padding:6px 9px;}
+
+/* Modrinth project creator presentation */
+.project-creator-primary{display:flex;align-items:center;gap:10px;margin-bottom:18px;padding:11px 12px;border:1px solid var(--mochi-border);border-radius:10px;background:var(--mochi-surface-raised);}
+.project-creator-primary-avatar{width:34px;height:34px;flex:0 0 34px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:var(--mochi-surface);border:1px solid var(--mochi-border);}
+.project-creator-primary-avatar img{display:block;width:100%;height:100%;object-fit:cover;}
+.project-creator-primary-fallback{font-weight:800;font-size:13px;color:var(--mochi-accent-strong);}
+.project-creator-primary>div:last-child{display:grid;gap:2px;min-width:0;}
+.project-creator-primary span{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--mochi-text-muted);}
+.project-creator-primary strong{font-size:13px;color:var(--mochi-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.project-overview-heading{margin-top:24px!important;}
+.project-creators{margin-top:24px;padding-top:20px;border-top:1px solid var(--mochi-border);}
+.project-creators-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:10px;}
+.project-creators-heading h3{margin:0!important;}
+.project-creators-heading p{margin:3px 0 0;color:var(--mochi-text-muted);font-size:10px;}
+.project-creator-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;}
+.project-creator{display:flex;align-items:center;gap:9px;min-width:0;padding:8px 9px;border:1px solid var(--mochi-border);border-radius:9px;background:var(--mochi-surface-raised);}
+.project-creator img{width:28px;height:28px;flex:0 0 28px;border-radius:50%;object-fit:cover;}
+.project-creator>div{display:grid;gap:2px;min-width:0;}
+.project-creator strong{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.project-creator small{font-size:9px;color:var(--mochi-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+@media(max-width:700px){.project-creator-grid{grid-template-columns:1fr;}}
