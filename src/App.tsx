@@ -27,6 +27,10 @@ import {
   KeyRound,
   Github,
 } from "lucide-react";
+
+function GoogleIcon({ size = 15 }: { size?: number }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 12.27c0-.71-.06-1.39-.18-2.04H12v3.86h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.21Z"/><path fill="#34A853" d="M12 21.6c2.63 0 4.84-.87 6.45-2.36l-3.14-2.45c-.87.58-1.98.93-3.31.93-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.6Z"/><path fill="#FBBC05" d="M6.54 13.69A5.84 5.84 0 0 1 6.23 12c0-.59.11-1.16.31-1.69V7.78H3.3A9.72 9.72 0 0 0 2.27 12c0 1.57.38 3.05 1.03 4.22l3.24-2.53Z"/><path fill="#EA4335" d="M12 6.28c1.43 0 2.71.49 3.72 1.46l2.79-2.79C16.83 3.3 14.63 2.4 12 2.4a9.74 9.74 0 0 0-8.7 5.38l3.24 2.53C7.31 8 9.46 6.28 12 6.28Z"/></svg>;
+}
 import { AccountAvatar } from "./components/AccountAvatar";
 import { ModrinthManager } from "./components/ModrinthManager";
 import { MochiIcon } from "./components/MochiIcon";
@@ -48,7 +52,7 @@ import {
   type LaunchMethodId,
   type PlatformCapabilities,
 } from "./lib/platform";
-import { enrollTotp, getVerifiedTotpFactor, registerPasskey, sendEmailCode, signInWithPasskey, signInWithProvider, verifyEmailCode, verifyEmailToken, verifyMfaCode } from "./lib/auth";
+import { enrollTotp, getVerifiedTotpFactor, sendEmailCode, signInWithProvider, verifyEmailCode, verifyEmailToken, verifyMfaCode } from "./lib/auth";
 import { importThemeFile, importThemeFolder, useThemeEngine } from "./lib/theme";
 import { getProviderCredentialStatus, saveProviderCredential } from "./lib/providerCredentials";
 
@@ -136,6 +140,33 @@ function App() {
     let unlisten: (() => void) | undefined;
 
     const handleDeepLinks = (urls: string[]) => {
+      const callbackUrl = urls.find((url) => {
+        try {
+          const parsed = new URL(url);
+          return parsed.protocol === "mochi:" && parsed.hostname === "auth" && parsed.pathname === "/callback";
+        } catch { return false; }
+      });
+      if (callbackUrl) {
+        const parsed = new URL(callbackUrl);
+        const accessToken = parsed.searchParams.get("access_token");
+        const refreshToken = parsed.searchParams.get("refresh_token");
+        if (accessToken && refreshToken) {
+          setShowAuth(true);
+          setAuthBusy(true);
+          setAuthError("");
+          setAuthNotice("Completing browser sign-in…");
+          void client.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+            .then(({ error }) => {
+              if (error) throw error;
+              setAuthNotice("Signed in successfully.");
+              setShowAuth(false);
+            })
+            .catch((error) => setAuthError(error instanceof Error ? error.message : "Unable to complete browser sign-in."))
+            .finally(() => setAuthBusy(false));
+          return;
+        }
+      }
+
       const verificationUrl = urls.find((url) => {
         try {
           const parsed = new URL(url);
@@ -509,87 +540,6 @@ function App() {
     }
   };
 
-  const handlePasskey = async () => {
-    if (!supabase) return;
-    setAuthBusy(true);
-    setAuthError("");
-    setAuthNotice("");
-    try {
-      const result = await signInWithPasskey(supabase);
-      if (result.error) throw result.error;
-      if (!result.data?.session) throw new Error("Passkey sign-in did not create a session.");
-      setShowAuth(false);
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Passkey sign-in failed.");
-      setAuthNotice("If passkeys are not available in this desktop environment, you can use the Mochi website instead.");
-    } finally {
-      setAuthBusy(false);
-    }
-  };
-
-  const openWebsiteSignIn = () => {
-    window.open("https://t1nkieplayz.github.io/Mochi-Website/#/signin", "_blank", "noopener,noreferrer");
-  };
-
-  const requestEmailCode = async () => {
-    if (!supabase) return;
-    const emailInput = document.querySelector('input[name="email"]') as HTMLInputElement | null;
-    const email = emailInput?.value.trim() ?? "";
-    if (!email) {
-      emailInput?.reportValidity();
-      setAuthError("Enter your email address first.");
-      return;
-    }
-    setAuthBusy(true);
-    setAuthError("");
-    setAuthNotice("");
-    try {
-      const { error } = await sendEmailCode(supabase, email);
-      if (error) throw error;
-      setEmailCodeEmail(email);
-      setEmailCode("");
-      setEmailCodeStep(true);
-      setAuthNotice("Verification code sent. Check your email.");
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Unable to send the verification code.");
-    } finally {
-      setAuthBusy(false);
-    }
-  };
-
-  const submitEmailCode = async () => {
-    if (!supabase || !emailCodeEmail || emailCode.length < 6) return;
-    setAuthBusy(true);
-    setAuthError("");
-    setAuthNotice("");
-    try {
-      const { error } = await verifyEmailCode(supabase, emailCodeEmail, emailCode.trim());
-      if (error) throw error;
-      setEmailCodeStep(false);
-      setEmailCode("");
-      setEmailCodeEmail("");
-      setShowAuth(false);
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "That verification code is not valid.");
-    } finally {
-      setAuthBusy(false);
-    }
-  };
-
-  const addPasskey = async () => {
-    if (!supabase || !user) return;
-    setAuthBusy(true);
-    try {
-      const { error } = await registerPasskey(supabase);
-      if (error) throw error;
-      setAuthNotice("Passkey added successfully.");
-    } catch (error) {
-      setAuthNotice(error instanceof Error ? error.message : "Passkey registration failed.");
-    } finally {
-      setAuthBusy(false);
-    }
-  };
-
   const addAuthenticator = async () => {
     if (!supabase || !user) return;
     setAuthBusy(true);
@@ -608,12 +558,11 @@ function App() {
     }
   };
 
-  const resetLocalData = () => {
-    window.localStorage.removeItem(storedPikosKey);
-    window.localStorage.removeItem(storedSettingsKey);
-    window.localStorage.removeItem(setupCompleteKey);
-    window.localStorage.removeItem(importSourcesKey);
-    window.localStorage.removeItem("mochi:theme");
+  const resetLocalData = async () => {
+    if (!window.confirm("Clear all Mochi app data and return to the welcome screen? Your Mochi account will not be deleted.")) return;
+    window.localStorage.clear();
+    if (supabase) await supabase.auth.signOut({ scope: "local" });
+    try { await import("@tauri-apps/api/core").then(({ invoke }) => invoke("clear_mochi_app_data")); } catch { /* browser/development mode */ }
     window.location.reload();
   };
 
@@ -665,7 +614,7 @@ function App() {
       <div className="form-fields"><label>Email<input name="email" type="email" placeholder="you@example.com" required /></label><label>Password<input name="password" type="password" minLength={6} placeholder="At least 6 characters" required /></label></div>
       {authError && <p className="auth-error">{authError}</p>}{authNotice && <p className="auth-notice">{authNotice}</p>}
       {mfaRequired ? <><p className="modal-description">{mfaMessage}</p><input className="mfa-input" inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="123456" maxLength={6} /><button className="play-button form-submit" type="button" disabled={authBusy || mfaCode.length !== 6} onClick={completeMfa}>{authBusy ? "Verifying..." : "Verify code"}</button></> : <><button className="play-button form-submit" disabled={authBusy} type="submit">{authBusy ? "Connecting..." : authMode === "sign-in" ? "Sign in" : "Create account"}</button>
-      <div className="auth-provider-row"><button type="button" className="secondary-button" onClick={() => { setAuthError(""); void signInWithProvider(supabase!, "google").then(({ error }) => { if (error) setAuthError(error.message); }); }}>Google</button><button type="button" className="secondary-button" onClick={() => { setAuthError(""); void signInWithProvider(supabase!, "github").then(({ error }) => { if (error) setAuthError(error.message); }); }}><MochiIcon name="github" fallback={Github} size={15}/> GitHub</button><button type="button" className="secondary-button" onClick={handlePasskey}><MochiIcon name="key" fallback={KeyRound} size={15}/> Passkey</button></div>
+      <div className="auth-provider-row"><button type="button" className="secondary-button" onClick={() => { setAuthError(""); void signInWithProvider(supabase!, "google").then(({ error }) => { if (error) setAuthError(error.message); }); }}><GoogleIcon /> Google</button><button type="button" className="secondary-button" onClick={() => { setAuthError(""); void signInWithProvider(supabase!, "github").then(({ error }) => { if (error) setAuthError(error.message); }); }}><MochiIcon name="github" fallback={Github} size={15}/> GitHub</button></div>
       <div className="auth-provider-row"><button type="button" className="switch-auth" onClick={requestEmailCode}>{authBusy ? "Sending..." : "Email me a verification code"}</button><button type="button" className="secondary-button" onClick={openWebsiteSignIn}>Use website</button></div>
       <button className="switch-auth" type="button" onClick={() => { setAuthMode(authMode === "sign-in" ? "sign-up" : "sign-in"); setAuthError(""); setAuthNotice(""); }}>{authMode === "sign-in" ? "New to Mochi? Create an account" : "Already have an account? Sign in"}</button></>}
     </>}
@@ -870,15 +819,15 @@ function App() {
               </div>
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>Security</strong><span>Protect your Mochi account</span></div>
-                {user && <div className="security-actions"><button className="secondary-button" onClick={addPasskey} disabled={authBusy}><MochiIcon name="key" fallback={KeyRound} size={15}/> Add passkey</button><button className="secondary-button" onClick={addAuthenticator} disabled={authBusy}><MochiIcon name="security" fallback={ShieldCheck} size={15}/> Enable authenticator</button>{authNotice && <small className="metadata-note">{authNotice}</small>}{mfaMessage && <small className="metadata-note">{mfaMessage}</small>}</div>}
+                {user && <div className="security-actions"><button className="secondary-button" onClick={addAuthenticator} disabled={authBusy}><MochiIcon name="security" fallback={ShieldCheck} size={15}/> Enable authenticator</button>{authNotice && <small className="metadata-note">{authNotice}</small>}{mfaMessage && <small className="metadata-note">{mfaMessage}</small>}</div>}
               </div>
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>Data & privacy</strong><span>Local-first storage</span></div>
-                <div className="setting-row"><span><strong>Library location</strong><small>Your game metadata is saved in this browser profile.</small></span><code>~/.config/mochi</code></div>
+                <div className="setting-row"><span><strong>Library location</strong><small>Your game metadata is saved in this browser profile.</small></span><code>~/.config/Mochi</code></div>
                 <button className="setting-row setting-button" onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}><span><strong>Advanced settings</strong><small>Diagnostics and developer options.</small></span><MochiIcon name="chevron" fallback={ChevronDown} className={showAdvancedSettings ? "rotate" : ""} size={16} /></button>
                 {showAdvancedSettings && <div className="advanced-note">Native game detection and process controls will appear here when the Tauri backend is connected.</div>}
               </div>
-              <button className="reset-button" onClick={resetLocalData}>Reset local library and settings</button>
+              <button className="reset-button" onClick={resetLocalData}>Clear all Mochi app data</button>
             </section>
           ) : (
             <div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>{activeNav} is ready when you are.</h2><p>This part of Mochi is taking shape. Your local library remains available offline.</p><button className="secondary-button" onClick={() => setActiveNav("Library")}><MochiIcon name="library" fallback={Library} size={16} /> Back to library</button></div>
