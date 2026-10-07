@@ -206,3 +206,8 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 .download-empty h3{margin:5px 0 0;color:#e8eaed;font:700 18px "Manrope",sans-serif;}
 .download-empty p{margin:0;color:#777d8a;font-size:12px;}
 @media (max-width:800px){.provider-grid{grid-template-columns:1fr}.settings-page{width:100%}.content{padding-left:28px;padding-right:28px}}
+
+/* Keep navigation fixed while the main workspace scrolls */
+.app-shell{height:100vh;min-height:100vh;overflow:hidden;}
+.sidebar{height:100vh;position:sticky;top:0;overflow:hidden;}
+.main-content{height:100vh;overflow-y:auto;overflow-x:hidden;}
