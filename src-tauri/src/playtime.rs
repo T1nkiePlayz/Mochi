@@ -98,12 +98,13 @@ pub fn list() -> Result<Vec<PlaytimeEntry>, String> {
     Ok(games)
 }
 
-pub fn start(game_id: String, name: String, launch: impl FnOnce() -> Result<(), String> + Send + 'static) -> Result<(), String> {
+pub fn start(game_id: String, name: String, target: String, launch: impl FnOnce() -> Result<(), String> + Send + 'static) -> Result<(), String> {
     let session_id = game_id.clone();
+    let before = process_snapshot_ids();
 
     {
         let shared = state();
-        let mut guard = shared.lock().map_err(|_| "Playtime tracker lock is poisoned.".to_string())?;
+        let guard = shared.lock().map_err(|_| "Playtime tracker lock is poisoned.".to_string())?;
         if guard.active.contains_key(&session_id) {
             return Err("This game is already being tracked.".into());
         }
@@ -130,6 +131,7 @@ pub fn start(game_id: String, name: String, launch: impl FnOnce() -> Result<(), 
         persist_locked(&guard)?;
     }
 
+    spawn_session_monitor(game_id, name, target, before);
     Ok(())
 }
 
@@ -156,9 +158,9 @@ pub fn finish(game_id: &str) -> Result<(), String> {
     persist_locked(&guard)
 }
 
-pub fn spawn_session_monitor(game_id: String, name: String, process_target: String) {
+pub fn spawn_session_monitor(game_id: String, name: String, process_target: String, before: HashSet<u32>) {
     thread::spawn(move || {
-        let pid = wait_for_game_process(&process_target);
+        let pid = wait_for_game_process(&process_target, &before);
         if let Some(pid) = pid {
             while process_tree_alive(pid) {
                 thread::sleep(Duration::from_secs(5));
@@ -265,8 +267,17 @@ fn target_matches(info: &ProcessInfo, target: &str) -> bool {
 }
 
 #[cfg(target_os = "linux")]
-fn wait_for_game_process(target: &str) -> Option<u32> {
-    let before: HashSet<u32> = process_snapshot().keys().copied().collect();
+fn process_snapshot_ids() -> HashSet<u32> {
+    process_snapshot().keys().copied().collect()
+}
+
+#[cfg(not(target_os = "linux"))]
+fn process_snapshot_ids() -> HashSet<u32> {
+    HashSet::new()
+}
+
+#[cfg(target_os = "linux")]
+fn wait_for_game_process(target: &str, before: &HashSet<u32>) -> Option<u32> {
     let started = SystemTime::now();
 
     for _ in 0..30 {
@@ -323,7 +334,7 @@ fn process_tree_alive(root_pid: u32) -> bool {
 }
 
 #[cfg(not(target_os = "linux"))]
-fn wait_for_game_process(_target: &str) -> Option<u32> {
+fn wait_for_game_process(_target: &str, _before: &HashSet<u32>) -> Option<u32> {
     None
 }
 
