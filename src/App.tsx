@@ -70,7 +70,7 @@ const storedPikosKey = "mochi:pikos";
 const storedSettingsKey = "mochi:settings";
 const setupCompleteKey = "mochi:setup-complete";
 const importSourcesKey = "mochi:import-sources";
-function App() {
+function formatBytes(bytes: number) {\n  if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + " KiB";\n  if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + " MiB";\n  return (bytes / 1024 / 1024 / 1024).toFixed(2) + " GiB";\n}\n\nfunction App() {
   const [library, setLibrary] = useState<Piko[]>(() => {
     try {
       const stored = window.localStorage.getItem(storedPikosKey);
@@ -1109,7 +1109,7 @@ function App() {
                           <div className="download-row-copy"><strong>{download.itemName}</strong><small>{download.filename}</small></div>
                           <div className="download-progress-wrap">
                             <div className={download.status === "downloading" && !download.total ? "download-progress indeterminate" : "download-progress"}><span style={{ width: download.status === "downloading" && download.total ? progress + "%" : download.status === "completed" ? "100%" : undefined }} /></div>
-                            <small>{download.status === "completed" ? "Completed" : download.status === "failed" ? download.error || "Failed" : download.total ? Math.round(progress) + "% · " + Math.round(download.downloaded / 1024 / 1024) + " / " + Math.round(download.total / 1024 / 1024) + " MiB" : Math.round(download.downloaded / 1024 / 1024) + " MiB downloaded"}</small>
+                            <small>{download.status === "failed" ? download.error || "Failed" : download.total ? (download.status === "completed" ? "Completed · " : Math.round(progress) + "% · ") + formatBytes(download.total) + " total" + (download.status === "downloading" ? " · " + formatBytes(download.downloaded) + " downloaded" : "") : download.status === "completed" ? "Completed · size unavailable" : formatBytes(download.downloaded) + " downloaded · size unavailable"}</small>
                           </div>
                         </article>;
                       })}</div>
