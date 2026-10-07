@@ -12,7 +12,7 @@ type Provider = "igdb" | "nexus";
 type Body =
   | { action: "set"; provider: Provider; secret: string }
   | { action: "status"; provider?: Provider }
-  | { action: "delete"; provider: Provider };
+  | { action: "delete"; provider: Provider }\n  | { action: "nexus-games"; query?: string }\n  | { action: "nexus-mods"; gameDomain: string };
 
 const pool = new Pool(Deno.env.get("SUPABASE_DB_URL")!, 1, true);
 
@@ -57,6 +57,57 @@ Deno.serve(async (req) => {
 
   const connection = await pool.connect();
   try {
+    if (body.action === "nexus-games" || body.action === "nexus-mods") {
+      const secretRows = await connection.queryObject<{ decrypted_secret: string }>(
+        "select decrypted_secret from vault.decrypted_secrets where id = (select secret_id from mochi_private.user_credentials where user_id = $1 and provider = 'nexus')",
+        [user.id],
+      );
+      const apiKey = secretRows.rows[0]?.decrypted_secret;
+      if (!apiKey) return response({ error: "Nexus Mods API key is not configured." }, 403);
+
+      const headers = {
+        Accept: "application/json",
+        apikey: apiKey,
+        "Application-Name": "Mochi",
+        "Application-Version": "0.1.0",
+      };
+
+      if (body.action === "nexus-games") {
+        const upstream = await fetch("https://api.nexusmods.com/v1/games.json", { headers });
+        if (!upstream.ok) return response({ error: "Nexus Mods returned HTTP " + upstream.status + " while loading games." }, upstream.status);
+        const games = await upstream.json() as Array<Record<string, unknown>>;
+        const query = body.query?.trim().toLowerCase() ?? "";
+        const filtered = games
+          .filter((game) => typeof game.name === "string" && typeof game.domain_name === "string")
+          .filter((game) => !query || String(game.name).toLowerCase().includes(query) || String(game.domain_name).toLowerCase().includes(query))
+          .map((game) => ({
+            id: String(game.id ?? ""),
+            name: String(game.name),
+            domainName: String(game.domain_name),
+            iconUrl: typeof game.id === "number" || /^\\d+$/.test(String(game.id ?? ""))
+              ? "https://images.nexusmods.com/images/games/v2/" + String(game.id) + "/thumbnail.jpg"
+              : undefined,
+            modCount: typeof game.mods === "number" ? game.mods : undefined,
+          }))
+          .filter((game) => game.id && game.name && game.domainName);
+        return response({ games: filtered });
+      }
+
+      const domain = body.gameDomain.trim().replace(/[^a-z0-9_-]/gi, "");
+      if (!domain) return response({ error: "Invalid Nexus game." }, 400);
+      const upstream = await fetch("https://api.nexusmods.com/v3/games/" + encodeURIComponent(domain) + "/trending-mods", { headers });
+      if (!upstream.ok) return response({ error: "Nexus Mods returned HTTP " + upstream.status + " while loading mods." }, upstream.status);
+      const payload = await upstream.json() as { data?: { mods?: Array<Record<string, unknown>> } };
+      const mods = (payload.data?.mods ?? []).map((mod) => ({
+        id: String(mod.mod_id ?? mod.id ?? mod.mod_page_url ?? ""),
+        name: String(mod.name ?? "Untitled mod"),
+        author: typeof mod.author === "string" ? mod.author : undefined,
+        summary: typeof mod.summary === "string" ? mod.summary : undefined,
+        pictureUrl: typeof mod.picture_url === "string" ? mod.picture_url : undefined,
+        modPageUrl: String(mod.mod_page_url ?? ("https://www.nexusmods.com/" + domain + "/mods/" + String(mod.mod_id ?? ""))),
+      }));
+      return response({ mods });
+    }
     if (body.action === "status" && !body.provider) {
       const rows = await connection.queryObject<{ provider: Provider }>(
         "select provider from mochi_private.user_credentials where user_id = $1 order by provider",
