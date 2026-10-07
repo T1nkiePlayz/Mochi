@@ -144,7 +144,7 @@ Built-in themes are bundled at build time through Vite's asset graph. User theme
 
 ## User theme precedence
 
-A user theme with the same ID as a built-in theme takes precedence over the built-in theme.
+A user theme with the same ID as a built-in theme takes precedence over the bundled version.
 
 This intentionally allows:
 
@@ -160,6 +160,8 @@ The Settings page exposes:
 
 - Import theme file
 - Import theme folder
+
+After an import, Mochi reloads the available theme list so the new theme can be selected without restarting the launcher.
 
 The native backend validates the manifest before installation.
 
