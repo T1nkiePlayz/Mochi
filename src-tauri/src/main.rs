@@ -103,6 +103,7 @@ fn main() {
             themes::initialize_config(&app.handle())?;
             let app_data_dir = app.path().app_data_dir()?;
             playtime::initialize(app_data_dir).map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error))?;
+            modrinth::initialize_downloads();
             tray::initialize(app)?;
             Ok(())
         })
