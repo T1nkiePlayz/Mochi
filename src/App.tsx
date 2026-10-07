@@ -566,6 +566,59 @@ function App() {
     window.location.reload();
   };
 
+  const requestEmailCode = async () => {
+    if (!supabase) return;
+    const emailInput = document.querySelector<HTMLInputElement>('input[name="email"]');
+    const email = emailInput?.value.trim().toLowerCase() ?? "";
+    if (!email) {
+      emailInput?.reportValidity();
+      setAuthError("Enter your email address first.");
+      return;
+    }
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      const { error } = await sendEmailCode(supabase, email);
+      if (error) throw error;
+      setEmailCodeEmail(email);
+      setEmailCode("");
+      setEmailCodeStep(true);
+      setAuthNotice("Verification code sent. Check your email.");
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Unable to send the verification code.");
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const submitEmailCode = async () => {
+    if (!supabase || !emailCodeEmail) return;
+    const token = emailCode.replace(/\s/g, "");
+    if (!/^\d{6}$/.test(token)) {
+      setAuthError("Enter the 6-digit verification code from your email.");
+      return;
+    }
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      const { error } = await verifyEmailCode(supabase, emailCodeEmail, token);
+      if (error) throw error;
+      setAuthNotice("Signed in successfully.");
+      setEmailCodeStep(false);
+      setShowAuth(false);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "The verification code could not be verified.");
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const openWebsiteSignIn = () => {
+    void import("@tauri-apps/api/core").then(({ invoke }) =>
+      invoke("open_external_url", { url: "https://t1nkieplayz.github.io/Mochi-Website/#/signin?app=mochi" })
+    ).catch((error) => setAuthError(error instanceof Error ? error.message : "Unable to open the Mochi website."));
+  };
+
   const authenticate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!supabase) return;
