@@ -20,22 +20,6 @@ type SetupProps = {
   saveCredential: (provider: "igdb" | "nexus") => Promise<void>;
   credentialBusy: "igdb" | "nexus" | null;
   onFinish: (games: ImportedGame[], sources: ImportSourceId[]) => void;
-};port { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, ChevronDown, Gamepad2, KeyRound, Library, LoaderCircle, LogIn, RefreshCw, Sparkles, UserRound } from "lucide-react";
-import type { ThemeDescriptor } from "../lib/theme";
-import { detectImportSources, scanImportGames, type DetectedImportSource, type ImportSourceId, type ImportedGame } from "../lib/sources";
-
-type SetupProps = {
-  settings: IgdbSettings;
-  setSettings: (settings: IgdbSettings) => void;
-  onSignIn: () => void;
-  signedIn: boolean;
-  credentialStatus: { igdb: boolean; nexus: boolean };
-  nexusApiKey: string;
-  setNexusApiKey: (value: string) => void;
-  saveCredential: (provider: "igdb" | "nexus") => Promise<void>;
-  credentialBusy: "igdb" | "nexus" | null;
-  onFinish: (games: ImportedGame[], sources: ImportSourceId[]) => void;
 };
 
 const steps = ["welcome", "theme", "account", "igdb", "imports"] as const;
