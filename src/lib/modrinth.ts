@@ -24,6 +24,19 @@ export async function searchModrinth(query: string, projectType: ModrinthProject
   const result = await get<{ hits: ModrinthProject[] }>(API + "/search?" + params);
   return result.hits;
 }
+
+export async function getPopularModrinth(projectType: ModrinthProjectType, gameVersion?: string): Promise<ModrinthProject[]> {
+  const facets: string[][] = [["project_type:" + projectType]];
+  if (gameVersion?.trim()) facets.push(["versions:" + gameVersion.trim()]);
+  const params = new URLSearchParams({
+    query: "",
+    limit: "12",
+    index: "downloads",
+    facets: JSON.stringify(facets),
+  });
+  const result = await get<{ hits: ModrinthProject[] }>(API + "/search?" + params);
+  return result.hits;
+}
 export async function getModrinthVersions(projectId: string, gameVersion?: string, loader?: string): Promise<ModrinthVersion[]> {
   const params = new URLSearchParams({ limit: "100" });
   if (gameVersion) params.set("game_versions", JSON.stringify([gameVersion]));
@@ -33,6 +46,33 @@ export async function getModrinthVersions(projectId: string, gameVersion?: strin
 export async function listInstalledMods(path: string): Promise<InstalledModrinthFile[]> {
   return invoke<InstalledModrinthFile[]>("list_mod_files", { path });
 }
+export async function startModrinthDownload(
+  url: string,
+  path: string,
+  tofuId: string,
+  tofuName: string,
+  itemName: string,
+  filename: string,
+): Promise<string> {
+  return invoke<string>("start_modrinth_download", { url, path, tofuId, tofuName, itemName, filename });
+}
+
+export async function getDownloads(): Promise<Array<{
+  id: string;
+  tofuId: string;
+  tofuName: string;
+  itemName: string;
+  filename: string;
+  downloaded: number;
+  total?: number;
+  status: "downloading" | "completed" | "failed";
+  error?: string;
+  createdAt: number;
+  finishedAt?: number;
+}>> {
+  return invoke("get_downloads");
+}
+
 export async function downloadModrinthFile(url: string, path: string): Promise<void> {
   await invoke("download_modrinth_file", { url, path });
 }
