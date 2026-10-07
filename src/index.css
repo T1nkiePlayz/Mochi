@@ -171,3 +171,7 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 .setup-source-empty{padding:15px;color:#626775;font-size:9px;text-align:center}
 .setup-chevron-expanded{transform:rotate(180deg);transition:transform .18s ease}
 @media(max-width:700px){.setup-provider-fields{grid-template-columns:1fr}.setup-platform-strip{margin-top:28px}.setup-source-games{max-height:140px}}
+
+
+.account-avatar{overflow:hidden;display:grid;place-items:center;flex:0 0 auto;}
+.account-avatar-image,.account-avatar img{width:100%;height:100%;display:block;object-fit:cover;aspect-ratio:1/1;}
