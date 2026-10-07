@@ -719,28 +719,6 @@ function App() {
           ))}
         </nav>
 
-        <div className="sidebar-section">
-          <div className="section-label">
-            <span>Your Pikos</span>
-            <button className="icon-button tiny" aria-label="Add Piko" onClick={() => setShowAddPiko(true)}>
-              <MochiIcon name="plus" fallback={Plus} size={14} />
-            </button>
-          </div>
-          <div className="piko-list">
-            {visiblePikos.map((piko) => (
-              <button
-                className={`piko-nav-item ${selectedPiko.id === piko.id ? "selected" : ""}`}
-                key={piko.id}
-                onClick={() => selectPiko(piko)}
-              >
-                <span className="piko-dot" style={{ background: piko.accent }} />
-                <span>{piko.name}</span>
-                <span className="tofu-count">{piko.tofus.length}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
         <div className="sidebar-bottom">
           <button className={`nav-item ${activeNav === "Settings" ? "active" : ""}`} onClick={() => setActiveNav("Settings")}>
             <MochiIcon name="settings" fallback={Settings} size={17} strokeWidth={1.8} />
