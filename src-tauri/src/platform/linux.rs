@@ -111,7 +111,7 @@ fn flatpak_installed(s:&str)->bool{std::process::Command::new("flatpak").args(["
 
 pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> {
     let home = std::env::var_os("HOME").ok_or("Unable to determine the home directory.")?;
-    let autostart = std::path::PathBuf::from(home).join(".config/autostart");
+    let config_root = std::env::var_os("XDG_CONFIG_HOME").map(std::path::PathBuf::from).unwrap_or_else(|| std::path::PathBuf::from(home).join(".config"));\n    let autostart = config_root.join("autostart");
     let desktop = autostart.join("mochi.desktop");
 
     if enabled {
