@@ -584,23 +584,88 @@ function App() {
     }
   };
 
+  const loadSecurity = async () => {
+    if (!supabase || !user) return;
+    const [mfaResult, passkeyResult] = await Promise.all([supabase.auth.mfa.listFactors(), listPasskeys(supabase)]);
+    if (!mfaResult.error) setSecurityFactors(mfaResult.data.totp ?? []);
+    if (!passkeyResult.error) setPasskeys(passkeyResult.data ?? []);
+  };
+
   const addAuthenticator = async () => {
     if (!supabase || !user) return;
-    setAuthBusy(true);
+    setSecurityBusy(true);
     try {
-      const { data, error } = await enrollTotp(supabase);
+      const { data, error } = await enrollTotp(supabase, "Mochi authenticator");
       if (error) throw error;
       if (data?.totp?.qr_code) {
-        setAuthNotice("Scan the QR code returned by Supabase, then verify the code in the next step.");
-        setMfaFactorId(data.id);
-        setMfaMessage(data.totp.secret ? `Secret: ${data.totp.secret}` : "Authenticator factor created.");
+        setMfaSetup({ id: data.id, qr: data.totp.qr_code, secret: data.totp.secret || "" });
+        setMfaCode("");
+        setAuthNotice("Scan the QR code with your authenticator app, then verify the six-digit code.");
       }
+      await loadSecurity();
     } catch (error) {
       setAuthNotice(error instanceof Error ? error.message : "Unable to enroll an authenticator.");
-    } finally {
-      setAuthBusy(false);
-    }
+    } finally { setSecurityBusy(false); }
   };
+
+  const verifyAuthenticatorSetup = async () => {
+    if (!supabase || !mfaSetup || !mfaCode) return;
+    setSecurityBusy(true);
+    try {
+      const result = await verifyMfaCode(supabase, mfaSetup.id, mfaCode);
+      if (result.error) throw result.error;
+      setMfaSetup(null);
+      setMfaCode("");
+      setAuthNotice("Authenticator enabled successfully.");
+      await loadSecurity();
+    } catch (error) {
+      setAuthNotice(error instanceof Error ? error.message : "The authenticator code could not be verified.");
+    } finally { setSecurityBusy(false); }
+  };
+
+  const removeAuthenticator = async (factorId: string) => {
+    if (!supabase) return;
+    setSecurityBusy(true);
+    try {
+      const { error } = await removeTotp(supabase, factorId);
+      if (error) throw error;
+      setAuthNotice("Authenticator removed.");
+      await loadSecurity();
+    } catch (error) {
+      setAuthNotice(error instanceof Error ? error.message : "Unable to remove the authenticator.");
+    } finally { setSecurityBusy(false); }
+  };
+
+  const addPasskey = async () => {
+    if (!supabase) return;
+    setSecurityBusy(true);
+    try {
+      const { error } = await registerPasskey(supabase);
+      if (error) throw error;
+      setAuthNotice("Passkey registered successfully.");
+      await loadSecurity();
+    } catch (error) {
+      setAuthNotice(error instanceof Error ? error.message : "Unable to register a passkey.");
+    } finally { setSecurityBusy(false); }
+  };
+
+  const removePasskey = async (passkeyId: string) => {
+    if (!supabase) return;
+    setSecurityBusy(true);
+    try {
+      const { error } = await deletePasskey(supabase, passkeyId);
+      if (error) throw error;
+      setAuthNotice("Passkey removed.");
+      await loadSecurity();
+    } catch (error) {
+      setAuthNotice(error instanceof Error ? error.message : "Unable to remove the passkey.");
+    } finally { setSecurityBusy(false); }
+  };
+
+  useEffect(() => {
+    if (user) void loadSecurity();
+    else { setSecurityFactors([]); setPasskeys([]); }
+  }, [user?.id]);
 
   const resetLocalData = async () => {
     if (!window.confirm("Clear all Mochi app data and return to the welcome screen? Your Mochi account will not be deleted.")) return;
