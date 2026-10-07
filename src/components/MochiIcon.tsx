@@ -25,7 +25,7 @@ export function MochiIcon({ name, fallback: Fallback, size = 16, ...props }: Pro
   const variable = "--mochi-icon-" + iconVariable(name);
   return (
     <span className="mochi-icon-wrap" aria-hidden="true">
-      {customUrl ? <span className="mochi-icon-custom" style={{ "--mochi-icon-image": "url(" + customUrl + ")" } as CSSProperties} /> : <Fallback size={size} {...props} />}
+      {customUrl ? <span className="mochi-icon-custom" style={{ "--mochi-icon-image": customUrl } as CSSProperties} /> : <Fallback size={size} {...props} />}
     </span>
   );
 }
