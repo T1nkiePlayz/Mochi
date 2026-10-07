@@ -24,7 +24,7 @@ const platformImages: Record<ImportSourceId, string> = {
   steam: "https://cdn.simpleicons.org/steam",
   heroic: "https://cdn.simpleicons.org/heroicgameslauncher",
   lutris: "https://cdn.simpleicons.org/lutris",
-  bottles: "https://cdn.simpleicons.org/bottles",
+  bottles: "https://raw.githubusercontent.com/bottlesdevs/Bottles/main/data/icons/hicolor/scalable/apps/com.usebottles.bottles.svg",
   itch: "https://cdn.simpleicons.org/itchdotio",
 };
 
