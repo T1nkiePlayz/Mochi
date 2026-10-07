@@ -127,7 +127,7 @@ pub fn start(app: AppHandle, game_id: String, name: String, target: String, laun
             seconds: 0,
             last_played: now_seconds(),
         });
-        entry.name = name;
+        entry.name = name.clone();
         entry.last_played = now_seconds();
         persist_locked(&guard)?;
     }
