@@ -190,6 +190,7 @@ pub fn start_modrinth_download(
     Ok(id)
 }
 
+#[tauri::command]
 pub async fn download_modrinth_file(url: String, path: String) -> Result<(), String> {
     let parsed = reqwest::Url::parse(&url).map_err(|_| "Invalid Modrinth download URL.".to_string())?;
     if parsed.host_str() != Some("cdn.modrinth.com") { return Err("Mochi only downloads from the official Modrinth CDN.".into()); }
