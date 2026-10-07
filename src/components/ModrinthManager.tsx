@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Download, FolderOpen, RefreshCw, Search, Trash2, Power, PackageOpen } from "lucide-react";
-import { deleteModFile, downloadModrinthFile, getModrinthVersions, listInstalledMods, searchModrinth, setModFileEnabled, type ModrinthProject, type ModrinthProjectType, type InstalledModrinthFile } from "../lib/modrinth";
+import { deleteModFile, startModrinthDownload, getModrinthVersions, listInstalledMods, searchModrinth, setModFileEnabled, type ModrinthProject, type ModrinthProjectType, type InstalledModrinthFile } from "../lib/modrinth";
 import type { Tofu } from "../models";
 
 type Props = { tofu: Tofu; onPathChange: (path: string) => void };
@@ -36,8 +36,9 @@ export function ModrinthManager({ tofu, onPathChange }: Props) {
       const version = versions.find(v => v.files.length > 0);
       const file = version?.files.find(f => f.primary) ?? version?.files[0];
       if (!file || !version) throw new Error("No compatible Modrinth file was found for this Tofu.");
-      await downloadModrinthFile(file.url, tofu.path); await refreshInstalled();
-      setMessage("Installed " + project.title + " " + version.version_number + ".");
+      await startModrinthDownload(file.url, tofu.path, tofu.id, tofu.name, project.title, file.filename);
+      setMessage("Queued " + project.title + " " + version.version_number + " for download.");
+
     } catch (e) { setMessage(e instanceof Error ? e.message : "Installation failed."); } finally { setBusy(false); }
   };
 
