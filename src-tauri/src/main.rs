@@ -33,6 +33,9 @@ fn list_user_themes(app: tauri::AppHandle) -> Result<Vec<themes::UserThemeDescri
 fn load_user_theme(app: tauri::AppHandle, theme_id: String) -> Result<themes::LoadedUserTheme, String> { themes::load_user_theme(app, theme_id) }
 
 #[tauri::command]
+fn clear_mochi_app_data(app: tauri::AppHandle) -> Result<(), String> { themes::clear_app_data(app) }
+
+#[tauri::command]
 fn import_theme(app: tauri::AppHandle, source_path: String) -> Result<themes::UserThemeDescriptor, String> { themes::import_theme(app, source_path) }
 
 fn main() {
@@ -53,7 +56,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             launch_game, list_flatpaks, get_platform_capabilities, detect_import_sources, scan_import_games,
-            get_mochi_config_info, set_mochi_theme, list_user_themes, load_user_theme, import_theme,
+            get_mochi_config_info, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
             modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::delete_mod_file, modrinth::download_modrinth_file
         ])
         .run(tauri::generate_context!())
