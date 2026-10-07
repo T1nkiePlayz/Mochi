@@ -27,8 +27,8 @@
     "shadow": "rgba(30,55,43,.14)"
   },
   "ui": {
-    "fontBody": ""DM Sans", sans-serif",
-    "fontDisplay": ""Manrope", sans-serif",
+    "fontBody": "\"DM Sans\", sans-serif",
+    "fontDisplay": "\"Manrope\", sans-serif",
     "radiusSm": "8px",
     "radiusMd": "12px",
     "radiusLg": "18px",
@@ -40,7 +40,7 @@
     "bodyLineHeight": "1.55",
     "headingWeight": "800",
     "labelWeight": "700",
-    "mono": ""JetBrains Mono", monospace"
+    "mono": "\"JetBrains Mono\", monospace"
   },
   "layout": {
     "contentPadding": "46px 54px 28px",
