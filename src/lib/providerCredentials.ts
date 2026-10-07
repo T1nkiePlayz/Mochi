@@ -17,9 +17,3 @@ export async function getProviderCredentialStatus(client: SupabaseClient, provid
   return Boolean(data?.configured);
 }
 
-export async function deleteProviderCredential(client: SupabaseClient, provider: ProviderCredential): Promise<void> {
-  const { error } = await client.functions.invoke("store-provider-credentials", {
-    body: { action: "delete", provider },
-  });
-  if (error) throw error;
-}
