@@ -17,3 +17,4 @@ pub fn list_flatpaks() -> Result<Vec<FlatpakApp>, String> {
 pub fn launch_game(_target: &str) -> Result<(), String> {
     Err("Mochi does not currently support launching games on this platform.".into())
 }
+\npub fn set_launch_on_startup(_enabled: bool) -> Result<(), String> { Err("Launch on startup is not implemented on this platform.".into()) }\n
