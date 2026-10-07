@@ -121,7 +121,7 @@ pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> {
         let exe = std::env::current_exe()
             .map_err(|e| format!("Unable to determine the Mochi executable: {e}"))?;
         let content = format!(
-            "[Desktop Entry]\nType=Application\nName=Mochi\nComment=Launch Mochi when you sign in\nExec={}\nTerminal=false\nStartupNotify=false\nX-GNOME-Autostart-enabled=true\n",
+            "[Desktop Entry]\nType=Application\nName=Mochi\nComment=Launch Mochi when you sign in\nExec=\"{}\"\nTerminal=false\nStartupNotify=false\nX-GNOME-Autostart-enabled=true\n",
             exe.to_string_lossy().replace('\\', "\\\\").replace('"', "\\\"")
         );
         std::fs::write(&desktop, content)
