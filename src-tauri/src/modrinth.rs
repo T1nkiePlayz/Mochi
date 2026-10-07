@@ -4,7 +4,7 @@ use std::{
     fs,
     io::Write,
     path::PathBuf,
-    sync::{Mutex, OnceLock},
+    sync::{atomic::{AtomicU64, Ordering}, Mutex, OnceLock},
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -29,6 +29,7 @@ pub struct DownloadEntry {
 }
 
 static DOWNLOADS: OnceLock<Mutex<HashMap<String, DownloadEntry>>> = OnceLock::new();
+static NEXT_DOWNLOAD_ID: AtomicU64 = AtomicU64::new(1);
 
 fn downloads() -> &'static Mutex<HashMap<String, DownloadEntry>> {
     DOWNLOADS.get_or_init(|| Mutex::new(HashMap::new()))
@@ -51,6 +52,13 @@ fn cleanup_downloads() {
             entry.finished_at.map(|finished| finished > cutoff).unwrap_or(true)
         });
     }
+}
+
+pub fn initialize_downloads() {
+    std::thread::spawn(|| loop {
+        std::thread::sleep(std::time::Duration::from_secs(60));
+        cleanup_downloads();
+    });
 }
 
 pub fn list_downloads() -> Vec<DownloadEntry> {
@@ -125,7 +133,7 @@ pub fn start_modrinth_download(
     }
 
     cleanup_downloads();
-    let id = format!("download-{}", now_ms());
+    let id = format!("download-{}-{}", now_ms(), NEXT_DOWNLOAD_ID.fetch_add(1, Ordering::Relaxed));
     let entry = DownloadEntry {
         id: id.clone(),
         tofu_id,
