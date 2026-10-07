@@ -1,7 +1,35 @@
 import { invoke } from "@tauri-apps/api/core";
 
 export type ModrinthProjectType = "mod" | "modpack" | "resourcepack" | "shader";
-export type ModrinthProjectDetails = ModrinthProject & { body?: string; published?: string; updated?: string; followers?: number; license?: { id?: string; name?: string; url?: string }; issues_url?: string; source_url?: string; wiki_url?: string; discord_url?: string; };
+export type ModrinthTeamMember = {
+  team_id: string;
+  user: {
+    id: string;
+    username: string;
+    name?: string | null;
+    avatar_url: string;
+    bio?: string;
+  };
+  role: string;
+  permissions?: number;
+  accepted?: boolean;
+  ordering?: number;
+};
+export type ModrinthProjectDetails = ModrinthProject & {
+  body?: string;
+  published?: string;
+  updated?: string;
+  followers?: number;
+  license?: { id?: string; name?: string; url?: string };
+  issues_url?: string;
+  source_url?: string;
+  wiki_url?: string;
+  discord_url?: string;
+  donation_urls?: Array<{ id: string; platform: string; url: string }>;
+  gallery?: Array<{ url: string; raw_url?: string; title?: string; description?: string }>;
+  team?: string;
+  members?: ModrinthTeamMember[];
+};
 export type ModrinthProject = {
   project_id: string; slug: string; title: string; description: string; project_type: ModrinthProjectType;
   downloads: number; icon_url?: string; author?: string; latest_version?: string; categories?: string[]; loaders?: string[];
@@ -10,7 +38,8 @@ export type ModrinthDependency = { version_id?: string | null; project_id?: stri
 export type ModrinthFile = { hashes: { sha1?: string; sha512?: string }; url: string; filename: string; primary: boolean; size: number; file_type?: string | null; };
 export type ModrinthVersion = {
   id: string; project_id: string; name: string; version_number: string; game_versions: string[]; loaders: string[];
-  featured: boolean; date_published: string; dependencies: ModrinthDependency[]; files: ModrinthFile[];
+  featured: boolean; date_published: string; date_modified?: string; version_type?: "release" | "beta" | "alpha";
+  changelog?: string | null; status?: string; dependencies: ModrinthDependency[]; files: ModrinthFile[];
 };
 export type InstalledModrinthFile = { filename: string; path: string; enabled: boolean; size: number; };
 
@@ -27,7 +56,16 @@ export async function searchModrinth(query: string, projectType: ModrinthProject
 }
 
 export async function getModrinthProject(projectId: string): Promise<ModrinthProjectDetails> {
-  return get<ModrinthProjectDetails>(API + "/project/" + encodeURIComponent(projectId));
+  const project = await get<ModrinthProjectDetails>(API + "/project/" + encodeURIComponent(projectId));
+  if (project.team) {
+    try {
+      const members = await get<ModrinthTeamMember[]>(API + "/team/" + encodeURIComponent(project.team) + "/members");
+      return { ...project, members: members.sort((a, b) => (a.ordering ?? 0) - (b.ordering ?? 0)), author: members[0]?.user?.username ?? project.author };
+    } catch {
+      // Project details remain usable if the team endpoint is unavailable.
+    }
+  }
+  return project;
 }
 
 export async function getPopularModrinth(projectType: ModrinthProjectType, gameVersion?: string): Promise<ModrinthProject[]> {
@@ -43,10 +81,24 @@ export async function getPopularModrinth(projectType: ModrinthProjectType, gameV
   return result.hits;
 }
 export async function getModrinthVersions(projectId: string, gameVersion?: string, loader?: string): Promise<ModrinthVersion[]> {
-  const params = new URLSearchParams({ limit: "100" });
-  if (gameVersion) params.set("game_versions", JSON.stringify([gameVersion]));
-  if (loader) params.set("loaders", JSON.stringify([loader]));
-  return get<ModrinthVersion[]>(API + "/project/" + encodeURIComponent(projectId) + "/version?" + params);
+  const all: ModrinthVersion[] = [];
+  let offset = 0;
+  const limit = 100;
+  while (true) {
+    const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    if (gameVersion) params.set("game_versions", JSON.stringify([gameVersion]));
+    if (loader) params.set("loaders", JSON.stringify([loader]));
+    const page = await get<ModrinthVersion[]>(API + "/project/" + encodeURIComponent(projectId) + "/version?" + params);
+    all.push(...page);
+    if (page.length < limit) break;
+    offset += limit;
+  }
+  return all;
+}
+
+export async function getModrinthGameVersions(): Promise<string[]> {
+  const versions = await get<Array<{ version: string; version_type: string }>>(API + "/tag/game_version");
+  return versions.map(item => item.version);
 }
 export async function listInstalledMods(path: string): Promise<InstalledModrinthFile[]> {
   return invoke<InstalledModrinthFile[]>("list_mod_files", { path });
