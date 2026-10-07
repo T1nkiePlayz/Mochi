@@ -11,6 +11,7 @@ use tauri::{AppHandle, Manager};
 const CONFIG_FILE: &str = "config.json";
 const MAX_THEME_ASSET_BYTES: usize = 10 * 1024 * 1024;
 const THEMES_DIR: &str = "themes";
+const LOCATION_FILE: &str = ".mochi-location";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -68,11 +69,23 @@ pub struct MochiConfigInfo {
     pub selected_theme: String,
 }
 
-fn config_dir(app: &AppHandle) -> Result<PathBuf, String> {
+fn default_config_dir(app: &AppHandle) -> Result<PathBuf, String> {
     app.path()
         .config_dir()
         .map(|path| path.join("Mochi"))
         .map_err(|error| format!("Unable to resolve Mochi config directory: {error}"))
+}
+
+fn config_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let default_root = default_config_dir(app)?;
+    let location_file = default_root.join(LOCATION_FILE);
+    if let Ok(location) = fs::read_to_string(&location_file) {
+        let path = PathBuf::from(location.trim());
+        if path.is_absolute() && path.is_dir() {
+            return Ok(path);
+        }
+    }
+    Ok(default_root)
 }
 
 pub fn initialize_config(app: &AppHandle) -> Result<(), String> {
@@ -390,11 +403,98 @@ pub fn import_theme(app: AppHandle, source_path: String) -> Result<UserThemeDesc
 }
 
 
+
+fn copy_directory_contents(source: &Path, destination: &Path) -> Result<(), String> {
+    fs::create_dir_all(destination)
+        .map_err(|error| format!("Unable to create destination directory: {error}"))?;
+    for entry in fs::read_dir(source)
+        .map_err(|error| format!("Unable to read source directory: {error}"))?
+    {
+        let entry = entry.map_err(|error| format!("Unable to inspect source entry: {error}"))?;
+        let source_path = entry.path();
+        let destination_path = destination.join(entry.file_name());
+        if source_path.file_name().and_then(|name| name.to_str()) == Some(LOCATION_FILE) {
+            continue;
+        }
+        if source_path.is_dir() {
+            copy_directory_contents(&source_path, &destination_path)?;
+        } else if source_path.is_file() {
+            fs::copy(&source_path, &destination_path)
+                .map_err(|error| format!("Unable to copy '{}': {error}", source_path.display()))?;
+        }
+    }
+    Ok(())
+}
+
+pub fn move_config_location(app: AppHandle, destination: String) -> Result<String, String> {
+    let selected = PathBuf::from(destination.trim());
+    if selected.as_os_str().is_empty() {
+        return Err("A destination folder is required.".into());
+    }
+    let current = config_dir(&app)?;
+    let default_root = default_config_dir(&app)?;
+    let destination = if selected.file_name().and_then(|name| name.to_str()) == Some("Mochi") {
+        selected
+    } else {
+        selected.join("Mochi")
+    };
+
+    if current == destination {
+        return Ok(destination.to_string_lossy().into_owned());
+    }
+    if destination == default_root {
+        return Err("Choose a different folder from the current Mochi data location.".into());
+    }
+    if current.starts_with(&destination) || destination.starts_with(&current) {
+        return Err("The new Mochi data folder cannot be inside the existing Mochi data folder.".into());
+    }
+
+    if destination.exists() && !destination.is_dir() {
+        return Err("The selected Mochi data location is not a directory.".into());
+    }
+    fs::create_dir_all(&destination)
+        .map_err(|error| format!("Unable to create the new Mochi data folder: {error}"))?;
+
+    copy_directory_contents(&current, &destination)?;
+
+    fs::create_dir_all(&default_root)
+        .map_err(|error| format!("Unable to prepare the Mochi location marker: {error}"))?;
+    fs::write(default_root.join(LOCATION_FILE), format!("{}\n", destination.display()))
+        .map_err(|error| format!("Unable to save the Mochi data location: {error}"))?;
+
+    if current != default_root && current.exists() {
+        fs::remove_dir_all(&current)
+            .map_err(|error| format!("Unable to remove the old Mochi data folder: {error}"))?;
+    } else if current == default_root {
+        for entry in fs::read_dir(&current)
+            .map_err(|error| format!("Unable to clean the old Mochi data folder: {error}"))?
+        {
+            let entry = entry.map_err(|error| format!("Unable to inspect old Mochi data: {error}"))?;
+            if entry.file_name().to_str() == Some(LOCATION_FILE) {
+                continue;
+            }
+            let path = entry.path();
+            if path.is_dir() {
+                fs::remove_dir_all(path).map_err(|error| format!("Unable to remove old Mochi data: {error}"))?;
+            } else {
+                fs::remove_file(path).map_err(|error| format!("Unable to remove old Mochi file: {error}"))?;
+            }
+        }
+    }
+
+    Ok(destination.to_string_lossy().into_owned())
+}
+
 pub fn clear_app_data(app: AppHandle) -> Result<(), String> {
     let root = config_dir(&app)?;
+    let default_root = default_config_dir(&app)?;
     if root.exists() {
         fs::remove_dir_all(&root)
             .map_err(|error| format!("Unable to clear Mochi app data: {error}"))?;
+    }
+    if default_root.exists() && default_root != root {
+        fs::remove_dir_all(&default_root)
+            .map_err(|error| format!("Unable to clear Mochi location marker: {error}"))?;
     }
     Ok(())
 }
