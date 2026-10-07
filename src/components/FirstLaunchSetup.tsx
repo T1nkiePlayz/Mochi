@@ -4,6 +4,28 @@ import type { ThemeDescriptor } from "../lib/theme";
 import { detectImportSources, scanImportGames, type DetectedImportSource, type ImportSourceId, type ImportedGame } from "../lib/sources";
 
 type SetupProps = {
+  igdbClientId: string;
+  setIgdbClientId: (value: string) => void;
+  igdbClientSecret: string;
+  setIgdbClientSecret: (value: string) => void;
+  onSignIn: () => void;
+  signedIn: boolean;
+  credentialStatus: { igdb: boolean; nexus: boolean };
+  credentialStatusLoaded: boolean;
+  themes: ThemeDescriptor[];
+  theme: string;
+  setTheme: (themeId: string) => Promise<void>;
+  nexusApiKey: string;
+  setNexusApiKey: (value: string) => void;
+  saveCredential: (provider: "igdb" | "nexus") => Promise<void>;
+  credentialBusy: "igdb" | "nexus" | null;
+  onFinish: (games: ImportedGame[], sources: ImportSourceId[]) => void;
+};port { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Gamepad2, KeyRound, Library, LoaderCircle, LogIn, RefreshCw, Sparkles, UserRound } from "lucide-react";
+import type { ThemeDescriptor } from "../lib/theme";
+import { detectImportSources, scanImportGames, type DetectedImportSource, type ImportSourceId, type ImportedGame } from "../lib/sources";
+
+type SetupProps = {
   settings: IgdbSettings;
   setSettings: (settings: IgdbSettings) => void;
   onSignIn: () => void;
@@ -29,8 +51,9 @@ const platformImages: Record<ImportSourceId, string> = {
 };
 
 export function FirstLaunchSetup({
-  igdbClientId, setIgdbClientId, igdbClientSecret, setIgdbClientSecret, onSignIn, signedIn, credentialStatus,
-  nexusApiKey, setNexusApiKey, saveCredential, credentialBusy, onFinish,
+  igdbClientId, setIgdbClientId, igdbClientSecret, setIgdbClientSecret,
+  onSignIn, signedIn, credentialStatus, credentialStatusLoaded,
+  themes, theme, setTheme, nexusApiKey, setNexusApiKey, saveCredential, credentialBusy, onFinish,
 }: SetupProps) {
   const [step, setStep] = useState<Step>("welcome");
   const [sources, setSources] = useState<DetectedImportSource[]>([]);
