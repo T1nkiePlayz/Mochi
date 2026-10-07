@@ -85,6 +85,10 @@ function App() {
   const [isLaunching, setIsLaunching] = useState(false);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [savedAccounts, setSavedAccounts] = useState<Array<{ id: string; username: string; email: string; refreshToken: string }>>(() => { try { return JSON.parse(window.localStorage.getItem("mochi:accounts") || "[]"); } catch { return []; } });
+  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; createdAt: number }>>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [showCustomGame, setShowCustomGame] = useState(false);
   const [addGameStep, setAddGameStep] = useState<"form" | "igdb">("form");
   const [pendingGame, setPendingGame] = useState<{ name: string; executablePath: string; candidates: IgdbGame[] } | null>(null);
