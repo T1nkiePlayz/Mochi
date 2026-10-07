@@ -688,6 +688,10 @@ function App() {
         onSignIn={() => { setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); }}
         signedIn={Boolean(user)}
         credentialStatus={credentialStatus}
+        credentialStatusLoaded={credentialStatusLoaded}
+        themes={themes}
+        theme={theme}
+        setTheme={setTheme}
         nexusApiKey={nexusApiKey}
         setNexusApiKey={setNexusApiKey}
         saveCredential={saveCredential}
