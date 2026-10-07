@@ -388,19 +388,19 @@ export function useThemeEngine() {
   const selectTheme = async (themeId: string) => {
     setThemeState(themeId);
     await setTheme(themeId);
-    const descriptor = (await listThemes()).find((candidate) => candidate.id === themeId);
+    const available = await listThemes();
+    const descriptor = available.find((candidate) => candidate.id === themeId);
     if (descriptor) {
-      const loaded = await loadTheme(descriptor);
-      applyTheme(loaded);
+      applyTheme(await loadTheme(descriptor));
     }
-    setThemes(await listThemes());
+    setThemes(available);
   };
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const info = await getThemeConfig();
+        const [info, available] = await Promise.all([getThemeConfig(), listThemes()]);
         if (cancelled) return;
         setConfigInfo(info);
         const stored = window.localStorage.getItem("mochi:theme");
@@ -418,8 +418,6 @@ export function useThemeEngine() {
         if (legacyTheme && legacyTheme !== info.selectedTheme) {
           await setTheme(legacyTheme);
         }
-        const available = await listThemes();
-        if (cancelled) return;
         setThemes(available);
         const descriptor = available.find((candidate) => candidate.id === selected) ?? available[0];
         if (descriptor) {
