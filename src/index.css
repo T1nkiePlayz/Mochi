@@ -278,3 +278,30 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 .account-menu-avatar-image{display:block!important;width:100%!important;height:100%!important;min-width:100%!important;min-height:100%!important;object-fit:cover!important;object-position:center!important;border-radius:inherit!important;}
 .account-menu button>span:nth-child(2){overflow:hidden;flex:1;}
 .account-menu strong,.account-menu small{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+
+/* Issue fixes: keep branding, navigation and settings geometry consistent across themes. */
+.brand-mark{background:transparent!important;box-shadow:none!important;border:0!important;}
+.brand-mark img{display:block;width:34px;height:34px;object-fit:contain;}
+.nav-item{justify-content:flex-start;align-items:center;}
+.nav-item .mochi-icon-wrap{display:grid;place-items:center;width:18px;height:18px;flex:0 0 18px;}
+.nav-item>span{min-width:0;}
+.setting-location-row{align-items:center;}
+.setting-location-value{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0;max-width:65%;}
+.setting-location-value code{max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.setting-location-value .secondary-button{flex:0 0 auto;padding:7px 11px;}
+[data-mochi-theme="minecraft-ore"] .brand-mark{background:transparent!important;box-shadow:none!important;border:0!important;}
+[data-mochi-theme="minecraft-ore"] .settings-page{width:min(100%,1080px)!important;max-width:1080px!important;margin:0 auto!important;padding-top:30px!important;}
+[data-mochi-theme="minecraft-ore"] .settings-group{width:100%!important;padding:22px 24px!important;margin-top:14px!important;}
+[data-mochi-theme="minecraft-ore"] .provider-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-width:900px!important;}
+[data-mochi-theme="minecraft-ore"] .theme-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+[data-mochi-theme="minecraft-ore"] .theme-card{min-height:112px;align-content:start;border-color:#454545;background:#202020;}
+[data-mochi-theme="minecraft-ore"] .theme-card:hover,[data-mochi-theme="minecraft-ore"] .theme-card.selected{border-color:#7ed321;background:#292929;box-shadow:inset 0 0 0 1px rgba(126,211,33,.35),0 2px 0 rgba(0,0,0,.28);}
+[data-mochi-theme="minecraft-ore"] .theme-card svg{width:18px;height:18px;margin:0;padding:4px;border:1px solid #454545;background:#171717;color:#9be84f;}
+[data-mochi-theme="minecraft-ore"] .theme-card strong{color:#fff;}
+[data-mochi-theme="minecraft-ore"] .theme-card small{color:#a7a7a7;}
+[data-mochi-theme="minecraft-ore"] .notification-popover,.notification-popover{color:var(--mochi-text);background:var(--mochi-surface);border-color:var(--mochi-border);}
+@media(max-width:800px){
+  .setting-location-value{max-width:100%;flex:1;}
+  .setting-location-value code{max-width:100%;flex:1;}
+}
