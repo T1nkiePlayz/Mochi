@@ -24,7 +24,7 @@ mod macos;
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
 mod unsupported;
 
-pub fn launch_game(target: &str) -> Result<(), String> {
+pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> {\n    #[cfg(target_os = "linux")]\n    { return linux::set_launch_on_startup(enabled); }\n    #[cfg(target_os = "macos")]\n    { return macos::set_launch_on_startup(enabled); }\n    #[cfg(not(any(target_os = "linux", target_os = "macos")))]\n    { return unsupported::set_launch_on_startup(enabled); }\n}\n\npub fn launch_game(target: &str) -> Result<(), String> {
     #[cfg(target_os = "linux")]
     { linux::launch_game(target) }
 
