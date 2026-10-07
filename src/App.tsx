@@ -26,6 +26,7 @@ import {
   ShieldCheck,
   KeyRound,
   Github,
+  Unlink,
 } from "lucide-react";
 
 function GoogleIcon({ size = 15 }: { size?: number }) {
@@ -756,6 +757,33 @@ function App() {
     } finally { setSecurityBusy(false); }
   };
 
+  const unlinkAuthIdentity = async (provider: "google" | "github") => {
+    if (!supabase || !user) return;
+    const identity = (user.identities ?? []).find((item) => item.provider === provider);
+    if (!identity) return;
+    if ((user.identities ?? []).length < 2) {
+      setAuthNotice("Add another sign-in method before unlinking this account.");
+      return;
+    }
+    const providerName = provider === "google" ? "Google" : "GitHub";
+    if (!window.confirm("Unlink " + providerName + " from your Mochi account? You will no longer be able to sign in with " + providerName + " until you connect it again.")) return;
+    setSecurityBusy(true);
+    setAuthNotice("");
+    try {
+      const { error } = await supabase.auth.unlinkIdentity(identity);
+      if (error) throw error;
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (userData.user) setUser(userData.user);
+      setAuthNotice(providerName + " was unlinked from your Mochi account.");
+      await loadSecurity();
+    } catch (error) {
+      setAuthNotice(error instanceof Error ? error.message : "Unable to unlink " + providerName + ".");
+    } finally {
+      setSecurityBusy(false);
+    }
+  };
+
   const removePasskey = async (passkeyId: string) => {
     if (!supabase) return;
     setSecurityBusy(true);
@@ -1077,7 +1105,20 @@ function App() {
                   <div className="security-card"><div className="security-card-icon"><MochiIcon name="security" fallback={ShieldCheck} size={18}/></div><div className="security-card-copy"><strong>Authenticator app</strong><small>{securityFactors.some((factor) => factor.status === "verified") ? "Two-factor authentication is enabled." : "Use a time-based one-time password for an extra layer of protection."}</small></div><span className={securityFactors.some((factor) => factor.status === "verified") ? "credential-status saved" : "credential-status"}>{securityFactors.some((factor) => factor.status === "verified") ? "Enabled" : "Not configured"}</span></div>
                   {mfaSetup ? <div className="mfa-setup-card"><div><strong>Set up your authenticator</strong><small>Scan this QR code in your authenticator app.</small></div><img src={mfaSetup.qr} alt="Authenticator setup QR code" /><code>{mfaSetup.secret}</code><div className="mfa-setup-actions"><input className="mfa-input" inputMode="numeric" value={mfaCode} onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" maxLength={6}/><button className="secondary-button" disabled={securityBusy || mfaCode.length !== 6} onClick={() => void verifyAuthenticatorSetup()}>Verify</button><button className="secondary-button" disabled={securityBusy} onClick={() => { setMfaSetup(null); setMfaCode(""); }}>Cancel</button></div></div> : <div className="security-actions"><button className="secondary-button" onClick={() => void addAuthenticator()} disabled={securityBusy}>{securityFactors.some((factor) => factor.status === "verified") ? "Add another authenticator" : "Set up authenticator"}</button>{securityFactors.filter((factor) => factor.status === "verified").map((factor) => <button key={factor.id} className="secondary-button danger-outline" disabled={securityBusy} onClick={() => void removeAuthenticator(factor.id)}>Remove authenticator</button>)}</div>}
                   <div className="security-card"><div className="security-card-icon"><Github size={18}/></div><div className="security-card-copy"><strong>Connected accounts</strong><small>Google and GitHub identities linked to this Mochi account.</small></div></div>
-                  <div className="security-provider-grid">{(["google","github"] as const).map((provider) => { const connected = (user.identities ?? []).some((identity) => identity.provider === provider); return <button type="button" key={provider} className="security-provider" onClick={() => { if (supabase && !connected) void linkAuthIdentity(supabase, provider); }} disabled={connected || securityBusy}><strong>{provider === "google" ? "Google" : "GitHub"}</strong><span>{connected ? "Connected" : "Connect"}</span></button>; })}</div>
+                  <div className="security-provider-grid">{(["google","github"] as const).map((provider) => {
+                    const connected = (user.identities ?? []).find((identity) => identity.provider === provider);
+                    const canUnlink = (user.identities ?? []).length > 1;
+                    return <div className="security-provider" key={provider}>
+                      <span className="security-provider-copy"><strong>{provider === "google" ? "Google" : "GitHub"}</strong><small>{connected ? "Connected" : "Not connected"}</small></span>
+                      {connected ? (
+                        <button type="button" className="secondary-button danger-outline security-provider-action" onClick={() => void unlinkAuthIdentity(provider)} disabled={securityBusy || !canUnlink} title={canUnlink ? "Unlink " + (provider === "google" ? "Google" : "GitHub") : "Add another sign-in method before unlinking this account."}>
+                          <Unlink size={13} /> {canUnlink ? "Unlink" : "Required"}
+                        </button>
+                      ) : (
+                        <button type="button" className="secondary-button security-provider-action" onClick={() => { if (supabase) void linkAuthIdentity(supabase, provider).catch(() => {}); }} disabled={securityBusy}>Connect</button>
+                      )}
+                    </div>;
+                  })}</div>
                   <div className="security-card"><div className="security-card-icon"><KeyRound size={18}/></div><div className="security-card-copy"><strong>Passkeys</strong><small>Use a device, password manager, biometrics, or security key instead of a password.</small></div></div>
                   <div className="passkey-list">{passkeys.length ? passkeys.map((passkey) => <div className="passkey-row" key={passkey.id}><span><strong>{passkey.friendly_name || "Mochi passkey"}</strong><small>Added {passkey.created_at ? new Date(passkey.created_at).toLocaleDateString() : "recently"}</small></span><button className="secondary-button danger-outline" disabled={securityBusy} onClick={() => void removePasskey(passkey.id)}>Remove</button></div>) : <small className="metadata-note">No passkeys registered yet.</small>}<button className="secondary-button" disabled={securityBusy} onClick={() => void addPasskey()}>{securityBusy ? "Working..." : "Set up a passkey"}</button></div>
                   {authNotice && <small className="metadata-note security-notice">{authNotice}</small>}
