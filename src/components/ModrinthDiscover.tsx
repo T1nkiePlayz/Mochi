@@ -49,22 +49,6 @@ type Props = {
   supabase: SupabaseClient | null;
 };
 
-function projectTypeLabel(type: ModrinthProjectType) {
-  return type === "resourcepack" ? "Resource Pack" : type.charAt(0).toUpperCase() + type.slice(1);
-}
-
-function formatDate(value?: string) {
-  if (!value) return "Unknown date";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-}
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + " KiB";
-  if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + " MiB";
-  return (bytes / 1024 / 1024 / 1024).toFixed(2) + " GiB";
-}
-
 export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfigured, supabase }: Props) {
   const [projects, setProjects] = useState<Record<ModrinthProjectType, ModrinthProject[]>>({ mod: [], modpack: [], resourcepack: [], shader: [] });
   const [gameVersion, setGameVersion] = useState(tofu.version === "Local" ? "" : tofu.version);
