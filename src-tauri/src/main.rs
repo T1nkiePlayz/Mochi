@@ -6,6 +6,20 @@ mod themes;
 mod modrinth;
 
 #[tauri::command]
+fn send_system_notification(title: String, body: String) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        let status = std::process::Command::new("notify-send").args(["--app-name=Mochi", title.trim(), body.trim()]).status().map_err(|error| format!("Unable to start notify-send: {error}"))?;
+        if status.success() { Ok(()) } else { Err("The system notification daemon rejected the notification.".into()) }
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = (title, body);
+        Err("System notifications are currently implemented for Linux.".into())
+    }
+}
+
+#[tauri::command]
 fn open_external_url(url: String) -> Result<(), String> { platform::open_external_url(url.trim()) }
 
 #[tauri::command]
