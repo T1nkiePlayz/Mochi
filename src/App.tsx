@@ -1181,3 +1181,5 @@ function App() {
   );
 }
 export default App;
+
+// CI verification marker.
