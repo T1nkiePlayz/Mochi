@@ -7,10 +7,18 @@ export async function signInWithProvider(client: SupabaseClient, provider: "goog
   });
 }
 
-export async function sendMagicLink(client: SupabaseClient, email: string) {
+export async function sendEmailCode(client: SupabaseClient, email: string) {
   return client.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: window.location.origin },
+    options: { shouldCreateUser: true },
+  });
+}
+
+export async function verifyEmailCode(client: SupabaseClient, email: string, token: string) {
+  return client.auth.verifyOtp({
+    email,
+    token,
+    type: "email",
   });
 }
 
