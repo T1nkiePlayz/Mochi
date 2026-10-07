@@ -45,7 +45,6 @@ import { lookupIgdbGame, lookupIgdbGames, type IgdbGame, type IgdbSettings } fro
 import {
   chooseGameTarget,
   getPlatformCapabilities,
-  launchGame as launchGameTarget,
   listInstalledFlatpaks,
   normalizeLaunchTarget,
   type FlatpakApp,
@@ -86,7 +85,17 @@ function App() {
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
-  const [savedAccounts, setSavedAccounts] = useState<Array<{ id: string; username: string; email: string; refreshToken: string; avatarUrl?: string }>>(() => { try { return (JSON.parse(window.localStorage.getItem("mochi:accounts") || "[]") as Array<{ id: string; username: string; email: string; refreshToken: string; avatarUrl?: string }>).slice(0, 5); } catch { return []; } });
+  const [savedAccounts, setSavedAccounts] = useState<Array<{ id: string; username: string; email: string; refreshToken: string; avatarUrl?: string }>>(() => {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem("mochi:accounts") || "[]") as Array<{ id: string; username: string; email: string; refreshToken: string; avatarUrl?: string }>;
+      return stored.slice(0, 5).map((account) => ({
+        ...account,
+        username: account.username.includes("@") ? account.username.split("@")[0] : account.username,
+      }));
+    } catch {
+      return [];
+    }
+  });
   const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; createdAt: number }>>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showCustomGame, setShowCustomGame] = useState(false);
@@ -129,19 +138,28 @@ function App() {
   const [emailCodeEmail, setEmailCodeEmail] = useState("");
   const [showFirstLaunchSetup, setShowFirstLaunchSetup] = useState(() => window.localStorage.getItem(setupCompleteKey) !== "true");
   const [showImportPicker, setShowImportPicker] = useState(false);
+  const [playtime, setPlaytime] = useState<Array<{ gameId: string; name: string; seconds: number; lastPlayed: number }>>([]);
   const [syncState, setSyncState] = useState<"offline" | "syncing" | "synced" | "error">(
     isCloudConfigured ? "offline" : "offline",
   );
   const syncInitialized = useRef(false);
   const { themes, theme, setTheme, reloadThemes, configInfo } = useThemeEngine();
-  const currentUsername = user?.user_metadata?.username || user?.user_metadata?.user_name || user?.user_metadata?.preferred_username || user?.email || "Guest";
+  const currentUsername = user?.user_metadata?.username
+    || user?.user_metadata?.user_name
+    || user?.user_metadata?.preferred_username
+    || (user?.email ? user.email.split("@")[0] : null)
+    || "Guest";
   const pushNotification = (title: string, message: string) => {
     const notification = { id: crypto.randomUUID(), title, message, createdAt: Date.now() };
     setNotifications((current) => [notification, ...current].slice(0, 20));
     void import("@tauri-apps/api/core").then(({ invoke }) => invoke("send_system_notification", { title, body: message })).catch(() => {});
   };
   const saveAccountSession = (sessionUser: User, refreshToken: string) => {
-    const account = { id: sessionUser.id, username: sessionUser.user_metadata?.username || sessionUser.user_metadata?.user_name || sessionUser.user_metadata?.preferred_username || sessionUser.email || "Guest", email: sessionUser.email || "", refreshToken, avatarUrl: typeof sessionUser.user_metadata?.avatar_url === "string" ? sessionUser.user_metadata.avatar_url : typeof sessionUser.user_metadata?.picture === "string" ? sessionUser.user_metadata.picture : undefined };
+    const username = sessionUser.user_metadata?.username
+      || sessionUser.user_metadata?.user_name
+      || sessionUser.user_metadata?.preferred_username
+      || (sessionUser.email ? sessionUser.email.split("@")[0] : "Guest");
+    const account = { id: sessionUser.id, username, email: sessionUser.email || "", refreshToken, avatarUrl: typeof sessionUser.user_metadata?.avatar_url === "string" ? sessionUser.user_metadata.avatar_url : typeof sessionUser.user_metadata?.picture === "string" ? sessionUser.user_metadata.picture : undefined };
     setSavedAccounts((current) => { const next = [account, ...current.filter((item) => item.id !== account.id)].slice(0, 5); window.localStorage.setItem("mochi:accounts", JSON.stringify(next)); return next; });
   };
   const switchAccount = async (account: { id: string; username: string; email: string; refreshToken: string; avatarUrl?: string }) => {
@@ -156,6 +174,12 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(storedPikosKey, JSON.stringify(library));
   }, [library]);
+
+  useEffect(() => {
+    void refreshPlaytime();
+    const timer = window.setInterval(() => void refreshPlaytime(), 10000);
+    return () => window.clearInterval(timer);
+  }, []);
   useEffect(() => {
     window.localStorage.setItem(storedSettingsKey, JSON.stringify({ ...behavior }));
   }, [behavior]);
@@ -345,6 +369,16 @@ function App() {
     setLibrary(current => current.map(piko => piko.id === selectedPiko.id ? { ...piko, tofus: piko.tofus.map(tofu => tofu.id === selectedTofu.id ? { ...tofu, ...patch } : tofu) } : piko));
   };
 
+  const refreshPlaytime = async () => {
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const entries = await invoke<Array<{ gameId: string; name: string; seconds: number; lastPlayed: number }>>("get_playtime");
+      setPlaytime(entries);
+    } catch {
+      // Browser/development mode or an older backend without the playtime service.
+    }
+  };
+
   const launchGame = async () => {
     if (selectedPiko.id === "__empty" || !selectedPiko.executablePath) {
       setLaunchError("This game does not have an executable path. Add or edit the game to set its executable.");
@@ -352,9 +386,26 @@ function App() {
     }
     setLaunchError("");
     setIsLaunching(true);
-    try { await launchGameTarget(selectedPiko.executablePath); }
-    catch (error) { setLaunchError(error instanceof Error ? error.message : String(error)); }
-    finally { setIsLaunching(false); }
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("launch_game_tracked", {
+        gameId: selectedPiko.id,
+        name: selectedPiko.name,
+        launchTarget: selectedPiko.executablePath,
+      });
+      await refreshPlaytime();
+    } catch (error) {
+      setLaunchError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsLaunching(false);
+    }
+  };
+
+  const selectedPlaytime = playtime.find((entry) => entry.gameId === selectedPiko.id);
+  const formatPlaytime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
   };
 
   const addTofu = (event: FormEvent<HTMLFormElement>) => {
@@ -811,7 +862,7 @@ function App() {
         <div className="brand"><div className="brand-mark"><img src="/mochi.png" alt="Mochi" /></div><div><strong>Mochi</strong><span>Your games, your way.</span></div></div>
         <div className="sidebar-account-wrap">
           <button className="sidebar-account" aria-expanded={showAccountMenu} onClick={() => setShowAccountMenu((open) => !open)}><AccountAvatar user={user} size={34} /><span><strong>{currentUsername}</strong><small>{user ? "Mochi account" : "Sign in to Mochi"}</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={14} /></button>
-          {showAccountMenu && <div className="account-menu">{savedAccounts.map((account) => <button type="button" key={account.id} className={account.id === user?.id ? "selected" : ""} onClick={() => void switchAccount(account)}><span className="account-menu-avatar">{account.avatarUrl ? <img src={account.avatarUrl} alt="" referrerPolicy="no-referrer" /> : account.username.slice(0, 1).toUpperCase()}</span><span><strong>{account.username}</strong><small>Mochi account</small></span></button>)}{!user && <button type="button" className="account-menu-add" onClick={addAccount}><Plus size={14} /><span><strong>Sign in</strong><small>Add a Mochi account</small></span></button>}{user && savedAccounts.length < 5 && <button type="button" className="account-menu-add" onClick={addAccount}><Plus size={14} /><span><strong>Add User</strong><small>Sign in to another Mochi account</small></span></button>}{user && <button type="button" className="account-menu-add" onClick={signOut}><span className="account-menu-avatar">↪</span><span><strong>Sign out</strong><small>Keep local Mochi data</small></span></button>}</div>}
+          {showAccountMenu && <div className="account-menu">{savedAccounts.map((account) => <button type="button" key={account.id} className={account.id === user?.id ? "selected" : ""} onClick={() => void switchAccount(account)}><span className="account-menu-avatar">{account.avatarUrl ? <img className="account-menu-avatar-image" src={account.avatarUrl} alt="" referrerPolicy="no-referrer" /> : account.username.slice(0, 1).toUpperCase()}</span><span><strong>{account.username}</strong><small>Mochi account</small></span></button>)}{!user && <button type="button" className="account-menu-add" onClick={addAccount}><Plus size={14} /><span><strong>Sign in</strong><small>Add a Mochi account</small></span></button>}{user && savedAccounts.length < 5 && <button type="button" className="account-menu-add" onClick={addAccount}><Plus size={14} /><span><strong>Add User</strong><small>Sign in to another Mochi account</small></span></button>}{user && <button type="button" className="account-menu-add" onClick={signOut}><span className="account-menu-avatar">↪</span><span><strong>Sign out</strong><small>Keep local Mochi data</small></span></button>}</div>}
         </div>
 
         <nav className="primary-nav" aria-label="Main navigation">
@@ -876,7 +927,7 @@ function App() {
                     <button className="icon-button dark-button" aria-label="More options"><MochiIcon name="more" fallback={MoreHorizontal} size={19} /></button>{launchError && <span className="metadata-note">{launchError}</span>}
                   </div>
                 </div>
-                <div className="hero-meta"><span>Last played</span><strong>Yesterday, 8:42 PM</strong></div>
+                <div className="hero-meta"><span>Playtime</span><strong>{selectedPlaytime ? formatPlaytime(selectedPlaytime.seconds) : "Not played yet"}</strong></div>
               </section>
 
               <section className="tofu-section">
