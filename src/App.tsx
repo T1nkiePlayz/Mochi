@@ -1175,3 +1175,5 @@ function formatBytes(bytes: number) {\n  if (bytes < 1024 * 1024) return Math.ma
   );
 }
 export default App;
+
+// CI verification marker for the discovery/download UI update.
