@@ -331,6 +331,16 @@ function buildBridgeSheet(): string {
     ".setup-platform-logo { background: var(--mochi-surface-raised); border-color: var(--mochi-border); }",
     ".setup-footer { color: var(--mochi-text); }",
     ".setup-nav { color: var(--mochi-text); background: var(--mochi-surface-raised); border-color: var(--mochi-border); }",
+    "[data-mochi-theme=\"mochi-light\"] .download-empty { background: var(--mochi-surface) !important; border-color: var(--mochi-border) !important; color: var(--mochi-text-strong) !important; }",
+    "[data-mochi-theme=\"mochi-light\"] .download-empty .empty-icon { background: var(--mochi-accent-soft) !important; color: var(--mochi-accent-strong) !important; }",
+    "[data-mochi-theme=\"mochi-light\"] .download-empty h3 { color: var(--mochi-text-strong) !important; }",
+    "[data-mochi-theme=\"mochi-light\"] .download-empty p { color: var(--mochi-text-muted) !important; }",
+    "[data-mochi-theme=\"mochi-light\"] .secondary-button { color: var(--mochi-text-strong); background: var(--mochi-surface-raised); border-color: var(--mochi-border); }",
+    "[data-mochi-theme=\"mochi-light\"] .empty-state .secondary-button { color: var(--mochi-text-strong); background: var(--mochi-surface); border: 1px solid var(--mochi-border); }",
+    "[data-mochi-theme=\"mochi-light\"] .account-menu { background: var(--mochi-surface) !important; border-color: var(--mochi-border) !important; }",
+    "[data-mochi-theme=\"mochi-light\"] .account-menu button { color: var(--mochi-text-strong); }",
+    "[data-mochi-theme=\"mochi-light\"] .account-menu button:hover, [data-mochi-theme=\"mochi-light\"] .account-menu button.selected { background: var(--mochi-surface-hover); }",
+    "[data-mochi-theme=\"mochi-light\"] .account-menu-avatar { color: var(--mochi-accent-strong); background: var(--mochi-accent-soft); }",
   ].join("\n");
 }
 
