@@ -39,3 +39,4 @@
 .version-picker-switch small { grid-column: 2; color: var(--mochi-text-muted); font-size: 11px; }
 .version-picker-switch input { accent-color: var(--mochi-accent); }
 .version-picker-note { font-size: 11px; padding: 8px; }
+.modrinth-controls .mochi-select.compact-select { min-width: 140px; }

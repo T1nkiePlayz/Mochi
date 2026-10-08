@@ -4,6 +4,7 @@ import { Copy, FolderOpen, Plus, Trash2, X } from "lucide-react";
 import { defaultLaunchConfig } from "../lib/launch";
 import type { RuntimeInfo } from "../lib/platform";
 import type { Piko, Tofu } from "../models";
+import { Select } from "./ui/Select";
 
 type Props = {
   piko: Piko;
@@ -65,7 +66,7 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
         <label>Content folder<div className="flatpak-input-row"><input readOnly value={selected.path ?? ""} placeholder="No folder chosen" /><button type="button" className="secondary-button" onClick={() => void chooseFolder((path) => patch({ path }), "Choose Tofu folder")}><FolderOpen size={14}/></button></div></label>
 
         <p className="eyebrow">Launch settings</p>
-        {compat.length > 0 && <label>Compatibility runtime<select value={launch.runtime ?? ""} onChange={(e) => patchLaunch({ runtime: e.target.value || undefined })}><option value="">Automatic</option>{compat.map((runtime) => <option key={runtime.id} value={runtime.id}>{runtime.name}</option>)}</select><small className="metadata-note">Used for Windows programs (.exe). Native games ignore it.</small></label>}
+        {compat.length > 0 && <label>Compatibility runtime<Select value={launch.runtime ?? ""} onChange={(value) => patchLaunch({ runtime: value || undefined })} label="Compatibility runtime" searchable={false} options={[{ value: "", label: "Automatic" }, ...compat.map((runtime) => ({ value: runtime.id, label: runtime.name }))]} /><small className="metadata-note">Used for Windows programs (.exe). Native games ignore it.</small></label>}
         {wrappers.length > 0 && <div className="wrapper-options"><span>Wrappers</span>{wrappers.map((wrapper) => <label key={wrapper.id} className="check-row"><input type="checkbox" checked={launch.wrappers.includes(wrapper.id)} onChange={(e) => patchLaunch({ wrappers: e.target.checked ? [...launch.wrappers, wrapper.id] : launch.wrappers.filter((id) => id !== wrapper.id) })} /> {wrapper.name}</label>)}</div>}
         <label>Launch arguments<input value={launch.args} placeholder="--fullscreen -windowed" onChange={(e) => patchLaunch({ args: e.target.value })} /></label>
         <label>Environment variables<textarea rows={3} value={launch.env} placeholder={"DXVK_HUD=fps\nMANGOHUD=1"} onChange={(e) => patchLaunch({ env: e.target.value })} spellCheck={false} /></label>

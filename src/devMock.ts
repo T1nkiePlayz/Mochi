@@ -4,8 +4,43 @@
  */
 type Handler = (args: Record<string, unknown>) => unknown;
 
+
+/** Fake Modrinth API: paged search over generated projects, the game version tag list and project pages. */
+const fakeProjects = (type: string) => Array.from({ length: 420 }, (_, index) => ({
+  project_id: `${type}-${index}`, slug: `${type}-${index}`, title: `${type === "mod" ? "Mod" : type} project ${index + 1}`,
+  description: "A generated project used to exercise paging and infinite scroll in the dev server.", project_type: type,
+  downloads: 5_000_000 - index * 9_000, author: `author${index % 17}`, categories: ["fabric", "forge"], icon_url: undefined, loaders: ["fabric"],
+}));
+const fakeVersions = [
+  ...["26.4-snapshot-3", "26.4-snapshot-2", "26.3-rc-1"].map((version, i) => ({ version, version_type: "snapshot", date: `2026-09-${28 - i}T00:00:00Z`, major: false })),
+  { version: "26.3", version_type: "release", date: "2026-09-15T00:00:00Z", major: false },
+  { version: "26.2", version_type: "release", date: "2026-06-15T00:00:00Z", major: false },
+  { version: "26.1", version_type: "release", date: "2026-03-15T00:00:00Z", major: true },
+  ...["1.21.11", "1.21.8", "1.21.4", "1.21.1", "1.21", "1.20.6", "1.20.4", "1.20.1", "1.19.4", "1.18.2", "1.16.5", "1.12.2", "1.8.9"].map((version, i) => ({ version, version_type: "release", date: new Date(Date.UTC(2025, 9, 1) - i * 86_400_000 * 60).toISOString(), major: false })),
+  { version: "24w14potato", version_type: "snapshot", date: "2024-04-01T00:00:00Z", major: false },
+  { version: "b1.7.3", version_type: "beta", date: "2011-07-08T00:00:00Z", major: false },
+];
+const apiResult = (data: unknown) => ({ data, cached: false, stale: false, fetchedAt: Date.now() });
+
 const now = Math.floor(Date.now() / 1000);
 const handlers: Record<string, Handler> = {
+  get_public_api: (args) => {
+    const url = new URL(String(args.url));
+    if (url.pathname === "/v2/tag/game_version") return apiResult(fakeVersions);
+    if (url.pathname === "/v2/search") {
+      const facets = JSON.parse(url.searchParams.get("facets") || "[]") as string[][];
+      const type = facets.flat().find((facet) => facet.startsWith("project_type:"))?.split(":")[1] ?? "mod";
+      const text = (url.searchParams.get("query") || "").toLowerCase();
+      const all = fakeProjects(type).filter((project) => !text || project.title.toLowerCase().includes(text));
+      const offset = Number(url.searchParams.get("offset") || 0);
+      const limit = Number(url.searchParams.get("limit") || 10);
+      return apiResult({ hits: all.slice(offset, offset + limit), offset, limit, total_hits: all.length });
+    }
+    if (/\/members$/.test(url.pathname)) return apiResult([]);
+    if (/\/version$/.test(url.pathname)) return apiResult([]);
+    const id = decodeURIComponent(url.pathname.split("/").pop() || "");
+    return apiResult({ ...fakeProjects("mod")[0], project_id: id, title: id, body: "Generated project description.", followers: 1200 });
+  },
   get_platform_capabilities: () => ({
     platform: "linux", displayName: "Linux", launchMethods: ["file", "flatpak", "custom"], supportsFlatpak: true,
     supportsAppBundles: false, supportsStartup: true, supportsSystemNotifications: true, supportsShortcuts: true,
