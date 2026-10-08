@@ -131,27 +131,39 @@ export async function pushLibrary(client: SupabaseClient, userId: string, librar
   if (tofuError) throw tofuError;
 }
 
-export async function clearAccountCloudData(client: SupabaseClient) {
-  const { error } = await client.functions.invoke("store-provider-credentials", {
-    body: { action: "clear" },
-  });
+export type ClearedCloudData = {
+  deleted_pikos: number;
+  deleted_tofus: number;
+};
+
+export async function clearAccountCloudData(client: SupabaseClient): Promise<ClearedCloudData> {
+  const { data, error } = await client.rpc("clear_my_cloud_data");
   if (error) throw error;
+  return {
+    deleted_pikos: Number(data?.deleted_pikos ?? 0),
+    deleted_tofus: Number(data?.deleted_tofus ?? 0),
+  };
 }
 
 
-export async function getCloudSyncEnabled(client: SupabaseClient, userId: string): Promise<boolean> {
+export type CloudAccountSettings = { syncEnabled: boolean; metadataSyncAllowed: boolean };
+
+export async function getCloudAccountSettings(client: SupabaseClient, userId: string): Promise<CloudAccountSettings> {
   const { data, error } = await client
     .from("profiles")
-    .select("cloud_sync_enabled")
+    .select("cloud_sync_enabled, metadata_sync_allowed")
     .eq("id", userId)
     .maybeSingle();
   if (error) throw error;
   if (!data) {
     const { error: createError } = await client
       .from("profiles")
-      .upsert({ id: userId, cloud_sync_enabled: false }, { onConflict: "id" });
+      .upsert({ id: userId, cloud_sync_enabled: false, metadata_sync_allowed: false }, { onConflict: "id" });
     if (createError) throw createError;
-    return false;
+    return { syncEnabled: false, metadataSyncAllowed: false };
   }
-  return data.cloud_sync_enabled === true;
+  return {
+    syncEnabled: data.cloud_sync_enabled === true,
+    metadataSyncAllowed: data.metadata_sync_allowed === true,
+  };
 }

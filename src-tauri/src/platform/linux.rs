@@ -141,13 +141,47 @@ pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> {
 }
 
 fn installed_executable() -> Result<std::path::PathBuf, String> {
-    // AppImage mounts its payload under /tmp at runtime. The APPIMAGE variable
-    // points to the permanent file the user launched, so desktop entries must
-    // target that file rather than current_exe() inside the temporary mount.
+    // AppImage mounts its payload under /tmp at runtime. Keep a managed copy
+    // in ~/.local/bin so desktop and autostart entries survive after the
+    // downloaded source image is moved or deleted.
     if let Some(appimage) = std::env::var_os("APPIMAGE") {
-        let path = std::path::PathBuf::from(appimage);
-        if path.is_absolute() && path.is_file() {
-            return Ok(path);
+        let source = std::path::PathBuf::from(appimage);
+        if source.is_file() {
+            let source = std::fs::canonicalize(&source)
+                .map_err(|error| format!("Unable to resolve the launched AppImage: {error}"))?;
+            let home = std::env::var_os("HOME").ok_or("Unable to determine the home directory.")?;
+            let bin = std::path::PathBuf::from(home).join(".local/bin");
+            std::fs::create_dir_all(&bin)
+                .map_err(|error| format!("Unable to create the AppImage install directory: {error}"))?;
+
+            let installed = bin.join("mochi.AppImage");
+            if std::fs::canonicalize(&installed).ok().as_deref() == Some(source.as_path()) {
+                return Ok(installed);
+            }
+
+            let temporary = bin.join(format!(".mochi.AppImage.{}.tmp", std::process::id()));
+            let _ = std::fs::remove_file(&temporary);
+            if let Err(error) = std::fs::copy(&source, &temporary) {
+                return Err(format!("Unable to copy Mochi into ~/.local/bin: {error}"));
+            }
+
+            use std::os::unix::fs::PermissionsExt;
+            let mode = match std::fs::metadata(&source) {
+                Ok(metadata) => metadata.permissions().mode(),
+                Err(error) => {
+                    let _ = std::fs::remove_file(&temporary);
+                    return Err(format!("Unable to inspect the launched AppImage: {error}"));
+                }
+            };
+            if let Err(error) = std::fs::set_permissions(&temporary, std::fs::Permissions::from_mode(mode | 0o100)) {
+                let _ = std::fs::remove_file(&temporary);
+                return Err(format!("Unable to make the installed AppImage executable: {error}"));
+            }
+            if let Err(error) = std::fs::rename(&temporary, &installed) {
+                let _ = std::fs::remove_file(&temporary);
+                return Err(format!("Unable to update the installed Mochi AppImage: {error}"));
+            }
+            return Ok(installed);
         }
     }
     std::env::current_exe().map_err(|e| format!("Unable to determine the Mochi executable: {e}"))

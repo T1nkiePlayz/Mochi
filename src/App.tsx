@@ -43,7 +43,7 @@ import { FirstLaunchSetup } from "./components/FirstLaunchSetup";
 import { ImportPicker } from "./components/ImportPicker";
 import type { ImportedGame, ImportSourceId } from "./lib/sources";
 import { isCloudConfigured, supabase } from "./lib/supabase";
-import { clearAccountCloudData, getCloudSyncEnabled, pullLibrary, pushLibrary } from "./lib/cloud";
+import { clearAccountCloudData, getCloudAccountSettings, pullLibrary, pushLibrary } from "./lib/cloud";
 import type { Piko, Tofu } from "./models";
 import { lookupIgdbGame, lookupIgdbGames, type IgdbGame, type IgdbSettings } from "./lib/igdb";
 import {
@@ -157,6 +157,7 @@ function App() {
     isCloudConfigured ? "offline" : "offline",
   );
   const [cloudSyncEnabled, setCloudSyncEnabled] = useState(false);
+  const [cloudDataAccessAllowed, setCloudDataAccessAllowed] = useState(false);
   const [cloudDataBusy, setCloudDataBusy] = useState(false);
   const [cloudDataMessage, setCloudDataMessage] = useState("");
   const syncInitialized = useRef(false);
@@ -328,6 +329,7 @@ function App() {
     if (!supabase || !user) {
       syncInitialized.current = false;
       setCloudSyncEnabled(false);
+      setCloudDataAccessAllowed(false);
       setSyncState("offline");
       return;
     }
@@ -335,11 +337,12 @@ function App() {
     let cancelled = false;
     const client = supabase;
     setSyncState("syncing");
-    void getCloudSyncEnabled(client, user.id)
-      .then(async (enabled) => {
+    void getCloudAccountSettings(client, user.id)
+      .then(async (settings) => {
         if (cancelled) return;
-        setCloudSyncEnabled(enabled);
-        if (!enabled) {
+        setCloudDataAccessAllowed(settings.metadataSyncAllowed);
+        setCloudSyncEnabled(settings.syncEnabled);
+        if (!settings.syncEnabled) {
           syncInitialized.current = false;
           setSyncState("offline");
           return;
@@ -358,6 +361,7 @@ function App() {
         if (cancelled) return;
         console.error("Mochi cloud sync failed", error);
         syncInitialized.current = false;
+        setCloudDataAccessAllowed(false);
         setCloudSyncEnabled(false);
         setSyncState("error");
       });
@@ -820,20 +824,15 @@ function App() {
   };
 
   const clearCloudData = async () => {
-    if (!supabase || !user || cloudDataBusy) return;
-    if (!window.confirm("Delete all Mochi data saved to your cloud account, including your cloud library and saved provider credentials? Your local library and Mochi account will remain on this device.")) return;
+    if (!supabase || !user || !cloudDataAccessAllowed || cloudDataBusy) return;
+    if (!window.confirm("Delete all Mochi Cloud Pikos and Tofus for this account? Your local library, account, and saved provider credentials will not be changed.")) return;
     setCloudDataBusy(true);
     setCloudDataMessage("");
     try {
-      await clearAccountCloudData(supabase);
-      syncInitialized.current = false;
-      setCloudSyncEnabled(false);
-      setSyncState("offline");
-      setCredentialStatus({ igdb: false, nexus: false });
-      setIgdbClientId("");
-      setIgdbClientSecret("");
-      setNexusApiKey("");
-      setCloudDataMessage("Cloud data and saved provider credentials cleared. Your local library was not changed.");
+      const deleted = await clearAccountCloudData(supabase);
+      syncInitialized.current = cloudSyncEnabled;
+      setSyncState(cloudSyncEnabled ? "synced" : "offline");
+      setCloudDataMessage(`Cloud library cleared. Removed ${deleted.deleted_pikos} Pikos and ${deleted.deleted_tofus} Tofus. Your local library and saved provider credentials were not changed.`);
     } catch (error) {
       setCloudDataMessage(error instanceof Error ? error.message : "Unable to clear cloud library data.");
     } finally {
@@ -1157,7 +1156,7 @@ function App() {
               </div>
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>Data & privacy</strong><span>Local-first storage</span></div>
-                <div className="setting-row"><span><strong>Cloud data</strong><small>Delete your cloud library and saved provider credentials. Your local library and account stay on this device.</small></span><button type="button" className="secondary-button danger-outline" disabled={!user || cloudDataBusy} onClick={() => void clearCloudData()}>{cloudDataBusy ? "Clearing…" : "Clear cloud data"}</button></div>
+                <div className="setting-row"><span><strong>Cloud data</strong><small>{cloudDataAccessAllowed ? "Delete your cloud Pikos and Tofus. Your local library, account, and saved provider credentials stay unchanged." : "Mochi Cloud data controls are not enabled for this account."}</small></span><button type="button" className="secondary-button danger-outline" disabled={!user || !cloudDataAccessAllowed || cloudDataBusy} onClick={() => void clearCloudData()}>{cloudDataBusy ? "Clearing…" : cloudDataAccessAllowed ? "Clear cloud data" : "Unavailable"}</button></div>
                 {cloudDataMessage && <p className="metadata-note" role="status" style={{ padding: "0 17px 14px" }}>{cloudDataMessage}</p>}
                 <div className="setting-row setting-location-row"><span><strong>Library location</strong><small>Your Mochi configuration, themes and launcher data are stored here.</small></span><span className="setting-location-value"><code>{configInfo?.configPath || "Default Mochi location"}</code><button type="button" className="secondary-button" onClick={() => void chooseMochiConfigLocation()}>Change</button></span></div>
                 <button className="setting-row setting-button" onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}><span><strong>Advanced settings</strong><small>Diagnostics and experimental launcher controls.</small></span><MochiIcon name="chevron" fallback={ChevronDown} className={showAdvancedSettings ? "rotate" : ""} size={16} /></button>
