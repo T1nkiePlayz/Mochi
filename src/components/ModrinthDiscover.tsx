@@ -304,6 +304,12 @@ const defaultNexusGames: Array<{ domainName: string; search: string }> = [
   { domainName: "stardewvalley", search: "Stardew Valley" },
 ];
 
+const defaultNexusGame = ({ domainName, search }: typeof defaultNexusGames[number]): NexusGame => ({
+  id: "",
+  domainName,
+  name: search,
+});
+
 type Props = {
   tofu: Tofu;
   pikos: Piko[];
@@ -358,38 +364,29 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
     setNexusLoading(true);
     setMessage("");
     try {
-      const requested = [
-        ...defaultNexusGames,
-        ...addedNexusDomains.map(domainName => ({ domainName, search: domainName })),
-      ];
-      const results = await Promise.all(
-        requested.map(async ({ domainName, search }) => {
-          const games = await getNexusGames(supabase, search);
-          return games.find(game => game.domainName === domainName);
-        }),
-      );
-      const byDomain = new Map<string, NexusGame>();
-      results.filter((game): game is NexusGame => Boolean(game)).forEach(game => byDomain.set(game.domainName, game));
-      const seeded = defaultNexusGames
-        .map(({ domainName }) => byDomain.get(domainName))
-        .filter((game): game is NexusGame => Boolean(game));
+      const catalog = await getNexusGames(supabase);
+      const byDomain = new Map(catalog.map((game) => [game.domainName, game]));
+      const seeded = defaultNexusGames.map((item) => byDomain.get(item.domainName) ?? defaultNexusGame(item));
       const custom = addedNexusDomains
-        .map(domain => byDomain.get(domain))
-        .filter((game): game is NexusGame => Boolean(game));
+        .map((domain) => byDomain.get(domain) ?? { id: "", name: domain, domainName: domain });
       setNexusGames([...seeded, ...custom.filter(game => !defaultNexusGames.some(item => item.domainName === game.domainName))]);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to load Nexus Mods games.");
-      setNexusGames([]);
+      setNexusGames([
+        ...defaultNexusGames.map(defaultNexusGame),
+        ...addedNexusDomains.map((domainName) => ({ id: "", name: domainName, domainName })),
+      ]);
     } finally {
       setNexusLoading(false);
     }
   };
 
-  const searchNexusGames = async (value: string) => {
+  const searchNexusGames = async () => {
     if (!nexusVisible || !supabase) return;
     setNexusLoading(true);
+    setMessage("");
     try {
-      const games = await getNexusGames(supabase, value);
+      const games = await getNexusGames(supabase);
       setNexusGameResults(games);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to search Nexus Mods games.");
@@ -433,9 +430,8 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
 
   useEffect(() => {
     if (!showNexusGamePicker || !nexusVisible) return;
-    const timer = window.setTimeout(() => void searchNexusGames(nexusGameSearch.trim()), 250);
-    return () => window.clearTimeout(timer);
-  }, [showNexusGamePicker, nexusVisible, nexusGameSearch]);
+    void searchNexusGames();
+  }, [showNexusGamePicker, nexusVisible]);
 
   useEffect(() => {
     if (tab.kind === "nexus" && nexusVisible) void refreshNexusMods(tab.game);
@@ -501,7 +497,7 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
           {game.iconUrl ? <img className="discover-game-icon" src={game.iconUrl} alt="" /> : <span className="discover-game-icon fallback">{game.name.slice(0, 1)}</span>}
           <span>{game.name}</span>
         </button>)}
-        {nexusVisible && <button className="discover-game-add" type="button" title="Search and add a Nexus Mods game" aria-label="Search and add a Nexus Mods game" onClick={() => { setNexusGameSearch(""); setNexusGameResults([]); setShowNexusGamePicker(true); }}><Plus size={17} /></button>}
+        {nexusVisible && <button className="discover-game-add" type="button" title="Search and add a Nexus Mods game" aria-label="Search and add a Nexus Mods game" onClick={() => { setNexusGameSearch(""); setNexusGameResults([]); setMessage(""); setShowNexusGamePicker(true); }}><Plus size={17} /></button>}
       </div>
 
       {tab.kind === "minecraft" ? <>
@@ -543,7 +539,7 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
     </section>
     {details && <ProjectDetails project={details} gameVersion={gameVersion} onClose={() => setDetails(null)} />}
     {tofuPicker && <TofuPicker project={tofuPicker} pikos={pikos} onClose={() => setTofuPicker(null)} onInstall={(target) => { setTofuPicker(null); void install(tofuPicker, target); }} />}
-    {showNexusGamePicker && <NexusGamePicker games={nexusGameResults} search={nexusGameSearch} setSearch={setNexusGameSearch} onClose={() => { setShowNexusGamePicker(false); setNexusGameSearch(""); }} onChoose={addNexusGame} loading={nexusLoading} />}
+    {showNexusGamePicker && <NexusGamePicker games={nexusGameResults} search={nexusGameSearch} setSearch={setNexusGameSearch} onClose={() => { setShowNexusGamePicker(false); setNexusGameSearch(""); }} onChoose={addNexusGame} loading={nexusLoading} error={message} />}
   </>;
 
   async function openDetails(project: ModrinthProject) {
@@ -555,13 +551,14 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
   }
 }
 
-function NexusGamePicker({ games, search, setSearch, onClose, onChoose, loading }: { games: NexusGame[]; search: string; setSearch: (value: string) => void; onClose: () => void; onChoose: (game: NexusGame) => void; loading: boolean }) {
+function NexusGamePicker({ games, search, setSearch, onClose, onChoose, loading, error }: { games: NexusGame[]; search: string; setSearch: (value: string) => void; onClose: () => void; onChoose: (game: NexusGame) => void; loading: boolean; error: string }) {
   const value = search.trim().toLowerCase();
   const visible = games.filter(game => !value || game.name.toLowerCase().includes(value) || game.domainName.toLowerCase().includes(value));
   return <div className="discover-modal-backdrop" onMouseDown={onClose}><div className="tofu-picker-window nexus-game-picker-window" onMouseDown={event => event.stopPropagation()}>
     <div className="modal-header"><div><p className="eyebrow">Nexus Mods</p><h2>Add a game</h2></div><button className="icon-button" onClick={onClose}><X size={17}/></button></div>
     <p className="modal-description">Search the Nexus Mods game catalog and add a game as a permanent Discovery tab.</p>
     <label className="search-box nexus-game-search"><Search size={15}/><input autoFocus value={search} onChange={event => setSearch(event.target.value)} placeholder="Search Nexus games..." /></label>
+    {error && <p className="metadata-note" role="alert">{error}</p>}
     {loading ? <div className="discover-loading"><RefreshCw size={18} className="spin" /><span>Loading games...</span></div> : <div className="nexus-game-picker-list">{visible.slice(0, 30).map(game => <button key={game.domainName} className="nexus-game-picker-row" type="button" onClick={() => onChoose(game)}>
       {game.iconUrl ? <img src={game.iconUrl} alt="" /> : <span>{game.name.slice(0, 1)}</span>}<div><strong>{game.name}</strong><small>{game.domainName}{game.modCount ? " · " + game.modCount.toLocaleString() + " mods" : ""}</small></div><Plus size={15}/>
     </button>)}{!visible.length && <div className="discover-empty">No Nexus Mods games match your search.</div>}</div>}

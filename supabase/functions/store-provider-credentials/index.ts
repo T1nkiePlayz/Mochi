@@ -13,6 +13,7 @@ type Body =
   | { action: "set"; provider: Provider; secret: string }
   | { action: "status"; provider?: Provider }
   | { action: "delete"; provider: Provider }
+  | { action: "clear" }
   | { action: "nexus-games"; query?: string }
   | { action: "nexus-mods"; gameDomain: string };
 
@@ -59,6 +60,24 @@ Deno.serve(async (req) => {
 
   const connection = await pool.connect();
   try {
+    if (body.action === "clear") {
+      await connection.queryObject("begin");
+      try {
+        await connection.queryObject(
+          "delete from vault.secrets where id in (select secret_id from mochi_private.user_credentials where user_id = $1)",
+          [user.id],
+        );
+        await connection.queryObject("delete from mochi_private.user_credentials where user_id = $1", [user.id]);
+        await connection.queryObject("delete from public.pikos where user_id = $1", [user.id]);
+        await connection.queryObject("delete from public.profiles where id = $1", [user.id]);
+        await connection.queryObject("commit");
+      } catch (error) {
+        await connection.queryObject("rollback");
+        throw error;
+      }
+      return response({ cleared: true });
+    }
+
     if (body.action === "nexus-games" || body.action === "nexus-mods") {
       const secretRows = await connection.queryObject<{ decrypted_secret: string }>(
         "select decrypted_secret from vault.decrypted_secrets where id = (select secret_id from mochi_private.user_credentials where user_id = $1 and provider = 'nexus')",
@@ -86,7 +105,7 @@ Deno.serve(async (req) => {
             id: String(game.id ?? ""),
             name: String(game.name),
             domainName: String(game.domain_name),
-            iconUrl: typeof game.id === "number" || /^\\d+$/.test(String(game.id ?? ""))
+            iconUrl: typeof game.id === "number" || /^\d+$/.test(String(game.id ?? ""))
               ? "https://staticdelivery.nexusmods.com/images/games/cover_" + String(game.id) + ".jpg"
               : undefined,
             modCount: typeof game.mods === "number" ? game.mods : undefined,

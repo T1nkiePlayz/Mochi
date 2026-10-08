@@ -10,6 +10,22 @@ permissions:
   pull-requests: read
 
 jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Detect backend changes
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          base: ${{ github.ref }}
+          filters: |
+            backend:
+              - 'src-tauri/**'
+
   build:
     runs-on: ubuntu-24.04
     steps:
@@ -40,6 +56,8 @@ jobs:
 
   macos:
     name: macOS backend (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -48,11 +66,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-          cache: npm
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Cache Rust
@@ -61,21 +74,7 @@ jobs:
           workspaces: "./src-tauri -> target"
           shared-key: macos-${{ matrix.os }}-rust
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - name: Detect backend changes
-        id: changes
-        uses: dorny/paths-filter@v4
-        with:
-          filters: |
-            backend:
-              - 'src-tauri/**'
-              - 'Cargo.lock'
-              - '.github/workflows/ci.yml'
-      - name: Install dependencies
-        run: npm ci
-      - name: Build frontend
-        run: npm run build
       - name: Check Tauri backend
-        if: steps.changes.outputs.backend == 'true'
         env:
           CARGO_PROFILE_DEV_DEBUG: "0"
         run: cargo check --manifest-path src-tauri/Cargo.toml

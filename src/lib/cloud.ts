@@ -68,6 +68,12 @@ export async function pullLibrary(client: SupabaseClient, userId: string): Promi
 }
 
 export async function pushLibrary(client: SupabaseClient, userId: string, library: Piko[]) {
+  if (!library.length) {
+    const { error } = await client.from("pikos").delete().eq("user_id", userId);
+    if (error) throw error;
+    return;
+  }
+
   const { data: pikoRows, error: pikoError } = await client
     .from("pikos")
     .upsert(
@@ -123,6 +129,13 @@ export async function pushLibrary(client: SupabaseClient, userId: string, librar
     .from("tofus")
     .upsert(tofuRows, { onConflict: "piko_id,local_id" });
   if (tofuError) throw tofuError;
+}
+
+export async function clearAccountCloudData(client: SupabaseClient) {
+  const { error } = await client.functions.invoke("store-provider-credentials", {
+    body: { action: "clear" },
+  });
+  if (error) throw error;
 }
 
 

@@ -46,6 +46,7 @@ export function FirstLaunchSetup({
   const [gamesBySource, setGamesBySource] = useState<Record<string, ImportedGame[]>>({});
   const [scanning, setScanning] = useState(false);
   const [entering, setEntering] = useState(false);
+  const [importError, setImportError] = useState("");
 
   const detected = useMemo(() => sources.filter((source) => source.detected), [sources]);
   const hasChange =
@@ -67,7 +68,7 @@ export function FirstLaunchSetup({
       .finally(() => setScanning(false));
   }, [step]);
 
-  const goNext = () => {
+  const goNext = async () => {
     if (step === "account" && !signedIn) {
       setStep("imports");
       return;
@@ -78,6 +79,25 @@ export function FirstLaunchSetup({
       window.setTimeout(() => { setStep(steps[index + 1]); setEntering(false); }, 140);
       return;
     }
+    if (step === "imports") {
+      setImportError("");
+      setScanning(true);
+      try {
+        const scanned = await Promise.all(selectedSources.map(async (source) => [
+          source,
+          gamesBySource[source] ?? await scanImportGames(source),
+        ] as const));
+        const games = scanned.flatMap(([, sourceGames]) => sourceGames);
+        onFinish(games, selectedSources);
+      } catch (error) {
+        // Keep setup open so the user can retry or deselect a source that failed to scan.
+        setImportError(error instanceof Error ? error.message : "Unable to scan the selected game platforms.");
+      } finally {
+        setScanning(false);
+      }
+      return;
+    }
+
     const games = selectedSources.flatMap((source) => gamesBySource[source] ?? []);
     onFinish(games, selectedSources);
   };
@@ -277,6 +297,7 @@ export function FirstLaunchSetup({
             ) : (
               <div className="setup-no-sources"><Gamepad2 size={20} /><strong>No supported game services detected.</strong><span>You can add games manually or configure a source later.</span><button type="button" className="text-button" onClick={() => { setScanning(true); void detectImportSources().then(setSources).finally(() => setScanning(false)); }}><RefreshCw size={14} /> Scan again</button></div>
             )}
+            {importError && <p className="metadata-note" role="alert">{importError}</p>}
           </section>
         )}
 
