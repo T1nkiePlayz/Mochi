@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "id": "mochi-light",
   "name": "Mochi Light",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "author": "Side Quest Games",
-  "description": "A bright Mochi theme with warm surfaces, soft mint accents and comfortable contrast.",
+  "description": "A bright, airy launcher: porcelain surfaces, sage accents and crisp contrast.",
   "colors": {
     "background": "#f4f7f5",
     "backgroundElevated": "#ffffff",
@@ -33,8 +33,7 @@
     "radiusMd": "12px",
     "radiusLg": "18px",
     "sidebarWidth": "246px",
-    "contentMaxWidth": "1160px",
-    "density": "1"
+    "contentMaxWidth": "1160px"
   },
   "typography": {
     "bodyLineHeight": "1.55",
@@ -66,6 +65,23 @@
     "inputHeight": "38px",
     "cardRadius": "18px",
     "heroRadius": "24px",
-    "glass": "rgba(255,255,255,.82)"
-  }
+    "appBackground": "radial-gradient(circle at 85% -10%, rgba(79,146,113,.12), transparent 36%), #f4f7f5",
+    "sidebarBackground": "#ffffff",
+    "sidebarBorder": "#d9e3dd",
+    "buttonBackground": "#ffffff",
+    "buttonColor": "#18231e",
+    "buttonBorder": "#bdcdc3",
+    "buttonShadow": "0 1px 0 rgba(30,55,43,.06)",
+    "primaryShadow": "0 6px 16px rgba(79,146,113,.28)",
+    "modalBackground": "#ffffff",
+    "modalBorder": "#d9e3dd",
+    "modalShadow": "0 24px 70px rgba(30,55,43,.22)",
+    "cardShadow": "0 1px 2px rgba(30,55,43,.06), 0 8px 24px rgba(30,55,43,.07)",
+    "overlayBackground": "rgba(24,35,30,.4)",
+    "inputBackground": "#ffffff",
+    "scrollbarThumb": "#bdcdc3"
+  },
+  "order": 2,
+  "scheme": "light",
+  "shell": "left"
 }

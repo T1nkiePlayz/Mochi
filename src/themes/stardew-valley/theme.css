@@ -1,64 +1,66 @@
-/* Stardew Valley — cozy farm journal / handcrafted noticeboard UI. */
-.app-shell{background:radial-gradient(circle at 80% -10%,rgba(230,168,78,.14),transparent 28%),linear-gradient(180deg,#182018,#1e281d 65%,#151c16)}
-.sidebar{background:linear-gradient(180deg,#2a3928,#1d291c);border-right:6px double #65734c;box-shadow:inset -3px 0 rgba(0,0,0,.18)}
-.brand-mark{border:3px solid #879a62!important;border-radius:12px!important;box-shadow:inset 0 -4px 0 rgba(0,0,0,.22),0 5px 0 rgba(0,0,0,.18)}
-.nav-item,.piko-nav-item{border:0!important;border-radius:4px 12px 12px 4px!important;margin:5px 4px;padding:11px 12px;background:transparent;box-shadow:none!important}.nav-item:hover,.piko-nav-item:hover{background:#394b31;color:#fff0c9;transform:translateX(3px)}
-.nav-item.active{background:#4a5f3d;color:#fff9e6;box-shadow:inset 4px 0 #e6a84e,3px 3px 0 rgba(0,0,0,.18)!important}.topbar{background:rgba(34,48,34,.88);border-bottom:3px solid #65734c;box-shadow:0 3px 0 rgba(0,0,0,.12)}
-.search-box{border:2px solid #65734c!important;border-radius:18px!important;background:#223022!important}.play-button{border-radius:8px 16px 8px 16px!important;border:2px solid #b47a2f;box-shadow:0 3px 0 #8b5e25!important}.secondary-button{border-radius:7px 13px 7px 13px!important;border:2px solid #65734c;background:#394b31}
-.game-card,.tofu-card,.new-tofu-card,.settings-group,.theme-card{border:2px solid #65734c!important;border-radius:6px 14px 8px 14px!important;background:linear-gradient(145deg,#394b31,#2c3b29);box-shadow:4px 5px 0 rgba(0,0,0,.16)!important}.game-card:hover,.tofu-card:hover{transform:translateY(-2px) rotate(-.15deg)}
-.hero-card{border:2px solid #879a62!important;border-radius:8px 18px 10px 18px!important;box-shadow:8px 9px 0 rgba(0,0,0,.16)!important}.modal{border:3px solid #879a62!important;border-radius:8px 18px 8px 18px!important;background:#2c3b29}.form-fields input,.form-fields select,.igdb-form input,.provider-credential-card input{border:2px solid #65734c;border-radius:6px 12px 6px 12px!important;background:#182018}.toggle{border-radius:8px!important}.theme-card{position:relative;overflow:hidden}.theme-card:after{content:"✦";position:absolute;right:12px;bottom:7px;color:rgba(230,168,78,.28);font-size:18px}
-/* Stardew controls use the same readable checkbox treatment as Minecraft Ore. */
-[data-mochi-theme="stardew-valley"] .toggle{
-  appearance:none;
-  width:22px;
-  height:22px;
-  min-width:22px;
-  margin:0;
-  border:2px solid #65734c;
-  border-radius:3px!important;
-  background:#182018;
-  box-shadow:inset 0 -2px 0 rgba(0,0,0,.25);
-  position:relative;
-}
-[data-mochi-theme="stardew-valley"] .toggle::after{
-  content:"";
-  position:absolute;
-  inset:3px;
-  width:auto;
-  height:auto;
-  border-radius:0;
-  background:transparent;
-}
-[data-mochi-theme="stardew-valley"] .toggle:checked{
-  border-color:#e6a84e;
-  background:#e6a84e;
-}
-[data-mochi-theme="stardew-valley"] .toggle:checked::after{
-  background:#25170a;
-  clip-path:polygon(14% 48%,0 63%,38% 100%,100% 20%,84% 6%,38% 68%);
-}
-[data-mochi-theme="stardew-valley"] .brand-mark{
-  display:grid!important;
-  place-items:center!important;
-  overflow:hidden!important;
-}
-[data-mochi-theme="stardew-valley"] .brand-mark img{
-  display:block!important;
-  width:72%!important;
-  height:72%!important;
-  max-width:72%!important;
-  max-height:72%!important;
-  object-fit:contain!important;
-  object-position:center!important;
-  margin:0!important;
-}
+/* Stardew Valley — a sunny farm menu. The launcher is a parchment menu box in a wooden frame
+ * sitting on the meadow, with the navigation as the toolbar hotbar along the bottom. */
 
-/* Cozy noticeboard styling for floating menus. */
-[data-mochi-theme="stardew-valley"] .notification-popover,[data-mochi-theme="stardew-valley"] .account-menu{border:2px solid #65734c;border-radius:8px 16px 10px 16px!important;background:linear-gradient(145deg,#394b31,#2c3b29);box-shadow:5px 6px 0 rgba(0,0,0,.2);}
-[data-mochi-theme="stardew-valley"] .notification-heading{border-bottom:2px solid #65734c;background:#2a3928;color:#fff9e6;}
-[data-mochi-theme="stardew-valley"] .notification-heading button,[data-mochi-theme="stardew-valley"] .account-menu-add>svg{color:#e6a84e;}
-[data-mochi-theme="stardew-valley"] .notification-item,[data-mochi-theme="stardew-valley"] .account-menu-add{border-color:#65734c!important;}
-[data-mochi-theme="stardew-valley"] .notification-item span,[data-mochi-theme="stardew-valley"] .notification-empty,[data-mochi-theme="stardew-valley"] .account-menu small{color:#c6ceae;}
-[data-mochi-theme="stardew-valley"] .account-menu button:hover,[data-mochi-theme="stardew-valley"] .account-menu button.selected{background:#4a5f3d;}
-[data-mochi-theme="stardew-valley"] .discover-game-tab{border:2px solid #65734c;border-radius:6px 14px 8px 14px!important;background:#2c3b29;}
-[data-mochi-theme="stardew-valley"] .discover-game-tab.active{border-color:#e6a84e;background:#4a5f3d;}
+.main-content { padding: 18px 22px 8px; }
+.content { margin: 6px auto 18px; background: #f1cf93; border: 3px solid #5c2c0c; box-shadow: 0 0 0 3px #d9822b, 0 0 0 6px #5c2c0c, 8px 8px 0 6px rgba(60, 30, 5, .35); }
+.topbar { margin: -18px -22px 14px; padding: 0 28px; box-shadow: inset 0 -3px 0 #5c2c0c; }
+.breadcrumb, .breadcrumb strong, .breadcrumb-slash { color: #ffe9c0; text-shadow: 2px 2px 0 #4a2306; }
+
+/* Hotbar */
+.sidebar { justify-content: center; gap: 10px; padding: 8px 20px; min-height: 84px; box-shadow: inset 0 3px 0 #c98a3c, inset 0 5px 0 #4a2306; }
+.primary-nav { gap: 8px; padding: 8px 10px; background: #5c2c0c; box-shadow: inset 0 0 0 3px #3a1a05; }
+.nav-item { flex-direction: column; justify-content: center; gap: 3px; width: 82px; height: 60px; min-height: 0; padding: 4px; background: #e8b868; border: 3px solid #3a1a05; box-shadow: inset 0 0 0 2px #f6d7a1, inset -2px -2px 0 2px #b97a2e; color: #4b2a10; font-size: 11px; }
+.nav-item:hover { background: #ffd58a; color: #2e1706; }
+.nav-item.active { border-color: #b3261e; box-shadow: inset 0 0 0 2px #f6d7a1, 0 0 0 2px #b3261e; background: #fbe5b8; color: #2e1706; }
+.nav-item svg, .nav-item .mochi-icon-wrap { width: 22px; height: 22px; font-size: 22px; }
+.sidebar-bottom .nav-item { width: 82px; }
+.sidebar-account-wrap { margin: 0; }
+.sidebar-account { background: #e8b868; border: 3px solid #3a1a05; border-radius: 0; box-shadow: inset 0 0 0 2px #f6d7a1; color: #2e1706; }
+.sidebar-account small { color: #7a4a22; }
+.sidebar-account:hover { background: #ffd58a; }
+.account-avatar { border-radius: 0; border: 3px solid #3a1a05; background: #8bc34a; color: #10300a; image-rendering: pixelated; }
+.account-menu { border-radius: 0; background: #f6d7a1; box-shadow: 0 0 0 3px #d9822b, 0 0 0 6px #5c2c0c; border: 3px solid #5c2c0c; }
+
+/* Menu boxes */
+.page-heading h1 { font-size: 34px; }
+.eyebrow { color: #a8691f; }
+.section-heading h3 { font-size: 22px; }
+.game-card { padding: 4px; background: #fbe5b8; }
+.game-card .game-card-art { border: 3px solid #5c2c0c; image-rendering: pixelated; }
+.game-card-copy { background: transparent; padding: 8px 4px 4px; }
+.game-card-copy strong { color: #2e1706; font-size: 15px; }
+.game-card-copy small { color: #7a4a22; }
+.game-card:hover { transform: none; background: #ffedc9; box-shadow: inset 0 0 0 2px #e8b868, 0 0 0 3px #b3261e; }
+.game-card:hover .game-card-art { transform: none; }
+.game-card-play { border-radius: 0; background: #5fae3a; box-shadow: inset 0 0 0 2px #9be06c; color: #10300a; border: 2px solid #2a4a12; }
+.continue-card { background: #fbe5b8; }
+.continue-art { border: 3px solid #5c2c0c; border-radius: 0; image-rendering: pixelated; }
+.continue-copy strong { color: #2e1706; }
+.continue-play { border-radius: 0; border: 3px solid #2a4a12; box-shadow: inset 0 0 0 2px #9be06c; }
+.category-count, .game-details-badges span { border-radius: 0; background: #e8b868; border: 2px solid #5c2c0c; color: #2e1706; }
+.library-toolbar { border-bottom: 3px solid #5c2c0c; }
+.library-count, .library-sort { color: #7a4a22; }
+.game-details-hero { box-shadow: inset 0 0 0 2px #e8b868; }
+.game-details-cover { border: 3px solid #5c2c0c; image-rendering: pixelated; }
+.hero-card h2, .hero-card p { color: #fff7e0; text-shadow: 2px 2px 0 #2e1706; }
+.settings-group-heading strong, .game-details-title h2 { color: #2e1706; }
+.tofu-card.active { box-shadow: inset 0 0 0 2px #e8b868, 0 0 0 3px #b3261e; }
+.workspace-tabs { border-bottom: 3px solid #5c2c0c; }
+.workspace-tabs button { border: 3px solid #5c2c0c; background: #e0a050; color: #2e1706; border-radius: 0; margin-right: 2px; }
+.workspace-tabs button.active { background: #fbe5b8; border-bottom-color: #fbe5b8; box-shadow: none; }
+.toggle { appearance: none; position: relative; width: 46px; height: 24px; border: 3px solid #5c2c0c; background: #c9b08a; border-radius: 0; }
+.toggle::after { content: ""; position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: #fbe5b8; border: 2px solid #5c2c0c; box-sizing: content-box; width: 12px; height: 12px; transition: transform 80ms linear; }
+.toggle:checked { background: #5fae3a; }
+.toggle:checked::after { transform: translateX(22px); }
+.credential-status { border-radius: 0; }
+.notification-popover { background: #f6d7a1; border: 3px solid #5c2c0c; border-radius: 0; box-shadow: 0 0 0 3px #d9822b, 0 0 0 6px #5c2c0c; }
+.setup-shell { background: var(--mochi-app-background); color: #2e1706; }
+.setup-panel { background: #f6d7a1; border: 3px solid #5c2c0c; border-radius: 0; box-shadow: 0 0 0 3px #d9822b, 0 0 0 6px #5c2c0c, 8px 8px 0 6px rgba(60, 30, 5, .4); color: #4b2a10; }
+.setup-footer { background: #f1cf93; border-top: 3px solid #5c2c0c; }
+.setup-orbit { display: none; }
+.setup-progress span { background: #c9a066; border-radius: 0; height: 6px; }
+.setup-progress span.active { background: #5fae3a; }
+.download-progress { background: #c9a066; border: 3px solid #5c2c0c; border-radius: 0; height: 14px; }
+.download-progress > span { background: #5fae3a; }
+.play-button, .secondary-button { text-shadow: none; }
+::selection { background: #b3261e; color: #fff; }

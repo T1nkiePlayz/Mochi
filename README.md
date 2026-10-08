@@ -108,8 +108,9 @@ One Piko can therefore have multiple Tofus without duplicating the game's identi
 ### Launcher experience
 
 - Library search across game names, descriptions, and categories, with **Ctrl+K / Cmd+K** focus shortcut.
-- Customizable local themes with theme-defined colors, typography, component tokens, and assets.
-- A dedicated high-contrast light theme with light-specific icon assets.
+- Eleven built-in themes, each with its own layout and visual language: Mochi, Mochi Light, Minecraft Ore (after Prism's Ore UI Dark Diamond), Minecraft Dungeons, Subnautica, Stardew Valley, RuneScape, Fallout Pip-Boy, Cyberpunk 2077, Animal Crossing and Terraria.
+- Every colour, shape, surface, font and layout position is a design token, so a JSON-only theme can retint the whole launcher and a `theme.css` can restyle any of its screens; see `docs/theme-architecture.md`.
+- A game library with *Continue playing*, sorting, and a per-game page that holds playtime, Tofus and mod management.
 - Guided first-launch setup with separated Welcome, account, IGDB, and import stages.
 - Setup navigation with Previous on the left and Next on the right.
 - In-app notification centre with unread indicator and native desktop notifications on Linux (`notify-send`) and macOS (`osascript`).
@@ -184,7 +185,7 @@ When IGDB is configured, Mochi can search for possible matches after a game is a
 
 ### Local themes and settings
 
-Mochi includes multiple visual themes and stores launcher preferences locally. Settings include appearance, launcher behavior, and optional IGDB configuration.
+Mochi includes eleven visual themes (with colour previews in Settings) and stores launcher preferences locally. Settings include appearance, launcher behavior, and optional IGDB configuration.
 
 ### Account integration
 

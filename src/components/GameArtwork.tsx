@@ -11,5 +11,7 @@ export function GameArtwork({ className, cacheKey, fallback }: { className: stri
       .catch(() => {});
     return () => { cancelled = true; };
   }, [cacheKey]);
-  return <div className={className} style={{ backgroundImage: cached ? `linear-gradient(145deg, rgba(10,15,20,.12), rgba(11,15,20,.88)), url("${cached}")` : fallback }} />;
+  // Older libraries stored a hard-coded purple gradient as "no artwork"; let the theme's placeholder show instead.
+  const custom = fallback && !fallback.includes("rgba(73,57,103") ? fallback : undefined;
+  return <div className={className} style={{ backgroundImage: cached ? `linear-gradient(145deg, rgba(10,15,20,.12), rgba(11,15,20,.88)), url("${cached}")` : custom }} />;
 }

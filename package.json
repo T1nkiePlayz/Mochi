@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "node scripts/check-themes.mjs && tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "check:themes": "node scripts/check-themes.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

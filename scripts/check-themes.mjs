@@ -1,0 +1,51 @@
+// Validates every built-in theme: manifest shape, unique ids, asset files, fonts, and token names.
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const root = "src/themes";
+const SHELLS = ["left", "right", "top", "bottom", "rail"];
+const SECTIONS = ["colors", "ui", "typography", "layout", "effects", "components"];
+const REQUIRED_COLORS = ["background", "backgroundElevated", "surface", "surfaceRaised", "surfaceHover", "border", "borderStrong", "text", "textStrong", "textMuted", "textFaint", "accent", "accentStrong", "accentText", "accentSoft", "success", "warning", "danger", "shadow"];
+
+// Token names the launcher actually reads (src/styles/*.css and src/index.css).
+const css = ["src/styles/tokens.css", "src/styles/components.css", "src/styles/bridge.css", "src/index.css"].map((file) => readFileSync(file, "utf8")).join("\n");
+const defined = new Set([...readFileSync("src/styles/tokens.css", "utf8").matchAll(/--mochi-([a-z0-9-]+)\s*:/g)].map((match) => match[1]));
+const kebab = (name) => name.replace(/([a-z])([A-Z])/g, "$1-$2").replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase();
+
+const errors = [];
+const ids = new Set();
+for (const folder of readdirSync(root, { withFileTypes: true }).filter((entry) => entry.isDirectory())) {
+  const dir = join(root, folder.name);
+  const manifestPath = join(dir, "theme.json");
+  if (!existsSync(manifestPath)) { errors.push(`${folder.name}: missing theme.json`); continue; }
+  const fail = (message) => errors.push(`${folder.name}: ${message}`);
+  let manifest;
+  try { manifest = JSON.parse(readFileSync(manifestPath, "utf8")); } catch (error) { fail(`theme.json is not valid JSON (${error.message})`); continue; }
+
+  if (manifest.schemaVersion !== 1) fail("schemaVersion must be 1");
+  if (manifest.id !== folder.name) fail(`id "${manifest.id}" must match the folder name`);
+  if (ids.has(manifest.id)) fail("duplicate id"); ids.add(manifest.id);
+  if (!/^[A-Za-z0-9_-]{1,80}$/.test(manifest.id ?? "")) fail("id may only contain letters, numbers, - and _");
+  if (!manifest.name?.trim()) fail("missing name");
+  if (manifest.shell && !SHELLS.includes(manifest.shell)) fail(`shell must be one of ${SHELLS.join(", ")}`);
+  if (manifest.scheme && !["light", "dark"].includes(manifest.scheme)) fail("scheme must be light or dark");
+  for (const font of manifest.fonts ?? []) if (!font.startsWith("https://fonts.googleapis.com/")) fail(`font "${font}" must be a Google Fonts stylesheet`);
+  for (const color of REQUIRED_COLORS) if (!manifest.colors?.[color]) fail(`colors.${color} is required`);
+  if (!existsSync(join(dir, "theme.css"))) fail("missing theme.css");
+
+  for (const [name, path] of [...Object.entries(manifest.assets ?? {}), ...Object.entries(manifest.icons ?? {})]) {
+    if (path.includes("..") || path.startsWith("/")) fail(`asset "${name}" must be a relative path inside the theme`);
+    else if (!existsSync(join(dir, path))) fail(`asset "${name}" points at missing file ${path}`);
+  }
+  for (const section of SECTIONS) {
+    for (const key of Object.keys(manifest[section] ?? {})) {
+      if (!defined.has(kebab(key)) && !css.includes(`--mochi-${kebab(key)}`)) fail(`${section}.${key} (--mochi-${kebab(key)}) is not a token the launcher reads`);
+    }
+  }
+}
+
+if (errors.length) {
+  console.error(errors.map((error) => `✗ ${error}`).join("\n"));
+  process.exit(1);
+}
+console.log(`✓ ${ids.size} themes valid: ${[...ids].join(", ")}`);

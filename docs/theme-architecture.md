@@ -101,13 +101,13 @@ Examples:
     ui.radiusMd -> --mochi-radius-md
     ui.sidebarWidth -> --mochi-sidebar-width
 
-The standard launcher stylesheet is connected to these tokens through a runtime bridge.
+The standard launcher stylesheet is written against these tokens.
 
 This means changing a token can affect many parts of the launcher at once without requiring a theme author to know every internal selector.
 
 ## Custom CSS
 
-theme.css is loaded after the standard theme bridge.
+theme.css is loaded after the launcher's own stylesheets.
 
 This is deliberately powerful. A theme can override:
 
@@ -127,20 +127,77 @@ This is deliberately powerful. A theme can override:
 
 Theme CSS is treated as user-installed UI code. Mochi should therefore only install themes the user trusts.
 
+## Layers
+
+The launcher paints with four stylesheets, always in this order, and a theme comes last:
+
+1. `src/styles/tokens.css` — every design token with Mochi's default value (103 of them; see `docs/theme-hooks.md`).
+2. `src/index.css` — structure and per-screen layout, written entirely against tokens.
+3. `src/styles/bridge.css` — maps remaining components onto tokens.
+4. `src/styles/components.css` — one definition per primitive (buttons, inputs, cards, panels, dialogs, tabs) plus the shell presets below.
+5. The theme: `theme.json` tokens (as a generated `:root` block), then `theme.css`.
+
+Because every colour, radius, border width, shadow, font and surface is a token, a JSON-only theme can already reshape the whole launcher. `theme.css` is for what tokens cannot express: textures, clipped corners, pseudo-element ornaments, animation, structural changes.
+
+## Token vocabulary
+
+Manifest sections map to CSS variables by camelCase-to-kebab-case (`components.primaryBackground` becomes `--mochi-primary-background`). The sections are `colors`, `ui`, `typography`, `layout`, `effects` and `components`; the section a key lives in does not matter to the launcher, only its name.
+
+| Group | Tokens (examples) |
+| --- | --- |
+| Palette | `background`, `backgroundElevated`, `surface`, `surfaceRaised`, `surfaceHover`, `border`, `borderStrong`, `text`, `textStrong`, `textMuted`, `textFaint`, `accent`, `accentStrong`, `accentText`, `accentSoft`, `success`, `warning`, `danger`, `shadow` |
+| Typography | `fontBody`, `fontDisplay`, `mono`, `headingWeight`, `headingTracking`, `headingTransform`, `labelWeight`, `labelTracking`, `labelTransform`, `textShadow`, `headingShadow`, `imageRendering` |
+| Shape | `radiusSm/Md/Lg`, `cardRadius`, `buttonRadius`, `inputRadius`, `modalRadius`, `heroRadius`, `borderWidth` |
+| Layout | `sidebarWidth`, `contentMaxWidth`, `contentPadding`, `topbarHeight`, `cardGap`, `coverAspect`, `coverMin` |
+| Surfaces | `appBackground`, `sidebarBackground`, `topbarBackground`, `cardBackground`, `cardHoverBackground`, `cardBorder`, `cardShadow`, `panelBackground`, `modalBackground`, `modalShadow`, `inputBackground`, `heroOverlay`, `coverPlaceholder`, `navActiveBackground`, `navActiveShadow` |
+| Buttons | `buttonBackground`, `buttonColor`, `buttonBorder`, `buttonShadow`, `buttonHoverBackground`, `buttonActiveTransform`, `buttonTransform`, `primaryBackground`, `primaryColor`, `primaryShadow`, `dangerBackground` |
+| Effects | `blur`, `transition`, `focusRing`, `scrollbarThumb`, `scrollbarTrack`, `scrollbarWidth` |
+
+`node scripts/check-themes.mjs` (run by `npm run build` and CI) rejects a theme that sets a token the launcher never reads.
+
+## Shell presets
+
+`"shell"` in `theme.json` chooses where navigation lives. The launcher sets `data-mochi-shell` on `<html>` and the base stylesheet rearranges the shell, so a theme only dresses the result:
+
+| Value | Layout |
+| --- | --- |
+| `left` | Sidebar on the left (default) |
+| `right` | Sidebar on the right |
+| `top` | Navigation as a bar across the top, account on the right |
+| `bottom` | Navigation as a hotbar along the bottom |
+| `rail` | Narrow icon rail on the left |
+
+## Fonts and colour scheme
+
+`"fonts"` lists Google Fonts stylesheet URLs. Only `https://fonts.googleapis.com/` URLs are loaded, and the native backend rejects other hosts when importing a theme. `"scheme"` (`light` or `dark`) tells the webview how to draw native controls such as scrollbars and date inputs.
+
 ## Built-in themes
 
-Built-in themes are stored as real theme folders in the source tree.
+Built-in themes are real theme folders under `src/themes/`; every folder is discovered automatically at build time (`"order"` sorts the picker). Each uses a different shell and a different visual language:
 
-Current built-ins:
-
-- Mochi
-- Minecraft Ore
-- Subnautica
-- Minecraft Dungeons
-
-Minecraft Ore replaces the previous Minecraft accent-only implementation with a full Mochi-native visual theme. It uses block-like geometry, mineral greens, stronger borders and a custom ore asset while retaining Mochi's own layout and branding.
+| Theme | Shell | Character |
+| --- | --- | --- |
+| Mochi | left | Soft glass, mint highlights |
+| Mochi Light | left | Porcelain and sage |
+| Minecraft Ore | top | Ore UI "Dark Diamond": charcoal panels, bevelled stone buttons, diamond-blue toolbar (after Prism Launcher's theme) |
+| Minecraft Dungeons | left | Gilded dungeon tablet, ember glow, carved gold frames |
+| Subnautica | rail | Pressurised-hull HUD, bubbles, chamfered scanner glass |
+| Stardew Valley | bottom | Meadow, parchment menu box, toolbar hotbar |
+| RuneScape | right | Carved stone panels, shadowed yellow text |
+| Fallout Pip-Boy | top | Phosphor CRT, scanlines, bracketed controls, green-dithered artwork |
+| Cyberpunk 2077 | rail | Sliced neon panels, glitch hover, hazard stripes |
+| Animal Crossing | top | Pastel island, bubbly pill controls |
+| Terraria | left | Inventory-blue slots, outlined gold titles |
 
 Built-in themes are bundled at build time through Vite's asset graph. User themes never need to be bundled.
+
+## Authoring a theme
+
+1. Copy `src/themes/mochi` and change the id, name and `colors`.
+2. Pick a `shell` and `scheme`, add `fonts`.
+3. Override primitives through tokens first (`buttonBackground`, `cardBorder`, `modalShadow`...).
+4. Use `theme.css` for ornament. Class names are listed in `docs/theme-hooks.md`; scope structural rules with `[data-mochi-theme="your-id"]` only when needed, since the stylesheet is only loaded while your theme is active.
+5. Preview in a browser with `npm run dev` (a dev-only mock backend stands in for Tauri), then run `npm run check:themes`.
 
 ## User theme precedence
 

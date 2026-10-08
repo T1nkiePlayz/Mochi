@@ -1,33 +1,13 @@
-/* Mochi Light — bright, soft and calm. */
-.app-shell{background:radial-gradient(circle at 80% -15%,rgba(79,146,113,.10),transparent 30%),radial-gradient(circle at 0% 100%,rgba(112,158,134,.07),transparent 32%),var(--mochi-background);}
-.sidebar{background:linear-gradient(180deg,rgba(255,255,255,.94),rgba(241,247,243,.96));backdrop-filter:blur(var(--mochi-blur));}
-.brand-mark,.account-avatar,.empty-icon{box-shadow:var(--mochi-shadow-soft);}
-.nav-item.active{background:linear-gradient(90deg,var(--mochi-accent-soft),transparent);border-color:rgba(79,146,113,.12);}
-.game-card,.tofu-card,.new-tofu-card,.settings-group,.theme-card{box-shadow:var(--mochi-shadow-soft);backdrop-filter:blur(10px);}
-.hero-card{box-shadow:var(--mochi-shadow-card);}
-.play-button{box-shadow:0 8px 24px rgba(61,126,95,.16);}
-.modal{backdrop-filter:blur(var(--mochi-blur));}
-.search-box input::placeholder{color:var(--mochi-text-faint);}
-
-/* Light-theme contrast guardrails: keep text readable even where legacy component styles use dark-mode literals. */
-.app-shell,.main-content,.content,.setup-shell{color:var(--mochi-text);background:var(--mochi-background);}
-.page-heading h1,.section-heading h3,.settings-intro h2,.settings-group-heading strong,.settings-group-heading span,.setting-row,.setting-row strong,.theme-card,.theme-card strong,.provider-credential-heading strong,.modal h2,.modal-description,.form-fields label,.setup-page h1,.setup-welcome-line,.setup-theme-copy strong,.setup-provider-card>div strong,.setup-source-copy strong,.setup-found-game strong{color:var(--mochi-text-strong);}
-.brand span,.breadcrumb,.eyebrow,.detail-label,.text-button,.setting-row small,.theme-card small,.provider-credential-heading small,.metadata-note,.modal-description,.form-fields label,.setup-description,.setup-footnote,.setup-subtitle,.setup-to,.setup-theme-copy small,.setup-provider-card>div span,.setup-source-copy small,.setup-source-empty,.setup-found-game small{color:var(--mochi-text-muted);}
-.sidebar,.topbar,.settings-group,.game-card,.tofu-card,.new-tofu-card,.provider-credential-card,.theme-card,.modal,.setup-panel,.setup-choice,.setup-source-group,.setup-provider-card{border-color:var(--mochi-border);}
-.nav-item,.icon-button,.sidebar-account,.text-button{color:var(--mochi-text-muted);}
-.nav-item:hover,.nav-item.active,.icon-button:hover,.sidebar-account:hover{color:var(--mochi-text-strong);background:var(--mochi-surface-hover);}
-.search-box,.form-fields input,.form-fields select,.igdb-form input,.provider-credential-card input,.setup-provider-card input{color:var(--mochi-text);background:var(--mochi-surface);border-color:var(--mochi-border);}
-.search-box input::placeholder,.search-box kbd{color:var(--mochi-text-faint);}
-.setup-footer{background:var(--mochi-background-elevated);border-color:var(--mochi-border);}
-.setup-nav{color:var(--mochi-text);background:var(--mochi-surface-raised);border-color:var(--mochi-border);}
-.setup-next{color:var(--mochi-accent-text);background:var(--mochi-accent);border-color:var(--mochi-accent);}
-
-/* Light surfaces and text for floating account and notification menus. */
-.notification-popover,.account-menu{border-color:#d9e3dd;background:rgba(255,255,255,.98);box-shadow:0 18px 45px rgba(43,72,55,.16);}
-.notification-heading{background:#f1f7f3;color:#23392c;}
-.notification-item{border-color:#e5ede8;}
-.notification-item strong,.account-menu strong{color:#23392c;}
-.notification-item span,.notification-empty,.account-menu small{color:#64786b;}
-.account-menu button{color:#304538;}
-.account-menu button:hover,.account-menu button.selected{background:#edf4ef;}
-.discover-game-tab.active{box-shadow:inset 0 0 0 1px rgba(79,146,113,.12),0 4px 14px rgba(61,126,95,.12);}
+/* Mochi Light — porcelain surfaces and sage accents. */
+.sidebar { box-shadow: 1px 0 0 var(--mochi-border), 8px 0 30px rgba(30, 55, 43, .05); }
+.nav-item.active { color: var(--mochi-text-strong); font-weight: 600; }
+.brand-mark, .account-avatar { box-shadow: 0 2px 8px rgba(30, 55, 43, .1); }
+.game-card:hover, .continue-card:hover { box-shadow: 0 10px 30px rgba(30, 55, 43, .14); }
+.game-card-copy strong, .continue-copy strong { color: var(--mochi-text-strong); }
+.hero-card h2, .hero-card p { text-shadow: 0 2px 14px rgba(0, 0, 0, .5); }
+.settings-group, .modrinth-manager, .game-details-hero { box-shadow: 0 1px 2px rgba(30, 55, 43, .06), 0 10px 30px rgba(30, 55, 43, .06); }
+.notification-popover, .account-menu { box-shadow: 0 16px 50px rgba(30, 55, 43, .2); }
+.setup-shell { background: var(--mochi-app-background); color: var(--mochi-text); }
+.setup-panel { background: #ffffff; border-color: var(--mochi-border); box-shadow: 0 30px 90px rgba(30, 55, 43, .18); }
+.setup-footer { background: #f7faf8; border-top-color: var(--mochi-border); }
+.setup-orbit { border-color: rgba(79, 146, 113, .14); }

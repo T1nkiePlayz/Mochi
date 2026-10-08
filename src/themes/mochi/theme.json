@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "mochi",
   "name": "Mochi",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "author": "Side Quest Games",
   "description": "Soft glass, calm mint highlights and a deliberately quiet launcher surface.",
   "colors": {
@@ -13,7 +13,7 @@
     "surfaceHover": "#24332b",
     "border": "#2a3a32",
     "borderStrong": "#3b5146",
-    "text": "#edf5f0",
+    "text": "#e4eee8",
     "textStrong": "#ffffff",
     "textMuted": "#91a69a",
     "textFaint": "#607369",
@@ -33,8 +33,7 @@
     "radiusMd": "12px",
     "radiusLg": "18px",
     "sidebarWidth": "246px",
-    "contentMaxWidth": "1160px",
-    "density": "1"
+    "contentMaxWidth": "1160px"
   },
   "typography": {
     "bodyLineHeight": "1.55",
@@ -59,7 +58,10 @@
     "inputHeight": "38px",
     "cardRadius": "18px",
     "heroRadius": "24px",
-    "glass": "rgba(18,27,23,.72)"
+    "appBackground": "radial-gradient(circle at 82% -12%, rgba(185,219,200,.12), transparent 34%), radial-gradient(circle at 0% 100%, rgba(82,132,111,.1), transparent 34%), #0b0f0e",
+    "sidebarBackground": "linear-gradient(180deg, rgba(18,27,23,.9), rgba(10,15,13,.94))",
+    "cardBackground": "rgba(20,29,25,.78)",
+    "panelBackground": "rgba(20,29,25,.7)"
   },
   "icons": {
     "library": "assets/icons-library.svg",
@@ -67,5 +69,8 @@
     "play": "assets/icons-play.svg",
     "plus": "assets/icons-plus.svg",
     "mods": "assets/icons-mods.svg"
-  }
+  },
+  "order": 1,
+  "scheme": "dark",
+  "shell": "left"
 }

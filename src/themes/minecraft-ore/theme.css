@@ -1,124 +1,73 @@
-/* Minecraft Ore 3.0 — inspired by Prism Launcher Ore UI's compact, pixel-forward visual language. */
-body{image-rendering:auto;}
-.app-shell{background:linear-gradient(rgba(13,13,13,.96),rgba(13,13,13,.98)),radial-gradient(circle at 72% -12%,rgba(126,211,33,.14),transparent 32%),var(--mochi-background);}
-.sidebar{background:linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),var(--mochi-background-elevated);background-size:8px 8px;border-right:1px solid var(--mochi-border);}
-.brand-mark,.empty-icon,.account-avatar{border-radius:2px!important;border:2px solid var(--mochi-border-strong);box-shadow:inset 0 -3px 0 rgba(0,0,0,.32);}
-.nav-item,.piko-nav-item,.setting-row,.game-card,.tofu-card,.new-tofu-card,.modal,.settings-group,.theme-card,.provider-credential-card,.download-empty{border-radius:2px!important;}
-.nav-item{min-height:34px;}
-.nav-item.active{box-shadow:inset 3px 0 var(--mochi-accent),inset 0 0 0 1px rgba(126,211,33,.12);background:linear-gradient(90deg,rgba(126,211,33,.10),var(--mochi-surface-hover));}
-.nav-item:hover{background:var(--mochi-surface-hover);}
-.play-button,.secondary-button{min-height:34px;border-radius:2px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25);}
-.play-button{background:var(--mochi-accent);color:var(--mochi-accent-text);}
-.secondary-button{background:var(--mochi-surface-raised);}
-.play-button:hover,.secondary-button:hover{filter:brightness(1.08);}
-.hero-card{border-radius:3px;box-shadow:0 3px 0 rgba(0,0,0,.3),0 20px 45px var(--mochi-shadow);}
-.hero-card h2,.page-heading h1,.section-heading h3,.settings-intro h2{letter-spacing:-.025em;text-shadow:2px 2px 0 rgba(0,0,0,.45);}
-.game-card-art{image-rendering:pixelated;}
-.game-card,.tofu-card,.new-tofu-card,.settings-group,.theme-card,.provider-credential-card{box-shadow:0 2px 0 rgba(0,0,0,.25);}
-.game-card:hover,.tofu-card:hover{transform:translateY(-1px);}
-.game-card.selected,.tofu-card.active,.theme-card.selected{box-shadow:inset 0 0 0 1px var(--mochi-accent),0 2px 0 rgba(0,0,0,.25);}
-.search-box{border-radius:2px;background:#181818;}
-.search-box:focus-within{border-color:var(--mochi-accent);}
-.form-fields input,.form-fields select,.igdb-form input,.provider-credential-card input{border-radius:2px;}
-.toggle{border-radius:2px;}
-.settings-page{max-width:680px;}
-.provider-grid{max-width:100%;}
-.download-empty{background:var(--mochi-surface);}
+/* Minecraft Ore — Ore UI "Dark Diamond" for Mochi (after Prism Launcher's Ore UI theme).
+ * Everything is flat, square and bevelled: 2px near-black outlines, a lighter inner ring and
+ * a thick darker lip under every control, exactly like the Ore UI button artwork. */
 
-/* Keep the Ore skin visual while inheriting Mochi's shared settings geometry. */
-[data-mochi-theme="minecraft-ore"] .settings-page{
-  width:min(100%,680px);
-  max-width:680px;
-  margin:0 auto;
-}
-[data-mochi-theme="minecraft-ore"] .settings-group{
-  border-color:#454545;
-  background:#202020;
-  box-shadow:0 3px 0 rgba(0,0,0,.28),0 10px 22px rgba(0,0,0,.18);
-}
-[data-mochi-theme="minecraft-ore"] .settings-group-heading{
-  padding:14px 15px 10px;
-  border-bottom-color:#454545;
-}
-[data-mochi-theme="minecraft-ore"] .setting-row{
-  min-height:58px;
-  padding:13px 15px;
-  border-bottom-color:#454545;
-  color:#e7e7e7;
-}
-[data-mochi-theme="minecraft-ore"] .setting-row:hover{
-  background:#292929;
-}
-[data-mochi-theme="minecraft-ore"] .setting-row strong{color:#fff;}
-[data-mochi-theme="minecraft-ore"] .setting-row small{color:#a7a7a7;}
-[data-mochi-theme="minecraft-ore"] .theme-card{
-  min-height:0;
-  padding:13px;
-  border-color:#454545;
-  background:#202020;
-  box-shadow:0 3px 0 rgba(0,0,0,.28),0 10px 20px rgba(0,0,0,.16);
-}
-[data-mochi-theme="minecraft-ore"] .theme-card:hover,
-[data-mochi-theme="minecraft-ore"] .theme-card.selected{
-  border-color:#7ed321;
-  background:#292929;
-  box-shadow:inset 0 0 0 1px rgba(126,211,33,.35),0 3px 0 rgba(0,0,0,.3),0 10px 22px rgba(0,0,0,.18);
-}
-[data-mochi-theme="minecraft-ore"] .theme-card > .mochi-icon-wrap,
-[data-mochi-theme="minecraft-ore"] .theme-card > svg{
-  width:30px;
-  height:30px;
-  padding:5px;
-  margin:0 0 3px;
-  border:1px solid #454545;
-  background:#171717;
-  color:#9be84f;
-}
-[data-mochi-theme="minecraft-ore"] .theme-card > .mochi-icon-wrap .mochi-icon-custom{
-  width:100%;
-  height:100%;
-}
-[data-mochi-theme="minecraft-ore"] .toggle{
-  width:22px;
-  height:22px;
-  border:2px solid #666;
-  border-radius:2px;
-  background:#171717;
-  box-shadow:inset 0 -2px 0 rgba(0,0,0,.35);
-}
-[data-mochi-theme="minecraft-ore"] .toggle::after{
-  top:3px;
-  left:3px;
-  width:12px;
-  height:12px;
-  border-radius:0;
-  background:transparent;
-}
-[data-mochi-theme="minecraft-ore"] .toggle:checked{
-  border-color:#7ed321;
-  background:#7ed321;
-}
-[data-mochi-theme="minecraft-ore"] .toggle:checked::after{
-  left:3px;
-  background:#101508;
-  clip-path:polygon(14% 48%,0 63%,38% 100%,100% 20%,84% 6%,38% 68%);
-}
-[data-mochi-theme="minecraft-ore"] .secondary-button,
-[data-mochi-theme="minecraft-ore"] .play-button{
-  box-shadow:inset 0 -3px 0 rgba(0,0,0,.28),0 2px 0 rgba(0,0,0,.2);
-}
+.app-shell { background: #1C1D1D; }
+.sidebar { padding: 0 12px; min-height: 66px; box-shadow: inset 0 -2px 0 #39393B; gap: 12px; }
+.brand-mark { background: #1C1D1D; border: 2px solid #0E0E0F; box-shadow: inset 0 0 0 2px #39393B; border-radius: 0; }
+.brand strong { font-size: 17px; letter-spacing: 0; }
+.brand span { display: none; }
 
-[data-mochi-theme="minecraft-ore"] .nav-item{min-height:38px;margin:3px 0;padding:8px 10px;border:2px solid #3d3d3d;border-radius:3px!important;background:#1b1b1b;box-shadow:inset 0 -3px 0 rgba(0,0,0,.38),0 2px 0 rgba(0,0,0,.2)}
-[data-mochi-theme="minecraft-ore"] .nav-item:hover{border-color:#666;background:#303030;transform:translateY(-1px)}
-[data-mochi-theme="minecraft-ore"] .nav-item.active{border-color:#7ed321;background:linear-gradient(#343434,#252525);box-shadow:inset 0 0 0 1px rgba(155,232,79,.22),inset 0 -3px 0 rgba(0,0,0,.38),0 2px 0 rgba(0,0,0,.2)}
-[data-mochi-theme="minecraft-ore"] .nav-item.active:before{display:none}
+/* Toolbar buttons (navigation) */
+.nav-item { min-height: 40px; padding: 0 16px; gap: 9px; border: 2px solid #0E0E0F; background: #39393B; color: #fff;
+  box-shadow: inset 0 0 0 2px #47484A, inset 0 -4px 0 0 #2A2B2C; font-size: 13px; font-weight: 600; transition: none; }
+.nav-item:hover { background: #47484A; box-shadow: inset 0 0 0 2px #565758, inset 0 -4px 0 0 #2A2B2C; }
+.nav-item:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px #2A2B2C; }
+.nav-item.active { background: #1855D1; box-shadow: inset 0 0 0 2px #2E6BE6, inset 0 -4px 0 0 #001F5C; }
+.sidebar-account { border: 2px solid #0E0E0F; border-radius: 0; background: #39393B; box-shadow: inset 0 0 0 2px #47484A, inset 0 -4px 0 0 #2A2B2C; }
+.sidebar-account:hover { background: #47484A; border-color: #0E0E0F; }
+.account-avatar { border-radius: 0; border: 2px solid #0E0E0F; background: #1C1D1D; image-rendering: pixelated; }
 
-/* Pixel-framed account and notification overlays. */
-[data-mochi-theme="minecraft-ore"] .notification-popover,[data-mochi-theme="minecraft-ore"] .account-menu{border:2px solid #454545;border-radius:2px!important;background:#202020;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25),0 6px 0 rgba(0,0,0,.22);}
-[data-mochi-theme="minecraft-ore"] .notification-heading{border-bottom:2px solid #454545;background:#171717;color:#fff;text-transform:uppercase;letter-spacing:.08em;}
-[data-mochi-theme="minecraft-ore"] .notification-heading button,[data-mochi-theme="minecraft-ore"] .account-menu-add>svg{color:#9be84f;}
-[data-mochi-theme="minecraft-ore"] .notification-item,[data-mochi-theme="minecraft-ore"] .account-menu-add{border-color:#454545!important;}
-[data-mochi-theme="minecraft-ore"] .notification-item span,[data-mochi-theme="minecraft-ore"] .notification-empty,[data-mochi-theme="minecraft-ore"] .account-menu small{color:#a7a7a7;}
-[data-mochi-theme="minecraft-ore"] .account-menu button:hover,[data-mochi-theme="minecraft-ore"] .account-menu button.selected{background:#303030;}
-[data-mochi-theme="minecraft-ore"] .discover-game-tab{border-radius:2px!important;border-width:2px;background:#1b1b1b;box-shadow:inset 0 -3px 0 rgba(0,0,0,.28);}
-[data-mochi-theme="minecraft-ore"] .discover-game-tab.active{border-color:#7ed321;background:#292929;}
+/* Top bar becomes the Prism toolbar strip */
+.topbar { background: #2A2B2C; box-shadow: inset 0 -2px 0 #39393B; }
+.breadcrumb, .breadcrumb strong { font-family: var(--mochi-font-display); font-size: 14px; }
+.search-box { box-shadow: inset 0 4px 0 0 #0A0A0B; }
+
+/* Typography */
+.page-heading h1 { font-size: 28px; text-shadow: 2px 2px 0 #0E0E0F; }
+.eyebrow { color: #A8A9AB; }
+.section-heading h3 { text-shadow: 2px 2px 0 #0E0E0F; }
+
+/* Library */
+.game-card { box-shadow: inset 0 0 0 2px #39393B; padding: 6px; background: #2A2B2C; }
+.game-card:hover { background: #39393B; box-shadow: inset 0 0 0 2px #47484A; transform: none; }
+.game-card.selected { box-shadow: inset 0 0 0 2px #2E6BE6; }
+.game-card .game-card-art { border: 2px solid #0E0E0F; image-rendering: pixelated; }
+.game-card:hover .game-card-art { transform: none; }
+.game-card-copy { background: transparent; padding: 9px 4px 5px; }
+.game-card-play { border-radius: 0; background: #1855D1; box-shadow: inset 0 0 0 2px #2E6BE6; }
+.continue-card { box-shadow: inset 0 0 0 2px #39393B; }
+.continue-art { border: 2px solid #0E0E0F; image-rendering: pixelated; }
+.continue-play { border-radius: 0; box-shadow: inset 0 0 0 2px #2E6BE6, inset 0 -4px 0 0 #001F5C; border: 2px solid #0E0E0F; }
+.category-count { border-radius: 0; background: #1C1D1D; border: 2px solid #0E0E0F; color: #A8A9AB; }
+.library-toolbar { border-bottom: 2px solid #0E0E0F; box-shadow: 0 2px 0 #39393B; }
+
+/* Game page */
+.game-details-hero { box-shadow: inset 0 0 0 2px #39393B; }
+.game-details-cover { border: 2px solid #0E0E0F; image-rendering: pixelated; }
+.game-details-badges span, .running-badge { border-radius: 0; background: #1C1D1D; border: 2px solid #0E0E0F; color: #E6E6E7; }
+.game-stats { border-top: 2px solid #0E0E0F; box-shadow: 0 -2px 0 #39393B; }
+.tofu-card.active { background: #39393B; box-shadow: inset 0 0 0 2px #2E6BE6; }
+.workspace-tabs { border-bottom: 2px solid #0E0E0F; }
+.workspace-tabs button { border: 2px solid #0E0E0F; background: #39393B; color: #fff; box-shadow: inset 0 0 0 2px #47484A, inset 0 -3px 0 #2A2B2C; }
+.workspace-tabs button.active { background: #1855D1; box-shadow: inset 0 0 0 2px #2E6BE6, inset 0 -3px 0 #001F5C; }
+
+/* Settings and forms */
+.settings-group-heading strong { text-shadow: 2px 2px 0 #0E0E0F; font-family: var(--mochi-font-display); }
+.toggle { appearance: none; position: relative; width: 38px; height: 24px; border: 2px solid #0E0E0F; border-radius: 0; background: #737476; box-shadow: inset 0 -4px 0 #2A2B2C; }
+.toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; background: #EDEDEE; box-shadow: inset -2px -2px 0 #A8A9AB; transition: transform 90ms linear; }
+.toggle:checked { background: #2E6BE6; box-shadow: inset 0 -4px 0 #001F5C; }
+.toggle:checked::after { transform: translateX(14px); }
+.credential-status { border-radius: 0; }
+.setup-panel, .modal { border-radius: 0; }
+.setup-shell { background: #1C1D1D; }
+.setup-orbit { display: none; }
+.setup-progress span { border-radius: 0; background: #0E0E0F; }
+.setup-progress span.active { background: #2E6BE6; }
+.danger-outline, .stop-button { background: #B62323; color: #fff; border-color: #0E0E0F; box-shadow: inset 0 0 0 2px #C93636, inset 0 -4px 0 #520202; }
+.danger-outline:hover:not(:disabled), .stop-button:hover:not(:disabled) { background: #C93636; }
+.notification-popover, .account-menu { border-radius: 0; box-shadow: inset 0 0 0 2px #39393B; }
+.download-progress { border-radius: 0; background: #131314; border: 2px solid #0E0E0F; }
+.download-progress > span { background: #2E6BE6; }
+.game-card, .tofu-card, .new-tofu-card, .theme-card, .settings-group, .modal, .hero-card, .search-box { border-radius: 0; }
+.game-cloud-status.is-synced { color: #9CD78C; }

@@ -1,30 +1,61 @@
-/* Subnautica 2.0 — underwater glass and instrument-panel depth. */
-.app-shell{background:radial-gradient(circle at 70% -5%,rgba(94,219,229,.22),transparent 32%),radial-gradient(circle at 20% 115%,rgba(21,103,125,.2),transparent 34%),linear-gradient(180deg,#041016,#061a22 60%,#041116);}
-.sidebar{background:linear-gradient(180deg,rgba(7,26,34,.88),rgba(3,16,22,.96));backdrop-filter:blur(var(--mochi-blur));}
-.sidebar:after{content:"";position:absolute;right:-1px;top:0;bottom:0;width:1px;background:linear-gradient(180deg,transparent,var(--mochi-accent),transparent);opacity:.35;}
-.nav-item,.piko-nav-item{border:1px solid transparent;border-radius:var(--mochi-radius-md);}
-.nav-item.active{background:linear-gradient(90deg,var(--mochi-accent-soft),rgba(0,0,0,0));border-color:rgba(94,219,229,.18);box-shadow:0 0 22px rgba(94,219,229,.08),inset 2px 0 var(--mochi-accent);}
-.game-card,.tofu-card,.new-tofu-card,.settings-group,.theme-card{background:linear-gradient(145deg,rgba(15,48,57,.86),rgba(6,25,32,.88));backdrop-filter:blur(14px);box-shadow:var(--mochi-shadow-card);}
-.hero-card{border-radius:var(--mochi-hero-radius);box-shadow:0 0 45px rgba(94,219,229,.08),var(--mochi-shadow-card);}
-.play-button{box-shadow:0 0 24px rgba(94,219,229,.2);}
-.modal-backdrop{background:rgba(1,12,17,.72);backdrop-filter:blur(7px);}
+/* Subnautica — a pressurised-hull HUD. Floating glass rail, chamfered scanner panels, drifting
+ * bubbles and shafts of surface light. Corners are cut, never rounded. */
 
-[data-mochi-theme="subnautica"] .sidebar{clip-path:polygon(0 0,100% 0,100% calc(100% - 28px),calc(100% - 14px) 100%,0 100%);box-shadow:12px 0 45px rgba(0,0,0,.25)}
-[data-mochi-theme="subnautica"] .nav-item{position:relative;border:0;border-radius:0!important;margin:5px 0;padding:12px 14px 12px 20px;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%,8px 50%);background:transparent;transition:all .18s ease}
-[data-mochi-theme="subnautica"] .nav-item:hover{background:rgba(94,219,229,.09);transform:translateX(3px)}
-[data-mochi-theme="subnautica"] .nav-item.active{background:linear-gradient(90deg,rgba(94,219,229,.2),rgba(94,219,229,.03));box-shadow:none}
-[data-mochi-theme="subnautica"] .nav-item.active:before{content:"";position:absolute;left:5px;top:9px;bottom:9px;width:2px;background:var(--mochi-accent);box-shadow:0 0 12px var(--mochi-accent)}
-[data-mochi-theme="subnautica"] .nav-item:after{content:"";position:absolute;right:17px;top:50%;width:5px;height:5px;border:1px solid var(--mochi-accent);border-radius:50%;transform:translateY(-50%);opacity:.45}
-[data-mochi-theme="subnautica"] .search-box,[data-mochi-theme="subnautica"] .secondary-button,[data-mochi-theme="subnautica"] .play-button{border-radius:999px!important}
-[data-mochi-theme="subnautica"] .game-card,[data-mochi-theme="subnautica"] .tofu-card,[data-mochi-theme="subnautica"] .new-tofu-card,[data-mochi-theme="subnautica"] .settings-group,[data-mochi-theme="subnautica"] .theme-card{border-radius:4px!important;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px))}
-[data-mochi-theme="subnautica"] .hero-card{border-radius:5px!important;clip-path:polygon(0 0,calc(100% - 24px) 0,100% 24px,100% 100%,24px 100%,0 calc(100% - 24px))}
-[data-mochi-theme="subnautica"] .modal{border-radius:6px!important;clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px))}
-[data-mochi-theme="subnautica"] .form-fields input,[data-mochi-theme="subnautica"] .form-fields select,[data-mochi-theme="subnautica"] .igdb-form input{border-radius:3px!important}
+@keyframes sub-bubbles { from { background-position: 0 0, 0 0, 0 0; } to { background-position: 40px -900px, -30px -700px, 20px -1200px; } }
+@keyframes sub-pulse { 50% { opacity: .55; } }
 
-/* Underwater glass menus with cyan instrument accents. */
-[data-mochi-theme="subnautica"] .notification-popover,[data-mochi-theme="subnautica"] .account-menu{border-color:rgba(94,219,229,.38);border-radius:5px!important;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));background:linear-gradient(145deg,rgba(15,48,57,.97),rgba(4,22,29,.99));backdrop-filter:blur(18px);box-shadow:0 0 32px rgba(94,219,229,.12);}
-[data-mochi-theme="subnautica"] .notification-heading{border-bottom:1px solid rgba(94,219,229,.24);color:#e8ffff;}
-[data-mochi-theme="subnautica"] .notification-heading button,[data-mochi-theme="subnautica"] .account-menu-add>svg{color:#5edbe5;}
-[data-mochi-theme="subnautica"] .notification-item{border-color:rgba(94,219,229,.16);}
-[data-mochi-theme="subnautica"] .discover-game-tab{border-radius:4px!important;}
-[data-mochi-theme="subnautica"] .discover-game-tab.active{box-shadow:0 0 18px rgba(94,219,229,.17),inset 0 0 0 1px rgba(94,219,229,.18);}
+.app-shell::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .5;
+  background-image:
+    radial-gradient(circle, rgba(190, 245, 255, .55) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle, rgba(190, 245, 255, .4) 0 1px, transparent 2px),
+    radial-gradient(circle, rgba(190, 245, 255, .3) 0 2.5px, transparent 3.5px);
+  background-size: 190px 260px, 130px 210px, 310px 380px; animation: sub-bubbles 90s linear infinite; }
+.sidebar, .main-content { position: relative; z-index: 1; }
+
+/* Floating rail */
+.sidebar { margin: 14px 0 14px 14px; height: calc(100vh - 28px); border: 1px solid rgba(94, 224, 255, .5); backdrop-filter: blur(var(--mochi-blur));
+  border-radius: 10px; box-shadow: inset 0 0 40px rgba(77, 232, 255, .1), 0 0 30px rgba(0, 20, 30, .5); }
+.brand-mark { border-radius: 4px; background: rgba(77, 232, 255, .12); border: 1px solid rgba(127, 240, 255, .6); box-shadow: 0 0 18px rgba(77, 232, 255, .35); }
+.nav-item { border-radius: 4px; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+.nav-item.active { color: #fff; }
+.sidebar-account { border-radius: 4px; }
+.account-avatar { border-radius: 4px; border-color: rgba(127, 240, 255, .6); box-shadow: 0 0 12px rgba(77, 232, 255, .3); }
+
+.topbar { backdrop-filter: blur(8px); background: linear-gradient(180deg, rgba(2, 23, 34, .6), transparent); }
+.breadcrumb strong { text-transform: uppercase; letter-spacing: .14em; color: #7ff0ff; font-weight: 600; }
+.page-heading h1 { font-size: 36px; }
+.eyebrow { color: #4de8ff; }
+.section-heading h3 { font-size: 15px; font-weight: 600; letter-spacing: .16em; }
+.section-heading { border-bottom: 1px solid rgba(94, 224, 255, .22); padding-bottom: 8px; }
+
+/* Chamfered HUD surfaces */
+.game-card, .tofu-card, .new-tofu-card, .continue-card, .theme-card, .provider-credential-card, .settings-group, .modrinth-manager,
+.game-details-hero, .game-details-section, .download-group, .download-row, .security-card, .profile-row, .import-source-row, .setup-source, .setup-choice, .discover-card, .modrinth-result, .installed-content-row {
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); backdrop-filter: blur(6px); }
+.modal, .setup-panel, .notification-popover, .account-menu { clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px); }
+.secondary-button, .play-button, .setup-nav, .icon-button, .search-box { clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+.game-card:hover { transform: translateY(-2px); filter: drop-shadow(0 0 14px rgba(77, 232, 255, .45)); }
+.game-card-copy { background: rgba(2, 23, 34, .55); }
+.game-card .game-card-art { filter: saturate(1.15) contrast(1.05); }
+.game-card-play { border-radius: 2px; }
+.continue-art { border-radius: 2px; }
+.continue-play { border-radius: 2px; }
+.category-count, .game-details-badges span { border-radius: 2px; text-transform: uppercase; letter-spacing: .12em; font-size: 9px; }
+.hero-card { clip-path: polygon(24px 0, 100% 0, 100% calc(100% - 24px), calc(100% - 24px) 100%, 0 100%, 0 24px); }
+
+/* Scanner readouts */
+.game-stats dd, .tofu-mods, .download-row small { font-variant-numeric: tabular-nums; }
+.library-toolbar { border-bottom-color: rgba(94, 224, 255, .25); }
+.ready-status { text-transform: uppercase; letter-spacing: .1em; font-size: 10px; }
+.live-dot, .notification-dot { animation: sub-pulse 1.8s ease-in-out infinite; }
+.workspace-tabs button { text-transform: uppercase; letter-spacing: .14em; font-size: 10px; border-radius: 2px; }
+.toggle { appearance: none; position: relative; width: 42px; height: 20px; border: 1px solid rgba(94, 224, 255, .55); border-radius: 2px; background: rgba(1, 13, 21, .7); }
+.toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: #5390a6; transition: transform 200ms ease, background 200ms ease; }
+.toggle:checked { background: rgba(77, 232, 255, .2); box-shadow: 0 0 14px rgba(77, 232, 255, .35); }
+.toggle:checked::after { transform: translateX(22px); background: #7ff0ff; box-shadow: 0 0 10px #7ff0ff; }
+.setup-shell { background: var(--mochi-app-background); }
+.setup-orbit { border-color: rgba(94, 224, 255, .12); }
+.download-progress { border-radius: 2px; background: rgba(1, 13, 21, .7); }
+.download-progress > span { background: linear-gradient(90deg, #2cc4de, #7ff0ff); box-shadow: 0 0 12px #4de8ff; }
+.danger-outline, .stop-button { color: #ff9f43; border-color: rgba(255, 159, 67, .6); }
+.danger-outline:hover:not(:disabled), .stop-button:hover:not(:disabled) { background: rgba(255, 159, 67, .16); border-color: #ff9f43; }
