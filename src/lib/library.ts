@@ -20,8 +20,7 @@ export const defaultFilter: LibraryFilter = { kind: "smart", id: "all" };
 export const RECENT_DAYS = 30;
 export const MOST_PLAYED_LIMIT = 12;
 
-/** Games added by another worker may be marked as launchers (Steam, Heroic, ...). */
-export const isLauncher = (piko: Piko) => (piko as Piko & { kind?: "game" | "launcher" }).kind === "launcher";
+export const isLauncher = (piko: Piko) => piko.kind === "launcher";
 export const sourceOf = (piko: Piko) => piko.sourceId || (piko.platformCategory ? piko.platformCategory.toLowerCase() : "other");
 export const sourceLabel = (piko: Piko) => piko.platformCategory || piko.sourceId || "Other";
 
