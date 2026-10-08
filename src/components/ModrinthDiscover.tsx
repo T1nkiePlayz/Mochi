@@ -72,7 +72,7 @@ function findClosingDelimiter(source: string, start: number, delimiter: string):
   while (index < source.length) {
     const found = source.indexOf(delimiter, index);
     if (found < 0) return -1;
-    if (found === start || source[found - 1] !== "\\\\") return found;
+    if (found === start || source[found - 1] !== "\\") return found;
     index = found + delimiter.length;
   }
   return -1;
@@ -81,8 +81,20 @@ function findClosingDelimiter(source: string, start: number, delimiter: string):
 function findClosingParenthesis(source: string, start: number): number {
   let depth = 0;
   for (let index = start; index < source.length; index += 1) {
-    if (source[index] === "(" && source[index - 1] !== "\\\\") depth += 1;
-    if (source[index] === ")" && source[index - 1] !== "\\\\") {
+    if (source[index] === "(" && source[index - 1] !== "\\") depth += 1;
+    if (source[index] === ")" && source[index - 1] !== "\\") {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return -1;
+}
+
+function findClosingBracket(source: string, start: number): number {
+  let depth = 0;
+  for (let index = start; index < source.length; index += 1) {
+    if (source[index] === "[" && source[index - 1] !== "\\") depth += 1;
+    if (source[index] === "]" && source[index - 1] !== "\\") {
       depth -= 1;
       if (depth === 0) return index;
     }
@@ -92,7 +104,7 @@ function findClosingParenthesis(source: string, start: number): number {
 
 function parseInlineElement(source: string, start: number): { node: ReactNode; end: number } | null {
   if (source.startsWith("![", start)) {
-    const labelEnd = source.indexOf("]", start + 2);
+    const labelEnd = findClosingBracket(source, start + 1);
     if (labelEnd < 0 || source[labelEnd + 1] !== "(") return null;
     const urlEnd = findClosingParenthesis(source, labelEnd + 1);
     if (urlEnd < 0) return null;
@@ -102,7 +114,7 @@ function parseInlineElement(source: string, start: number): { node: ReactNode; e
   }
 
   if (source[start] === "[") {
-    const labelEnd = source.indexOf("]", start + 1);
+    const labelEnd = findClosingBracket(source, start);
     if (labelEnd < 0 || source[labelEnd + 1] !== "(") return null;
     const urlEnd = findClosingParenthesis(source, labelEnd + 1);
     if (urlEnd < 0) return null;
