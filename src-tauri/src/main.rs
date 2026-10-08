@@ -144,7 +144,8 @@ fn main() {
             std::thread::spawn(|| {
                 if let Err(error) = platform::ensure_platform_integration() { eprintln!("Mochi platform integration: {error}"); }
             });
-            themes::initialize_config(app.handle())?;
+            // An unwritable config folder must not stop Mochi from opening; commands report the problem when used.
+            if let Err(error) = themes::initialize_config(app.handle()) { eprintln!("Mochi config: {error}"); }
             let data_dir = app.path().app_data_dir()?;
             playtime::initialize(data_dir).map_err(std::io::Error::other)?;
             tray::initialize(app)?;

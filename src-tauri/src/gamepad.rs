@@ -15,7 +15,7 @@ use serde::Serialize;
 use std::{
     collections::HashMap,
     sync::{
-        mpsc::{channel, Receiver, Sender},
+        mpsc::{sync_channel, Receiver, SyncSender},
         Mutex, OnceLock,
     },
     time::{Duration, Instant},
@@ -136,7 +136,10 @@ enum Command {
 }
 
 static PADS: Mutex<Vec<PadInfo>> = Mutex::new(Vec::new());
-static COMMANDS: OnceLock<Mutex<Sender<Command>>> = OnceLock::new();
+/// Bounded: a frontend stuck in a rumble loop must not grow memory while the input thread is busy.
+static COMMANDS: OnceLock<SyncSender<Command>> = OnceLock::new();
+const COMMAND_QUEUE: usize = 32;
+const MAX_RESTARTS: u32 = 5;
 
 fn pad_info(gilrs: &Gilrs, id: GamepadId, on_deck: bool) -> PadInfo {
     let pad = gilrs.gamepad(id);
@@ -167,16 +170,23 @@ fn emit(app: &AppHandle, event: &PadEvent) { let _ = app.emit("gamepad-event", e
 /// Starts the input thread. Returns immediately and never fails the caller.
 pub fn start(app: AppHandle) {
     if std::env::var_os("MOCHI_NO_GAMEPAD").is_some() { return; }
-    let (sender, receiver) = channel();
-    let _ = COMMANDS.set(Mutex::new(sender));
+    let (sender, receiver) = sync_channel(COMMAND_QUEUE);
+    let _ = COMMANDS.set(sender);
     let spawned = std::thread::Builder::new().name("mochi-gamepad".into()).spawn(move || {
-        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run(app, receiver)));
-        if outcome.is_err() { eprintln!("Mochi gamepad: input thread stopped unexpectedly."); }
+        // A panic inside a driver binding must not leave Mochi without controller input for the whole session.
+        for attempt in 1..=MAX_RESTARTS {
+            let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run(&app, &receiver)));
+            if outcome.is_ok() { return; }
+            eprintln!("Mochi gamepad: input thread stopped unexpectedly (restart {attempt}/{MAX_RESTARTS}).");
+            let lost: Vec<usize> = PADS.lock().map(|mut pads| pads.drain(..).map(|pad| pad.id).collect()).unwrap_or_default();
+            for id in lost { emit(&app, &PadEvent::Disconnected { id }); }
+            std::thread::sleep(Duration::from_secs(u64::from(attempt) * 2));
+        }
     });
     if let Err(error) = spawned { eprintln!("Mochi gamepad: unable to start input thread: {error}"); }
 }
 
-fn run(app: AppHandle, commands: Receiver<Command>) {
+fn run(app: &AppHandle, commands: &Receiver<Command>) {
     let mut gilrs = match Gilrs::new() {
         Ok(gilrs) => gilrs,
         Err(error) => { eprintln!("Mochi gamepad: controller support unavailable: {error}"); return; }
@@ -185,7 +195,7 @@ fn run(app: AppHandle, commands: Receiver<Command>) {
     for (id, _) in gilrs.gamepads() {
         let pad = pad_info(&gilrs, id, on_deck);
         remember(&pad);
-        emit(&app, &PadEvent::Connected { pad });
+        emit(app, &PadEvent::Connected { pad });
     }
 
     let mut axes: HashMap<(usize, &'static str), f32> = HashMap::new();
@@ -204,28 +214,33 @@ fn run(app: AppHandle, commands: Receiver<Command>) {
             EventType::Connected => {
                 let pad = pad_info(&gilrs, event.id, on_deck);
                 remember(&pad);
-                emit(&app, &PadEvent::Connected { pad });
+                emit(app, &PadEvent::Connected { pad });
             }
             EventType::Disconnected => {
                 forget(id);
                 axes.retain(|(pad, _), _| *pad != id);
-                emit(&app, &PadEvent::Disconnected { id });
+                emit(app, &PadEvent::Disconnected { id });
             }
             EventType::ButtonPressed(button, _) | EventType::ButtonReleased(button, _) => {
                 let pressed = matches!(event.event, EventType::ButtonPressed(..));
-                if let Some(name) = canonical_button(button) { emit(&app, &PadEvent::Button { id, button: name, pressed }); }
+                if let Some(name) = canonical_button(button) { emit(app, &PadEvent::Button { id, button: name, pressed }); }
             }
             EventType::AxisChanged(axis, value, _) => {
                 if let Some((name, value)) = canonical_axis(axis, value) {
                     if axis_changed(axes.get(&(id, name)).copied(), value) {
                         axes.insert((id, name), value);
-                        emit(&app, &PadEvent::Axis { id, axis: name, value });
+                        emit(app, &PadEvent::Axis { id, axis: name, value });
                     }
                 }
             }
             _ => {}
         }
     }
+}
+
+/// 0..=1 to the motor range; NaN and out-of-range values from the frontend become 0 / the nearest limit.
+fn rumble_magnitude(value: f32) -> u16 {
+    if value.is_nan() { 0 } else { (value.clamp(0.0, 1.0) * f32::from(u16::MAX)) as u16 }
 }
 
 fn rumble(gilrs: &mut Gilrs, id: Option<usize>, strong: f32, weak: f32, millis: u32) -> Option<(Effect, Instant)> {
@@ -236,11 +251,10 @@ fn rumble(gilrs: &mut Gilrs, id: Option<usize>, strong: f32, weak: f32, millis: 
         .collect();
     if targets.is_empty() { return None; }
     let millis = millis.clamp(10, 2000);
-    let magnitude = |value: f32| (value.clamp(0.0, 1.0) * f32::from(u16::MAX)) as u16;
     let replay = Replay { play_for: Ticks::from_ms(millis), ..Default::default() };
     let built = EffectBuilder::new()
-        .add_effect(BaseEffect { kind: BaseEffectType::Strong { magnitude: magnitude(strong) }, scheduling: replay, envelope: Default::default() })
-        .add_effect(BaseEffect { kind: BaseEffectType::Weak { magnitude: magnitude(weak) }, scheduling: replay, envelope: Default::default() })
+        .add_effect(BaseEffect { kind: BaseEffectType::Strong { magnitude: rumble_magnitude(strong) }, scheduling: replay, envelope: Default::default() })
+        .add_effect(BaseEffect { kind: BaseEffectType::Weak { magnitude: rumble_magnitude(weak) }, scheduling: replay, envelope: Default::default() })
         .gamepads(&targets)
         .finish(gilrs)
         .ok()?;
@@ -254,8 +268,9 @@ pub fn get_gamepads() -> Vec<PadInfo> { PADS.lock().map(|pads| pads.clone()).unw
 /// Short haptic pulse; silently does nothing when no connected pad supports it.
 #[tauri::command]
 pub fn gamepad_rumble(id: Option<usize>, strong: f32, weak: f32, millis: u32) {
-    if let Some(sender) = COMMANDS.get().and_then(|sender| sender.lock().ok()) {
-        let _ = sender.send(Command::Rumble { id, strong, weak, millis });
+    // try_send: when the queue is full the pulse is simply dropped instead of blocking the UI thread.
+    if let Some(sender) = COMMANDS.get() {
+        let _ = sender.try_send(Command::Rumble { id, strong, weak, millis });
     }
 }
 
@@ -302,6 +317,22 @@ mod tests {
         assert_eq!(canonical_axis(Axis::LeftStickY, 1.0), Some(("leftY", -1.0)));
         assert_eq!(canonical_axis(Axis::LeftStickX, 0.5), Some(("leftX", 0.5)));
         assert_eq!(canonical_axis(Axis::Unknown, 0.5), None);
+    }
+
+    #[test]
+    fn rumble_values_are_sanitised() {
+        assert_eq!(rumble_magnitude(f32::NAN), 0);
+        assert_eq!(rumble_magnitude(-3.0), 0);
+        assert_eq!(rumble_magnitude(9.0), u16::MAX);
+        assert_eq!(rumble_magnitude(f32::INFINITY), u16::MAX);
+        assert_eq!(rumble_magnitude(0.0), 0);
+    }
+
+    #[test]
+    fn command_queue_is_bounded() {
+        let (sender, _receiver) = sync_channel::<Command>(COMMAND_QUEUE);
+        let accepted = (0..COMMAND_QUEUE * 4).filter(|_| sender.try_send(Command::Rumble { id: None, strong: 1.0, weak: 1.0, millis: 10 }).is_ok()).count();
+        assert_eq!(accepted, COMMAND_QUEUE);
     }
 
     #[test]

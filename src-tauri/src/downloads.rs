@@ -1,16 +1,51 @@
 //! Provider-aware mod downloader: host allow-lists, size cap, SHA-1 verification and safe zip extraction.
 use crate::modrinth::{
-    cleanup_downloads, downloads, now_ms, update_download, validate_download_filename, validate_path, DownloadEntry,
+    active_download_count, cleanup_downloads, lock_downloads, now_ms, update_download, validate_download_filename, validate_path, DownloadEntry,
     MAX_DOWNLOAD_BYTES, NEXT_DOWNLOAD_ID,
 };
 use serde::Deserialize;
 use sha1::{Digest, Sha1};
 use std::{
+    collections::HashSet,
     fs,
     io::{Read, Write},
     path::{Component, Path, PathBuf},
-    sync::{atomic::Ordering, OnceLock},
+    sync::{atomic::Ordering, Mutex, OnceLock},
 };
+
+/// Downloads running at once; more would just compete for the same bandwidth and disk.
+const MAX_ACTIVE_DOWNLOADS: usize = 8;
+const TEMP_MARKER: &str = ".mochi-download-";
+const STALE_TEMP_SECS: u64 = 60 * 60;
+
+/// Destinations currently being written, so two downloads of one filename cannot interleave.
+fn in_flight() -> &'static Mutex<HashSet<PathBuf>> {
+    static SET: OnceLock<Mutex<HashSet<PathBuf>>> = OnceLock::new();
+    SET.get_or_init(Default::default)
+}
+
+struct DestinationGuard(PathBuf);
+
+impl DestinationGuard {
+    fn acquire(path: &Path) -> Result<Self, String> {
+        let mut set = in_flight().lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        if set.insert(path.to_path_buf()) { Ok(Self(path.to_path_buf())) } else { Err("That file is already being downloaded.".into()) }
+    }
+}
+
+impl Drop for DestinationGuard {
+    fn drop(&mut self) { in_flight().lock().unwrap_or_else(std::sync::PoisonError::into_inner).remove(&self.0); }
+}
+
+/// Removes `*.mochi-download-N` leftovers from crashed or killed sessions (never one that is still fresh).
+fn remove_stale_temp_files(dir: &Path) {
+    let Ok(entries) = fs::read_dir(dir) else { return };
+    for entry in entries.flatten() {
+        if !entry.file_name().to_string_lossy().contains(TEMP_MARKER) { continue; }
+        let old_enough = entry.metadata().ok().and_then(|m| m.modified().ok()).and_then(|t| t.elapsed().ok()).is_some_and(|age| age.as_secs() > STALE_TEMP_SECS);
+        if old_enough { let _ = fs::remove_file(entry.path()); }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -79,12 +114,13 @@ fn client_for(provider: Provider) -> Result<&'static reqwest::Client, String> {
             .user_agent("T1nkiePlayz/Mochi/0.1.0 (https://github.com/T1nkiePlayz/Mochi)")
             .redirect(policy)
             .connect_timeout(std::time::Duration::from_secs(20))
+            .read_timeout(std::time::Duration::from_secs(45))
             .build()
             .map_err(|e| format!("Unable to prepare {} downloads: {e}", provider.label()))
     }).as_ref().map_err(Clone::clone)
 }
 
-fn normalize_sha1(value: &str) -> Result<String, String> {
+pub(crate) fn normalize_sha1(value: &str) -> Result<String, String> {
     let v = value.trim().to_ascii_lowercase();
     if v.len() == 40 && v.bytes().all(|b| b.is_ascii_hexdigit()) { Ok(v) } else { Err("Invalid SHA-1 checksum.".into()) }
 }
@@ -99,6 +135,7 @@ pub(crate) async fn fetch_to_file(
     provider: Provider, url: reqwest::Url, destination: &Path, expected_sha1: Option<&str>, progress: impl Fn(u64, Option<u64>),
 ) -> Result<(), String> {
     let label = provider.label();
+    let _guard = DestinationGuard::acquire(destination)?;
     let mut response = client_for(provider)?.get(url).send().await.map_err(|e| format!("{label} download failed: {e}"))?;
     if !response.status().is_success() { return Err(format!("{label} download failed ({}).", response.status())); }
     let total = response.content_length();
@@ -106,7 +143,7 @@ pub(crate) async fn fetch_to_file(
     progress(0, total);
 
     let name = destination.file_name().and_then(|n| n.to_str()).unwrap_or("download");
-    let temp = destination.with_file_name(format!("{name}.mochi-download-{}", NEXT_DOWNLOAD_ID.fetch_add(1, Ordering::Relaxed)));
+    let temp = destination.with_file_name(format!("{name}{TEMP_MARKER}{}", NEXT_DOWNLOAD_ID.fetch_add(1, Ordering::Relaxed)));
     let result: Result<(), String> = async {
         let mut file = fs::File::create(&temp).map_err(|e| format!("Unable to create temporary download: {e}"))?;
         let mut hasher = Sha1::new();
@@ -119,6 +156,9 @@ pub(crate) async fn fetch_to_file(
             progress(downloaded, total);
         }
         file.flush().map_err(|e| format!("Unable to finalize downloaded file: {e}"))?;
+        // Make sure a power cut right after the rename cannot leave an empty "completed" file.
+        file.sync_all().map_err(|e| format!("Unable to finalize downloaded file: {e}"))?;
+        drop(file);
         if let Some(expected) = expected_sha1 {
             let actual: String = hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect();
             check_sha1(&actual, expected)?;
@@ -130,41 +170,81 @@ pub(crate) async fn fetch_to_file(
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct ExtractLimits { max_entries: usize, max_total_bytes: u64, max_entry_bytes: u64, max_ratio: u64 }
+pub(crate) struct ExtractLimits { max_entries: usize, max_total_bytes: u64, max_entry_bytes: u64, max_ratio: u64, ratio_min_bytes: u64 }
 
 pub(crate) const EXTRACT_LIMITS: ExtractLimits = ExtractLimits {
     max_entries: 10_000, max_total_bytes: 1024 * 1024 * 1024, max_entry_bytes: 512 * 1024 * 1024, max_ratio: 200,
+    // Tiny files (a few KiB of zeros or repeated JSON) legitimately compress >200x; only judge the ratio of big entries.
+    ratio_min_bytes: 1024 * 1024,
 };
 
-/// Extracts `archive` into `dest`. Entries that would escape `dest` (zip-slip), symlinks, and archives
+/// Extracts `archive` into `dest`. Entries that would escape `dest` (zip-slip, also through symlinked folders that
+/// already exist inside it), symlinks and other special files, duplicate or case-colliding names, and archives
 /// beyond the entry/size/ratio caps are rejected. Sizes are enforced on bytes actually written, not on headers.
+/// On failure the files this call created are removed again.
 pub(crate) fn extract_zip(archive: &Path, dest: &Path, limits: ExtractLimits) -> Result<usize, String> {
+    let mut created = Vec::new();
+    let result = extract_zip_inner(archive, dest, limits, &mut created);
+    if result.is_err() { for path in created.iter().rev() { let _ = fs::remove_file(path); } }
+    result
+}
+
+fn extract_zip_inner(archive: &Path, dest: &Path, limits: ExtractLimits, created: &mut Vec<PathBuf>) -> Result<usize, String> {
     let file = fs::File::open(archive).map_err(|e| format!("Unable to open archive: {e}"))?;
     let mut zip = zip::ZipArchive::new(file).map_err(|e| format!("Not a valid zip archive: {e}"))?;
     if zip.len() > limits.max_entries { return Err("Archive has too many files.".into()); }
     fs::create_dir_all(dest).map_err(|e| format!("Unable to create extraction folder: {e}"))?;
+    let canonical_dest = fs::canonicalize(dest).map_err(|e| format!("Unable to resolve extraction folder: {e}"))?;
     let mut total = 0u64;
     let mut written = 0usize;
+    // Lower-cased so "A.txt" and "a.txt" collide here exactly as they would on a case-insensitive macOS volume.
+    let mut seen: HashSet<String> = HashSet::new();
     for index in 0..zip.len() {
         let mut entry = zip.by_index(index).map_err(|e| format!("Unable to read archive entry: {e}"))?;
-        let relative = entry.enclosed_name().ok_or_else(|| format!("Archive entry '{}' escapes the target folder.", entry.name()))?;
-        if relative.components().any(|c| !matches!(c, Component::Normal(_))) { return Err(format!("Archive entry '{}' is not allowed.", entry.name())); }
-        if entry.unix_mode().is_some_and(|mode| mode & 0o170000 == 0o120000) { return Err(format!("Archive entry '{}' is a symlink.", entry.name())); }
+        let relative = entry.enclosed_name().ok_or_else(|| format!("Archive entry '{}' escapes the target folder.", entry.name().escape_debug()))?;
+        if relative.components().any(|c| !matches!(c, Component::Normal(_))) || entry.name().chars().any(char::is_control) {
+            return Err(format!("Archive entry '{}' is not allowed.", entry.name().escape_debug()));
+        }
+        if let Some(mode) = entry.unix_mode() {
+            let kind = mode & 0o170000;
+            if kind == 0o120000 { return Err(format!("Archive entry '{}' is a symlink.", entry.name())); }
+            if kind != 0 && kind != 0o100000 && kind != 0o040000 { return Err(format!("Archive entry '{}' is a special file.", entry.name())); }
+        }
         let target: PathBuf = dest.join(&relative);
-        if entry.is_dir() { fs::create_dir_all(&target).map_err(|e| format!("Unable to create folder: {e}"))?; continue; }
+        if entry.is_dir() {
+            fs::create_dir_all(&target).map_err(|e| format!("Unable to create folder: {e}"))?;
+            ensure_inside(&target, &canonical_dest)?;
+            continue;
+        }
+        if !seen.insert(relative.to_string_lossy().to_lowercase()) { return Err(format!("Archive contains '{}' more than once.", entry.name())); }
         if entry.size() > limits.max_entry_bytes { return Err(format!("Archive entry '{}' is too large.", entry.name())); }
-        if entry.compressed_size() > 0 && entry.size() / entry.compressed_size() > limits.max_ratio { return Err("Archive looks like a zip bomb.".into()); }
-        if let Some(parent) = target.parent() { fs::create_dir_all(parent).map_err(|e| format!("Unable to create folder: {e}"))?; }
-        // Never write through a pre-existing symlink.
-        if fs::symlink_metadata(&target).is_ok_and(|m| m.file_type().is_symlink()) { return Err(format!("'{}' is a symlink.", relative.display())); }
-        let mut out = fs::File::create(&target).map_err(|e| format!("Unable to write '{}': {e}", relative.display()))?;
+        if entry.size() > limits.ratio_min_bytes && entry.compressed_size() > 0 && entry.size() / entry.compressed_size() > limits.max_ratio { return Err("Archive looks like a zip bomb.".into()); }
+        if let Some(parent) = target.parent() {
+            fs::create_dir_all(parent).map_err(|e| format!("Unable to create folder: {e}"))?;
+            // A folder that already exists in `dest` may be a symlink pointing elsewhere.
+            ensure_inside(parent, &canonical_dest)?;
+        }
+        // Never write through a pre-existing symlink; replace a regular file, then create exclusively (O_EXCL does not follow links).
+        match fs::symlink_metadata(&target) {
+            Ok(meta) if meta.file_type().is_symlink() => return Err(format!("'{}' is a symlink.", relative.display())),
+            Ok(meta) if meta.is_file() => fs::remove_file(&target).map_err(|e| format!("Unable to replace '{}': {e}", relative.display()))?,
+            _ => {}
+        }
+        let mut out = fs::OpenOptions::new().write(true).create_new(true).open(&target).map_err(|e| format!("Unable to write '{}': {e}", relative.display()))?;
+        created.push(target.clone());
         let allowed = limits.max_entry_bytes.min(limits.max_total_bytes.saturating_sub(total));
         let copied = std::io::copy(&mut (&mut entry).take(allowed + 1), &mut out).map_err(|e| format!("Unable to extract '{}': {e}", relative.display()))?;
         if copied > allowed { return Err("Archive expands beyond Mochi's size limit.".into()); }
+        out.sync_all().map_err(|e| format!("Unable to extract '{}': {e}", relative.display()))?;
         total += copied;
         written += 1;
     }
     Ok(written)
+}
+
+fn ensure_inside(path: &Path, canonical_root: &Path) -> Result<(), String> {
+    let resolved = fs::canonicalize(path).map_err(|e| format!("Unable to resolve extraction path: {e}"))?;
+    if resolved.starts_with(canonical_root) { Ok(()) } else { Err("Archive entry resolves outside the target folder.".into()) }
 }
 
 /// Validates the request and starts the download in the background. Returns the download id.
@@ -178,14 +258,16 @@ pub fn start(request: ModDownloadRequest) -> Result<String, String> {
     if extract && !filename.to_ascii_lowercase().ends_with(".zip") { return Err("Only .zip archives can be extracted.".into()); }
     let keep_archive = request.keep_archive.unwrap_or(false);
     fs::create_dir_all(&root).map_err(|e| format!("Unable to create Tofu folder: {e}"))?;
+    remove_stale_temp_files(&root);
 
     cleanup_downloads();
+    if active_download_count() >= MAX_ACTIVE_DOWNLOADS { return Err("Too many downloads are running. Wait for one to finish.".into()); }
     let id = format!("download-{}-{}", now_ms(), NEXT_DOWNLOAD_ID.fetch_add(1, Ordering::Relaxed));
     let entry = DownloadEntry {
         id: id.clone(), tofu_id: request.tofu_id, tofu_name: request.tofu_name, item_name: request.item_name, filename: filename.clone(),
         downloaded: 0, total: None, status: "downloading".into(), error: None, created_at: now_ms(), finished_at: None,
     };
-    downloads().lock().map_err(|_| "Download state is unavailable.".to_string())?.insert(id.clone(), entry);
+    lock_downloads().insert(id.clone(), entry);
 
     let destination = root.join(&filename);
     let task_id = id.clone();
@@ -213,7 +295,7 @@ pub fn start(request: ModDownloadRequest) -> Result<String, String> {
     Ok(id)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn start_mod_download(request: ModDownloadRequest) -> Result<String, String> { start(request) }
 
 #[cfg(test)]
@@ -316,8 +398,115 @@ mod tests {
         assert!(extract_zip(&zip_path, &out, total).is_err());
         let entry = ExtractLimits { max_entry_bytes: 1000, ..EXTRACT_LIMITS };
         assert!(extract_zip(&zip_path, &out, entry).is_err());
-        let ratio = ExtractLimits { max_ratio: 2, ..EXTRACT_LIMITS };
+        let ratio = ExtractLimits { max_ratio: 2, ratio_min_bytes: 0, ..EXTRACT_LIMITS };
         assert!(extract_zip(&zip_path, &out, ratio).unwrap_err().contains("zip bomb"));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn small_highly_compressible_entries_are_not_zip_bombs() {
+        let dir = temp_dir("small");
+        let zip_path = dir.join("pack.zip");
+        build_zip(&zip_path, &[("zeros.bin", &[0u8; 100_000])], None);
+        assert_eq!(extract_zip(&zip_path, &dir.join("out"), EXTRACT_LIMITS).unwrap(), 1);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn does_not_write_through_symlinked_folders() {
+        let dir = temp_dir("symdir");
+        let (out, outside) = (dir.join("out"), dir.join("outside"));
+        fs::create_dir_all(&out).unwrap();
+        fs::create_dir_all(&outside).unwrap();
+        std::os::unix::fs::symlink(&outside, out.join("config")).unwrap();
+        let zip_path = dir.join("pack.zip");
+        build_zip(&zip_path, &[("config/evil.txt", b"x")], None);
+        assert!(extract_zip(&zip_path, &out, EXTRACT_LIMITS).is_err());
+        assert!(!outside.join("evil.txt").exists());
+        // A pre-existing symlinked file is refused too.
+        std::os::unix::fs::symlink(outside.join("victim"), out.join("file.txt")).unwrap();
+        build_zip(&zip_path, &[("file.txt", b"x")], None);
+        assert!(extract_zip(&zip_path, &out, EXTRACT_LIMITS).is_err());
+        assert!(!outside.join("victim").exists());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn rejects_duplicate_and_case_colliding_names_and_cleans_up() {
+        let dir = temp_dir("dup");
+        let zip_path = dir.join("pack.zip");
+        let out = dir.join("out");
+        build_zip(&zip_path, &[("a/Readme.txt", b"1"), ("a/readme.TXT", b"2")], None);
+        assert!(extract_zip(&zip_path, &out, EXTRACT_LIMITS).unwrap_err().contains("more than once"));
+        // Files written before the failure are removed again.
+        assert!(!out.join("a/Readme.txt").exists());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn rejects_control_characters_in_entry_names() {
+        let dir = temp_dir("ctl");
+        let zip_path = dir.join("pack.zip");
+        build_zip(&zip_path, &[("a\nb.txt", b"1")], None);
+        assert!(extract_zip(&zip_path, &dir.join("out"), EXTRACT_LIMITS).is_err());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn existing_files_are_replaced_not_appended() {
+        let dir = temp_dir("replace");
+        let out = dir.join("out");
+        fs::create_dir_all(&out).unwrap();
+        fs::write(out.join("a.txt"), b"old old old old").unwrap();
+        let zip_path = dir.join("pack.zip");
+        build_zip(&zip_path, &[("a.txt", b"new")], None);
+        extract_zip(&zip_path, &out, EXTRACT_LIMITS).unwrap();
+        assert_eq!(fs::read(out.join("a.txt")).unwrap(), b"new");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// Property-style: random entry names never produce a file outside the destination.
+    #[test]
+    fn random_entry_names_never_escape() {
+        let dir = temp_dir("fuzz");
+        let mut state = 0x2545_f491_4f6c_dd1du64;
+        let mut next = move || { state ^= state << 13; state ^= state >> 7; state ^= state << 17; state };
+        let pieces = ["..", ".", "a", "B", "/", "/", "\\", "%2e", "\0", " ", "~", "C:", "x.txt"];
+        for round in 0..150 {
+            let name: String = (0..(next() % 8 + 1)).map(|_| pieces[(next() % pieces.len() as u64) as usize]).collect();
+            let sandbox = dir.join(format!("s{round}"));
+            let out = sandbox.join("out");
+            let zip_path = dir.join(format!("z{round}.zip"));
+            let mut writer = zip::ZipWriter::new(fs::File::create(&zip_path).unwrap());
+            if writer.start_file(name.as_str(), zip::write::SimpleFileOptions::default()).is_err() { continue; }
+            writer.write_all(b"x").unwrap();
+            writer.finish().unwrap();
+            let _ = extract_zip(&zip_path, &out, EXTRACT_LIMITS);
+            // Nothing may exist in the sandbox besides `out` itself.
+            let stray: Vec<_> = fs::read_dir(&sandbox).map(|rd| rd.flatten().map(|e| e.file_name()).filter(|n| n != "out").collect()).unwrap_or_default();
+            assert!(stray.is_empty(), "{name:?} wrote {stray:?}");
+        }
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn same_destination_cannot_download_twice() {
+        let path = PathBuf::from("/tmp/mochi-guard-test/a.jar");
+        let first = DestinationGuard::acquire(&path).unwrap();
+        assert!(DestinationGuard::acquire(&path).is_err());
+        drop(first);
+        assert!(DestinationGuard::acquire(&path).is_ok());
+    }
+
+    #[test]
+    fn stale_temp_files_are_only_removed_when_old() {
+        let dir = temp_dir("stale");
+        let fresh = dir.join(format!("a.jar{TEMP_MARKER}1"));
+        fs::write(&fresh, b"x").unwrap();
+        fs::write(dir.join("keep.jar"), b"x").unwrap();
+        remove_stale_temp_files(&dir);
+        assert!(fresh.exists() && dir.join("keep.jar").exists());
         let _ = fs::remove_dir_all(&dir);
     }
 }
