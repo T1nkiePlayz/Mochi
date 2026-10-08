@@ -1,0 +1,38 @@
+/* Installed view: mod/Tofu control centre. Tokens only. */
+.inst-view { display: grid; gap: 14px; align-content: start; }
+.inst-heading { align-items: center; gap: 14px; flex-wrap: wrap; }
+.inst-summary { color: var(--mochi-text-muted); font-size: 12px; }
+.inst-toolbar { display: grid; grid-template-columns: minmax(200px, 1fr) 150px 170px auto auto; gap: 8px; align-items: center; }
+.inst-toolbar .search-box { width: auto; }
+.inst-progress { display: grid; gap: 6px; font-size: 12px; color: var(--mochi-text); }
+.inst-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.inst-card { display: grid; gap: 12px; padding: 14px 16px; border: var(--mochi-border-width, 1px) solid var(--mochi-card-border); border-radius: var(--mochi-card-radius); background: var(--mochi-card-background); box-shadow: var(--mochi-card-shadow); }
+.inst-main { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 14px; align-items: center; }
+.inst-thumb { width: 56px; height: 56px; border-radius: var(--mochi-radius-sm); background: var(--mochi-cover-placeholder, var(--mochi-surface-raised)) center / cover; }
+.inst-title { min-width: 0; display: grid; gap: 2px; }
+.inst-title h3 { margin: 0; color: var(--mochi-text-strong); font: 700 15px var(--mochi-font-display, inherit); }
+.inst-title p { margin: 0; color: var(--mochi-text-muted); font-size: 12px; }
+.inst-title code { color: var(--mochi-text-muted); font: 11px var(--mochi-mono, monospace); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inst-stats { display: flex; gap: 22px; margin: 0; }
+.inst-stats div { display: grid; gap: 2px; text-align: right; }
+.inst-stats dt { color: var(--mochi-text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.inst-stats dd { margin: 0; color: var(--mochi-text-strong); font-weight: 700; font-size: 13px; white-space: nowrap; }
+.inst-skel { display: inline-block; width: 44px; height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--mochi-surface) 25%, var(--mochi-surface-hover) 50%, var(--mochi-surface) 75%) 0 0 / 200% 100%; animation: stats-shimmer 1.4s linear infinite; }
+.inst-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.inst-badge { padding: 4px 10px; border-radius: var(--mochi-pill-radius, 999px); background: var(--mochi-surface-raised); color: var(--mochi-text-muted); font-size: 11px; font-weight: 600; }
+.inst-badge.has-updates { background: var(--mochi-accent); color: var(--mochi-accent-text, var(--mochi-text-strong)); }
+.inst-toggle { display: inline-flex; align-items: center; gap: 4px; color: var(--mochi-text-muted); background: transparent; font-size: 12px; border-radius: var(--mochi-radius-sm); padding: 4px 6px; }
+.inst-toggle:focus-visible { outline: none; box-shadow: var(--mochi-focus-ring); }
+.inst-error { margin: 0; color: var(--mochi-danger); font-size: 12px; }
+.inst-updates { list-style: none; margin: 0; padding: 10px 0 0; border-top: 1px solid var(--mochi-border); display: grid; gap: 8px; }
+.inst-updates li { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px; color: var(--mochi-text); }
+.inst-updates strong { color: var(--mochi-text-strong); }
+.inst-none { padding: 24px 0; text-align: center; }
+@media (max-width: 1100px) {
+  .inst-main { grid-template-columns: 56px minmax(0, 1fr); }
+  .inst-stats { grid-column: 1 / -1; justify-content: flex-start; }
+  .inst-stats div { text-align: left; }
+  .inst-toolbar { grid-template-columns: 1fr 1fr; }
+  .inst-toolbar .search-box { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) { .inst-skel { animation: none; } }
