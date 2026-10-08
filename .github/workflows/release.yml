@@ -7,11 +7,10 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  prepare:
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
-    name: Build and release Linux packages
+    name: Prepare release
     runs-on: ubuntu-24.04
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,92 +20,59 @@ jobs:
       - name: Sync app version from tag
         shell: bash
         run: |
-          version="${GITHUB_REF_NAME#v}"
-
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Invalid release tag version: $GITHUB_REF_NAME"
-            exit 1
-          fi
-
-          node <<'NODE'
-          const fs = require('fs');
-
-          const version = process.env.GITHUB_REF_NAME.replace(/^v/, '');
-          const files = [
-            'package.json',
-            'src-tauri/tauri.conf.json',
-            'src-tauri/Cargo.toml',
-          ];
-
-          const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          packageJson.version = version;
-          fs.writeFileSync('package.json', JSON.stringify(packageJson, null, 2) + '\n');
-
-          const tauriConfig = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
-          tauriConfig.version = version;
-          fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(tauriConfig, null, 2) + '\n');
-
-          const cargoPath = 'src-tauri/Cargo.toml';
-          const cargo = fs.readFileSync(cargoPath, 'utf8');
-          const updatedCargo = cargo.replace(
-            /(^\[package\][\s\S]*?^version\s*=\s*")[^"]+(")/m,
-            `$1${version}$2`,
-          );
-
-          if (updatedCargo === cargo) {
-            throw new Error('Could not find the [package] version in src-tauri/Cargo.toml');
-          }
-
-          fs.writeFileSync(cargoPath, updatedCargo);
-          NODE
+          node scripts/sync-version.mjs "$GITHUB_REF_NAME"
 
           git fetch origin main
-
           if [[ "$(git rev-parse origin/main)" != "$GITHUB_SHA" ]]; then
             echo "::error::Release tags must point to the current main commit so version metadata can be synchronized safely."
             exit 1
           fi
 
-          git switch --create release-version origin/main
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
           if git diff --quiet -- package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml; then
-            echo "Version metadata is already synced to $version."
+            echo "Version metadata is already synced."
           else
+            git switch --create release-version origin/main
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml
-            git commit -m "chore: sync app version to $version"
+            git commit -m "chore: sync app version to ${GITHUB_REF_NAME#v}"
             git push origin HEAD:main
           fi
 
-      - name: Read release notes from tagged commit
-        id: release_notes
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           notes="$(git show -s --format='%b' "$GITHUB_SHA")"
-
           if [[ -z "$(printf '%s' "$notes" | tr -d '[:space:]')" ]]; then
             notes="## Mochi $GITHUB_REF_NAME
 
-Your games, your way.
+          Your games, your way.
 
-### Linux downloads
-- **AppImage** — portable Linux build
-- **DEB** — Debian/Ubuntu-based distributions
-- **RPM** — Fedora/RHEL-based distributions"
+          ### Downloads
+          - **AppImage / DEB / RPM** — Linux
+          - **DMG** — macOS (Apple silicon and Intel)"
+          fi
+          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --title "Mochi $GITHUB_REF_NAME" --notes "$notes"
           fi
 
-          {
-            echo 'body<<MOCHI_RELEASE_NOTES'
-            printf '%s\n' "$notes"
-            echo 'MOCHI_RELEASE_NOTES'
-          } >> "$GITHUB_OUTPUT"
+  linux:
+    name: Linux packages
+    needs: prepare
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync app version from tag
+        run: node scripts/sync-version.mjs "$GITHUB_REF_NAME"
 
       - name: Install Linux dependencies
         run: |
-          sudo sed -i             -e 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g'             /etc/apt/sources.list.d/ubuntu.sources
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends             libwebkit2gtk-4.1-dev             libayatana-appindicator3-dev             librsvg2-dev             patchelf
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -125,13 +91,70 @@ Your games, your way.
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build and publish release
+      - name: Build and upload packages
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Mochi ${{ github.ref_name }}"
-          releaseBody: ${{ steps.release_notes.outputs.body }}
           releaseDraft: false
           prerelease: false
+
+  macos:
+    # Signing and notarization run only when the Apple secrets are configured;
+    # without them the DMGs are still built, but unsigned.
+    name: macOS packages (${{ matrix.target }})
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: aarch64-apple-darwin
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync app version from tag
+        run: node scripts/sync-version.mjs "$GITHUB_REF_NAME"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+          shared-key: release-${{ matrix.target }}
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build, sign, notarize and upload
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Mochi ${{ github.ref_name }}"
+          releaseDraft: false
+          prerelease: false
+          args: --target ${{ matrix.target }}

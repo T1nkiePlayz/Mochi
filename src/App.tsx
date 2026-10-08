@@ -9,7 +9,6 @@ import {
   Grid2X2,
   Library,
   Menu,
-  MoreHorizontal,
   Play,
   Plus,
   Search,
@@ -17,7 +16,6 @@ import {
   SlidersHorizontal,
   Sparkles,
   UserRound,
-  WifiOff,
   X,
   Palette,
   FileJson,
@@ -41,27 +39,40 @@ import { ModrinthDiscover } from "./components/ModrinthDiscover";
 import { MochiIcon } from "./components/MochiIcon";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { FirstLaunchSetup } from "./components/FirstLaunchSetup";
 import { ImportPicker } from "./components/ImportPicker";
 import type { ImportedGame, ImportSourceId } from "./lib/sources";
 import { isCloudConfigured, supabase } from "./lib/supabase";
 import { clearAccountCloudData, getCloudAccountSettings, pullLibrary, pushLibrary } from "./lib/cloud";
 import type { Piko, Tofu } from "./models";
-import { lookupIgdbGame, lookupIgdbGames, type IgdbGame, type IgdbSettings } from "./lib/igdb";
+import { lookupIgdbGames, type IgdbGame } from "./lib/igdb";
 import {
   chooseGameAppBundle,
   chooseGameTarget,
+  createGameShortcut,
   getPlatformCapabilities,
+  launchGame as startGame,
   listInstalledFlatpaks,
+  listRuntimes,
   normalizeLaunchTarget,
+  openPath,
+  openExternalUrl,
+  removeGameShortcut,
+  stopGame,
   type FlatpakApp,
   type LaunchMethodId,
   type PlatformCapabilities,
+  type RuntimeInfo,
+  type PlaytimeEntry,
+  getPlaytime,
 } from "./lib/platform";
+import { useGameSessions } from "./hooks";
+import { formatBytes, formatPlaytime, formatRelativeTime } from "./lib/format";
+import { TofuManager } from "./components/TofuManager";
+import { GameEditor } from "./components/GameEditor";
 import { deletePasskey, enrollTotp, getVerifiedTotpFactor, linkAuthIdentity, listPasskeys, registerPasskey, removeTotp, sendEmailCode, signInWithProvider, verifyEmailCode, verifyEmailToken, verifyMfaCode } from "./lib/auth";
 import { importThemeFile, importThemeFolder, useThemeEngine } from "./lib/theme";
-import { getProviderCredentialStatus, saveProviderCredential, validateNexusApiKey } from "./lib/providerCredentials";
+import { deleteProviderCredential, getProviderCredentialStatuses, saveProviderCredential, validateNexusApiKey } from "./lib/providerCredentials";
 import { getDownloads } from "./lib/modrinth";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -100,11 +111,6 @@ function gameSearchMatches(query: string, candidate: string): boolean {
     return Math.min(candidateWord.length, word.length) >= 4 && Math.abs(candidateWord.length - word.length) <= threshold && distance(word, candidateWord) <= threshold;
   }));
 }
-function formatBytes(bytes: number) {
-  if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + " KiB";
-  if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + " MiB";
-  return (bytes / 1024 / 1024 / 1024).toFixed(2) + " GiB";
-}
 
 function App() {
   const [library, setLibrary] = useState<Piko[]>(() => {
@@ -122,7 +128,6 @@ function App() {
   const [search, setSearch] = useState("");
   const [gameDetailsId, setGameDetailsId] = useState("");
   const [showAddPiko, setShowAddPiko] = useState(false);
-  const [showNewTofu, setShowNewTofu] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
@@ -143,14 +148,17 @@ function App() {
   const [showCustomGame, setShowCustomGame] = useState(false);
   const [addGameStep, setAddGameStep] = useState<"form" | "igdb">("form");
   const [pendingGame, setPendingGame] = useState<{ name: string; executablePath: string; platformCategory: string; candidates: IgdbGame[] } | null>(null);
-  const [platformCategory, setPlatformCategory] = useState("Custom");
+  const platformCategory = "Custom";
   const [launchType, setLaunchType] = useState<LaunchMethodId>("file");
   const [launchTarget, setLaunchTarget] = useState("");
   const [platformCapabilities, setPlatformCapabilities] = useState<PlatformCapabilities | null>(null);
   const [flatpakPickerOpen, setFlatpakPickerOpen] = useState(false);
   const [flatpaks, setFlatpaks] = useState<FlatpakApp[]>([]);
   const [flatpakBusy, setFlatpakBusy] = useState(false);
-  const [settings, setSettings] = useState<IgdbSettings>({ clientId: "", clientSecret: "" });
+  const [runtimes, setRuntimes] = useState<RuntimeInfo[]>([]);
+  const [showTofuManager, setShowTofuManager] = useState(false);
+  const [editingGameId, setEditingGameId] = useState("");
+  const { sessions, isRunning, refresh: refreshSessions } = useGameSessions();
   const [behavior, setBehavior] = useState(() => {
     try { const stored = JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}"); return { launchOnStartup: Boolean(stored.launchOnStartup), keepOpen: stored.keepOpen !== false, confirmLaunch: stored.confirmLaunch !== false, detailedErrors: Boolean(stored.detailedErrors), experimentalFeatures: Boolean(stored.experimentalFeatures), notificationsEnabled: stored.notificationsEnabled !== false, inAppNotifications: stored.inAppNotifications !== false, systemNotifications: stored.systemNotifications !== false }; } catch { return { launchOnStartup: false, keepOpen: true, confirmLaunch: true, detailedErrors: false, experimentalFeatures: false, notificationsEnabled: true, inAppNotifications: true, systemNotifications: true }; }
   });
@@ -184,7 +192,7 @@ function App() {
   const [emailCodeEmail, setEmailCodeEmail] = useState("");
   const [showFirstLaunchSetup, setShowFirstLaunchSetup] = useState(() => window.localStorage.getItem(setupCompleteKey) !== "true");
   const [showImportPicker, setShowImportPicker] = useState(false);
-  const [playtime, setPlaytime] = useState<Array<{ gameId: string; name: string; seconds: number; lastPlayed: number }>>([]);
+  const [playtime, setPlaytime] = useState<PlaytimeEntry[]>([]);
   const [downloads, setDownloads] = useState<Array<{ id: string; tofuId: string; tofuName: string; itemName: string; filename: string; downloaded: number; total?: number; status: "downloading" | "completed" | "failed"; error?: string; createdAt: number; finishedAt?: number }>>([]);
   const [syncState, setSyncState] = useState<"offline" | "syncing" | "synced" | "error">(
     isCloudConfigured ? "offline" : "offline",
@@ -203,12 +211,14 @@ function App() {
   const greeting = (() => { const hour = new Date().getHours(); return hour < 5 || hour >= 18 ? "Good evening" : hour < 12 ? "Good morning" : "Good afternoon"; })();
   const activeProfileId = user?.id || "guest";
   const accountStorageOwnerKey = multipleAccountsEnabled ? `profiles:${activeProfileId}` : "shared";
-  const scopedStorageKey = (key: string) => multipleAccountsEnabled ? profileStorageKey(activeProfileId, key) : key;
+  const scopedStorageKey = (key: string) => multipleAccountsEnabled ? profileStorageKey(activeProfileId, key) : `mochi:${key}`;
   const pushNotification = (title: string, message: string) => {
     const notification = { id: crypto.randomUUID(), title, message, createdAt: Date.now() };
     if (behavior.notificationsEnabled && behavior.inAppNotifications) setNotifications((current) => [notification, ...current].slice(0, 20));
     if (behavior.notificationsEnabled && behavior.systemNotifications) void invoke("send_system_notification", { title, body: message }).catch(() => {});
   };
+  const pushNotificationRef = useRef(pushNotification);
+  pushNotificationRef.current = pushNotification;
   const updateNotificationProgress = (id: string, progress: { value: number; total: number }, message: string) => {
     setNotifications(current => current.map(item => item.id === id ? { ...item, message, progress } : item));
   };
@@ -280,9 +290,11 @@ function App() {
 
   useEffect(() => {
     void refreshPlaytime();
-    const timer = window.setInterval(() => void refreshPlaytime(), 10000);
+    // Playtime of a running game grows continuously, so keep it fresh while one is open.
+    if (!sessions.length) return;
+    const timer = window.setInterval(() => void refreshPlaytime(), 15000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [sessions.length]);
   useEffect(() => {
     if (accountStorageOwner !== accountStorageOwnerKey) return;
     if (multipleAccountsEnabled) window.localStorage.setItem(scopedStorageKey("settings"), JSON.stringify({ ...behavior, theme }));
@@ -307,13 +319,32 @@ function App() {
     void invoke("set_launch_on_startup", { enabled: behavior.launchOnStartup }).catch(() => { /* browser/development mode */ });
   }, [behavior.launchOnStartup]);
 
+  // Always points at the latest launch logic so deep links never act on stale library state.
+  const launchFromLinkRef = useRef<(gameId: string) => void>(() => {});
+  launchFromLinkRef.current = (gameId) => {
+    const game = library.find((piko) => piko.id === gameId);
+    if (!game) { setLaunchError("That game is not in your Mochi library."); return; }
+    selectPiko(game);
+    void launchGame(game);
+  };
+
   useEffect(() => {
-    if (!supabase) return;
     const client = supabase;
 
     let unlisten: (() => void) | undefined;
 
     const handleDeepLinks = (urls: string[]) => {
+      for (const url of urls) {
+        try {
+          const parsed = new URL(url);
+          if (parsed.protocol === "mochi:" && parsed.hostname === "launch") {
+            const gameId = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
+            if (gameId) launchFromLinkRef.current(gameId);
+            return;
+          }
+        } catch { /* not a URL */ }
+      }
+      if (!client) return;
       const callbackUrl = urls.find((url) => {
         try {
           const parsed = new URL(url);
@@ -400,7 +431,16 @@ function App() {
 
   useEffect(() => {
     if (accountStorageOwner === accountStorageOwnerKey) return;
-    const profileKey = (key: string) => multipleAccountsEnabled ? profileStorageKey(activeProfileId, key) : key;
+    const profileKey = (key: string) => multipleAccountsEnabled ? profileStorageKey(activeProfileId, key) : `mochi:${key}`;
+    // Older versions saved the shared library under un-prefixed keys; move it to the canonical ones once.
+    if (!multipleAccountsEnabled) {
+      try {
+        for (const key of ["pikos", "notifications"]) {
+          const legacy = window.localStorage.getItem(key);
+          if (legacy !== null) { window.localStorage.setItem(`mochi:${key}`, legacy); window.localStorage.removeItem(key); }
+        }
+      } catch { /* storage unavailable */ }
+    }
     const read = <T,>(key: string, fallback: T): T => {
       try { const value = window.localStorage.getItem(key); return value ? JSON.parse(value) as T : fallback; } catch { return fallback; }
     };
@@ -454,7 +494,7 @@ function App() {
           const cloudIds = new Set(cloudLibrary.map((piko) => piko.id));
           setLibrary([...cloudLibrary, ...library.filter((piko) => !cloudIds.has(piko.id))]);
         } else {
-          await pushLibrary(client, user.id, library);
+          await pushLibrary(client, library);
         }
         syncInitialized.current = true;
         setSyncState("synced");
@@ -476,12 +516,17 @@ function App() {
     if (accountStorageOwner !== accountStorageOwnerKey || !supabase || !user || !cloudSyncEnabled || !syncInitialized.current) return;
     const client = supabase;
     setSyncState("syncing");
-    void pushLibrary(client, user.id, library)
-      .then(() => setSyncState("synced"))
-      .catch((error: unknown) => {
-        console.error("Mochi cloud sync failed", error);
-        setSyncState("error");
-      });
+    // Debounced: imports and metadata refreshes change the library many times in a burst.
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void pushLibrary(client, library)
+        .then(() => { if (!cancelled) setSyncState("synced"); })
+        .catch((error: unknown) => {
+          console.error("Mochi cloud sync failed", error);
+          if (!cancelled) setSyncState("error");
+        });
+    }, 1200);
+    return () => { cancelled = true; window.clearTimeout(timer); };
   }, [library, user?.id, cloudSyncEnabled, accountStorageOwner, accountStorageOwnerKey]);
 
   const finishFirstLaunchSetup = (games: ImportedGame[], sources: ImportSourceId[]) => {
@@ -534,75 +579,99 @@ function App() {
     setLibrary(current => current.map(piko => piko.id === selectedPiko.id ? { ...piko, tofus: piko.tofus.map(tofu => tofu.id === selectedTofu.id ? { ...tofu, ...patch } : tofu) } : piko));
   };
 
+  // The native side owns download state; poll it while the Downloads page is open or anything is in flight.
+  const downloadStatuses = useRef(new Map<string, string>());
+  const hasActiveDownload = downloads.some((download) => download.status === "downloading");
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const next = await getDownloads();
+        if (cancelled) return;
+        for (const download of next) {
+          const previous = downloadStatuses.current.get(download.id);
+          if (previous === "downloading" && download.status !== "downloading") {
+            pushNotificationRef.current(download.status === "completed" ? "Download finished" : "Download failed", download.status === "completed" ? `${download.itemName} was added to ${download.tofuName}.` : `${download.itemName}: ${download.error ?? "unknown error"}`);
+          }
+          downloadStatuses.current.set(download.id, download.status);
+        }
+        setDownloads(next);
+      } catch { /* browser/development mode */ }
+    };
+    void poll();
+    // The in-memory list is cheap to read; poll faster while the user is watching it.
+    const timer = window.setInterval(() => void poll(), activeNav === "Downloads" || hasActiveDownload ? 1500 : 4000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [activeNav, hasActiveDownload]);
+
+  const createTofu = () => {
+    const name = `Tofu ${selectedPiko.tofus.length + 1}`;
+    const tofu: Tofu = { id: `tofu-${Date.now()}`, name, version: "Local", runtime: "Native", mods: 0, status: "Ready" };
+    updateGame(selectedPiko.id, { tofus: [...selectedPiko.tofus, tofu] });
+    setSelectedTofuId(tofu.id);
+    setShowTofuManager(true);
+  };
+
   const refreshPlaytime = async () => {
     try {
-      const entries = await invoke<Array<{ gameId: string; name: string; seconds: number; lastPlayed: number }>>("get_playtime");
-      setPlaytime(entries);
+      setPlaytime(await getPlaytime());
     } catch {
       // Browser/development mode or an older backend without the playtime service.
     }
   };
 
-  const refreshDownloads = async () => {
-    try {
-      setDownloads(await getDownloads());
-    } catch {
-      // Browser/development mode or an older backend without the download service.
-    }
+  const shortError = (error: unknown) => {
+    const text = error instanceof Error ? error.message : String(error);
+    return behavior.detailedErrors ? text : text.split(/(?<=[.!?])\s/)[0];
   };
 
   const launchGame = async (piko: Piko = selectedPiko) => {
     if (piko.id === "__empty" || !piko.executablePath) {
-      setLaunchError("This game does not have an executable path. Add or edit the game to set its executable.");
+      setLaunchError("This game does not have a launch target. Edit the game to set one.");
       return;
     }
     if (behavior.confirmLaunch && !window.confirm(`Launch ${piko.name}?`)) return;
     setLaunchError("");
     setIsLaunching(true);
     try {
-      await invoke("launch_game_tracked", {
-        gameId: piko.id,
-        name: piko.name,
-        launchTarget: piko.executablePath,
-      });
-      await refreshPlaytime();
+      const tofu = piko.id === selectedPiko.id ? selectedTofu : piko.tofus[0];
+      await startGame(piko, tofu);
+      await Promise.all([refreshPlaytime(), refreshSessions()]);
     } catch (error) {
-      setLaunchError(error instanceof Error ? error.message : String(error));
+      setLaunchError(shortError(error));
     } finally {
       setIsLaunching(false);
     }
   };
 
+  const stopRunningGame = async (piko: Piko) => {
+    try { await stopGame(piko.id); } catch (error) { setLaunchError(shortError(error)); }
+  };
+
+  const updateGame = (gameId: string, changes: Partial<Piko>) =>
+    setLibrary((current) => current.map((piko) => piko.id === gameId ? { ...piko, ...changes } : piko));
+
+  const removeGame = (game: Piko) => {
+    if (!window.confirm(`Remove ${game.name} from your Mochi library? The game itself is not uninstalled.`)) return;
+    void removeGameShortcut(game.id).catch(() => {});
+    setLibrary((current) => current.filter((piko) => piko.id !== game.id));
+    setGameDetailsId("");
+    if (selectedPikoId === game.id) { setSelectedPikoId(""); setSelectedTofuId(""); }
+  };
+
+  const addShortcut = async (game: Piko) => {
+    try {
+      await createGameShortcut(game.id, game.name);
+      pushNotification("Shortcut added", `${game.name} now appears in your application menu.`);
+    } catch (error) { setLaunchError(shortError(error)); }
+  };
+
+  const openGameFolder = (game: Piko) => {
+    const folder = game.installPath || (game.executablePath?.startsWith("/") ? game.executablePath : "");
+    if (folder) void openPath(folder).catch((error) => setLaunchError(shortError(error)));
+  };
+
   const selectedPlaytime = playtime.find((entry) => entry.gameId === selectedPiko.id);
-  const formatPlaytime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
-  };
-
-  const addTofu = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const name = String(form.get("name") || "").trim();
-    const version = String(form.get("version") || "").trim();
-    const runtime = String(form.get("runtime") || "").trim();
-    if (!name || !version || !runtime) return;
-
-    const tofu: Tofu = {
-      id: `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`,
-      name,
-      version,
-      runtime,
-      mods: 0,
-      status: "Ready",
-    };
-
-    setLibrary((current) =>
-      current.map((piko) => (piko.id === selectedPiko.id ? { ...piko, tofus: [...piko.tofus, tofu] } : piko)),
-    );
-    setSelectedTofuId(tofu.id);
-    setShowNewTofu(false);
-  };
 
   const loadFlatpaks = async () => {
     setFlatpakBusy(true);
@@ -625,6 +694,10 @@ function App() {
       setLaunchError(error instanceof Error ? error.message : String(error));
     }
   };
+
+  useEffect(() => {
+    void listRuntimes().then(setRuntimes).catch(() => {});
+  }, []);
 
   useEffect(() => {
     void getPlatformCapabilities().then(setPlatformCapabilities).catch((error) => {
@@ -745,6 +818,7 @@ function App() {
       artwork: "linear-gradient(145deg, rgba(73,57,103,.35), rgba(20,16,29,.96))",
       artworkCacheKey: `${imported.source}-${imported.id}`.replace(/[^a-zA-Z0-9_-]/g, "-"),
       executablePath: imported.launchTarget,
+      installPath: imported.installPath ?? undefined,
       source: "custom" as const,
       sourceId: imported.source,
       platformCategory: imported.source === "steam" ? "Steam" : imported.source === "heroic" ? "Heroic" : imported.source === "lutris" ? "Lutris" : imported.source === "bottles" ? "Bottles" : imported.source === "itch" ? "itch.io" : "Flatpak",
@@ -763,6 +837,7 @@ function App() {
     setShowImportPicker(false);
   };
 
+  const hasIgdb = Boolean(supabase && user && credentialStatus.igdb);
   const addCustomGame = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -770,7 +845,6 @@ function App() {
     const executablePath = normalizeLaunchTarget(launchTarget, launchType);
     if (!name || !executablePath) return;
 
-    const hasIgdb = Boolean(supabase && user && credentialStatus.igdb);
     if (!hasIgdb) {
       addGameToLibrary(name, executablePath, null);
       return;
@@ -790,7 +864,6 @@ function App() {
     }
   };
 
-  const hasIgdb = Boolean(igdbClientId.trim() && igdbClientSecret.trim());
 
   const approveIgdbGame = (metadata: IgdbGame | null) => {
     if (!pendingGame) return;
@@ -831,13 +904,24 @@ function App() {
       setCredentialStatus({ igdb: false, nexus: false });
       return;
     }
-    void Promise.all([
-      getProviderCredentialStatus(supabase, "igdb"),
-      getProviderCredentialStatus(supabase, "nexus"),
-    ]).then(([igdb, nexus]) => { setCredentialStatus({ igdb, nexus }); setCredentialStatusLoaded(true); }).catch((error) => {
+    void getProviderCredentialStatuses(supabase).then((statuses) => { setCredentialStatus(statuses); setCredentialStatusLoaded(true); }).catch((error) => {
       console.warn("Mochi provider credential status unavailable", error);
     });
   }, [user]);
+
+  const removeCredential = async (provider: "igdb" | "nexus") => {
+    if (!supabase || !user || !window.confirm(`Remove your saved ${provider === "igdb" ? "IGDB" : "Nexus Mods"} credentials from Mochi Vault?`)) return;
+    setCredentialBusy(provider);
+    try {
+      await deleteProviderCredential(supabase, provider);
+      setCredentialStatus((current) => ({ ...current, [provider]: false }));
+      setIgdbMessage("Credentials removed.");
+    } catch (error) {
+      setIgdbMessage(error instanceof Error ? error.message : "Unable to remove the credentials.");
+    } finally {
+      setCredentialBusy(null);
+    }
+  };
 
   const saveCredential = async (provider: "igdb" | "nexus") => {
     if (!supabase || !user) {
@@ -867,36 +951,6 @@ function App() {
       setIgdbMessage(error instanceof Error ? error.message : "Unable to save provider credentials.");
     } finally {
       setCredentialBusy(null);
-    }
-  };
-
-  const lookupArtwork = async () => {
-    setIgdbMessage("");
-    setIgdbBusy(true);
-    try {
-      const result = await lookupIgdbGame(supabase!, selectedPiko.name);
-      if (!result) { setIgdbMessage("Configure IGDB credentials in the API settings first."); return; }
-      const artworkUrl = resolveIgdbImage(result.cover?.url, "t_1080p") || resolveIgdbImage(result.artworks?.[0]?.url, "t_1080p");
-      setLibrary((current) => current.map((piko) => piko.id === selectedPiko.id ? {
-        ...piko, description: result.summary || piko.description, artworkUrl,
-        artwork: artworkUrl ? `linear-gradient(145deg, rgba(10,15,20,.2), rgba(11,15,20,.94)), url('${artworkUrl}')` : piko.artwork,
-      } : piko));
-      setIgdbMessage(artworkUrl ? "Artwork and metadata updated locally." : "Game found, but no artwork was provided.");
-    } catch (error) {
-      setIgdbMessage(error instanceof Error ? error.message : "IGDB metadata is unavailable right now.");
-    } finally { setIgdbBusy(false); }
-  };
-
-  const startMfaChallenge = async () => {
-    if (!supabase) return;
-    try {
-      const factor = await getVerifiedTotpFactor(supabase);
-      if (!factor) return;
-      setMfaFactorId(factor.id);
-      setMfaRequired(true);
-      setMfaMessage("Enter the 6-digit code from your authenticator app.");
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Unable to start MFA.");
     }
   };
 
@@ -1099,7 +1153,7 @@ function App() {
   };
 
   const openWebsiteSignIn = () => {
-    void invoke("open_external_url", { url: "https://t1nkieplayz.github.io/Mochi-Website/#/signin?app=mochi" })
+    void openExternalUrl("https://t1nkieplayz.github.io/Mochi-Website/#/signin?app=mochi")
       .catch((error) => setAuthError(error instanceof Error ? error.message : "Unable to open the Mochi website."));
   };
 
@@ -1240,7 +1294,7 @@ function App() {
               <MochiIcon name="search" fallback={Search} size={16} />
               <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search your library" />
               {search && <button className="clear-search" onClick={() => setSearch("")}><MochiIcon name="close" fallback={X} size={13} /></button>}
-              {!search && <kbd>⌘ K</kbd>}
+              {!search && <kbd>{platformCapabilities?.platform === "macos" ? "⌘ K" : "Ctrl K"}</kbd>}
             </label>
             {behavior.notificationsEnabled && behavior.inAppNotifications && (
               <div className="notification-wrap">
@@ -1263,31 +1317,31 @@ function App() {
           </section>
 
           {activeNav === "Library" && gameDetailsId && library.some(piko => piko.id === gameDetailsId) ? (
-            <GameDetails game={library.find(piko => piko.id === gameDetailsId)!} synced={syncState === "synced"} onBack={() => setGameDetailsId("")} onPlay={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) { selectPiko(game); void launchGame(game); } }} />
+            <GameDetails game={library.find(piko => piko.id === gameDetailsId)!} synced={syncState === "synced"} running={isRunning(gameDetailsId)} canStop={Boolean(sessions.find((session) => session.gameId === gameDetailsId)?.canStop)} capabilities={platformCapabilities} onBack={() => setGameDetailsId("")} onPlay={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) { selectPiko(game); void launchGame(game); } }} onStop={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) void stopRunningGame(game); }} onEdit={() => setEditingGameId(gameDetailsId)} onRemove={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) removeGame(game); }} onOpenFolder={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) openGameFolder(game); }} onShortcut={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) void addShortcut(game); }} />
           ) : activeNav === "Library" && library.length === 0 ? (
             <div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>Your Mochi library is empty.</h2><p>Mochi starts clean. Add a game when you are ready.</p><button className="secondary-button" onClick={() => setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> Add Piko</button></div>
           ) : activeNav === "Library" ? (
             <>
               <section className="library-grid-view">
-                {groupedPikos.map(([category, games]) => <div className="library-category" key={category}><div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div><div className="game-card-grid">{games.map((piko) => <button className={`game-card ${selectedPiko.id === piko.id ? "selected" : ""}`} key={piko.id} onClick={() => { selectPiko(piko); setGameDetailsId(piko.id); }}><GameArtwork className="game-card-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} /><div className="game-card-copy"><strong>{piko.name}<span className={`game-cloud-status ${syncState === "synced" ? "is-synced" : "not-synced"}`} title={syncState === "synced" ? "Synced to Mochi Cloud" : "Not synced to Mochi Cloud"}>{syncState === "synced" ? "✓" : "!"}</span></strong><small>{piko.categories?.join(" · ") || piko.platformCategory || "Other"}</small></div><span className="game-card-play"><MochiIcon name="play" fallback={Play} size={15} fill="currentColor"/></span></button>)}</div></div>)}
+                {groupedPikos.map(([category, games]) => <div className="library-category" key={category}><div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div><div className="game-card-grid">{games.map((piko) => <button className={`game-card ${selectedPiko.id === piko.id ? "selected" : ""}`} key={piko.id} onClick={() => { selectPiko(piko); setGameDetailsId(piko.id); }}><GameArtwork className="game-card-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} /><div className="game-card-copy"><strong>{piko.name}<span className={`game-cloud-status ${syncState === "synced" ? "is-synced" : "not-synced"}`} title={syncState === "synced" ? "Synced to Mochi Cloud" : "Not synced to Mochi Cloud"}>{syncState === "synced" ? "✓" : "!"}</span></strong><small>{isRunning(piko.id) ? "Running now" : piko.categories?.join(" · ") || piko.platformCategory || "Other"}</small></div><span className="game-card-play"><MochiIcon name="play" fallback={Play} size={15} fill="currentColor"/></span></button>)}</div></div>)}
               </section>
               <LibraryModSearch query={search} nexusEnabled={behavior.experimentalFeatures && credentialStatus.nexus} supabase={supabase} />
               <section className="hero-card" style={{ backgroundImage: selectedPiko.artwork }}>
                 <div className="hero-copy">
-                  <span className="hero-kicker"><span className="live-dot" /> Last played recently</span>
+                  <span className="hero-kicker"><span className="live-dot" /> {isRunning(selectedPiko.id) ? "Running now" : selectedPlaytime?.lastPlayed ? `Last played ${formatRelativeTime(selectedPlaytime.lastPlayed)}` : "Not played yet"}</span>
                   <h2>{selectedPiko.name}</h2>
                   <p>{selectedPiko.description}</p>
                   <div className="hero-actions">
-                    <button className="play-button" onClick={() => void launchGame()}><MochiIcon name="play" fallback={Play} size={16} fill="currentColor" /> {isLaunching ? "Launching..." : "Play"}</button>
+                    {isRunning(selectedPiko.id) ? <button className="play-button stop-button" onClick={() => void stopRunningGame(selectedPiko)} disabled={!sessions.find((session) => session.gameId === selectedPiko.id)?.canStop}>Stop</button> : <button className="play-button" onClick={() => void launchGame()} disabled={isLaunching}><MochiIcon name="play" fallback={Play} size={16} fill="currentColor" /> {isLaunching ? "Launching..." : "Play"}</button>}
                     {selectedPiko.source === "custom" && <span className="metadata-note">{selectedPiko.executablePath}</span>}
-                    <button className="icon-button dark-button" aria-label="More options"><MochiIcon name="more" fallback={MoreHorizontal} size={19} /></button>{launchError && <span className="metadata-note">{launchError}</span>}
+                    {launchError && <span className="metadata-note">{launchError}</span>}
                   </div>
                 </div>
                 <div className="hero-meta"><span>Playtime</span><strong>{selectedPlaytime ? formatPlaytime(selectedPlaytime.seconds) : "Not played yet"}</strong></div>
               </section>
 
               <section className="tofu-section">
-                <div className="section-heading"><div><p className="eyebrow">Environments</p><h3>Your Tofus</h3></div><button className="text-button"><MochiIcon name="manage" fallback={SlidersHorizontal} size={15} /> Manage</button></div>
+                <div className="section-heading"><div><p className="eyebrow">Environments</p><h3>Your Tofus</h3></div><button className="text-button" onClick={() => setShowTofuManager(true)}><MochiIcon name="manage" fallback={SlidersHorizontal} size={15} /> Manage</button></div>
                 <div className="tofu-grid">
                   {selectedPiko.tofus.map((tofu) => (
                     <button className={`tofu-card ${selectedTofu.id === tofu.id ? "active" : ""}`} key={tofu.id} onClick={() => setSelectedTofuId(tofu.id)}>
@@ -1297,7 +1351,7 @@ function App() {
                       <span className="tofu-mods">{tofu.mods ? `${tofu.mods} mods installed` : "No mods installed"}</span>
                     </button>
                   ))}
-                  <button className="new-tofu-card" onClick={() => setShowNewTofu(true)}><MochiIcon name="plus" fallback={Plus} size={17} /><span>New Tofu</span><small>Set up another environment</small></button>
+                  <button className="new-tofu-card" onClick={createTofu}><MochiIcon name="plus" fallback={Plus} size={17} /><span>New Tofu</span><small>Set up another environment</small></button>
                 </div>
               </section>
 
@@ -1305,10 +1359,10 @@ function App() {
                 <div><span className="detail-label">Selected Tofu</span><strong>🧊 {selectedTofu.name}</strong></div>
                 <div><span className="detail-label">Runtime</span><strong>{selectedTofu.runtime} <span className="muted">· {selectedTofu.version}</span></strong></div>
                 <div><span className="detail-label">Install location</span><strong className="path-text">{selectedTofu.path || "~/Games/" + selectedPiko.name.replace(/\s+/g, "")}</strong></div>
-                <button className="icon-button"><MochiIcon name="settings" fallback={Settings} size={16} /></button>
+                <button className="icon-button" aria-label="Tofu settings" onClick={() => setShowTofuManager(true)}><MochiIcon name="settings" fallback={Settings} size={16} /></button>
               </section>
 
-              <ModrinthManager key={selectedTofu.id} tofu={selectedTofu} onPathChange={(path) => updateSelectedTofu({ path })} />
+              <ModrinthManager key={selectedTofu.id} tofu={selectedTofu} onUpdate={updateSelectedTofu} />
             </>
           ) : activeNav === "Settings" ? (
             <section className="settings-page">
@@ -1339,7 +1393,7 @@ function App() {
                     {user ? (
                       <>
                         <div className="provider-fields"><input value={igdbClientId} onChange={(event) => setIgdbClientId(event.target.value)} placeholder="Twitch Client ID" /><input type="password" value={igdbClientSecret} onChange={(event) => setIgdbClientSecret(event.target.value)} placeholder="Twitch Client Secret" /></div>
-                        <button className="secondary-button" onClick={() => void saveCredential("igdb")} disabled={credentialBusy !== null}>{credentialBusy === "igdb" ? "Saving..." : "Save IGDB securely"}</button>
+                        <button className="secondary-button" onClick={() => void saveCredential("igdb")} disabled={credentialBusy !== null}>{credentialBusy === "igdb" ? "Saving..." : "Save IGDB securely"}</button>{credentialStatus.igdb && <button className="secondary-button danger-outline" onClick={() => void removeCredential("igdb")} disabled={credentialBusy !== null}>Remove</button>}
                         {igdbMessage && <small className="metadata-note">{igdbMessage}</small>}
                       </>
                     ) : (
@@ -1350,7 +1404,7 @@ function App() {
                   </div>
                   <div className="provider-credential-card">
                     <div className="provider-credential-heading"><div><strong>Nexus Mods</strong><small>Your Nexus API key is stored server-side and is never returned to the launcher.</small></div><span className={credentialStatus.nexus ? "credential-status saved" : "credential-status"}>{credentialStatus.nexus ? "Saved" : "Not saved"}</span></div>
-                    {user ? <><input type="password" value={nexusApiKey} maxLength={4096} onChange={(event) => setNexusApiKey(event.target.value)} placeholder={credentialStatus.nexus ? "Enter a new key to replace the saved key" : "Paste your Nexus Mods Personal API Key"} autoComplete="off" spellCheck={false} /><small className="metadata-note">Use the full Personal API Key (at least 32 characters). Mochi verifies it with Nexus Mods before saving.</small><button className="secondary-button" onClick={() => void saveCredential("nexus")} disabled={credentialBusy !== null || Boolean(validateNexusApiKey(nexusApiKey))}>{credentialBusy === "nexus" ? "Validating..." : "Save Nexus securely"}</button></> : <button className="secondary-button" onClick={() => { setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); }}><MochiIcon name="account" fallback={UserRound} size={14} /> Sign in to save</button>}
+                    {user ? <><input type="password" value={nexusApiKey} maxLength={4096} onChange={(event) => setNexusApiKey(event.target.value)} placeholder={credentialStatus.nexus ? "Enter a new key to replace the saved key" : "Paste your Nexus Mods Personal API Key"} autoComplete="off" spellCheck={false} /><small className="metadata-note">Use the full Personal API Key (at least 32 characters). Mochi verifies it with Nexus Mods before saving.</small><button className="secondary-button" onClick={() => void saveCredential("nexus")} disabled={credentialBusy !== null || Boolean(validateNexusApiKey(nexusApiKey))}>{credentialBusy === "nexus" ? "Validating..." : "Save Nexus securely"}</button>{credentialStatus.nexus && <button className="secondary-button danger-outline" onClick={() => void removeCredential("nexus")} disabled={credentialBusy !== null}>Remove</button>}</> : <button className="secondary-button" onClick={() => { setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); }}><MochiIcon name="account" fallback={UserRound} size={14} /> Sign in to save</button>}
                   </div>
                 </div>
               </div>
@@ -1483,6 +1537,8 @@ function App() {
           {!flatpaks.length && <div className="empty-state flatpak-empty"><MochiIcon name="gamepad" fallback={Gamepad2} size={22} /><p>No installed Flatpaks were found.</p></div>}
         </div>
       </div>}
+      {showTofuManager && library.some((piko) => piko.id === selectedPiko.id) && <TofuManager piko={selectedPiko} selectedTofuId={selectedTofu.id} runtimes={runtimes} onSelect={setSelectedTofuId} onChange={(tofus) => updateGame(selectedPiko.id, { tofus })} onClose={() => setShowTofuManager(false)} />}
+      {editingGameId && library.some((piko) => piko.id === editingGameId) && <GameEditor game={library.find((piko) => piko.id === editingGameId)!} capabilities={platformCapabilities} onSave={(changes) => { updateGame(editingGameId, changes); setEditingGameId(""); }} onClose={() => setEditingGameId("")} />}
       {showImportPicker && <ImportPicker onClose={() => setShowImportPicker(false)} onImport={addImportedGames} />}
       {showAuth ? authModal : null}
     </div>

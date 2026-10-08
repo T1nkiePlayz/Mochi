@@ -20,6 +20,30 @@ type Body =
 type IgdbCredential = { clientId: string; clientSecret: string };
 
 const pool = new Pool(Deno.env.get("SUPABASE_DB_URL")!, 1, true);
+const ACTIONS = new Set(["set", "status", "delete", "nexus-games", "nexus-mods", "igdb-search"]);
+const MAX_BODY_BYTES = 16 * 1024;
+const RATE_LIMIT = 60; // requests per user per minute (best effort: per function instance)
+const rateWindow = new Map<string, { start: number; count: number }>();
+const igdbTokens = new Map<string, { token: string; expiresAt: number }>();
+let nexusGamesCache: { fetchedAt: number; games: Array<Record<string, unknown>> } | null = null;
+const NEXUS_GAMES_TTL_MS = 60 * 60 * 1000;
+
+function rateLimited(userId: string): boolean {
+  const now = Date.now();
+  const entry = rateWindow.get(userId);
+  if (!entry || now - entry.start > 60_000) {
+    rateWindow.set(userId, { start: now, count: 1 });
+    if (rateWindow.size > 5000) for (const [key, value] of rateWindow) if (now - value.start > 60_000) rateWindow.delete(key);
+    return false;
+  }
+  entry.count += 1;
+  return entry.count > RATE_LIMIT;
+}
+
+/** Upstream failures are reported as 502 (or 429) so the launcher always receives a readable message. */
+function upstreamStatus(status: number): number {
+  return status === 429 ? 429 : 502;
+}
 
 function response(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -36,12 +60,17 @@ function validNexusApiKey(value: string): boolean {
   return value.length >= 32 && value.length <= 4096 && /^[!-~]+$/.test(value);
 }
 
+let cachedPublishableKey: string | null = null;
+function publishableKey(): string {
+  if (!cachedPublishableKey) cachedPublishableKey = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS")!).default as string;
+  return cachedPublishableKey;
+}
+
 async function authenticate(req: Request) {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
 
-  const publishableKeys = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS")!);
-  const client = createClient(Deno.env.get("SUPABASE_URL")!, publishableKeys.default, {
+  const client = createClient(Deno.env.get("SUPABASE_URL")!, publishableKey(), {
     global: { headers: { Authorization: authHeader } },
   });
   const { data: { user }, error } = await client.auth.getUser();
@@ -61,6 +90,30 @@ async function getStoredSecret(userId: string, provider: Provider): Promise<stri
   }
 }
 
+/** Twitch app tokens last weeks; reuse them instead of requesting one per search. */
+async function igdbAccessToken(credentials: IgdbCredential): Promise<string> {
+  const clientId = credentials.clientId.trim();
+  // Key on a hash of the secret so a token is never shared with someone who only knows the client id.
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${clientId}:${credentials.clientSecret.trim()}`));
+  const cacheKey = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const cached = igdbTokens.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now() + 60_000) return cached.token;
+
+  const tokenResponse = await fetch("https://id.twitch.tv/oauth2/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ client_id: clientId, client_secret: credentials.clientSecret.trim(), grant_type: "client_credentials" }),
+  });
+  if (!tokenResponse.ok) {
+    console.error("IGDB Twitch token request failed", tokenResponse.status);
+    throw new Error("IGDB authentication failed. Check the Client ID and Client Secret.");
+  }
+  const token = await tokenResponse.json() as { access_token?: string; expires_in?: number };
+  if (!token.access_token) throw new Error("IGDB authentication did not return an access token.");
+  igdbTokens.set(cacheKey, { token: token.access_token, expiresAt: Date.now() + (token.expires_in ?? 3600) * 1000 });
+  return token.access_token;
+}
+
 async function searchIgdb(userId: string, query: string, limit: number) {
   const raw = await getStoredSecret(userId, "igdb");
   if (!raw) throw new Error("IGDB credentials are not configured for this Mochi account.");
@@ -75,28 +128,13 @@ async function searchIgdb(userId: string, query: string, limit: number) {
     throw new Error("Both the IGDB Client ID and Client Secret are required.");
   }
 
-  const tokenResponse = await fetch("https://id.twitch.tv/oauth2/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: credentials.clientId.trim(),
-      client_secret: credentials.clientSecret.trim(),
-      grant_type: "client_credentials",
-    }),
-  });
-  if (!tokenResponse.ok) {
-    console.error("IGDB Twitch token request failed", tokenResponse.status);
-    throw new Error("IGDB authentication failed. Check the Client ID and Client Secret.");
-  }
-
-  const token = await tokenResponse.json() as { access_token?: string };
-  if (!token.access_token) throw new Error("IGDB authentication did not return an access token.");
+  const accessToken = await igdbAccessToken(credentials);
   const escapedQuery = query.trim().replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   const upstream = await fetch("https://api.igdb.com/v4/games", {
     method: "POST",
     headers: {
       "Client-ID": credentials.clientId.trim(),
-      Authorization: `Bearer ${token.access_token}`,
+      Authorization: `Bearer ${accessToken}`,
       "Content-Type": "text/plain",
       Accept: "application/json",
     },
@@ -127,11 +165,18 @@ Deno.serve(async (req) => {
   const user = await authenticate(req);
   if (!user) return response({ error: "Authentication required" }, 401);
 
+  if (rateLimited(user.id)) return response({ error: "Too many requests. Try again in a minute." }, 429);
+
   let body: Body;
   try {
-    body = await req.json();
+    const text = await req.text();
+    if (text.length > MAX_BODY_BYTES) return response({ error: "Request body is too large." }, 413);
+    body = JSON.parse(text);
   } catch {
     return response({ error: "Invalid JSON body" }, 400);
+  }
+  if (!body || typeof body !== "object" || !ACTIONS.has((body as { action?: string }).action ?? "")) {
+    return response({ error: "Unknown action" }, 400);
   }
 
   if (body.action === "igdb-search") {
@@ -150,9 +195,12 @@ Deno.serve(async (req) => {
   if (body.action === "nexus-games") {
     try {
       const headers = await nexusHeaders(user.id);
-      const upstream = await fetch("https://api.nexusmods.com/v1/games.json", { headers });
-      if (!upstream.ok) return response({ error: `Nexus Mods returned HTTP ${upstream.status} while loading games.` }, upstream.status);
-      const games = await upstream.json() as Array<Record<string, unknown>>;
+      if (!nexusGamesCache || Date.now() - nexusGamesCache.fetchedAt > NEXUS_GAMES_TTL_MS) {
+        const upstream = await fetch("https://api.nexusmods.com/v1/games.json", { headers });
+        if (!upstream.ok) return response({ error: `Nexus Mods returned HTTP ${upstream.status} while loading games.` }, upstreamStatus(upstream.status));
+        nexusGamesCache = { fetchedAt: Date.now(), games: await upstream.json() as Array<Record<string, unknown>> };
+      }
+      const games = nexusGamesCache.games;
       const query = typeof body.query === "string" ? body.query.trim().toLowerCase() : "";
       const filtered = games
         .filter((game) => typeof game.name === "string" && typeof game.domain_name === "string")
@@ -184,7 +232,7 @@ Deno.serve(async (req) => {
       const headers = await nexusHeaders(user.id);
       if (sort === "trending") {
         const upstream = await fetch(`https://api.nexusmods.com/v3/games/${encodeURIComponent(domain)}/trending-mods`, { headers });
-        if (!upstream.ok) return response({ error: `Nexus Mods returned HTTP ${upstream.status} while loading trending mods.` }, upstream.status);
+        if (!upstream.ok) return response({ error: `Nexus Mods returned HTTP ${upstream.status} while loading trending mods.` }, upstreamStatus(upstream.status));
         const payload = await upstream.json() as { data?: { mods?: Array<Record<string, unknown>> } };
         const mods = (payload.data?.mods ?? []).map((mod) => ({
           id: String(mod.mod_id ?? mod.id ?? mod.mod_page_url ?? ""),
@@ -207,7 +255,7 @@ Deno.serve(async (req) => {
           variables: { domain, count: limit, offset },
         }),
       });
-      if (!upstream.ok) return response({ error: `Nexus Mods returned HTTP ${upstream.status} while loading the game catalog.` }, upstream.status);
+      if (!upstream.ok) return response({ error: `Nexus Mods returned HTTP ${upstream.status} while loading the game catalog.` }, upstreamStatus(upstream.status));
       const payload = await upstream.json() as { data?: { mods?: { totalCount?: number; nodes?: Array<{ modId?: number | string; name?: string }> } }; errors?: Array<{ message?: string }> };
       if (payload.errors?.length) return response({ error: payload.errors.map((item) => item.message).filter(Boolean).join("; ") || "Nexus Mods could not load this game catalog." }, 502);
       const result = payload.data?.mods;

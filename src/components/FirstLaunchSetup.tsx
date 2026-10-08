@@ -33,6 +33,7 @@ const platformImages: Record<ImportSourceId, string> = {
   lutris: "https://cdn.simpleicons.org/lutris",
   bottles: "https://raw.githubusercontent.com/bottlesdevs/Bottles/main/data/icons/hicolor/scalable/apps/com.usebottles.bottles.svg",
   itch: "https://cdn.simpleicons.org/itchdotio",
+  apps: "",
 };
 
 export function FirstLaunchSetup({
@@ -168,7 +169,7 @@ export function FirstLaunchSetup({
             <div className="setup-platform-strip" aria-label="Supported game platforms">
               {(["steam", "heroic", "lutris", "bottles", "itch", "flatpak"] as ImportSourceId[]).map((id) => (
                 <div className="setup-platform-logo" key={id} title={sources.find((source) => source.id === id)?.name ?? id}>
-                  <img src={platformImages[id]} alt="" />
+                  {platformImages[id] ? <img src={platformImages[id]} alt="" /> : <Gamepad2 size={18} />}
                 </div>
               ))}
             </div>
@@ -273,7 +274,7 @@ export function FirstLaunchSetup({
                       <div className="setup-source setup-source-header">
                         <button type="button" className="setup-source-main" onClick={() => void expandSource(source)}>
                           <span className="setup-source-check" onClick={(event) => { event.stopPropagation(); toggleSource(source.id); }}>{selectedSources.includes(source.id) ? <Check size={13} /> : null}</span>
-                          <span className="setup-source-logo"><img src={platformImages[source.id]} alt="" /></span>
+                          <span className="setup-source-logo">{platformImages[source.id] ? <img src={platformImages[source.id]} alt="" /> : <Gamepad2 size={18} />}</span>
                           <span className="setup-source-copy"><strong>{source.name}</strong><small>{source.gameCount ?? 0} games detected</small></span>
                           <ChevronDown size={17} className={expanded ? "setup-chevron-expanded" : ""} />
                         </button>

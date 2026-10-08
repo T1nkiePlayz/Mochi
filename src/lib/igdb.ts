@@ -1,9 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-
-export type IgdbSettings = {
-  clientId: string;
-  clientSecret: string;
-};
+import { invokeProviderFunction } from "./functions";
 
 export type IgdbGame = {
   id?: number;
@@ -22,15 +18,6 @@ export type IgdbGame = {
 
 export async function lookupIgdbGames(client: SupabaseClient, name: string): Promise<IgdbGame[]> {
   if (!name.trim()) return [];
-  const { data, error } = await client.functions.invoke("store-provider-credentials", {
-    body: { action: "igdb-search", query: name.trim(), limit: 6 },
-  });
-  if (error) throw error;
-  if (data?.error) throw new Error(data.error);
-  return (data?.games ?? []) as IgdbGame[];
-}
-
-export async function lookupIgdbGame(client: SupabaseClient, name: string): Promise<IgdbGame | null> {
-  const games = await lookupIgdbGames(client, name);
-  return games[0] ?? null;
+  const data = await invokeProviderFunction<{ games?: IgdbGame[] }>(client, { action: "igdb-search", query: name.trim(), limit: 6 });
+  return data.games ?? [];
 }

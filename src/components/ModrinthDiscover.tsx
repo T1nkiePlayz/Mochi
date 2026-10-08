@@ -12,6 +12,7 @@ import {
   type ModrinthProjectType,
 } from "../lib/modrinth";
 import type { Piko, Tofu } from "../models";
+import { formatBytes } from "../lib/format";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getNexusGames, getNexusMods, type NexusGame, type NexusMod, type NexusModSort } from "../lib/nexus";
 
@@ -32,11 +33,6 @@ function formatDate(value?: string) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-function formatBytes(bytes: number) {
-  if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + " KiB";
-  if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + " MiB";
-  return (bytes / 1024 / 1024 / 1024).toFixed(2) + " GiB";
-}
 
 function decodeHtmlEntities(value: string): string {
   return value
@@ -686,7 +682,7 @@ function NexusGamePicker({ games, search, setSearch, onClose, onChoose, loading,
 function ProjectDetails({ project, gameVersion, onClose }: { project: ModrinthProjectDetails; gameVersion: string; onClose: () => void }) {
   const [tab, setTab] = useState<"overview" | "versions">("overview");
   const [versions, setVersions] = useState<import("../lib/modrinth").ModrinthVersion[]>([]);
-  useEffect(() => { void getModrinthVersions(project.project_id).then(setVersions).catch(() => setVersions([])); }, [project.project_id]);
+  useEffect(() => { void getModrinthVersions(project.project_id, gameVersion || undefined).then(setVersions).catch(() => setVersions([])); }, [project.project_id, gameVersion]);
   return <div className="discover-modal-backdrop" onMouseDown={onClose}><div className="project-details-window" onMouseDown={event => event.stopPropagation()}>
     <div className="project-details-header"><div>{project.icon_url ? <DiscoveryImage src={project.icon_url} alt="" className="discover-card-icon" label={project.title}/> : <div className="discover-card-icon fallback"><PackageOpen size={26}/></div>}<div><p className="eyebrow">{projectTypeLabel(project.project_type)}</p><h2>{project.title}</h2><p>{project.description}</p><small>Created by <strong>{getPrimaryCreator(project).name || "Unknown creator"}</strong> · {project.downloads.toLocaleString()} downloads</small></div></div><div className="project-details-header-actions"><button type="button" className="secondary-button" onClick={() => { const url = `https://modrinth.com/${project.project_type}/${project.slug}`; void invoke("open_external_url", { url }); }}><ExternalLink size={13}/> View on Modrinth</button><button className="icon-button" onClick={onClose} aria-label="Close project details"><X size={17}/></button></div></div>
     <div className="project-tabs"><button className={tab==="overview"?"active":""} onClick={()=>setTab("overview")}>Overview</button><button className={tab==="versions"?"active":""} onClick={()=>setTab("versions")}>Versions</button></div>

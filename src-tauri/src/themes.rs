@@ -329,7 +329,7 @@ pub fn list_user_themes(app: AppHandle) -> Result<Vec<UserThemeDescriptor>, Stri
         }
     }
 
-    themes.sort_by(|left, right| left.name.to_lowercase().cmp(&right.name.to_lowercase()));
+    themes.sort_by_key(|theme| theme.name.to_lowercase());
     Ok(themes)
 }
 

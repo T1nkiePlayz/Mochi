@@ -1,0 +1,34 @@
+# Maintainer: Mochi contributors
+# Builds Mochi from a tagged source release. For a rolling build use a -git variant.
+pkgname=mochi-launcher
+_name=Mochi
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Local-first game launcher for Steam, Heroic, Lutris, Bottles, itch.io and Flatpak games"
+arch=('x86_64' 'aarch64')
+url="https://github.com/T1nkiePlayz/Mochi"
+license=('custom')
+depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'openssl')
+makedepends=('rust' 'cargo' 'nodejs' 'npm' 'patchelf')
+optdepends=('steam: Steam library import and launching'
+            'flatpak: Flatpak game discovery'
+            'lutris: Lutris library import'
+            'gamemode: GameMode launch wrapper'
+            'mangohud: MangoHud launch wrapper'
+            'wine: run Windows programs')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+  cd "$_name-$pkgver"
+  npm ci
+  npm run build
+  cargo build --release --manifest-path src-tauri/Cargo.toml
+}
+
+package() {
+  cd "$_name-$pkgver"
+  install -Dm755 src-tauri/target/release/mochi "$pkgdir/usr/bin/mochi"
+  install -Dm644 src-tauri/icons/icon.png "$pkgdir/usr/share/icons/hicolor/512x512/apps/mochi.png"
+  install -Dm644 packaging/mochi.desktop "$pkgdir/usr/share/applications/mochi.desktop"
+}

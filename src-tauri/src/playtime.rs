@@ -1,5 +1,10 @@
+//! Game session tracking: playtime history, running sessions, and stopping games.
+
+use crate::{
+    platform::Launched,
+    process::{self, ProcessInfo},
+};
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
 use std::{
     collections::{HashMap, HashSet},
     fs,
@@ -8,6 +13,10 @@ use std::{
     thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
+use tauri::{AppHandle, Emitter};
+
+pub const SESSIONS_CHANGED_EVENT: &str = "game-sessions-changed";
+const FIND_TIMEOUT_SECONDS: u64 = 120;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -23,11 +32,30 @@ struct PlaytimeFile {
     games: Vec<PlaytimeEntry>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActiveSessionInfo {
+    pub game_id: String,
+    pub started_at: u64,
+    pub can_stop: bool,
+}
+
+/// How a running game is recognised once it has been launched.
+#[derive(Debug, Clone)]
+enum Tracker {
+    /// The game leads the process group Mochi created for it.
+    Group(u32),
+    /// A single process found after a launcher hand-off.
+    Pid(u32),
+    /// Any process whose command line contains this normalised text.
+    Path(String),
+}
+
 #[derive(Debug, Clone)]
 struct ActiveSession {
-    game_id: String,
     name: String,
     started_at: SystemTime,
+    tracker: Option<Tracker>,
 }
 
 #[derive(Default)]
@@ -37,54 +65,54 @@ struct TrackerState {
     active: HashMap<String, ActiveSession>,
 }
 
+pub struct StartRequest {
+    pub game_id: String,
+    pub name: String,
+    pub target: String,
+    pub install_path: Option<String>,
+}
+
 static STATE: OnceLock<Arc<Mutex<TrackerState>>> = OnceLock::new();
 
 fn state() -> Arc<Mutex<TrackerState>> {
     STATE.get_or_init(|| Arc::new(Mutex::new(TrackerState::default()))).clone()
 }
 
-fn now_seconds() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs()
+fn lock<T>(shared: &Arc<Mutex<TrackerState>>, f: impl FnOnce(&mut TrackerState) -> T) -> Result<T, String> {
+    shared.lock().map(|mut guard| f(&mut guard)).map_err(|_| "Playtime tracker lock is poisoned.".to_string())
 }
 
-pub fn initialize(path: PathBuf) -> Result<(), String> {
-    let file = path.join("playtime.json");
-    if let Some(parent) = file.parent() {
-        fs::create_dir_all(parent).map_err(|e| format!("Unable to create playtime directory: {e}"))?;
-    }
+fn now_seconds() -> u64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
+}
 
+fn seconds_since(time: SystemTime) -> u64 {
+    SystemTime::now().duration_since(time).unwrap_or_default().as_secs()
+}
+
+pub fn initialize(directory: PathBuf) -> Result<(), String> {
+    fs::create_dir_all(&directory).map_err(|e| format!("Unable to create playtime directory: {e}"))?;
+    let file = directory.join("playtime.json");
     let games = match fs::read_to_string(&file) {
-        Ok(contents) => serde_json::from_str::<PlaytimeFile>(&contents)
-            .map(|data| data.games)
-            .unwrap_or_else(|_| {
-                // Keep an unreadable file for recovery instead of overwriting it with an empty history.
-                let _ = fs::rename(&file, file.with_extension("json.corrupt"));
-                Vec::new()
-            }),
+        Ok(contents) => serde_json::from_str::<PlaytimeFile>(&contents).map(|data| data.games).unwrap_or_else(|_| {
+            // Keep an unreadable file for recovery instead of overwriting it with an empty history.
+            let _ = fs::rename(&file, file.with_extension("json.corrupt"));
+            Vec::new()
+        }),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
         Err(error) => return Err(format!("Unable to read playtime data: {error}")),
     };
-
-    let shared = state();
-    let mut guard = shared.lock().map_err(|_| "Playtime tracker lock is poisoned.".to_string())?;
-    guard.path = Some(file);
-    guard.games = games.into_iter().map(|entry| (entry.game_id.clone(), entry)).collect();
-    Ok(())
+    lock(&state(), |guard| {
+        guard.path = Some(file);
+        guard.games = games.into_iter().map(|entry| (entry.game_id.clone(), entry)).collect();
+    })
 }
 
-fn persist_locked(guard: &TrackerState) -> Result<(), String> {
-    let Some(path) = &guard.path else {
-        return Err("Playtime tracker is not initialized.".into());
-    };
-
+fn persist(guard: &TrackerState) -> Result<(), String> {
+    let Some(path) = &guard.path else { return Err("Playtime tracker is not initialized.".into()) };
     let mut games: Vec<_> = guard.games.values().cloned().collect();
     games.sort_by(|a, b| b.seconds.cmp(&a.seconds).then_with(|| b.last_played.cmp(&a.last_played)));
-
-    let contents = serde_json::to_string_pretty(&PlaytimeFile { games })
-        .map_err(|e| format!("Unable to serialize playtime data: {e}"))?;
+    let contents = serde_json::to_string_pretty(&PlaytimeFile { games }).map_err(|e| format!("Unable to serialize playtime data: {e}"))?;
     // Write to a temporary file first so a crash mid-write cannot corrupt the history.
     let temp = path.with_extension("json.tmp");
     fs::write(&temp, contents).map_err(|e| format!("Unable to save playtime data: {e}"))?;
@@ -92,377 +120,170 @@ fn persist_locked(guard: &TrackerState) -> Result<(), String> {
 }
 
 pub fn list() -> Result<Vec<PlaytimeEntry>, String> {
-    let shared = state();
-    let guard = shared.lock().map_err(|_| "Playtime tracker lock is poisoned.".to_string())?;
-    let mut games: Vec<_> = guard.games.values().cloned().collect();
-    for session in guard.active.values() {
-        if let Some(entry) = games.iter_mut().find(|entry| entry.game_id == session.game_id) {
-            entry.seconds = entry.seconds.saturating_add(
-                SystemTime::now().duration_since(session.started_at).unwrap_or_default().as_secs(),
-            );
+    lock(&state(), |guard| {
+        let mut games: Vec<_> = guard.games.values().cloned().collect();
+        for (game_id, session) in &guard.active {
+            if let Some(entry) = games.iter_mut().find(|entry| &entry.game_id == game_id) {
+                entry.seconds = entry.seconds.saturating_add(seconds_since(session.started_at));
+            }
         }
-    }
-    games.sort_by(|a, b| b.seconds.cmp(&a.seconds).then_with(|| b.last_played.cmp(&a.last_played)));
-    Ok(games)
+        games.sort_by(|a, b| b.seconds.cmp(&a.seconds).then_with(|| b.last_played.cmp(&a.last_played)));
+        games
+    })
 }
 
-pub fn start(app: AppHandle, game_id: String, name: String, target: String, launch: impl FnOnce() -> Result<(), String> + Send + 'static) -> Result<(), String> {
-    let session_id = game_id.clone();
-    let before = process_snapshot_ids();
+pub fn active() -> Result<Vec<ActiveSessionInfo>, String> {
+    lock(&state(), |guard| {
+        guard.active.iter().map(|(game_id, session)| ActiveSessionInfo {
+            game_id: game_id.clone(),
+            started_at: session.started_at.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs(),
+            can_stop: session.tracker.is_some(),
+        }).collect()
+    })
+}
 
-    {
-        let shared = state();
-        let guard = shared.lock().map_err(|_| "Playtime tracker lock is poisoned.".to_string())?;
-        if guard.active.contains_key(&session_id) {
-            return Err("This game is already being tracked.".into());
-        }
-    }
+fn notify(app: &AppHandle) {
+    let _ = app.emit(SESSIONS_CHANGED_EVENT, ());
+    let _ = crate::tray::refresh(app);
+}
 
-    launch()?;
-
+pub fn start(app: AppHandle, request: StartRequest, launch: impl FnOnce() -> Result<Launched, String>) -> Result<(), String> {
     let shared = state();
-    {
-        let mut guard = shared.lock().map_err(|_| "Playtime tracker lock is poisoned.".to_string())?;
-        guard.active.insert(session_id.clone(), ActiveSession {
-            game_id: game_id.clone(),
-            name: name.clone(),
+    if lock(&shared, |guard| guard.active.contains_key(&request.game_id))? {
+        return Err("This game is already running.".into());
+    }
+    let before: HashSet<u32> = process::snapshot().keys().copied().collect();
+    let launched = launch()?;
+
+    lock(&shared, |guard| {
+        guard.active.insert(request.game_id.clone(), ActiveSession {
+            name: request.name.clone(),
             started_at: SystemTime::now(),
+            tracker: launched.direct_pid.map(Tracker::Group),
         });
-        let entry = guard.games.entry(game_id.clone()).or_insert_with(|| PlaytimeEntry {
-            game_id: game_id.clone(),
-            name: name.clone(),
-            seconds: 0,
-            last_played: now_seconds(),
+        let entry = guard.games.entry(request.game_id.clone()).or_insert_with(|| PlaytimeEntry {
+            game_id: request.game_id.clone(), name: request.name.clone(), seconds: 0, last_played: 0,
         });
-        entry.name = name.clone();
+        entry.name = request.name.clone();
         entry.last_played = now_seconds();
         // The game is already running; a failed save must not abort tracking.
-        if let Err(error) = persist_locked(&guard) { eprintln!("{error}"); }
-    }
+        if let Err(error) = persist(guard) { eprintln!("{error}"); }
+    })?;
 
-    spawn_session_monitor(app, game_id, name, target, before);
+    notify(&app);
+    thread::spawn(move || monitor(app, request, before, launched));
     Ok(())
 }
 
-pub fn finish(game_id: &str) -> Result<(), String> {
-    let shared = state();
-    let mut guard = shared.lock().map_err(|_| "Playtime tracker lock is poisoned.".to_string())?;
-    let Some(session) = guard.active.remove(game_id) else {
-        return Ok(());
-    };
-
-    let elapsed = SystemTime::now()
-        .duration_since(session.started_at)
-        .unwrap_or_default()
-        .as_secs();
-    let entry = guard.games.entry(session.game_id.clone()).or_insert_with(|| PlaytimeEntry {
-        game_id: session.game_id.clone(),
-        name: session.name.clone(),
-        seconds: 0,
-        last_played: now_seconds(),
-    });
-    entry.name = session.name;
-    entry.seconds = entry.seconds.saturating_add(elapsed);
-    entry.last_played = now_seconds();
-    persist_locked(&guard)
+fn normalise(text: &str) -> String {
+    text.to_lowercase().replace('\\', "/")
 }
 
-/// Credits every still-running session; called when Mochi exits.
-pub fn finish_all() {
-    let ids: Vec<String> = match state().lock() {
-        Ok(guard) => guard.active.keys().cloned().collect(),
-        Err(_) => return,
-    };
-    for id in ids { let _ = finish(&id); }
-}
-
-pub fn spawn_session_monitor(app: AppHandle, game_id: String, name: String, process_target: String, before: HashSet<u32>) {
-    thread::spawn(move || {
-        let pid = wait_for_game_process(&process_target, &before);
-        if let Some(pid) = pid {
-            while process_tree_alive(pid) {
-                thread::sleep(Duration::from_secs(5));
-            }
-        } else {
-            // Some platform launchers hand the game off without exposing a discoverable
-            // child process. Keep a short grace period, then finish the session rather
-            // than recording an unbounded play session.
-            thread::sleep(Duration::from_secs(30));
-        }
-
-        let _ = finish(&game_id);
-        let _ = crate::tray::refresh(&app);
-        let _ = name;
-    });
-}
-
-#[cfg(target_os = "linux")]
-#[derive(Debug, Clone)]
-struct ProcessInfo {
-    pid: u32,
-    cmdline: String,
-    start_time: u64,
-}
-
-#[cfg(target_os = "linux")]
-fn process_snapshot() -> HashMap<u32, ProcessInfo> {
-    let mut processes = HashMap::new();
-    let Ok(entries) = fs::read_dir("/proc") else { return processes };
-
-    for entry in entries.flatten() {
-        let name = entry.file_name();
-        let Some(pid_text) = name.to_str() else { continue };
-        let Ok(pid) = pid_text.parse::<u32>() else { continue };
-
-        let stat_path = entry.path().join("stat");
-        let cmdline_path = entry.path().join("cmdline");
-        let Ok(stat) = fs::read_to_string(stat_path) else { continue };
-        let Ok(cmdline) = fs::read(cmdline_path) else { continue };
-
-        let Some(close) = stat.rfind(')') else { continue };
-        let fields: Vec<&str> = stat[close + 1..].split_whitespace().collect();
-        let Some(start_time_text) = fields.get(19) else { continue };
-        let Ok(start_time) = start_time_text.parse::<u64>() else { continue };
-        let cmdline = String::from_utf8_lossy(&cmdline).replace('\0', " ");
-
-        processes.insert(pid, ProcessInfo { pid, cmdline, start_time });
-    }
-
-    processes
-}
-
-#[cfg(target_os = "linux")]
 fn is_launcher_process(info: &ProcessInfo) -> bool {
     let command = info.cmdline.to_lowercase();
-    [
-        "steam",
-        "steamwebhelper",
-        "flatpak",
-        "bwrap",
-        "pressure-vessel",
-        "proton",
-        "wineserver",
-        "wineboot",
-        "gio",
-        "xdg-open",
-        "lutris",
-        "heroic",
-        "bottles",
-        "itch-setup",
-        "itch",
-        "sh -c",
-        "bash -c",
-        "python3 -c",
-        "node -e",
-    ]
-    .iter()
-    .any(|value| command.contains(value))
-}
-
-#[cfg(target_os = "linux")]
-fn target_matches(info: &ProcessInfo, target: &str) -> bool {
-    let command = info.cmdline.to_lowercase();
-    let target = target.to_lowercase();
-
-    if target.is_empty() {
-        return false;
-    }
-
-    if target.starts_with("flatpak://") {
-        let app_id = target.trim_start_matches("flatpak://");
-        return command.contains(app_id);
-    }
-
-    if target.starts_with("steam://") || target.starts_with("heroic://") || target.starts_with("lutris:") || target.starts_with("bottles:") || target.starts_with("itch://") {
-        return false;
-    }
-
-    let target_name = std::path::Path::new(target.trim_matches('"'))
-        .file_name()
-        .and_then(|value| value.to_str())
-        .unwrap_or(&target);
-
-    command.contains(target_name)
-}
-
-#[cfg(target_os = "linux")]
-fn process_snapshot_ids() -> HashSet<u32> {
-    process_snapshot().keys().copied().collect()
-}
-
-#[cfg(target_os = "linux")]
-fn wait_for_game_process(target: &str, before: &HashSet<u32>) -> Option<u32> {
-    let started = SystemTime::now();
-
-    for _ in 0..30 {
-        thread::sleep(Duration::from_secs(1));
-        let snapshot = process_snapshot();
-        let mut candidates: Vec<ProcessInfo> = snapshot
-            .values()
-            .filter(|process| !before.contains(&process.pid))
-            .filter(|process| !is_launcher_process(process))
-            .filter(|process| target_matches(process, target) || target.starts_with("steam://") || target.starts_with("heroic://") || target.starts_with("lutris:") || target.starts_with("bottles:") || target.starts_with("itch://"))
-            .cloned()
-            .collect();
-
-        if !candidates.is_empty() {
-            candidates.sort_by_key(|process| process.start_time);
-            return candidates.last().map(|process| process.pid);
-        }
-
-        if started.elapsed().unwrap_or_default() > Duration::from_secs(30) {
-            break;
-        }
-    }
-
-    None
-}
-
-#[cfg(target_os = "linux")]
-fn process_tree_alive(root_pid: u32) -> bool {
-    let snapshot = process_snapshot();
-    if snapshot.contains_key(&root_pid) {
-        return true;
-    }
-
-    // If the original process exits but a child survives, follow the Linux process
-    // tree through /proc so launchers that hand off to another executable still count.
-    let mut parents = HashSet::from([root_pid]);
-    for _ in 0..8 {
-        let mut changed = false;
-        for process in snapshot.values() {
-            let stat_path = format!("/proc/{}/stat", process.pid);
-            let Ok(stat) = fs::read_to_string(stat_path) else { continue };
-            let Some(close) = stat.rfind(')') else { continue };
-            let fields: Vec<&str> = stat[close + 1..].split_whitespace().collect();
-            let Some(ppid_text) = fields.get(1) else { continue };
-            let Ok(ppid) = ppid_text.parse::<u32>() else { continue };
-            if parents.contains(&ppid) && parents.insert(process.pid) {
-                changed = true;
-            }
-        }
-        if !changed { break; }
-    }
-
-    parents.len() > 1
-}
-
-#[cfg(target_os = "macos")]
-#[derive(Debug, Clone)]
-struct MacProcessInfo {
-    pid: u32,
-    ppid: u32,
-    cmdline: String,
-    start_time: u64,
-}
-
-#[cfg(target_os = "macos")]
-fn mac_process_snapshot() -> HashMap<u32, MacProcessInfo> {
-    let mut processes = HashMap::new();
-    let Ok(output) = std::process::Command::new("ps").args(["-axo", "pid=,ppid=,etime=,command="]).output() else { return processes };
-    if !output.status.success() { return processes; }
-
-    let now = now_seconds();
-    for line in String::from_utf8_lossy(&output.stdout).lines() {
-        let mut fields = line.split_whitespace();
-        let Some(pid_text) = fields.next() else { continue };
-        let Some(ppid_text) = fields.next() else { continue };
-        let Some(etime_text) = fields.next() else { continue };
-        let command = fields.collect::<Vec<_>>().join(" ");
-        let Ok(pid) = pid_text.parse::<u32>() else { continue };
-        let Ok(ppid) = ppid_text.parse::<u32>() else { continue };
-        let elapsed = parse_ps_elapsed(etime_text);
-        processes.insert(pid, MacProcessInfo { pid, ppid, cmdline: command, start_time: now.saturating_sub(elapsed) });
-    }
-    processes
-}
-
-#[cfg(target_os = "macos")]
-fn parse_ps_elapsed(value: &str) -> u64 {
-    if let Some((days, time)) = value.split_once('-') {
-        return days.parse::<u64>().unwrap_or(0) * 86_400 + parse_ps_elapsed(time);
-    }
-    let parts: Vec<&str> = value.split(':').collect();
-    match parts.as_slice() {
-        [minutes, seconds] => minutes.parse::<u64>().unwrap_or(0) * 60 + seconds.parse::<u64>().unwrap_or(0),
-        [hours, minutes, seconds] => hours.parse::<u64>().unwrap_or(0) * 3_600 + minutes.parse::<u64>().unwrap_or(0) * 60 + seconds.parse::<u64>().unwrap_or(0),
-        _ => 0,
-    }
-}
-
-#[cfg(target_os = "macos")]
-fn mac_is_launcher_process(info: &MacProcessInfo) -> bool {
-    let command = info.cmdline.to_lowercase();
-    ["mochi", "steam", "steamwebhelper", "heroic", "lutris", "bottles", "itch", "open ", "osascript", "sh -c", "bash -c", "python3 -c", "node -e"]
+    ["steamwebhelper", "bwrap", "pressure-vessel", "xdg-open", "gio launch", "sh -c", "bash -c", "python3 -c", "node -e", "/usr/bin/open"]
         .iter()
         .any(|value| command.contains(value))
 }
 
-#[cfg(target_os = "macos")]
-fn mac_target_matches(info: &MacProcessInfo, target: &str) -> bool {
-    let command = info.cmdline.to_lowercase();
-    let target = target.to_lowercase();
-    if target.is_empty() { return false; }
-    if target.starts_with("steam://") || target.starts_with("heroic://") || target.starts_with("lutris:") || target.starts_with("bottles:") || target.starts_with("itch://") { return false; }
+/// Picks how to follow a game that was handed to another launcher.
+fn handoff_tracker(request: &StartRequest) -> Option<String> {
+    let target = request.target.trim_end_matches('/');
+    if target.ends_with(".app") { return Some(normalise(target)); }
+    if let Some(id) = target.strip_prefix("flatpak://") { return Some(normalise(id)); }
+    request.install_path.as_deref().map(str::trim).filter(|path| path.len() > 3).map(|path| normalise(path.trim_end_matches('/')))
+}
 
-    let path = std::path::Path::new(target.trim_matches('"'));
-    let target_name = path.file_name().and_then(|value| value.to_str()).unwrap_or(&target);
-    if command.contains(target_name) { return true; }
+fn path_processes(needle: &str) -> Vec<u32> {
+    let own = std::process::id();
+    process::snapshot().values().filter(|p| p.pid != own && normalise(&p.cmdline).contains(needle)).map(|p| p.pid).collect()
+}
 
-    if target.ends_with(".app") {
-        let bundle_name = path.file_stem().and_then(|value| value.to_str()).unwrap_or(target_name);
-        return command.contains(bundle_name);
+fn tracker_alive(tracker: &Tracker) -> bool {
+    match tracker {
+        Tracker::Group(pgid) => process::group_alive(*pgid),
+        Tracker::Pid(pid) => process::tree_alive(*pid),
+        Tracker::Path(needle) => !path_processes(needle).is_empty(),
     }
-    false
 }
 
-#[cfg(target_os = "macos")]
-fn process_snapshot_ids() -> HashSet<u32> {
-    mac_process_snapshot().keys().copied().collect()
+fn set_tracker(game_id: &str, tracker: Tracker) {
+    let _ = lock(&state(), |guard| {
+        if let Some(session) = guard.active.get_mut(game_id) { session.tracker = Some(tracker); }
+    });
 }
 
-#[cfg(target_os = "macos")]
-fn wait_for_game_process(target: &str, before: &HashSet<u32>) -> Option<u32> {
-    let started = SystemTime::now();
-    for _ in 0..30 {
+fn find_tracker(request: &StartRequest, before: &HashSet<u32>) -> Option<Tracker> {
+    let needle = handoff_tracker(request);
+    let started = std::time::Instant::now();
+    while started.elapsed() < Duration::from_secs(FIND_TIMEOUT_SECONDS) {
         thread::sleep(Duration::from_secs(1));
-        let snapshot = mac_process_snapshot();
-        let mut candidates: Vec<MacProcessInfo> = snapshot.values()
-            .filter(|process| !before.contains(&process.pid))
-            .filter(|process| !mac_is_launcher_process(process))
-            .filter(|process| mac_target_matches(process, target) || target.starts_with("steam://") || target.starts_with("heroic://") || target.starts_with("lutris:") || target.starts_with("bottles:") || target.starts_with("itch://"))
-            .cloned()
-            .collect();
-        if !candidates.is_empty() {
-            candidates.sort_by_key(|process| process.start_time);
-            return candidates.last().map(|process| process.pid);
+        if !lock(&state(), |guard| guard.active.contains_key(&request.game_id)).unwrap_or(false) { return None; }
+        if let Some(needle) = &needle {
+            if !path_processes(needle).is_empty() { return Some(Tracker::Path(needle.clone())); }
+        } else {
+            // No install path to match: fall back to the newest non-launcher process.
+            let snapshot = process::snapshot();
+            let candidate = snapshot.values().filter(|p| !before.contains(&p.pid) && !is_launcher_process(p)).min_by_key(|p| p.start_time);
+            if let Some(process) = candidate { return Some(Tracker::Pid(process.pid)); }
         }
-        if started.elapsed().unwrap_or_default() > Duration::from_secs(30) { break; }
     }
     None
 }
 
-#[cfg(target_os = "macos")]
-fn process_tree_alive(root_pid: u32) -> bool {
-    let snapshot = mac_process_snapshot();
-    if snapshot.contains_key(&root_pid) { return true; }
-    let mut parents = HashSet::from([root_pid]);
-    for _ in 0..8 {
-        let mut changed = false;
-        for process in snapshot.values() {
-            if parents.contains(&process.ppid) && parents.insert(process.pid) { changed = true; }
+fn monitor(app: AppHandle, request: StartRequest, before: HashSet<u32>, launched: Launched) {
+    let tracker = match launched.direct_pid {
+        Some(pid) => Some(Tracker::Group(pid)),
+        None => find_tracker(&request, &before),
+    };
+    let credited = match tracker {
+        Some(tracker) => {
+            set_tracker(&request.game_id, tracker.clone());
+            notify(&app);
+            // Hold on briefly so a launcher that restarts the game is not cut short.
+            while tracker_alive(&tracker) && lock(&state(), |guard| guard.active.contains_key(&request.game_id)).unwrap_or(false) {
+                thread::sleep(Duration::from_secs(3));
+            }
+            true
         }
-        if !changed { break; }
+        // The game never showed up (cancelled in the launcher, crashed, ...): don't invent playtime.
+        None => false,
+    };
+    let _ = finish(&request.game_id, credited);
+    notify(&app);
+}
+
+fn finish(game_id: &str, credit: bool) -> Result<(), String> {
+    lock(&state(), |guard| {
+        let Some(session) = guard.active.remove(game_id) else { return Ok(()) };
+        if credit {
+            let elapsed = seconds_since(session.started_at);
+            let entry = guard.games.entry(game_id.to_string()).or_insert_with(|| PlaytimeEntry {
+                game_id: game_id.to_string(), name: session.name.clone(), seconds: 0, last_played: 0,
+            });
+            entry.name = session.name;
+            entry.seconds = entry.seconds.saturating_add(elapsed);
+            entry.last_played = now_seconds();
+        }
+        persist(guard)
+    })?
+}
+
+/// Asks a running game to quit (then force-kills it if it will not).
+pub fn stop(game_id: &str) -> Result<(), String> {
+    let tracker = lock(&state(), |guard| guard.active.get(game_id).map(|session| session.tracker.clone()))?
+        .ok_or("This game is not running.")?
+        .ok_or("Mochi cannot stop this game yet because it has not been detected. Close it from its own launcher.")?;
+    match tracker {
+        Tracker::Group(pgid) => process::terminate(pgid, true),
+        Tracker::Pid(pid) => process::terminate(pid, false),
+        Tracker::Path(needle) => path_processes(&needle).into_iter().for_each(|pid| process::terminate(pid, false)),
     }
-    parents.len() > 1
+    Ok(())
 }
 
-#[cfg(not(any(target_os = "linux", target_os = "macos")))]
-fn wait_for_game_process(_target: &str, _before: &HashSet<u32>) -> Option<u32> {
-    None
-}
-
-#[cfg(not(any(target_os = "linux", target_os = "macos")))]
-fn process_tree_alive(_root_pid: u32) -> bool {
-    false
+/// Credits every still-running session; called when Mochi exits.
+pub fn finish_all() {
+    let ids: Vec<String> = lock(&state(), |guard| guard.active.keys().cloned().collect()).unwrap_or_default();
+    for id in ids { let _ = finish(&id, true); }
 }

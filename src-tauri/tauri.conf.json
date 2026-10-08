@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Mochi — Your games, your way.",
+        "title": "Mochi \u2014 Your games, your way.",
         "width": 1280,
         "height": 800,
         "minWidth": 960,
@@ -37,7 +37,18 @@
       "icons/icon.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "category": "Game",
+    "shortDescription": "Your games, your way.",
+    "longDescription": "Mochi is a local-first game launcher that organises games from Steam, Heroic, Lutris, Bottles, itch.io, Flatpak and more in one library, with optional cloud metadata sync.",
+    "linux": {
+      "deb": {
+        "section": "games"
+      },
+      "rpm": {
+        "release": "1"
+      }
+    }
   },
   "plugins": {
     "deep-link": {

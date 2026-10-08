@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { invokeProviderFunction } from "./functions";
 
 export type NexusGame = {
   id: string;
@@ -66,15 +67,11 @@ function normalizeNexusGame(value: any): NexusGame | null {
 }
 
 export async function getNexusGames(client: SupabaseClient, query = ""): Promise<NexusGame[]> {
-  const { data, error } = await client.functions.invoke("store-provider-credentials", {
-    body: { action: "nexus-games", query: query.trim() },
-  });
-  if (error) throw error;
-  if (data?.error) throw new Error(data.error);
+  const data = await invokeProviderFunction<{ games?: unknown[]; data?: { games?: unknown[] } }>(client, { action: "nexus-games", query: query.trim() });
 
-  const values: unknown[] = Array.isArray(data?.games)
+  const values: unknown[] = Array.isArray(data.games)
     ? data.games
-    : Array.isArray(data?.data?.games)
+    : Array.isArray(data.data?.games)
       ? data.data.games
       : [];
 
@@ -90,14 +87,10 @@ export async function getNexusMods(
 ): Promise<NexusModPage> {
   const limit = Math.max(8, Math.min(100, Math.floor(options.limit ?? 100)));
   const offset = Math.max(0, Math.floor(options.offset ?? 0));
-  const { data, error } = await client.functions.invoke("store-provider-credentials", {
-    body: { action: "nexus-mods", gameDomain, sort: options.sort ?? "catalog", offset, limit },
-  });
-  if (error) throw error;
-  if (data?.error) throw new Error(data.error);
+  const data = await invokeProviderFunction<{ mods?: NexusMod[]; total?: number; offset?: number }>(client, { action: "nexus-mods", gameDomain, sort: options.sort ?? "catalog", offset, limit });
   return {
-    mods: (data?.mods ?? []) as NexusMod[],
-    total: Number(data?.total ?? data?.mods?.length ?? 0),
-    offset: Number(data?.offset ?? offset),
+    mods: data.mods ?? [],
+    total: Number(data.total ?? data.mods?.length ?? 0),
+    offset: Number(data.offset ?? offset),
   };
 }

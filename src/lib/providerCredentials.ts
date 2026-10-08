@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { invokeProviderFunction } from "./functions";
 
 export type ProviderCredential = "igdb" | "nexus";
 
@@ -12,16 +13,15 @@ export function validateNexusApiKey(value: string): string | null {
 }
 
 export async function saveProviderCredential(client: SupabaseClient, provider: ProviderCredential, secret: string): Promise<void> {
-  const { error } = await client.functions.invoke("store-provider-credentials", {
-    body: { action: "set", provider, secret },
-  });
-  if (error) throw error;
+  await invokeProviderFunction(client, { action: "set", provider, secret });
 }
 
-export async function getProviderCredentialStatus(client: SupabaseClient, provider: ProviderCredential): Promise<boolean> {
-  const { data, error } = await client.functions.invoke("store-provider-credentials", {
-    body: { action: "status", provider },
-  });
-  if (error) throw error;
-  return Boolean(data?.configured);
+export async function getProviderCredentialStatuses(client: SupabaseClient): Promise<Record<ProviderCredential, boolean>> {
+  const data = await invokeProviderFunction<{ providers?: ProviderCredential[] }>(client, { action: "status" });
+  const configured = new Set(data.providers ?? []);
+  return { igdb: configured.has("igdb"), nexus: configured.has("nexus") };
+}
+
+export async function deleteProviderCredential(client: SupabaseClient, provider: ProviderCredential): Promise<void> {
+  await invokeProviderFunction(client, { action: "delete", provider });
 }

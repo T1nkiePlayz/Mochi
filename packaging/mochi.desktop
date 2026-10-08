@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Mochi
+Comment=Your games, your way.
+Exec=mochi %U
+Icon=mochi
+Terminal=false
+StartupNotify=true
+StartupWMClass=dev.sidequestgames.Mochilauncher
+Categories=Game;Utility;
+MimeType=x-scheme-handler/mochi;
