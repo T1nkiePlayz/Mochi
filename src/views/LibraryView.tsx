@@ -3,6 +3,7 @@ import { GameArtwork } from "../components/GameArtwork";
 import { GameDetails } from "../components/GameDetails";
 import { LibraryModSearch } from "../components/LibraryModSearch";
 import { MochiIcon } from "../components/MochiIcon";
+import { Select } from "../components/ui/Select";
 import { ModrinthManager } from "../components/ModrinthManager";
 import { supabase } from "../lib/supabase";
 import { formatPlaytime, formatRelativeTime } from "../lib/format";
@@ -90,7 +91,7 @@ export function LibraryView() {
     </section>}
     <section className="library-toolbar">
       <span className="library-count">{lib.visiblePikos.length} game{lib.visiblePikos.length === 1 ? "" : "s"}{search.trim() ? ` matching “${search.trim()}”` : ""}</span>
-      <label className="library-sort"><span>Sort by</span><select value={lib.librarySort} onChange={(event) => lib.setLibrarySort(event.target.value as LibrarySort)}><option value="category">Category</option><option value="name">Name</option><option value="recent">Recently played</option><option value="playtime">Most played</option></select></label>
+      <div className="library-sort"><span>Sort by</span><Select<LibrarySort> label="Sort by" value={lib.librarySort} onChange={lib.setLibrarySort} align="end" options={[{ value: "category", label: "Category" }, { value: "name", label: "Name" }, { value: "recent", label: "Recently played" }, { value: "playtime", label: "Most played" }]} /></div>
     </section>
     <section className="library-grid-view">
       {lib.groupedPikos.map(([category, games]) => <div className="library-category" key={category}>
