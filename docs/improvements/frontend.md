@@ -25,7 +25,7 @@ Found by running a temporary rollup plugin that printed `renderedLength` per mod
 - **Cover loading** (`lib/artworkCache.ts`). Every card used to call `get_cached_game_artwork` (returns a data URL) on every mount and keep a private copy. Now: one in-flight call per key, an LRU of 150 covers shared across views, and covers load only when within 400 px of the viewport (IntersectionObserver). Artwork cached natively by metadata refresh now calls `notifyArtworkChanged`, so covers appear without remounting (also invalidates the memory cache). Big Picture's `useArtworkUrl` shares the cache.
 - **`MochiIcon`**: each icon instance added its own `mochi-theme-changed` listener and ran `getComputedStyle` on every theme change. Now one shared listener and one computed-style read per variable per theme change (`MochiIcon.test.tsx` asserts a single listener for 25 icons).
 - **Images**: `RemoteImage` and the list thumbnails default to `loading="lazy" decoding="async"`.
-- **CSS**: removed 170 rules (and dead selectors from grouped rules) for classes no component renders anywhere (legacy setup/import/discover/hero blocks in `index.css`, `bridge.css`, `components.css`, `offline.css`). Rules using `:is/:not/:has` and keyframes are left alone, as are `stats.css` and the achievements UI, which another change owns.
+- **CSS**: removed or trimmed about 190 rules (whole rules, or dead selectors inside grouped rules) for classes no component renders anywhere (legacy setup/import/discover/hero blocks in `index.css`, `bridge.css`, `components.css`, `offline.css`). Rules using `:is/:not/:has` and keyframes are left alone, as are `stats.css` and the achievements UI, which another change owns.
 
 ## Looked at and left alone
 
