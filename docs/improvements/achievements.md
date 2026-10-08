@@ -38,7 +38,7 @@ macOS: the code is OS-neutral apart from `steam_roots` (already per-OS). Not bui
 
 ## Stats > Achievements
 
-The catalogue grew from 22 to 60+ achievements in 8 categories (Playtime, Streaks, Habits, Variety, Library, Explore,
+The catalogue grew from 22 to 77 achievements in 8 categories (Playtime, Streaks, Habits, Variety, Library, Explore,
 Mods, Steam). Definitions live in `src/lib/achievementDefs.ts` (add one entry, or one tier of a `ladder`), types in
 `achievementTypes.ts`, the engine in `achievements.ts`.
 
