@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { isMinecraftJava, modSupportOf, normalizeGameName } from "../src/lib/mods/gameSupport.ts";
 import { autoModLinks, bestNameMatch, dedupeKey, mergeModLinks } from "../src/lib/mods/gameMatch.ts";
 import { safeHttpUrl, sanitizeHtml, textOf } from "../src/lib/mods/sanitizeHtml.ts";
-import { interleaveUnique, nxmFromUrl, parseNxmUrl, pickBestFile, restrictedReason } from "../src/lib/mods/helpers.ts";
+import { pickBestFile, restrictedReason } from "../src/lib/mods/helpers.ts";
 
 test("Minecraft Java detection", () => {
   assert.equal(isMinecraftJava({ name: "Minecraft" }), true);
@@ -83,17 +83,39 @@ test("restrictedReason", () => {
   assert.equal(restrictedReason({ allowModDistribution: true }, { downloadUrl: "https://edge.forgecdn.net/x" }), null);
 });
 
-test("interleaveUnique merges and dedupes by name", () => {
-  const a = [{ name: "Alpha" }, { name: "Beta" }, { name: "Gamma" }];
-  const b = [{ name: "alpha!" }, { name: "Delta" }];
-  assert.deepEqual(interleaveUnique(a, b, (item) => item.name).map((item) => item.name), ["Alpha", "Beta", "Delta", "Gamma"]);
+test("isLinkedTo ranks Tofu targets by ecosystem", async () => {
+  const { isLinkedTo } = await import("../src/lib/mods/gameSupport.ts");
+  const stardew = { name: "Stardew Valley", modLinks: { curseforge: { gameId: 669, slug: "stardewvalley", name: "Stardew Valley" }, nexus: { domain: "stardewvalley", name: "Stardew Valley" }, source: "auto" } };
+  assert.equal(isLinkedTo(stardew, { source: "curseforge", gameId: 669 }), true);
+  assert.equal(isLinkedTo(stardew, { source: "nexus", domain: "stardewvalley" }), true);
+  assert.equal(isLinkedTo(stardew, { source: "curseforge", gameId: 432 }), false);
+  assert.equal(isLinkedTo({ name: "Minecraft" }, { source: "curseforge", gameId: 432 }), true);
+  assert.equal(isLinkedTo({ name: "Minecraft" }, { source: "modrinth" }), true);
+  assert.equal(isLinkedTo(stardew, { source: "modrinth" }), false);
 });
 
-test("nxm links", () => {
-  const link = "nxm://stardewvalley/mods/2400/files/12345?key=AbC_-1&expires=1893456000&user_id=7";
-  assert.deepEqual(parseNxmUrl(link), { gameDomain: "stardewvalley", modId: 2400, fileId: 12345, key: "AbC_-1", expires: 1893456000 });
-  assert.equal(parseNxmUrl("nxm://bad domain/mods/1/files/2"), null);
-  assert.equal(parseNxmUrl("nxm://x/mods/0/files/2"), null);
-  assert.equal(parseNxmUrl("https://x/mods/1/files/2"), null);
-  assert.equal(nxmFromUrl(["mochi://launch/x", link])?.modId, 2400);
+test("resolveSources applies source priority", async () => {
+  const { resolveSources, allSourcesOn, minecraftSourceFor, tabSource, isPublicCurseforgeGame } = await import("../src/lib/mods/resolveSources.ts");
+  const both = { curseforge: true, nexus: true, nexusKey: true };
+  assert.deepEqual(resolveSources(both, allSourcesOn), ["curseforge"]);
+  assert.deepEqual(resolveSources(both, { ...allSourcesOn, curseforge: false }), ["nexus"]);
+  assert.deepEqual(resolveSources({ nexus: true, nexusKey: true }, allSourcesOn), ["nexus"]);
+  assert.deepEqual(resolveSources({ nexus: true, nexusKey: false }, allSourcesOn), []);
+  assert.deepEqual(resolveSources({ nexus: true, nexusKey: true }, { ...allSourcesOn, nexus: false }), []);
+  assert.deepEqual(resolveSources({ curseforge: true }, { ...allSourcesOn, curseforge: false, nexus: false }), []);
+  assert.deepEqual(resolveSources({ minecraft: true }, allSourcesOn), ["modrinth", "curseforge"]);
+  assert.deepEqual(resolveSources({ minecraft: true }, { ...allSourcesOn, modrinth: false }), ["curseforge"]);
+  assert.deepEqual(resolveSources({ minecraft: true }, { ...allSourcesOn, curseforge: false }), ["modrinth"]);
+  assert.deepEqual(resolveSources({ minecraft: true }, { modrinth: false, curseforge: false, nexus: true }), []);
+  const noModrinth = { ...allSourcesOn, modrinth: false };
+  for (const kind of ["mod", "modpack", "resourcepack", "shader", "world"]) assert.equal(minecraftSourceFor(kind, "modrinth", noModrinth), "curseforge", kind);
+  assert.equal(minecraftSourceFor("world", "modrinth", allSourcesOn), "curseforge");
+  assert.equal(minecraftSourceFor("mod", "modrinth", allSourcesOn), "modrinth");
+  assert.equal(minecraftSourceFor("mod", "curseforge", { ...allSourcesOn, curseforge: false }), "modrinth");
+  assert.equal(minecraftSourceFor("mod", "curseforge", { modrinth: false, curseforge: false, nexus: true }), null);
+  assert.equal(tabSource({ onCurseforge: true, onNexus: true }, allSourcesOn, true), "curseforge");
+  assert.equal(tabSource({ onCurseforge: false, onNexus: true }, allSourcesOn, false), null);
+  assert.equal(isPublicCurseforgeGame({ apiStatus: 2 }), true);
+  assert.equal(isPublicCurseforgeGame({ apiStatus: 1 }), false);
+  assert.equal(isPublicCurseforgeGame({}), false);
 });

@@ -48,3 +48,13 @@ export function modSupportOf(piko: GameLike & Partial<Pick<Piko, "kind">>): ModS
   if (piko.kind === "launcher") return "none";
   return "ecosystem";
 }
+
+export type EcosystemRef = { source: "modrinth" } | { source: "curseforge"; gameId: number } | { source: "nexus"; domain: string };
+const CURSEFORGE_MINECRAFT_ID = 432;
+
+/** True when the game belongs to the mod ecosystem a mod was listed in (so its Tofus are the natural targets). */
+export function isLinkedTo(piko: GameLike, ref: EcosystemRef): boolean {
+  if (ref.source === "modrinth") return isMinecraftJava(piko);
+  if (ref.source === "curseforge") return piko.modLinks?.curseforge?.gameId === ref.gameId || ref.gameId === CURSEFORGE_MINECRAFT_ID && isMinecraftJava(piko);
+  return piko.modLinks?.nexus?.domain === ref.domain;
+}

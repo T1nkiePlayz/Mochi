@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { EdgeFunctionError, invokeEdgeFunction } from "./functions";
 import { isNetworkError } from "./offline";
+import { isPublicCurseforgeGame } from "./mods/resolveSources";
 
 // CurseForge data is fetched through Mochi's own proxy (the API key never leaves the server). The API terms
 // forbid saving or caching what it returns, so nothing here is persisted: identical in-flight requests share
@@ -12,7 +13,7 @@ export const CF_SORT = { featured: 1, popularity: 2, lastUpdated: 3, name: 4, au
 export const CF_LOADER = { any: 0, forge: 1, cauldron: 2, liteLoader: 3, fabric: 4, quilt: 5, neoForge: 6 } as const;
 export const CF_SITE = "https://www.curseforge.com";
 
-export type CfGame = { id: number; name: string; slug: string; assets?: { iconUrl?: string; tileUrl?: string; coverUrl?: string } };
+export type CfGame = { id: number; name: string; slug: string; status?: number; apiStatus?: number; assets?: { iconUrl?: string; tileUrl?: string; coverUrl?: string } };
 export type CfCategory = { id: number; gameId: number; name: string; slug: string; iconUrl?: string; isClass?: boolean; classId?: number; parentCategoryId?: number };
 export type CfAuthor = { id: number; name: string; url?: string };
 export type CfHash = { value: string; algo: number };
@@ -130,7 +131,7 @@ export function cfAllGames(): Promise<CfGame[]> {
     const games: CfGame[] = [];
     for (let index = 0; index < 400; index += 50) {
       const page = await cfGames(index, 50);
-      games.push(...page.data);
+      games.push(...page.data.filter(isPublicCurseforgeGame));
       if (index + 50 >= page.pagination.totalCount || page.data.length === 0) break;
     }
     return games;
