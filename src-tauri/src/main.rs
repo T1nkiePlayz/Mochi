@@ -86,10 +86,9 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
-            #[cfg(any(target_os = "linux", target_os = "macos"))]
+            #[cfg(target_os = "linux")]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
-                #[cfg(target_os = "linux")]
                 app.deep_link().register_all()?;
             }
             platform::ensure_platform_integration()?;
