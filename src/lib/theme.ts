@@ -63,13 +63,14 @@ function builtinAssets(themeId: string, manifest: ThemeManifest): Record<string,
 }
 
 const manifestModules = import.meta.glob("../themes/*/theme.json", { eager: true, import: "default" }) as Record<string, ThemeManifest>;
-const cssModules = import.meta.glob("../themes/*/theme.css", { eager: true, query: "?raw", import: "default" }) as Record<string, string>;
+// Theme stylesheets are only fetched for the theme being applied; the rest stay out of the entry chunk.
+const cssModules = import.meta.glob("../themes/*/theme.css", { query: "?raw", import: "default" }) as Record<string, () => Promise<string>>;
 
 /** Every folder under src/themes is a built-in theme; no registration needed. */
-const builtins: Array<{ manifest: ThemeManifest; css: string; assets: Record<string, string> }> = Object.entries(manifestModules)
+const builtins: Array<{ manifest: ThemeManifest; css: () => Promise<string>; assets: Record<string, string> }> = Object.entries(manifestModules)
   .map(([path, manifest]) => ({
     manifest,
-    css: cssModules[path.replace("theme.json", "theme.css")] ?? "",
+    css: cssModules[path.replace("theme.json", "theme.css")] ?? (async () => ""),
     assets: builtinAssets(path.split("/")[2], manifest),
   }))
   .sort((a, b) => (a.manifest.order ?? 100) - (b.manifest.order ?? 100) || a.manifest.name.localeCompare(b.manifest.name));
@@ -123,7 +124,7 @@ export async function setTheme(themeId: string): Promise<void> {
 export async function loadTheme(theme: ThemeDescriptor): Promise<LoadedTheme> {
   const builtin = builtinsById.get(theme.id);
   if (builtin && theme.source === "builtin") {
-    return { ...theme, css: builtin.css, assetUrls: builtin.assets };
+    return { ...theme, css: await builtin.css(), assetUrls: builtin.assets };
   }
 
   try {
@@ -139,7 +140,7 @@ export async function loadTheme(theme: ThemeDescriptor): Promise<LoadedTheme> {
     return {
       ...fallback.manifest,
       source: "builtin",
-      css: fallback.css,
+      css: await fallback.css(),
       assetUrls: fallback.assets,
     };
   }

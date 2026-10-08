@@ -1,6 +1,5 @@
 import { useSyncExternalStore } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { readJson, readString, storageKeys, writeString } from "../lib/storage";
 
 /** What the native side knows about how this process was started; injected before the page loads. */
@@ -55,7 +54,7 @@ applyDocument();
 
 async function setFullscreen(value: boolean) {
   if (boot.gamescope) return; // gamescope already presents every window fullscreen
-  try { await getCurrentWindow().setFullscreen(value); } catch { /* browser/development mode or missing permission */ }
+  try { await (await import("@tauri-apps/api/window")).getCurrentWindow().setFullscreen(value); } catch { /* browser/development mode or missing permission */ }
 }
 
 function setActive(next: boolean) {
