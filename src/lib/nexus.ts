@@ -40,12 +40,17 @@ function normalizeNexusGame(value: any): NexusGame | null {
   ].find((candidate) => typeof candidate === "string" && candidate.trim());
 
   const modCount = Number(value.modCount ?? value.mod_count ?? value.file_count ?? 0);
+  const resolvedIconUrl = iconUrl
+    ? String(iconUrl)
+    : id
+      ? `https://staticdelivery.nexusmods.com/images/games/cover_${encodeURIComponent(id)}.jpg`
+      : undefined;
 
   return {
     id,
     name,
     domainName,
-    ...(iconUrl ? { iconUrl: String(iconUrl) } : {}),
+    ...(resolvedIconUrl ? { iconUrl: resolvedIconUrl } : {}),
     ...(Number.isFinite(modCount) && modCount > 0 ? { modCount } : {}),
   };
 }
