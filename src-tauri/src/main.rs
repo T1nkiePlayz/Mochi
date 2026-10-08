@@ -100,7 +100,9 @@ fn main() {
                 use tauri_plugin_deep_link::DeepLinkExt;
                 app.deep_link().register_all()?;
             }
-            themes::initialize_config(&app.handle())?;
+            #[cfg(target_os = "linux")]
+            platform::ensure_desktop_entry()?;
+            themes::initialize_config(&app.handle())?
             let app_data_dir = app.path().app_data_dir()?;
             playtime::initialize(app_data_dir).map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error))?;
             modrinth::initialize_downloads();
