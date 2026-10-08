@@ -12,6 +12,7 @@ import { Topbar } from "./components/layout/Topbar";
 import { LibraryView } from "./views/LibraryView";
 import { AppProvider, useApp } from "./state/AppContext";
 import { Cloud } from "lucide-react";
+import { OfflineBanner } from "./components/OfflineBanner";
 
 // Everything except the library loads on demand so the launcher reaches an interactive library sooner.
 const SettingsView = lazy(() => import("./views/SettingsView").then((m) => ({ default: m.SettingsView })));
@@ -69,6 +70,7 @@ function Shell() {
     <main className="main-content">
       <Topbar />
       <div className="content">
+        <OfflineBanner />
         <ErrorBoundary resetKey={app.activeNav}>
           <Suspense fallback={<ViewFallback />}><CurrentView /></Suspense>
         </ErrorBoundary>

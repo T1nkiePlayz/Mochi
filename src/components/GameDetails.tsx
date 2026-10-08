@@ -1,3 +1,4 @@
+import { RemoteImage } from "./RemoteImage";
 import { useState, type ReactNode } from "react";
 import { ArrowLeft, ExternalLink, FolderOpen, Pencil, Play, Square, Trash2 } from "lucide-react";
 import { openExternalUrl, type PlatformCapabilities } from "../lib/platform";
@@ -5,6 +6,7 @@ import { formatPlaytime, formatRelativeTime } from "../lib/format";
 import type { Piko } from "../models";
 import type { PlaytimeEntry } from "../lib/platform";
 import { GameArtwork } from "./GameArtwork";
+import { useOnline } from "../lib/offline";
 
 type Props = {
   game: Piko;
@@ -27,6 +29,7 @@ type Props = {
 
 export function GameDetails({ game, synced, running, playtime, launchError, launching, workspace, canStop, capabilities, onBack, onPlay, onStop, onEdit, onRemove, onOpenFolder, onShortcut }: Props) {
   const [playTrailer, setPlayTrailer] = useState(false);
+  const online = useOnline();
   const trailer = game.trailerId && /^[A-Za-z0-9_-]{6,20}$/.test(game.trailerId) ? game.trailerId : "";
   const folder = game.installPath || (game.executablePath?.startsWith("/") ? game.executablePath : "");
   return <section className="game-details-page">
@@ -48,8 +51,8 @@ export function GameDetails({ game, synced, running, playtime, launchError, laun
     <div className="game-workspace">{workspace}</div>
     <div className="game-details-content">
       <section className="game-details-section"><div className="discover-section-heading"><div><h3>About {game.name}</h3><p>Game information from IGDB when available.</p></div></div><div className="game-details-info">{game.categories?.length ? <div><small>Genres</small><strong>{game.categories.join(", ")}</strong></div> : null}{game.firstReleaseDate ? <div><small>First released</small><strong>{new Date(game.firstReleaseDate * 1000).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</strong></div> : null}<div><small>Platform</small><strong>{game.platformCategory || game.sourceId || "Custom"}</strong></div></div>{game.description && <p className="game-details-description">{game.description}</p>}</section>
-      {game.screenshots?.length ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Screenshots</h3><p>Images from IGDB.</p></div></div><div className="game-screenshot-grid">{game.screenshots.map((url, index) => <img key={`${url}-${index}`} src={url} alt={`${game.name} screenshot ${index + 1}`} loading="lazy" />)}</div></section> : null}
-      {trailer ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Trailer</h3><p>Watch the trailer in Mochi.</p></div><button type="button" className="text-button" onClick={() => void openExternalUrl(`https://www.youtube.com/watch?v=${trailer}`)}><ExternalLink size={13}/> Open on YouTube</button></div><div className="game-trailer-frame">{playTrailer ? <iframe src={`https://www.youtube-nocookie.com/embed/${trailer}?autoplay=1&controls=1&playsinline=1`} title={`${game.name} trailer`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <button type="button" className="game-trailer-start" onClick={() => setPlayTrailer(true)}><GameArtwork className="game-trailer-poster" cacheKey={game.artworkCacheKey} fallback={game.artwork}/><span><Play size={23} fill="currentColor"/> Play trailer</span></button>}</div></section> : null}
+      {game.screenshots?.length ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Screenshots</h3><p>Images from IGDB.</p></div></div><div className="game-screenshot-grid">{game.screenshots.map((url, index) => <RemoteImage key={`${url}-${index}`} src={url} alt={`${game.name} screenshot ${index + 1}`} loading="lazy" />)}</div></section> : null}
+      {trailer ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Trailer</h3><p>Watch the trailer in Mochi.</p></div><button type="button" className="text-button" onClick={() => void openExternalUrl(`https://www.youtube.com/watch?v=${trailer}`)}><ExternalLink size={13}/> Open on YouTube</button></div><div className="game-trailer-frame">{playTrailer && online ? <iframe src={`https://www.youtube-nocookie.com/embed/${trailer}?autoplay=1&controls=1&playsinline=1`} title={`${game.name} trailer`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <button type="button" className="game-trailer-start" disabled={!online} onClick={() => setPlayTrailer(true)}><GameArtwork className="game-trailer-poster" cacheKey={game.artworkCacheKey} fallback={game.artwork}/><span><Play size={23} fill="currentColor"/> {online ? "Play trailer" : "Trailer needs internet"}</span></button>}</div></section> : null}
     </div>
   </section>;
 }

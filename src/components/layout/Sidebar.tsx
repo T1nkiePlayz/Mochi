@@ -1,3 +1,4 @@
+import { RemoteImage } from "../RemoteImage";
 import { BarChart3, ChevronDown, Download, Grid2X2, Library, Plus, Settings, Sparkles } from "lucide-react";
 import { AccountAvatar } from "../AccountAvatar";
 import { MochiIcon } from "../MochiIcon";
@@ -20,7 +21,7 @@ export function Sidebar() {
     <div className="sidebar-account-wrap">
       <button className="sidebar-account" aria-expanded={account.showAccountMenu} onClick={() => account.setShowAccountMenu(!account.showAccountMenu)}><AccountAvatar user={user} size={34} /><span><strong>{usernameOf(user)}</strong><small>{user ? "Mochi account" : "Sign in to Mochi"}</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={14} /></button>
       {account.showAccountMenu && <div className="account-menu">
-        {storage.multipleAccountsEnabled && account.savedAccounts.map((saved) => <button type="button" key={saved.id} className={saved.id === user?.id ? "selected" : ""} onClick={() => void account.switchAccount(saved)}><span className="account-menu-avatar">{saved.avatarUrl ? <img className="account-menu-avatar-image" src={saved.avatarUrl} alt="" referrerPolicy="no-referrer" /> : saved.username.slice(0, 1).toUpperCase()}</span><span><strong>{saved.username}</strong><small>Mochi account</small></span></button>)}
+        {storage.multipleAccountsEnabled && account.savedAccounts.map((saved) => <button type="button" key={saved.id} className={saved.id === user?.id ? "selected" : ""} onClick={() => void account.switchAccount(saved)}><span className="account-menu-avatar">{saved.avatarUrl ? <RemoteImage className="account-menu-avatar-image" src={saved.avatarUrl} alt="" referrerPolicy="no-referrer" fallback={saved.username.slice(0, 1).toUpperCase()} /> : saved.username.slice(0, 1).toUpperCase()}</span><span><strong>{saved.username}</strong><small>Mochi account</small></span></button>)}
         {!user && <button type="button" className="account-menu-add" onClick={() => { account.setShowAccountMenu(false); account.openSignIn(); }}><Plus size={14} /><span><strong>Sign in</strong><small>Add a Mochi account</small></span></button>}
         {user && storage.multipleAccountsEnabled && account.savedAccounts.length < 5 && <button type="button" className="account-menu-add" onClick={() => { account.setShowAccountMenu(false); account.openSignIn(); }}><Plus size={14} /><span><strong>Add User</strong><small>Sign in to another Mochi account</small></span></button>}
         {user && <button type="button" className="account-menu-add" onClick={() => void account.signOut()}><span className="account-menu-avatar">↪</span><span><strong>Sign out</strong><small>Keep local Mochi data</small></span></button>}

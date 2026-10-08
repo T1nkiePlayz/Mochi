@@ -17,7 +17,7 @@ export type ThemeManifest = {
   components?: Record<string, string>;
   icons?: Record<string, string>;
   assets?: Record<string, string>;
-  /** Google Fonts stylesheet URLs (https://fonts.googleapis.com/...) the theme needs. */
+  /** Google Fonts stylesheet URLs (https://fonts.googleapis.com/css...). Ignored for built-in themes (bundled); user themes get them downloaded once and cached locally. */
   fonts?: string[];
   /** Where the navigation lives: a left sidebar (default), right sidebar, top bar, bottom bar or icon rail. */
   shell?: "left" | "right" | "top" | "bottom" | "rail";
@@ -170,6 +170,19 @@ function buildTokenSheet(theme: LoadedTheme): string {
   return lines.join("\n");
 }
 
+const fontStyleId = "mochi-theme-fonts";
+const MAX_FONT_URLS = 6;
+
+/** Mirrors the native allow-list: only Google Fonts CSS endpoints over https. */
+export function isGoogleFontsUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === "fonts.googleapis.com" && !url.port && !url.username && !url.password && url.pathname.startsWith("/css");
+  } catch {
+    return false;
+  }
+}
+
 export function applyTheme(theme: LoadedTheme): () => void {
   const styleId = "mochi-theme-engine";
   document.getElementById(styleId)?.remove();
@@ -179,15 +192,22 @@ export function applyTheme(theme: LoadedTheme): () => void {
   style.textContent = [buildTokenSheet(theme), theme.css].join("\n");
   document.head.appendChild(style);
 
-  document.querySelectorAll("link[data-mochi-theme-font]").forEach((link) => link.remove());
-  for (const href of theme.fonts ?? []) {
-    // Only Google Fonts stylesheets are loaded, so a theme cannot pull in arbitrary remote CSS.
-    if (!href.startsWith("https://fonts.googleapis.com/")) continue;
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = href;
-    link.dataset.mochiThemeFont = "";
-    document.head.appendChild(link);
+  document.getElementById(fontStyleId)?.remove();
+  // Built-in fonts are bundled (fonts.generated.css). Only user themes can declare Google Fonts,
+  // which the native side downloads once and serves from the Mochi config folder.
+  let cancelled = false;
+  if (theme.source === "user") {
+    const urls = (theme.fonts ?? []).filter(isGoogleFontsUrl).slice(0, MAX_FONT_URLS);
+    if (urls.length) {
+      void invoke<string>("cache_theme_fonts", { themeId: theme.id, urls }).then((fontCss) => {
+        if (cancelled || !fontCss) return;
+        document.getElementById(fontStyleId)?.remove();
+        const fontStyle = document.createElement("style");
+        fontStyle.id = fontStyleId;
+        fontStyle.textContent = fontCss;
+        document.head.appendChild(fontStyle);
+      }).catch(() => { /* Offline and uncached: the theme falls back to its system font stack. */ });
+    }
   }
 
   document.documentElement.dataset.mochiTheme = theme.id;
@@ -196,8 +216,9 @@ export function applyTheme(theme: LoadedTheme): () => void {
   window.dispatchEvent(new Event("mochi-theme-changed"));
 
   return () => {
+    cancelled = true;
     document.getElementById(styleId)?.remove();
-    document.querySelectorAll("link[data-mochi-theme-font]").forEach((link) => link.remove());
+    document.getElementById(fontStyleId)?.remove();
   };
 }
 

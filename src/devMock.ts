@@ -31,6 +31,7 @@ const handlers: Record<string, Handler> = {
     { filename: "lithium.jar.disabled", path: "/mods/lithium.jar.disabled", enabled: false, size: 402_000 },
   ],
   list_user_themes: () => [],
+  cache_theme_fonts: () => "",
   get_mochi_config_info: () => ({ configPath: "~/.config/Mochi/config.json", themesPath: "~/.config/Mochi/themes", selectedTheme: localStorage.getItem("mochi:theme") ?? "mochi" }),
   set_mochi_theme: (args) => { localStorage.setItem("mochi:theme", String(args.themeId)); return null; },
   detect_import_sources: () => [

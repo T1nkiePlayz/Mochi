@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { clearAccountCloudData, getCloudAccountSettings, pullLibrary, pushLibrary } from "../lib/cloud";
 import type { Piko } from "../models";
+import { isNetworkError } from "../lib/offline";
 
 export type SyncState = "offline" | "syncing" | "synced" | "error";
 
@@ -45,9 +46,12 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        console.error("Mochi cloud sync failed", error);
         initialized.current = false;
-        setCloudDataAccessAllowed(false); setCloudSyncEnabled(false); setSyncState("error");
+        setCloudDataAccessAllowed(false); setCloudSyncEnabled(false);
+        // Offline is an expected state, not an error; sync retries when the account loads again.
+        if (isNetworkError(error)) { setSyncState("offline"); return; }
+        console.error("Mochi cloud sync failed", error);
+        setSyncState("error");
       });
     return () => { cancelled = true; };
   }, [user?.id, storageReady, storageKey]);
@@ -61,7 +65,7 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
     const timer = window.setTimeout(() => {
       void pushLibrary(client, library)
         .then(() => { if (!cancelled) setSyncState("synced"); })
-        .catch((error: unknown) => { console.error("Mochi cloud sync failed", error); if (!cancelled) setSyncState("error"); });
+        .catch((error: unknown) => { if (cancelled) return; if (isNetworkError(error)) { setSyncState("offline"); return; } console.error("Mochi cloud sync failed", error); setSyncState("error"); });
     }, 1200);
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, [library, user?.id, cloudSyncEnabled, storageReady, storageKey]);
