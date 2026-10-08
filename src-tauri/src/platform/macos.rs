@@ -47,7 +47,7 @@ fn is_app_bundle(path: &Path) -> bool {
 }
 
 pub fn prepare_launch(target: &str, config: &LaunchConfig) -> Result<Prepared, String> {
-    for scheme in ["steam://rungameid/", "lutris:rungameid/", "itch://run-game/"] {
+    for scheme in ["steam://rungameid/", "steam://open/", "lutris:rungameid/", "itch://run-game/"] {
         if let Some(id) = target.strip_prefix(scheme) {
             let mut command = open_command();
             command.arg(format!("{scheme}{}", safe_launch_id(id)?));
