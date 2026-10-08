@@ -1,7 +1,7 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { Piko } from "../models";
-import { profileStorageKey, readJson, removeKey, storageKeys, writeJson, writeJsonDebounced } from "../lib/storage";
+import { profileStorageKey, readJson, removeKey, storageKeys, writeJson, writeJsonDebounced, writeString } from "../lib/storage";
 import { sanitizeLibrary } from "../lib/library";
 import { defaultBehavior, normalizeBehavior, type Behavior } from "./settings";
 import type { AppNotification } from "./useNotifications";
@@ -40,6 +40,9 @@ export function useProfileStorage(params: Params) {
     if (multipleAccountsEnabled) writeJsonDebounced(scoped("settings"), { ...behavior, theme });
     else writeJsonDebounced(storageKeys.settings, { ...behavior, multipleAccountsEnabled });
   }, [behavior, theme, multipleAccountsEnabled, ready, ownerKey]);
+
+  // Startup happens before any profile loads, so the active profile's choice is mirrored device-wide.
+  useEffect(() => { if (ready) writeString(storageKeys.bigPictureStartup, String(behavior.bigPictureOnStartup)); }, [behavior.bigPictureOnStartup, ready]);
 
   // The multi-profile switch itself always lives in the shared settings so it survives a profile change.
   useEffect(() => {

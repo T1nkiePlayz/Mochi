@@ -37,9 +37,16 @@ export function effectiveStartup(startupSetting: boolean): boolean {
 export function markStartupChoice() { writeString(bigPictureExplicitKey, "true"); }
 
 const boot = readBoot();
+/** The device-wide mirror wins (per-account profiles keep their settings elsewhere); old installs fall back to the shared settings. */
+export function readStartupSetting(): unknown {
+  const mirrored = readString(storageKeys.bigPictureStartup);
+  if (mirrored === "true" || mirrored === "false") return mirrored === "true";
+  return readJson<Record<string, unknown>>(storageKeys.settings, {}).bigPictureOnStartup;
+}
+
 let active = shouldStartInBigPicture(
   boot,
-  readJson<Record<string, unknown>>(storageKeys.settings, {}).bigPictureOnStartup,
+  readStartupSetting(),
   readString(bigPictureExplicitKey) === "true",
 );
 const listeners = new Set<() => void>();

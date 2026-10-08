@@ -2,6 +2,8 @@
 export const storageKeys = {
   pikos: "mochi:pikos",
   settings: "mochi:settings",
+  /** Device-wide copy of the "open in Big Picture on startup" choice; read before any profile is loaded. */
+  bigPictureStartup: "mochi:bigpicture-startup",
   setupComplete: "mochi:setup-complete",
   importSources: "mochi:import-sources",
   accounts: "mochi:accounts",
