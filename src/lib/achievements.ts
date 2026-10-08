@@ -1,70 +1,12 @@
 import type { Piko } from "../models";
-import { computeStreaks, dayKey, dayTotals, startOfDay, addDays, STREAK_MIN_SECONDS, splitAtMidnight, type SessionRecord } from "./stats";
+import { computeStreaks, STREAK_MIN_SECONDS, splitAtMidnight, type SessionRecord } from "./stats";
+import { achievements } from "./achievementDefs";
+import { rarityOrder, type AchievementCategory, type AchievementDef, type AchievementFlags, type Facts } from "./achievementTypes";
 
-export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
-export const rarityLabels: Record<Rarity, string> = { common: "Common", uncommon: "Uncommon", rare: "Rare", epic: "Epic", legendary: "Legendary" };
+export * from "./achievementTypes";
+export { achievements };
 
-/** Local facts that are not derivable from play history; recorded by `useAchievements`. */
-export type AchievementFlags = { themes: string[]; usedDiscover: boolean; installedMod: boolean };
-
-/** Everything a rule may look at. Build it with `buildFacts`; rules stay pure functions of it. */
-export type Facts = {
-  totalSeconds: number;
-  sessionCount: number;
-  longestSessionSeconds: number;
-  longestStreak: number;
-  /** Most distinct games played inside any 7-day window. */
-  maxGamesInWeek: number;
-  nightSessions: number;
-  earlySessions: number;
-  gameCount: number;
-  collectionCount: number;
-  customTofuCount: number;
-  flags: AchievementFlags;
-};
-
-export type AchievementDef = {
-  id: string;
-  title: string;
-  description: string;
-  rarity: Rarity;
-  /** Name of a lucide icon, resolved in the UI. */
-  icon: string;
-  /** Hidden achievements show as a mystery until unlocked. */
-  hidden?: boolean;
-  target: number;
-  value: (facts: Facts) => number;
-  /** Unit for progress text. */
-  unit?: "hours" | "days" | "games" | "sessions" | "themes" | "";
-};
-
-const hours = (n: number) => n * 3600;
-
-/** Add an achievement by adding one entry here. */
-export const achievements: AchievementDef[] = [
-  { id: "first-launch", title: "First launch", description: "Launch a game through Mochi.", rarity: "common", icon: "Rocket", target: 1, value: (f) => f.sessionCount + (f.totalSeconds > 0 ? 1 : 0), unit: "sessions" },
-  { id: "hour-1", title: "Warming up", description: "Play for 1 hour in total.", rarity: "common", icon: "Timer", target: hours(1), value: (f) => f.totalSeconds, unit: "hours" },
-  { id: "hours-10", title: "Getting hooked", description: "Play for 10 hours in total.", rarity: "uncommon", icon: "Hourglass", target: hours(10), value: (f) => f.totalSeconds, unit: "hours" },
-  { id: "hours-100", title: "Centurion", description: "Play for 100 hours in total.", rarity: "rare", icon: "Medal", target: hours(100), value: (f) => f.totalSeconds, unit: "hours" },
-  { id: "hours-500", title: "Lifestyle", description: "Play for 500 hours in total.", rarity: "epic", icon: "Trophy", target: hours(500), value: (f) => f.totalSeconds, unit: "hours" },
-  { id: "hours-1000", title: "Touch grass?", description: "Play for 1,000 hours in total.", rarity: "legendary", icon: "Crown", hidden: true, target: hours(1000), value: (f) => f.totalSeconds, unit: "hours" },
-  { id: "streak-3", title: "On a roll", description: "Play 3 days in a row.", rarity: "common", icon: "Flame", target: 3, value: (f) => f.longestStreak, unit: "days" },
-  { id: "streak-7", title: "Week warrior", description: "Play 7 days in a row.", rarity: "uncommon", icon: "Flame", target: 7, value: (f) => f.longestStreak, unit: "days" },
-  { id: "streak-30", title: "Unstoppable", description: "Play 30 days in a row.", rarity: "epic", icon: "Flame", target: 30, value: (f) => f.longestStreak, unit: "days" },
-  { id: "night-owl", title: "Night owl", description: "Start a session after midnight (00:00 to 04:00).", rarity: "uncommon", icon: "Moon", target: 1, value: (f) => f.nightSessions, unit: "sessions" },
-  { id: "early-bird", title: "Early bird", description: "Start a session between 04:00 and 07:00.", rarity: "uncommon", icon: "Sunrise", target: 1, value: (f) => f.earlySessions, unit: "sessions" },
-  { id: "marathon", title: "Marathon", description: "Play a single 4 hour session.", rarity: "rare", icon: "Footprints", target: hours(4), value: (f) => f.longestSessionSeconds, unit: "hours" },
-  { id: "ultramarathon", title: "Ultramarathon", description: "Play a single 8 hour session.", rarity: "epic", icon: "Mountain", hidden: true, target: hours(8), value: (f) => f.longestSessionSeconds, unit: "hours" },
-  { id: "variety", title: "Variety pack", description: "Play 5 different games within one week.", rarity: "rare", icon: "Shuffle", target: 5, value: (f) => f.maxGamesInWeek, unit: "games" },
-  { id: "collector-10", title: "Collector", description: "Have 10 games in your library.", rarity: "common", icon: "Library", target: 10, value: (f) => f.gameCount, unit: "games" },
-  { id: "collector-50", title: "Hoarder", description: "Have 50 games in your library.", rarity: "rare", icon: "Library", target: 50, value: (f) => f.gameCount, unit: "games" },
-  { id: "collector-100", title: "Archivist", description: "Have 100 games in your library.", rarity: "epic", icon: "Library", target: 100, value: (f) => f.gameCount, unit: "games" },
-  { id: "organised", title: "Organised", description: "Create a collection.", rarity: "common", icon: "FolderTree", target: 1, value: (f) => f.collectionCount },
-  { id: "themer", title: "Themer", description: "Try 5 different themes.", rarity: "uncommon", icon: "Palette", target: 5, value: (f) => f.flags.themes.length, unit: "themes" },
-  { id: "modder", title: "Modder", description: "Install a mod.", rarity: "uncommon", icon: "Puzzle", target: 1, value: (f) => (f.flags.installedMod ? 1 : 0) },
-  { id: "explorer", title: "Explorer", description: "Open Discover.", rarity: "common", icon: "Compass", target: 1, value: (f) => (f.flags.usedDiscover ? 1 : 0) },
-  { id: "tinkerer", title: "Tinkerer", description: "Create a Tofu (an environment for a game).", rarity: "common", icon: "Wrench", target: 1, value: (f) => f.customTofuCount },
-];
+export const emptyFlags = (): AchievementFlags => ({ themes: [], usedDiscover: false, installedMod: false, controllerUsed: false, bigPictureUsed: false, views: [] });
 
 /** Reads collections (id list or objects) from wherever the app stores them; tolerant of any shape. */
 export function countCollections(stored: unknown, library: Piko[]): number {
@@ -74,48 +16,123 @@ export function countCollections(stored: unknown, library: Piko[]): number {
   return ids.size;
 }
 
+const DAY_MS = 86_400_000;
+const FESTIVE = new Set(["12-24", "12-25", "12-31", "01-01"]);
+/** Whole days since the epoch for a local "YYYY-MM-DD" key; DST cannot skew it because it uses UTC. */
+const ordinal = (key: string) => { const [y, m, d] = key.split("-").map(Number); return Math.round(Date.UTC(y, m - 1, d) / DAY_MS); };
+/** Monday = 0 ... Sunday = 6, for a day ordinal (1970-01-01 was a Thursday). */
+const weekdayOf = (ord: number) => (((ord + 3) % 7) + 7) % 7;
+
+type DayInfo = { seconds: number; sessions: number; games: Map<string, number> };
+
+/**
+ * One pass over the history (plus one over the library) produces every number the rules need,
+ * so adding an achievement never adds another scan.
+ */
 export function buildFacts(records: SessionRecord[], library: Piko[], flags: AchievementFlags, collectionCount: number, now = Date.now()): Facts {
-  const totals = dayTotals(records);
-  const streaks = computeStreaks(totals, now);
-  let totalSeconds = 0, sessionCount = 0, longestSessionSeconds = 0, nightSessions = 0, earlySessions = 0;
-  const gamesByDay = new Map<string, Set<string>>();
+  const days = new Map<string, DayInfo>();
+  const gameSeconds = new Map<string, number>();
+  let totalSeconds = 0, sessionCount = 0, longestSessionSeconds = 0, nightSessions = 0, earlySessions = 0, quickSessions = 0;
   for (const record of records) {
     totalSeconds += record.seconds;
+    gameSeconds.set(record.gameId, (gameSeconds.get(record.gameId) ?? 0) + record.seconds);
     if (record.kind === "historic") continue;
-    sessionCount += record.kind === "daily" ? record.count : 1;
+    const count = record.kind === "daily" ? record.count : 1;
+    sessionCount += count;
     if (record.kind === "session") {
       longestSessionSeconds = Math.max(longestSessionSeconds, record.seconds);
+      if (record.seconds >= 30 && record.seconds < 600) quickSessions += 1;
       const hour = new Date(record.start * 1000).getHours();
       if (hour < 4) nightSessions += 1; else if (hour < 7) earlySessions += 1;
     }
+    let first = true;
     for (const piece of splitAtMidnight(record)) {
-      if (piece.seconds < STREAK_MIN_SECONDS / 2) continue;
-      if (!gamesByDay.has(piece.day)) gamesByDay.set(piece.day, new Set());
-      gamesByDay.get(piece.day)!.add(piece.gameId);
+      let day = days.get(piece.day);
+      if (!day) { day = { seconds: 0, sessions: 0, games: new Map() }; days.set(piece.day, day); }
+      day.seconds += piece.seconds;
+      if (first) { day.sessions += count; first = false; }
+      if (piece.seconds >= STREAK_MIN_SECONDS / 2) day.games.set(piece.gameId, (day.games.get(piece.gameId) ?? 0) + 1);
     }
   }
-  let maxGamesInWeek = 0;
-  const days = [...gamesByDay.keys()].sort();
-  for (const key of days) {
-    const [y, m, d] = key.split("-").map(Number);
-    const window = new Set<string>();
-    for (let i = 0; i < 7; i += 1) gamesByDay.get(dayKey(addDays(startOfDay(new Date(y, m - 1, d).getTime()), -i)))?.forEach((id) => window.add(id));
-    maxGamesInWeek = Math.max(maxGamesInWeek, window.size);
+
+  const totals = new Map<string, number>();
+  let maxDaySeconds = 0, maxSessionsInDay = 0;
+  for (const [key, day] of days) {
+    totals.set(key, day.seconds);
+    maxDaySeconds = Math.max(maxDaySeconds, day.seconds);
+    maxSessionsInDay = Math.max(maxSessionsInDay, day.sessions);
   }
+  const playedKeys = [...days.keys()].filter((key) => (days.get(key)?.seconds ?? 0) >= STREAK_MIN_SECONDS).sort();
+  const weekdays = new Set<number>(), months = new Set<string>();
+  let weekendDays = 0, festiveDays = 0, longestGapDays = 0, previous = -Infinity;
+  for (const key of playedKeys) {
+    const ord = ordinal(key), weekday = weekdayOf(ord);
+    weekdays.add(weekday);
+    if (weekday >= 5) weekendDays += 1;
+    months.add(key.slice(0, 7));
+    if (FESTIVE.has(key.slice(5))) festiveDays += 1;
+    if (Number.isFinite(previous)) longestGapDays = Math.max(longestGapDays, ord - previous - 1);
+    previous = ord;
+  }
+
+  // Distinct games in any 7-day window, with a sliding window over the sorted days (O(days)).
+  const window = new Map<string, number>();
+  const dayList = [...days.keys()].sort().map((key) => ({ ord: ordinal(key), games: days.get(key)!.games }));
+  let maxGamesInWeek = 0, left = 0;
+  dayList.forEach((entry) => {
+    entry.games.forEach((_, id) => window.set(id, (window.get(id) ?? 0) + 1));
+    for (; dayList[left].ord <= entry.ord - 7; left += 1) {
+      dayList[left].games.forEach((_, id) => { const next = (window.get(id) ?? 1) - 1; if (next <= 0) window.delete(id); else window.set(id, next); });
+    }
+    maxGamesInWeek = Math.max(maxGamesInWeek, window.size);
+  });
+
+  const byId = new Map(library.map((piko) => [piko.id, piko]));
+  const playedGenres = new Set<string>(), playedSources = new Set<string>();
+  let gamesPlayed = 0, maxGameSeconds = 0, gamesOver10h = 0;
+  for (const [id, seconds] of gameSeconds) {
+    if (seconds <= 0) continue;
+    gamesPlayed += 1;
+    maxGameSeconds = Math.max(maxGameSeconds, seconds);
+    if (seconds >= 36_000) gamesOver10h += 1;
+    const piko = byId.get(id);
+    piko?.categories?.forEach((genre) => playedGenres.add(genre.toLowerCase()));
+    if (piko?.sourceId) playedSources.add(piko.sourceId);
+  }
+
+  const sources = new Set<string>(), tags = new Set<string>(), collectionSizes = new Map<string, number>();
+  let customGames = 0, steamGames = 0, favouriteCount = 0, tofuCount = 0, customTofuCount = 0, totalMods = 0, moddedGames = 0;
+  for (const piko of library) {
+    if (piko.sourceId) sources.add(piko.sourceId);
+    if (piko.source === "custom" && !piko.sourceId) customGames += 1;
+    if (piko.sourceId === "steam" && piko.kind !== "launcher") steamGames += 1;
+    if (piko.favorite) favouriteCount += 1;
+    piko.tags?.forEach((tag) => tags.add(tag.toLowerCase()));
+    piko.collectionIds?.forEach((id) => collectionSizes.set(id, (collectionSizes.get(id) ?? 0) + 1));
+    let mods = 0;
+    for (const tofu of piko.tofus) { tofuCount += 1; if (tofu.id !== "default") customTofuCount += 1; mods += tofu.mods; }
+    totalMods += mods;
+    if (mods > 0) moddedGames += 1;
+  }
+
   return {
-    totalSeconds, sessionCount, longestSessionSeconds, longestStreak: streaks.longest, maxGamesInWeek, nightSessions, earlySessions,
-    gameCount: library.length, collectionCount,
-    customTofuCount: library.reduce((sum, piko) => sum + piko.tofus.filter((tofu) => tofu.id !== "default").length, 0),
-    flags,
+    totalSeconds, sessionCount, longestSessionSeconds, quickSessions, maxSessionsInDay, maxDaySeconds,
+    longestStreak: computeStreaks(totals, now).longest, daysPlayed: playedKeys.length, weekendDays, weekdaysCovered: weekdays.size,
+    longestGapDays, monthsActive: months.size, festiveDays, maxGamesInWeek, nightSessions, earlySessions,
+    gamesPlayed, maxGameSeconds, gamesOver10h, playedGenres: playedGenres.size, playedSources: playedSources.size,
+    gameCount: library.length, librarySources: sources.size, customGames, steamGames, collectionCount,
+    maxCollectionSize: Math.max(0, ...collectionSizes.values()), favouriteCount, distinctTags: tags.size, tofuCount, customTofuCount, totalMods, moddedGames,
+    steam: flags.steam?.known ? flags.steam : null, flags,
   };
 }
 
-export type AchievementProgress = { def: AchievementDef; value: number; fraction: number; met: boolean };
+export type AchievementProgress = { def: AchievementDef; value: number; fraction: number; met: boolean; /** False while the data this rule needs (Steam) has not been loaded. */ available: boolean };
 
-export function evaluate(facts: Facts): AchievementProgress[] {
-  return achievements.map((def) => {
-    const value = def.value(facts);
-    return { def, value, fraction: Math.min(1, value / def.target), met: value >= def.target };
+export function evaluate(facts: Facts, defs: AchievementDef[] = achievements): AchievementProgress[] {
+  return defs.map((def) => {
+    const available = def.requires !== "steam" || facts.steam !== null;
+    const value = available ? def.value(facts) : 0;
+    return { def, value, fraction: Math.min(1, value / def.target), met: available && value >= def.target, available };
   });
 }
 
@@ -125,7 +142,25 @@ export const newlyMet = (progress: AchievementProgress[], unlocked: Record<strin
 
 export function progressText(item: AchievementProgress): string {
   const { def, value } = item;
+  if (!item.available) return "Needs Steam data";
   if (def.unit === "hours") return `${Math.min(value, def.target) / 3600 >= 10 ? Math.floor(Math.min(value, def.target) / 3600) : (Math.min(value, def.target) / 3600).toFixed(1)} / ${def.target / 3600} h`;
   if (def.target === 1) return item.met ? "Done" : "Not yet";
   return `${Math.min(Math.floor(value), def.target)} / ${def.target}${def.unit ? ` ${def.unit}` : ""}`;
+}
+
+export type AchievementFilter = { category: AchievementCategory | "all"; status: "all" | "unlocked" | "locked" };
+
+/**
+ * Filters and orders the list: unlocked first, then by rarity, then closest to done. Ladders show only the
+ * next tier of a family while locked, so 5 hour tiers do not bury everything else; unlocked tiers all show.
+ */
+export function visibleAchievements(progress: AchievementProgress[], unlocked: Record<string, number>, filter: AchievementFilter, collapseTiers = true): AchievementProgress[] {
+  const isDone = (item: AchievementProgress) => item.met || item.def.id in unlocked;
+  const nextTier = new Map<string, string>();
+  if (collapseTiers) for (const item of progress) { if (item.def.family && !isDone(item) && !nextTier.has(item.def.family)) nextTier.set(item.def.family, item.def.id); }
+  return progress
+    .filter((item) => filter.category === "all" || item.def.category === filter.category)
+    .filter((item) => filter.status === "all" || (filter.status === "unlocked") === isDone(item))
+    .filter((item) => !collapseTiers || isDone(item) || !item.def.family || nextTier.get(item.def.family) === item.def.id)
+    .sort((a, b) => Number(isDone(b)) - Number(isDone(a)) || (isDone(a) && isDone(b) ? (unlocked[b.def.id] ?? 0) - (unlocked[a.def.id] ?? 0) : b.fraction - a.fraction || rarityOrder.indexOf(a.def.rarity) - rarityOrder.indexOf(b.def.rarity)));
 }

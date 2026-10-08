@@ -108,3 +108,15 @@ i.stat-cell { display: inline-block; width: 11px; height: 11px; border-radius: 3
 
 @media (max-width: 1100px) { .stats-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .stats-skeleton { animation: none; } .stat-bar, .stat-cell { transition: none; } }
+
+/* Achievement filters and tiers */
+.ach-filters { display: grid; gap: 8px; margin: 12px 0; }
+.ach-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ach-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border: 1px solid var(--mochi-border); border-radius: var(--mochi-pill-radius, 999px); background: var(--mochi-surface); color: var(--mochi-text-muted); font-size: 12px; font-weight: 600; }
+.ach-chip small { color: inherit; opacity: .8; font-weight: 500; }
+.ach-chip:hover { color: var(--mochi-text-strong); background: var(--mochi-surface-hover); }
+.ach-chip[aria-pressed="true"] { color: var(--mochi-accent-text, var(--mochi-text-strong)); background: var(--mochi-accent); border-color: var(--mochi-accent); }
+.ach-chip:focus-visible { outline: none; box-shadow: var(--mochi-focus-ring); }
+.ach-tier { color: var(--mochi-text-muted); }
+.ach-steam-note { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 12px; padding: 10px 12px; border: 1px dashed var(--mochi-border); border-radius: var(--mochi-radius-md); color: var(--mochi-text-muted); font-size: 12px; }
+.ach-steam-note small { flex-basis: 100%; }
