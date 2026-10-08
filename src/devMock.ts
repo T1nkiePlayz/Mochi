@@ -9,7 +9,15 @@ const handlers: Record<string, Handler> = {
   get_platform_capabilities: () => ({
     platform: "linux", displayName: "Linux", launchMethods: ["file", "flatpak", "custom"], supportsFlatpak: true,
     supportsAppBundles: false, supportsStartup: true, supportsSystemNotifications: true, supportsShortcuts: true,
+    isSteamDeck: new URLSearchParams(location.search).has("deck"), isGamescope: new URLSearchParams(location.search).has("gamescope"),
   }),
+  get_system_status: () => ({ hasBattery: true, batteryPercent: 76, charging: false }),
+  get_gamepads: () => [],
+  gamepad_rumble: () => null,
+  suspend_system: () => null,
+  quit_mochi: () => null,
+  "plugin:window|set_fullscreen": () => null,
+  "plugin:window|is_fullscreen": () => false,
   get_playtime: () => [
     { gameId: "a", name: "Minecraft", seconds: 93_600, lastPlayed: now - 3_600 },
     { gameId: "b", name: "Stardew Valley", seconds: 41_000, lastPlayed: now - 86_400 },

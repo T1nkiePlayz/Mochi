@@ -1,6 +1,7 @@
 import { Bell, Menu, Search, X } from "lucide-react";
 import { MochiIcon } from "../MochiIcon";
 import { useApp } from "../../state/AppContext";
+import { BigPictureButton } from "../../bigpicture/EntryButton";
 
 export function Topbar() {
   const { activeNav, lib, behavior, platformCapabilities, notifications: n } = useApp();
@@ -16,6 +17,7 @@ export function Topbar() {
         {search && <button className="clear-search" aria-label="Clear search" onClick={() => setSearch("")}><MochiIcon name="close" fallback={X} size={13} /></button>}
         {!search && <kbd>{platformCapabilities?.platform === "macos" ? "⌘ K" : "Ctrl K"}</kbd>}
       </label>
+      <BigPictureButton />
       {showBell && <div className="notification-wrap">
         <button className="icon-button" aria-label="Notifications" aria-expanded={n.showNotifications} onClick={() => n.setShowNotifications(!n.showNotifications)}>
           <MochiIcon name="notifications" fallback={Bell} size={17} />{n.notifications.length > 0 && <span className="notification-dot" />}

@@ -101,8 +101,8 @@ export function ControllerRuntime() {
           return true;
         }
         if (inBigPicture) return false;
-        if (current.app.lib.gameDetailsId) { current.app.lib.setGameDetailsId(""); return true; }
-        if (current.app.activeNav !== "Library") { current.app.setActiveNav("Library"); return true; }
+        if (current.lib.gameDetailsId) { current.lib.setGameDetailsId(""); return true; }
+        if (current.activeNav !== "Library") { current.setActiveNav("Library"); return true; }
         return false;
       }
       case "tabPrev":
@@ -116,8 +116,8 @@ export function ControllerRuntime() {
           return true;
         }
         if (inModal || inBigPicture) return false;
-        const index = NAV_ORDER.indexOf(current.app.activeNav);
-        current.app.setActiveNav(NAV_ORDER[(index + step + NAV_ORDER.length) % NAV_ORDER.length]);
+        const index = NAV_ORDER.indexOf(current.activeNav);
+        current.setActiveNav(NAV_ORDER[(index + step + NAV_ORDER.length) % NAV_ORDER.length]);
         return true;
       }
       case "triggerLeft":
