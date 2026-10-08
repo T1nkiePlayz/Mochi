@@ -15,6 +15,13 @@ fn command_exists(command: &str) -> bool {
     Command::new("sh").args(["-c", &format!("command -v {command}")]).output().map(|o| o.status.success()).unwrap_or(false)
 }
 
+fn launchctl_domain() -> Option<String> {
+    let output = Command::new("id").arg("-u").output().ok()?;
+    if !output.status.success() { return None; }
+    let uid = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    (!uid.is_empty()).then(|| format!("gui/{uid}"))
+}
+
 pub fn capabilities() -> PlatformCapabilities {
     PlatformCapabilities {
         platform: "macos".into(),
@@ -77,10 +84,16 @@ pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> {
 "#);
         fs::write(&plist, content).map_err(|e| format!("Unable to install Mochi startup agent: {e}"))?;
         if command_exists("launchctl") {
-            let _ = Command::new("launchctl").args(["load", "-w"]).arg(&plist).status();
+            if let Some(domain) = launchctl_domain() {
+                let _ = Command::new("launchctl").args(["bootstrap", &domain]).arg(&plist).status();
+            }
         }
     } else if plist.exists() {
-        if command_exists("launchctl") { let _ = Command::new("launchctl").args(["unload", "-w"]).arg(&plist).status(); }
+        if command_exists("launchctl") {
+            if let Some(domain) = launchctl_domain() {
+                let _ = Command::new("launchctl").args(["bootout", &domain]).arg(&plist).status();
+            }
+        }
         fs::remove_file(&plist).map_err(|e| format!("Unable to remove Mochi startup agent: {e}"))?;
     }
     Ok(())
