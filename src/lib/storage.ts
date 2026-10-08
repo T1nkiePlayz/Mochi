@@ -28,6 +28,12 @@ export function flushPendingWrites(): void {
   for (const [key, value] of entries) writeJsonNow(key, value);
 }
 
+/** Drops pending debounced writes (used before wiping local data so they cannot resurrect it). */
+export function discardPendingWrites(): void {
+  if (pendingTimer !== undefined) { clearTimeout(pendingTimer); pendingTimer = undefined; }
+  pendingWrites.clear();
+}
+
 /** Like `writeJson`, but coalesces rapid updates into one write after `delayMs`. Reads and direct writes of the same key stay consistent. */
 export function writeJsonDebounced(key: string, value: unknown, delayMs = 400): void {
   if (!flushHooked && typeof window !== "undefined") {
