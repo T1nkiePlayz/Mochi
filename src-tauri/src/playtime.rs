@@ -327,7 +327,7 @@ fn heartbeat() {
 pub fn history(since_epoch: Option<u64>) -> Result<Vec<Session>, String> {
     lock(&state(), |guard| {
         let since = since_epoch.unwrap_or(0);
-        let mut out: Vec<Session> = guard.history.iter().filter(|s| s.start.saturating_add(s.seconds) >= since).cloned().collect();
+        let mut out: Vec<Session> = guard.history.iter().filter(|s| s.kind == SessionKind::Historic || s.start.saturating_add(s.seconds) >= since).cloned().collect();
         for (game_id, session) in &guard.active {
             let start = session.started_at.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
             let seconds = seconds_since(session.started_at);
