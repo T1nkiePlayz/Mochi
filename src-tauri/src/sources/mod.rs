@@ -530,7 +530,7 @@ mod tests {
         fs::create_dir_all(root.join("steamapps/common/Proton 9.0")).unwrap();
         write(&root.join("steamapps/appmanifest_2.acf"), "garbage \u{0} \"appid\"");
         write(&root.join("steamapps/appmanifest_3.acf"), "\"AppState\"\n{\n\"appid\" \"3\"\n\"name\" \"Evil\"\n\"installdir\" \"../../etc\"\n}");
-        let games = scan_steam(&[root.clone()], true);
+        let games = scan_steam(std::slice::from_ref(&root), true);
         let names: Vec<_> = games.iter().map(|game| game.name.as_str()).collect();
         assert_eq!(names, ["Counter-Strike", "Portal 2", "Team Fortress 2", "Steam"]);
         assert_eq!(games[1].launch_target, "steam://rungameid/620");
@@ -552,7 +552,7 @@ mod tests {
         write(&root.join("GamesConfig/corrupt.json"), "{ not json");
         let found = scan_heroic(&[root.clone(), PathBuf::from("/no/such/heroic")]);
         let summary: Vec<_> = found.iter().map(|game| (game.name.as_str(), game.id.as_str())).collect();
-        assert_eq!(summary, [("amzn1.adg.product.X".get(..0).map(|_| "Prime").unwrap(), "heroic:nile:amzn1.adg.product.X"), ("Celeste", "heroic:legendary:Sugar"), ("My Side Game", "heroic:sideload:side1"), ("The Witcher", "heroic:gog:1207")].iter().map(|(n, i)| (*n, *i)).collect::<Vec<_>>());
+        assert_eq!(summary, [("Celeste", "heroic:legendary:Sugar"), ("My Side Game", "heroic:sideload:side1"), ("Prime", "heroic:nile:amzn1.adg.product.X"), ("The Witcher", "heroic:gog:1207")]);
         let witcher = found.iter().find(|game| game.name == "The Witcher").unwrap();
         assert_eq!(witcher.launch_target, "heroic://launch?appName=1207&runner=gog");
         let _ = fs::remove_dir_all(&root);
@@ -594,15 +594,15 @@ mod tests {
         receipt("One Bundle", 1, &["One.app"]);
         receipt("No Bundle", 2, &[]);
         receipt("Two Bundles", 3, &["A.app", "B.app"]);
-        let on_mac = scan_itch_with(&[root.clone()], true);
+        let on_mac = scan_itch_with(std::slice::from_ref(&root), true);
         let target = |games: &[ImportedGame], name: &str| games.iter().find(|game| game.name == name).unwrap().launch_target.clone();
         assert!(target(&on_mac, "One Bundle").ends_with("One Bundle/One.app"));
         assert_eq!(target(&on_mac, "No Bundle"), "itch://games/2");
         assert_eq!(target(&on_mac, "Two Bundles"), "itch://games/3");
-        assert_eq!(target(&scan_itch_with(&[root.clone()], false), "One Bundle"), "itch://run-game/1");
+        assert_eq!(target(&scan_itch_with(std::slice::from_ref(&root), false), "One Bundle"), "itch://run-game/1");
         // A corrupt receipt is skipped.
         fs::write(root.join("apps/No Bundle/.itch/receipt.json.gz"), b"not gzip").unwrap();
-        assert_eq!(scan_itch_with(&[root.clone()], true).len(), 2);
+        assert_eq!(scan_itch_with(std::slice::from_ref(&root), true).len(), 2);
         let _ = fs::remove_dir_all(&root);
     }
 

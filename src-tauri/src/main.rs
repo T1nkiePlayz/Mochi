@@ -38,10 +38,10 @@ fn send_system_notification(title: String, body: String) -> Result<(), String> {
     platform::send_system_notification(&title, &body)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn open_external_url(url: String) -> Result<(), String> { platform::open_external_url(&url) }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn open_path_in_file_manager(path: String) -> Result<(), String> { platform::open_path(&path) }
 
 #[tauri::command(async)]
@@ -59,16 +59,16 @@ fn launch_game_tracked(app: tauri::AppHandle, request: LaunchRequest) -> Result<
     playtime::start(app, request, move || platform::launch_game(&target, &config))
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn stop_game(game_id: String) -> Result<(), String> { playtime::stop(&game_id) }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn get_active_sessions() -> Result<Vec<playtime::ActiveSessionInfo>, String> { playtime::active() }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn get_playtime() -> Result<Vec<playtime::PlaytimeEntry>, String> { playtime::list() }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn get_playtime_history(since_epoch: Option<u64>) -> Result<Vec<playtime::Session>, String> { playtime::history(since_epoch) }
 
 #[tauri::command(async)]
