@@ -546,3 +546,31 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 @media(max-width:700px){.discover-instance-grid{grid-template-columns:1fr;}.discover-instance-stats{grid-template-columns:1fr;}}
 
 .search-box>.mochi-icon-wrap{display:grid!important;place-items:center!important;flex:0 0 16px!important;width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;overflow:hidden}.search-box>.mochi-icon-wrap .mochi-icon-custom{display:block!important;width:100%!important;height:100%!important;background-position:center!important;background-size:contain!important;background-repeat:no-repeat!important}
+
+/* Compact Modrinth versions: readable at a glance, with changelogs kept one click away. */
+.project-version{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:14px 16px;border:1px solid var(--mochi-border);border-radius:10px;background:var(--mochi-surface-raised);}
+.project-version-main{display:grid;gap:8px;min-width:0;flex:1;}
+.project-version-heading{display:flex;align-items:center;gap:9px;min-width:0;}
+.project-version-heading strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mochi-text-strong);font-size:12px;}
+.project-version-heading>span{flex:0 0 auto;padding:3px 7px;border:1px solid var(--mochi-border);border-radius:999px;color:var(--mochi-text-muted);font:9px var(--mochi-mono);}
+.project-version-meta,.project-version-targets{display:flex;flex-wrap:wrap;gap:6px 12px;color:var(--mochi-text-muted);font-size:10px;}
+.project-version-meta span{display:inline-flex;align-items:center;gap:4px;}
+.project-version-meta span:first-child{text-transform:capitalize;color:var(--mochi-accent-strong);}
+.project-version-targets span{padding:4px 7px;border-radius:5px;background:var(--mochi-surface);color:var(--mochi-text-muted);}
+.project-version-changelog,.project-version-files{margin-top:1px;border-top:1px solid var(--mochi-border);padding-top:8px;}
+.project-version-changelog summary,.project-version-files summary{cursor:pointer;color:var(--mochi-accent-strong);font-size:10px;font-weight:700;list-style:none;}
+.project-version-changelog summary::-webkit-details-marker,.project-version-files summary::-webkit-details-marker{display:none;}
+.project-version-changelog summary:before,.project-version-files summary:before{content:"›";display:inline-block;margin-right:6px;transition:transform .15s ease;}
+.project-version-changelog[open] summary:before,.project-version-files[open] summary:before{transform:rotate(90deg);}
+.project-version-changelog-body{max-height:220px;overflow:auto;margin-top:8px;padding:10px 12px;border-radius:7px;background:var(--mochi-surface);color:var(--mochi-text-muted);font-size:10px;line-height:1.55;}
+.project-version-changelog-body p:first-child{margin-top:0;}
+.project-version-changelog-body p:last-child{margin-bottom:0;}
+.project-version-files{flex:0 0 auto;min-width:92px;margin-top:0;border-top:0;padding-top:0;}
+.project-version-files summary{display:flex;align-items:center;gap:5px;justify-content:flex-end;padding:6px 0;}
+.project-version-files summary span{min-width:17px;height:17px;padding:2px 5px;border-radius:999px;background:var(--mochi-surface);text-align:center;color:var(--mochi-text-muted);}
+.project-version-files .project-file-list{display:grid;gap:5px;width:min(360px,55vw);margin-top:5px;padding:8px;border:1px solid var(--mochi-border);border-radius:7px;background:var(--mochi-surface);}
+.project-version-files .project-file-list>div{display:flex;justify-content:space-between;gap:10px;padding:5px 6px;border-radius:4px;font-size:9px;}
+.project-version-files .project-file-list>div:hover{background:var(--mochi-surface-hover);}
+.project-version-files .project-file-list span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mochi-text);}
+.project-version-files .project-file-list small{flex:0 0 auto;color:var(--mochi-text-muted);}
+@media(max-width:700px){.project-version{display:grid;gap:10px}.project-version-files{justify-self:start}.project-version-files .project-file-list{width:min(100%,420px)}}
