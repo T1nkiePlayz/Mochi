@@ -49,7 +49,7 @@ function useAppController() {
     startProgress: notifications.startProgress, updateProgress: notifications.updateProgress,
   });
   const hasIgdb = Boolean(supabase && user && credentials.status.igdb);
-  const add = useAddGame(lib, metadata, hasIgdb, credentials.status.igdb, actions.setLaunchError);
+  const add = useAddGame(lib, metadata, hasIgdb, credentials.status.igdb, actions.setLaunchError, () => setActiveNav("Library"));
   const storage = useProfileStorage({
     user, library: lib.library, setLibrary: lib.setLibrary, behavior, setBehavior,
     notifications: notifications.notifications, setNotifications: notifications.setNotifications,
