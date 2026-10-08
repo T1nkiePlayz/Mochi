@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Gamepad2, KeyRound, Library, LoaderCircle, LogIn, RefreshCw, Sparkles, UserRound } from "lucide-react";
 import type { ThemeDescriptor } from "../lib/theme";
-import { validateNexusApiKey } from "../lib/providerCredentials";
+import { validateNexusApiKey, type ProviderCredential } from "../lib/providerCredentials";
 import { detectImportSources, scanImportGames, type DetectedImportSource, type ImportSourceId, type ImportedGame } from "../lib/sources";
 
 type SetupProps = {
@@ -11,15 +11,15 @@ type SetupProps = {
   setIgdbClientSecret: (value: string) => void;
   onSignIn: () => void;
   signedIn: boolean;
-  credentialStatus: { igdb: boolean; nexus: boolean };
+  credentialStatus: Record<ProviderCredential, boolean>;
   credentialStatusLoaded: boolean;
   themes: ThemeDescriptor[];
   theme: string;
   setTheme: (themeId: string) => Promise<void>;
   nexusApiKey: string;
   setNexusApiKey: (value: string) => void;
-  saveCredential: (provider: "igdb" | "nexus") => Promise<void>;
-  credentialBusy: "igdb" | "nexus" | null;
+  saveCredential: (provider: ProviderCredential) => Promise<void>;
+  credentialBusy: ProviderCredential | null;
   onFinish: (games: ImportedGame[], sources: ImportSourceId[]) => void;
 };
 

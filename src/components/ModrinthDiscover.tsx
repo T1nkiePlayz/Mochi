@@ -311,12 +311,11 @@ type Props = {
   tofu: Tofu;
   pikos: Piko[];
   playtime?: Array<{ gameId: string; name: string; seconds: number; lastPlayed: number }>;
-  experimentalFeatures: boolean;
   nexusConfigured: boolean;
   supabase: SupabaseClient | null;
 };
 
-export function ModrinthDiscover({ tofu, pikos, playtime = [], experimentalFeatures, nexusConfigured, supabase }: Props) {
+export function ModrinthDiscover({ tofu, pikos, playtime = [], nexusConfigured, supabase }: Props) {
   const [projects, setProjects] = useState<Record<ModrinthProjectType, ModrinthProject[]>>({ mod: [], modpack: [], resourcepack: [], shader: [] });
   const [gameVersion, setGameVersion] = useState(tofu.version === "Local" ? "" : tofu.version);
   const [gameVersions, setGameVersions] = useState<string[]>([]);
@@ -350,7 +349,7 @@ export function ModrinthDiscover({ tofu, pikos, playtime = [], experimentalFeatu
   });
   const [tab, setTab] = useState<DiscoveryTab>({ kind: "all" });
 
-  const nexusVisible = experimentalFeatures && nexusConfigured && Boolean(supabase);
+  const nexusVisible = nexusConfigured && Boolean(supabase);
 
   const refreshMinecraft = async (sort = projectSort) => {
     setLoading(true);

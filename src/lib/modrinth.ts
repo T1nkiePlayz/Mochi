@@ -117,7 +117,7 @@ export async function startModrinthDownload(
   return invoke<string>("start_modrinth_download", { url, path, tofuId, tofuName, itemName, filename });
 }
 
-export async function getDownloads(): Promise<Array<{
+export type DownloadEntry = {
   id: string;
   tofuId: string;
   tofuName: string;
@@ -129,7 +129,9 @@ export async function getDownloads(): Promise<Array<{
   error?: string;
   createdAt: number;
   finishedAt?: number;
-}>> {
+};
+
+export async function getDownloads(): Promise<DownloadEntry[]> {
   return invoke("get_downloads");
 }
 

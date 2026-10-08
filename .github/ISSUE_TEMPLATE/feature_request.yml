@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest an idea or improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes: { label: Problem or use case, description: What are you trying to do? }
+    validations: { required: true }
+  - type: textarea
+    id: solution
+    attributes: { label: Proposed solution }
+    validations: { required: true }
+  - type: textarea
+    id: alternatives
+    attributes: { label: Alternatives considered }
+  - type: checkboxes
+    id: platforms
+    attributes:
+      label: Platforms it should work on
+      options:
+        - label: Linux
+        - label: macOS
+        - label: Steam Deck / controller
+        - label: Works offline
