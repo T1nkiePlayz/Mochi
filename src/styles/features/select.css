@@ -5,6 +5,7 @@
   border: 1px solid var(--mochi-input-border); border-radius: var(--mochi-input-radius);
   font: inherit; text-align: left; cursor: pointer;
 }
+.mochi-select-trigger:focus-visible { outline: none; box-shadow: var(--mochi-focus-ring); border-color: var(--mochi-input-focus-border); }
 .mochi-select-trigger:hover:not(:disabled), .mochi-select.open .mochi-select-trigger { border-color: var(--mochi-input-focus-border); }
 .mochi-select-trigger:disabled { opacity: .5; cursor: not-allowed; }
 .mochi-select-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -20,7 +21,8 @@
 .mochi-select[data-align="end"] .mochi-select-popover { left: auto; right: 0; }
 .mochi-select-search { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--mochi-border); color: var(--mochi-text-muted); }
 .mochi-select-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--mochi-text); font: inherit; }
-.mochi-select-list { margin: 0; padding: 4px; list-style: none; max-height: 280px; overflow-y: auto; }
+.mochi-select[data-placement="top"] .mochi-select-popover { top: auto; bottom: calc(100% + 6px); }
+.mochi-select-list { margin: 0; padding: 4px; list-style: none; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .mochi-select-group { padding: 8px 8px 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--mochi-text-faint); }
 .mochi-select-option { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: calc(var(--mochi-input-radius) - 2px); cursor: pointer; color: var(--mochi-text); }
 .mochi-select-option.active { background: var(--mochi-surface-hover); }
@@ -30,3 +32,10 @@
 .mochi-select-option-copy small { color: var(--mochi-text-muted); font-size: 11px; }
 .mochi-select-empty { padding: 12px; color: var(--mochi-text-muted); font-size: 13px; }
 .mochi-select-icon { display: inline-flex; flex: none; }
+
+/* Minecraft version picker (discover/VersionPicker.tsx) */
+.version-picker-popover { min-width: 260px; }
+.version-picker-switch { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--mochi-border); cursor: pointer; color: var(--mochi-text); font-size: 12px; }
+.version-picker-switch small { grid-column: 2; color: var(--mochi-text-muted); font-size: 11px; }
+.version-picker-switch input { accent-color: var(--mochi-accent); }
+.version-picker-note { font-size: 11px; padding: 8px; }
