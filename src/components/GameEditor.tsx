@@ -1,41 +1,116 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { X } from "lucide-react";
-import { chooseGameAppBundle, chooseGameTarget, type PlatformCapabilities } from "../lib/platform";
+import { supabase } from "../lib/supabase";
+import { lookupIgdbGames } from "../lib/igdb";
+import { applyIgdbMetadata, sanitizeKey } from "../lib/metadata";
+import { deleteGameArtwork, saveCustomArtwork } from "../lib/artwork";
+import { tagCounts } from "../lib/library";
+import type { PlatformCapabilities } from "../lib/platform";
 import type { Piko } from "../models";
+import { useApp } from "../state/AppContext";
+import { cacheArtwork } from "../state/useMetadata";
+import type { ArtworkSelection } from "./artwork/ArtworkPicker";
+import { ArtworkTab } from "./library/editor/ArtworkTab";
+import { GeneralTab } from "./library/editor/GeneralTab";
+import { LaunchTab } from "./library/editor/LaunchTab";
+import { MetadataTab } from "./library/editor/MetadataTab";
+import type { EditorContext, LockedField } from "./library/editor/types";
 
 type Props = {
   game: Piko;
   capabilities: PlatformCapabilities | null;
-  onSave: (changes: Pick<Piko, "name" | "executablePath" | "platformCategory" | "installPath">) => void;
+  onSave: (changes: Partial<Piko>) => void;
   onClose: () => void;
 };
 
+const tabs = [["general", "General"], ["launch", "Launch"], ["artwork", "Artwork"], ["metadata", "Metadata"]] as const;
+type TabId = (typeof tabs)[number][0];
+
 export function GameEditor({ game, capabilities, onSave, onClose }: Props) {
-  const [name, setName] = useState(game.name);
-  const [target, setTarget] = useState(game.executablePath ?? "");
-  const [category, setCategory] = useState(game.platformCategory ?? "");
-  const [installPath, setInstallPath] = useState(game.installPath ?? "");
+  const app = useApp();
+  const [tab, setTab] = useState<TabId>("general");
+  const [draft, setDraft] = useState<Piko>(game);
+  const [artwork, setArtwork] = useState<ArtworkSelection | null>(null);
+  const [artworkReset, setArtworkReset] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const allTags = useMemo(() => tagCounts(app.lib.library).map(([tag]) => tag), [app.lib.library]);
 
-  const pick = async (bundle: boolean) => {
-    try { const selected = bundle ? await chooseGameAppBundle() : await chooseGameTarget(); if (selected) setTarget(selected); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
+  const patch = (changes: Partial<Piko>, lock?: LockedField) => setDraft((current) => ({
+    ...current, ...changes,
+    lockedFields: lock && !current.lockedFields?.includes(lock) ? [...(current.lockedFields ?? []), lock] : (changes.lockedFields ?? current.lockedFields),
+  }));
+  const unlock = (field: LockedField) => { setUnlocked(true); setDraft((current) => ({ ...current, lockedFields: current.lockedFields?.filter((item) => item !== field) })); };
+
+  const ctx: EditorContext = {
+    game, draft, capabilities, collections: app.collections.collections, tagSuggestions: allTags, patch, unlock,
+    createCollection: (name) => app.collections.createCollection(name),
+    artwork, setArtwork, artworkReset, setArtworkReset, hasIgdb: app.hasIgdb,
+    refreshGame: (app.metadata as { refreshGame?: EditorContext["refreshGame"] }).refreshGame,
   };
-  const submit = (event: FormEvent) => {
+
+  const submit = async () => {
+    if (!draft.name.trim()) { setTab("general"); setError("A name is required."); return; }
+    if (!draft.executablePath?.trim()) { setTab("launch"); setError("A launch target is required."); return; }
+    setSaving(true); setError("");
+    try {
+      let final: Piko = { ...draft, name: draft.name.trim(), executablePath: draft.executablePath.trim(), installPath: draft.installPath?.trim() || undefined, platformCategory: draft.platformCategory?.trim() || undefined };
+      const cacheKey = final.artworkCacheKey || sanitizeKey(final.id);
+      if (artwork) {
+        await saveCustomArtwork(cacheKey, artwork.source, artwork.crop);
+        final = { ...final, artworkCacheKey: cacheKey, artworkSource: "custom", artworkUrl: undefined, artwork: "", lockedFields: [...new Set([...(final.lockedFields ?? []), "artwork" as const])] };
+      } else if (artworkReset) {
+        await deleteGameArtwork(cacheKey).catch(() => {});
+        final = { ...final, artworkSource: undefined, artwork: final.artworkUrl ? final.artwork : "", lockedFields: final.lockedFields?.filter((field) => field !== "artwork") };
+        if (!final.artworkUrl) final.artworkCacheKey = undefined;
+      }
+      // "Reset to automatic" re-applies the saved IGDB match for the fields that were unlocked.
+      if (unlocked && final.igdbId && supabase && app.hasIgdb) {
+        try {
+          const found = await lookupIgdbGames(supabase, final.name);
+          const match = found.find((item) => item.id === final.igdbId);
+          if (match) final = applyIgdbMetadata(final, match);
+        } catch { /* offline: the fields refresh next time metadata runs */ }
+      }
+      if (final.artworkUrl && final.artworkSource !== "custom" && (final.artworkUrl !== game.artworkUrl || artworkReset)) await cacheArtwork(final);
+      const changes: Partial<Piko> = {};
+      (Object.keys(final) as Array<keyof Piko>).concat(Object.keys(game) as Array<keyof Piko>).forEach((key) => {
+        if (JSON.stringify(final[key]) !== JSON.stringify(game[key])) (changes as Record<string, unknown>)[key] = final[key];
+      });
+      onSave(changes);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+      setSaving(false);
+    }
+  };
+
+  const onTabKey = (event: KeyboardEvent, index: number) => {
+    const next = event.key === "ArrowRight" ? index + 1 : event.key === "ArrowLeft" ? index - 1 : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : -1;
+    if (next < 0) return;
     event.preventDefault();
-    if (!name.trim() || !target.trim()) { setError("A name and launch target are required."); return; }
-    onSave({ name: name.trim(), executablePath: target.trim(), platformCategory: category.trim() || undefined, installPath: installPath.trim() || undefined });
+    const target = (next + tabs.length) % tabs.length;
+    setTab(tabs[target][0]);
+    tabRefs.current[target]?.focus();
   };
 
-  return <div className="modal-backdrop" onClick={onClose}><form className="modal" onSubmit={submit} onClick={(event) => event.stopPropagation()}>
-    <div className="modal-header"><div><p className="eyebrow">Library</p><h2>Edit game</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17}/></button></div>
-    <div className="form-fields">
-      <label>Game name<input value={name} onChange={(e) => setName(e.target.value)} required autoFocus /></label>
-      <label>Platform category<input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Steam, Heroic, Custom" /></label>
-      <label>Launch target<div className="flatpak-input-row"><input value={target} onChange={(e) => setTarget(e.target.value)} required /><button type="button" className="secondary-button" onClick={() => void pick(false)}>File…</button>{capabilities?.supportsAppBundles && <button type="button" className="secondary-button" onClick={() => void pick(true)}>App…</button>}</div></label>
-      <label>Install folder <small className="metadata-note">Optional. Lets Mochi follow the game's process to track playtime.</small><input value={installPath} onChange={(e) => setInstallPath(e.target.value)} placeholder="/path/to/game" /></label>
+  return <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal game-editor" role="dialog" aria-modal="true" aria-label={`Edit ${game.name}`} onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => { if (event.key === "Escape" && !event.defaultPrevented) onClose(); }}>
+      <div className="modal-header"><div><p className="eyebrow">Library</p><h2>Edit game</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button></div>
+      <div className="editor-tabs" role="tablist" aria-label="Game settings">
+        {tabs.map(([id, label], index) => <button type="button" key={id} role="tab" id={`editor-tab-${id}`} aria-selected={tab === id} aria-controls={`editor-panel-${id}`} tabIndex={tab === id ? 0 : -1}
+          ref={(node) => { tabRefs.current[index] = node; }} className={tab === id ? "active" : ""} onClick={() => setTab(id)} onKeyDown={(event) => onTabKey(event, index)}>{label}</button>)}
+      </div>
+      <div className="editor-panel" role="tabpanel" id={`editor-panel-${tab}`} aria-labelledby={`editor-tab-${tab}`}>
+        {tab === "general" && <GeneralTab ctx={ctx} />}
+        {tab === "launch" && <LaunchTab ctx={ctx} />}
+        {tab === "artwork" && <ArtworkTab ctx={ctx} />}
+        {tab === "metadata" && <MetadataTab ctx={ctx} />}
+      </div>
+      {error && <p className="auth-error" role="alert">{error}</p>}
+      <div className="editor-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="play-button" type="button" onClick={() => void submit()} disabled={saving}>{saving ? "Saving…" : "Save changes"}</button></div>
     </div>
-    {error && <p className="auth-error">{error}</p>}
-    <button className="play-button form-submit" type="submit">Save changes</button>
-  </form></div>;
+  </div>;
 }
