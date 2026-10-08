@@ -106,7 +106,7 @@ Every launcher screen is built from 635 stable class names and 103 design tokens
 
 **mods/CurseforgeCredit** — `.curseforge-credit`
 
-**mods/GameMods** — `.game-mods`
+**mods/GameModsContent** — `.game-mods`
 
 **mods/InstallNoticeBar** — `.mod-notice`
 

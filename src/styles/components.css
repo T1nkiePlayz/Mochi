@@ -36,9 +36,7 @@ button:disabled { cursor: not-allowed; }
 .content { max-width: var(--mochi-content-max-width); padding: var(--mochi-content-padding); }
 
 /* ---- Typography ------------------------------------------------------------ */
-.brand strong, .page-heading h1, .hero-card h2, .section-heading h3, .settings-intro h2, .modal h2,
-.game-details-title h2, .setup-page h1, .setup-welcome-line, .discover-header h2, .tofu-workspace-header h3,
-.downloads-intro h2, .empty-state h2, .mfa-title, .download-empty h3 {
+.brand strong, .page-heading h1, .section-heading h3, .settings-intro h2, .modal h2, .game-details-title h2, .setup-page h1, .setup-welcome-line, .discover-header h2, .tofu-workspace-header h3, .downloads-intro h2, .empty-state h2, .mfa-title, .download-empty h3 {
   font-family: var(--mochi-font-display);
   font-weight: var(--mochi-heading-weight);
   letter-spacing: var(--mochi-heading-tracking);
@@ -46,8 +44,7 @@ button:disabled { cursor: not-allowed; }
   text-shadow: var(--mochi-heading-shadow);
   color: var(--mochi-text-strong);
 }
-.eyebrow, .section-label, .detail-label, .form-fields label, .setup-fields label, .workspace-section-title,
-.credential-status, .setting-row small.eyebrow {
+.eyebrow, .detail-label, .form-fields label, .workspace-section-title, .credential-status, .setting-row small.eyebrow {
   font-weight: var(--mochi-label-weight);
   letter-spacing: var(--mochi-label-tracking);
   text-transform: var(--mochi-label-transform);
@@ -55,7 +52,7 @@ button:disabled { cursor: not-allowed; }
 code, .mfa-setup-card code, .theme-config-path code, .setting-location-value code { font-family: var(--mochi-mono); }
 
 /* ---- Buttons --------------------------------------------------------------- */
-.secondary-button, .play-button, .setup-nav, .text-button.bordered {
+.secondary-button, .play-button, .setup-nav {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: var(--mochi-button-height); padding: var(--mochi-button-padding);
   border: var(--mochi-border-width) solid var(--mochi-button-border);
@@ -89,32 +86,30 @@ code, .mfa-setup-card code, .theme-config-path code, .setting-location-value cod
 .reset-button { color: var(--mochi-danger); }
 
 /* ---- Navigation ------------------------------------------------------------ */
-.nav-item, .piko-nav-item {
+.nav-item {
   min-height: 38px; border: var(--mochi-border-width) solid transparent; border-radius: var(--mochi-button-radius);
   color: var(--mochi-text-muted); font-weight: 500;
   transition: background var(--mochi-transition), color var(--mochi-transition), border-color var(--mochi-transition);
 }
-.nav-item:hover, .piko-nav-item:hover { background: var(--mochi-nav-hover-background); color: var(--mochi-text-strong); }
-.nav-item.active, .piko-nav-item.selected { background: var(--mochi-nav-active-background); box-shadow: var(--mochi-nav-active-shadow); color: var(--mochi-text-strong); }
+.nav-item:hover { background: var(--mochi-nav-hover-background); color: var(--mochi-text-strong); }
+.nav-item.active { background: var(--mochi-nav-active-background); box-shadow: var(--mochi-nav-active-shadow); color: var(--mochi-text-strong); }
 .sidebar-account { border-radius: var(--mochi-card-radius); }
 .sidebar-account:hover { background: var(--mochi-nav-hover-background); border-color: var(--mochi-card-border); }
-.workspace-tabs button, .discover-tabs button, .discover-game-tab, .discover-platform-tab, .project-tabs button {
+.workspace-tabs button, .discover-tabs button, .discover-game-tab, .project-tabs button {
   border-radius: var(--mochi-button-radius); color: var(--mochi-text-muted);
   transition: background var(--mochi-transition), color var(--mochi-transition);
 }
-.workspace-tabs button:hover, .discover-tabs button:hover, .discover-game-tab:hover, .discover-platform-tab:hover, .project-tabs button:hover { color: var(--mochi-text-strong); background: var(--mochi-nav-hover-background); }
-.workspace-tabs button.active, .discover-tabs button.active, .discover-game-tab.active, .discover-platform-tab.active, .project-tabs button.active { background: var(--mochi-accent-soft); color: var(--mochi-text-strong); box-shadow: inset 0 -2px var(--mochi-accent-strong); }
+.workspace-tabs button:hover, .discover-tabs button:hover, .discover-game-tab:hover, .project-tabs button:hover { color: var(--mochi-text-strong); background: var(--mochi-nav-hover-background); }
+.workspace-tabs button.active, .discover-tabs button.active, .discover-game-tab.active, .project-tabs button.active { background: var(--mochi-accent-soft); color: var(--mochi-text-strong); box-shadow: inset 0 -2px var(--mochi-accent-strong); }
 
 /* ---- Inputs ---------------------------------------------------------------- */
-.form-fields input, .form-fields select, .form-fields textarea, .igdb-form input, .setup-fields input, .provider-credential-card input,
-.compact-input, .mfa-input, .setup-provider-card input, .tofu-manager-form textarea, .setup-fields select {
+.form-fields input, .form-fields select, .form-fields textarea, .provider-credential-card input, .compact-input, .mfa-input, .setup-provider-card input, .tofu-manager-form textarea {
   min-height: var(--mochi-input-height, 38px);
   border: var(--mochi-border-width) solid var(--mochi-input-border); border-radius: var(--mochi-input-radius);
   background: var(--mochi-input-background); color: var(--mochi-text); box-shadow: var(--mochi-input-shadow);
   font-family: var(--mochi-font-body); transition: border-color var(--mochi-transition), box-shadow var(--mochi-transition);
 }
-.form-fields input:focus, .form-fields select:focus, .form-fields textarea:focus, .igdb-form input:focus, .setup-fields input:focus,
-.provider-credential-card input:focus, .compact-input:focus, .mfa-input:focus, .setup-provider-card input:focus, .tofu-manager-form textarea:focus {
+.form-fields input:focus, .form-fields select:focus, .form-fields textarea:focus, .provider-credential-card input:focus, .compact-input:focus, .mfa-input:focus, .setup-provider-card input:focus, .tofu-manager-form textarea:focus {
   border-color: var(--mochi-input-focus-border); box-shadow: var(--mochi-focus-ring);
 }
 .search-box {
@@ -129,22 +124,16 @@ code, .mfa-setup-card code, .theme-config-path code, .setting-location-value cod
 .toggle:checked { background: var(--mochi-accent-strong); }
 
 /* ---- Cards ----------------------------------------------------------------- */
-.game-card, .tofu-card, .new-tofu-card, .theme-card, .provider-credential-card, .security-card, .security-provider, .passkey-row,
-.profile-row, .installed-content-row, .modrinth-result, .import-source-row, .import-game-row, .setup-source, .setup-choice,
-.setup-theme-card, .flatpak-item, .igdb-candidate, .add-options button, .discover-card, .suggested-game-card, .download-row,
-.tofu-manager-item, .nexus-game-picker-row, .tofu-picker-row, .setup-found-game, .mfa-setup-card, .notification-item {
+.game-card, .tofu-card, .new-tofu-card, .theme-card, .provider-credential-card, .security-card, .security-provider, .passkey-row, .profile-row, .installed-content-row, .modrinth-result, .setup-choice, .setup-theme-card, .flatpak-item, .igdb-candidate, .add-options button, .discover-card, .suggested-game-card, .download-row, .tofu-manager-item, .nexus-game-picker-row, .tofu-picker-row, .mfa-setup-card, .notification-item {
   background: var(--mochi-card-background); border: var(--mochi-border-width) solid var(--mochi-card-border);
   border-radius: var(--mochi-card-radius); color: var(--mochi-text);
   transition: background var(--mochi-transition), border-color var(--mochi-transition), transform var(--mochi-transition), box-shadow var(--mochi-transition);
 }
 .game-card, .tofu-card, .new-tofu-card, .theme-card, .discover-card, .suggested-game-card { box-shadow: var(--mochi-card-shadow); }
-.game-card:hover, .tofu-card:hover, .new-tofu-card:hover, .theme-card:hover, .import-source-row:hover, .import-game-row:hover,
-.setup-source:hover, .setup-theme-card:hover, .flatpak-item:hover, .igdb-candidate:hover, .add-options button:hover, .discover-card:hover,
-.suggested-game-card:hover, .tofu-manager-item:hover, .nexus-game-picker-row:hover, .tofu-picker-row:hover {
+.game-card:hover, .tofu-card:hover, .new-tofu-card:hover, .theme-card:hover, .setup-theme-card:hover, .flatpak-item:hover, .igdb-candidate:hover, .add-options button:hover, .discover-card:hover, .suggested-game-card:hover, .tofu-manager-item:hover, .nexus-game-picker-row:hover, .tofu-picker-row:hover {
   background: var(--mochi-card-hover-background); border-color: var(--mochi-card-hover-border);
 }
-.game-card.selected, .tofu-card.active, .theme-card.selected, .import-game-row.selected, .setup-source.selected, .setup-theme-card.selected,
-.tofu-manager-item.active, .profile-row.active {
+.game-card.selected, .tofu-card.active, .theme-card.selected, .setup-theme-card.selected, .tofu-manager-item.active, .profile-row.active {
   border-color: var(--mochi-card-hover-border); background: var(--mochi-card-hover-background);
   box-shadow: inset 0 0 0 1px var(--mochi-card-hover-border), var(--mochi-card-shadow);
 }
@@ -161,12 +150,8 @@ code, .mfa-setup-card code, .theme-config-path code, .setting-location-value cod
 .setting-row { border-bottom: var(--mochi-border-width) solid var(--mochi-panel-border); color: var(--mochi-text); }
 .setting-row:hover { background: var(--mochi-nav-hover-background); }
 .setting-row small, .game-card-copy small, .tofu-details, .tofu-mods { color: var(--mochi-text-muted); }
-.hero-card { border: var(--mochi-border-width) solid var(--mochi-card-border); border-radius: var(--mochi-hero-radius); box-shadow: var(--mochi-shadow-card); overflow: hidden; }
-.hero-card::before { content: ""; position: absolute; inset: 0; background: var(--mochi-hero-overlay); pointer-events: none; }
-.hero-card { position: relative; isolation: isolate; }
 .hero-copy, .hero-meta { position: relative; z-index: 1; }
-.hero-card h2 { color: #fff; text-shadow: 0 2px 18px rgba(0, 0, 0, .55); }
-.hero-card p, .hero-kicker, .hero-meta { color: rgba(255, 255, 255, .78); }
+.hero-meta { color: rgba(255, 255, 255, .78); }
 .hero-meta strong { color: #fff; }
 .details-strip { border-top: var(--mochi-border-width) solid var(--mochi-border); border-bottom: var(--mochi-border-width) solid var(--mochi-border); }
 .game-details-hero { background: var(--mochi-panel-background); border: var(--mochi-border-width) solid var(--mochi-panel-border); border-radius: var(--mochi-hero-radius); box-shadow: var(--mochi-shadow-card); }
