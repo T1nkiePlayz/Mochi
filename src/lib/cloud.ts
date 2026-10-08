@@ -89,9 +89,9 @@ export async function pushLibrary(client: SupabaseClient, library: Piko[]) {
     tags: (piko.tags ?? []).slice(0, 60).map((tag) => tag.slice(0, 60)),
     artwork_source: piko.artworkSource ?? null,
     kind: piko.kind ?? null,
-    tofus: piko.tofus.map((tofu) => ({
+    tofus: (piko.tofus ?? []).map((tofu) => ({
       local_id: tofu.id, name: clamp(tofu.name, 200), version: clamp(tofu.version, 100), runtime: clamp(tofu.runtime, 100),
-      mods_count: Math.max(0, tofu.mods), status: tofu.status,
+      mods_count: Number.isFinite(tofu.mods) ? Math.max(0, Math.floor(tofu.mods)) : 0, status: tofu.status,
     })),
   }));
   const { error } = await client.rpc("sync_my_library", { library: payload });
@@ -133,4 +133,33 @@ export async function getCloudAccountSettings(client: SupabaseClient, userId: st
     syncEnabled: data.cloud_sync_enabled === true,
     metadataSyncAllowed: data.metadata_sync_allowed === true,
   };
+}
+
+/**
+ * Merges the cloud library into the local one. The cloud wins for the fields it stores, but local-only data
+ * (install path, launch settings, collections, locked fields, cached artwork keys...) is kept, and games that
+ * only exist on this device are not lost.
+ */
+export function mergeCloudLibrary(local: Piko[], cloud: Piko[]): Piko[] {
+  const localById = new Map(local.map((piko) => [piko.id, piko]));
+  const cloudIds = new Set(cloud.map((piko) => piko.id));
+  const merged = cloud.map((remote) => {
+    const mine = localById.get(remote.id);
+    if (!mine) return remote;
+    const tofuById = new Map(mine.tofus.map((tofu) => [tofu.id, tofu]));
+    return {
+      ...mine,
+      ...remote,
+      // Never replace artwork we have with an empty value (the cloud drops large inline images).
+      artwork: remote.artwork || mine.artwork,
+      artworkCacheKey: mine.artworkCacheKey,
+      installPath: mine.installPath,
+      collectionIds: mine.collectionIds,
+      lockedFields: mine.lockedFields,
+      modLinks: mine.modLinks,
+      executablePath: remote.executablePath ?? mine.executablePath,
+      tofus: remote.tofus.map((tofu) => ({ ...tofuById.get(tofu.id), ...tofu })),
+    } satisfies Piko;
+  });
+  return [...merged, ...local.filter((piko) => !cloudIds.has(piko.id))];
 }

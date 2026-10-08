@@ -24,6 +24,8 @@ export function TagEditor({ tags, suggestions, onChange, label = "Tags" }: Props
     if (tag && !has(tag)) onChange([...tags, tag]);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    // Enter confirms an IME candidate (Japanese, Chinese, Korean input); it must not also commit the tag.
+    if (event.nativeEvent.isComposing) return;
     if (event.key === "Enter" || event.key === ",") { event.preventDefault(); add(active >= 0 && matches[active] ? matches[active] : text); }
     else if (event.key === "Backspace" && !text && tags.length) onChange(tags.slice(0, -1));
     else if (event.key === "ArrowDown") { event.preventDefault(); setActive((value) => Math.min(matches.length - 1, value + 1)); }

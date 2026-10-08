@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { readFileSync } from "node:fs";
 
@@ -6,6 +6,7 @@ const { version } = JSON.parse(readFileSync(new URL("./package.json", import.met
 
 export default defineConfig({
   plugins: [react()],
+  test: { include: ["src/**/*.test.{ts,tsx}"] },
   define: { __APP_VERSION__: JSON.stringify(version) },
   build: {
     rollupOptions: {

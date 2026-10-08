@@ -1,8 +1,8 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { ExternalLink, PackageOpen, X } from "lucide-react";
 import { getModrinthVersions, type ModrinthProjectDetails, type ModrinthVersion } from "../../lib/modrinth";
 import { formatBytes } from "../../lib/format";
+import { openExternalUrl } from "../../lib/platform";
 import { DiscoveryImage } from "./DiscoveryImage";
 import { Markdown } from "./Markdown";
 import { formatDate, getPrimaryCreator, projectTypeLabel } from "./utils";
@@ -10,9 +10,13 @@ import { formatDate, getPrimaryCreator, projectTypeLabel } from "./utils";
 export function ProjectDetails({ project, gameVersion, onClose }: { project: ModrinthProjectDetails; gameVersion: string; onClose: () => void }) {
   const [tab, setTab] = useState<"overview" | "versions">("overview");
   const [versions, setVersions] = useState<ModrinthVersion[]>([]);
-  useEffect(() => { void getModrinthVersions(project.project_id, gameVersion || undefined).then(setVersions).catch(() => setVersions([])); }, [project.project_id, gameVersion]);
+  useEffect(() => {
+    let live = true;
+    void getModrinthVersions(project.project_id, gameVersion || undefined).then((next) => { if (live) setVersions(next); }).catch(() => { if (live) setVersions([]); });
+    return () => { live = false; };
+  }, [project.project_id, gameVersion]);
   return <div className="discover-modal-backdrop" onMouseDown={onClose}><div className="project-details-window" onMouseDown={event => event.stopPropagation()}>
-    <div className="project-details-header"><div>{project.icon_url ? <DiscoveryImage src={project.icon_url} alt="" className="discover-card-icon" label={project.title}/> : <div className="discover-card-icon fallback"><PackageOpen size={26}/></div>}<div><p className="eyebrow">{projectTypeLabel(project.project_type)}</p><h2>{project.title}</h2><p>{project.description}</p><small>Created by <strong>{getPrimaryCreator(project).name || "Unknown creator"}</strong> · {project.downloads.toLocaleString()} downloads</small></div></div><div className="project-details-header-actions"><button type="button" className="secondary-button" onClick={() => { const url = `https://modrinth.com/${project.project_type}/${project.slug}`; void invoke("open_external_url", { url }); }}><ExternalLink size={13}/> View on Modrinth</button><button className="icon-button" onClick={onClose} aria-label="Close project details"><X size={17}/></button></div></div>
+    <div className="project-details-header"><div>{project.icon_url ? <DiscoveryImage src={project.icon_url} alt="" className="discover-card-icon" label={project.title}/> : <div className="discover-card-icon fallback"><PackageOpen size={26}/></div>}<div><p className="eyebrow">{projectTypeLabel(project.project_type)}</p><h2>{project.title}</h2><p>{project.description}</p><small>Created by <strong>{getPrimaryCreator(project).name || "Unknown creator"}</strong> · {(project.downloads ?? 0).toLocaleString()} downloads</small></div></div><div className="project-details-header-actions"><button type="button" className="secondary-button" onClick={() => { void openExternalUrl(`https://modrinth.com/${encodeURIComponent(project.project_type)}/${encodeURIComponent(project.slug || project.project_id)}`).catch(() => undefined); }}><ExternalLink size={13}/> View on Modrinth</button><button className="icon-button" onClick={onClose} aria-label="Close project details"><X size={17}/></button></div></div>
     <div className="project-tabs"><button className={tab==="overview"?"active":""} onClick={()=>setTab("overview")}>Overview</button><button className={tab==="versions"?"active":""} onClick={()=>setTab("versions")}>Versions</button></div>
     {tab==="overview" ? <div className="project-overview">
       <section className="project-creator-primary">
@@ -24,7 +28,7 @@ export function ProjectDetails({ project, gameVersion, onClose }: { project: Mod
         <div><span>Created by</span><strong>{getPrimaryCreator(project).name || "Unknown creator"}</strong></div>
       </section>
       <div className="project-info-grid">
-        <span><strong>Downloads</strong>{project.downloads.toLocaleString()}</span>
+        <span><strong>Downloads</strong>{(project.downloads ?? 0).toLocaleString()}</span>
         <span><strong>Followers</strong>{(project.followers||0).toLocaleString()}</span>
         <span><strong>Project type</strong>{projectTypeLabel(project.project_type)}</span>
         <span><strong>Categories</strong>{project.categories?.join(", ")||"Not provided"}</span>

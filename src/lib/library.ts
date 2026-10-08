@@ -1,4 +1,4 @@
-import type { Piko } from "../models";
+import type { Piko, Tofu } from "../models";
 import type { PlaytimeEntry } from "./platform";
 
 export type SmartFilterId = "all" | "favorites" | "installed" | "recent" | "unplayed" | "most-played" | "launchers" | "running";
@@ -44,6 +44,7 @@ export function matchesSmartFilter(piko: Piko, id: SmartFilterId, context: Filte
     case "most-played": return mostPlayed ? mostPlayed.has(piko.id) : (entry?.seconds ?? 0) > 0;
     case "launchers": return isLauncher(piko);
     case "running": return context.isRunning(piko.id);
+    default: return true;
   }
 }
 
@@ -80,3 +81,38 @@ export const toggleInList = (list: string[] | undefined, value: string, on: bool
   const current = list ?? [];
   return on ? (current.includes(value) ? current : [...current, value]) : current.filter((item) => item !== value);
 };
+
+const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
+const defaultTofuOf = (): Tofu => ({ id: "default", name: "Default", version: "Local", runtime: "Native", mods: 0, status: "Ready" });
+
+/**
+ * Makes a library read from storage (or the cloud) safe to render: drops non-objects and entries without an id,
+ * removes duplicate ids (React keys), and guarantees every Piko has a name and at least one valid Tofu.
+ */
+export function sanitizeLibrary(value: unknown): Piko[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const result: Piko[] = [];
+  for (const item of value) {
+    if (!isRecord(item) || typeof item.id !== "string" || !item.id || seen.has(item.id)) continue;
+    seen.add(item.id);
+    const tofus = (Array.isArray(item.tofus) ? item.tofus : []).filter((tofu): tofu is Tofu => isRecord(tofu) && typeof tofu.id === "string");
+    result.push({
+      ...(item as unknown as Piko),
+      name: typeof item.name === "string" ? item.name : "Untitled",
+      description: typeof item.description === "string" ? item.description : "",
+      accent: typeof item.accent === "string" ? item.accent : "#a99ad6",
+      artwork: typeof item.artwork === "string" ? item.artwork : "",
+      tofus: tofus.length ? tofus.map((tofu) => ({ ...tofu, name: typeof tofu.name === "string" ? tofu.name : "Default", mods: Number.isFinite(tofu.mods) ? tofu.mods : 0 })) : [defaultTofuOf()],
+    });
+  }
+  return result;
+}
+
+/** A stored filter is only usable when its kind and (for smart filters) its id are still known. */
+export function sanitizeFilter(value: unknown): LibraryFilter {
+  if (!isRecord(value) || typeof value.id !== "string") return defaultFilter;
+  if (value.kind === "smart") return smartFilters.some((filter) => filter.id === value.id) ? { kind: "smart", id: value.id as SmartFilterId } : defaultFilter;
+  if (value.kind === "source" || value.kind === "collection") return { kind: value.kind, id: value.id };
+  return defaultFilter;
+}

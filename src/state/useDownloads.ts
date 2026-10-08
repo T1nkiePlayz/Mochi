@@ -7,14 +7,16 @@ export function useDownloads(active: boolean, notify: (title: string, message: s
   const statuses = useRef(new Map<string, string>());
   const notifyRef = useRef(notify);
   notifyRef.current = notify;
+  const seq = useRef(0);
   const hasActive = downloads.some((download) => download.status === "downloading");
 
   useEffect(() => {
     let cancelled = false;
     const poll = async () => {
       try {
+        const mine = ++seq.current;
         const next = await getDownloads();
-        if (cancelled) return;
+        if (cancelled || mine !== seq.current) return;
         for (const download of next) {
           if (statuses.current.get(download.id) === "downloading" && download.status !== "downloading") {
             notifyRef.current(

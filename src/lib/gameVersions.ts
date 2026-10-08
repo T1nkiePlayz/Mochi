@@ -67,7 +67,10 @@ type RecentEntry = { id: string; count: number; last: number };
 
 export function readRecentVersions(): RecentEntry[] {
   const value = readJson<unknown>(RECENT_KEY, []);
-  return Array.isArray(value) ? value.filter((item): item is RecentEntry => Boolean(item) && typeof (item as RecentEntry).id === "string") : [];
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Partial<RecentEntry> & { id: string } => Boolean(item) && typeof (item as RecentEntry).id === "string")
+    .map((item) => ({ id: item.id, count: Number.isFinite(item.count) ? Number(item.count) : 1, last: Number.isFinite(item.last) ? Number(item.last) : 0 }));
 }
 
 export function recordRecentVersion(id: string): void {

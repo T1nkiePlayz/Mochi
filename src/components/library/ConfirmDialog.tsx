@@ -5,12 +5,15 @@ type Props = { title: string; message: string; confirmLabel: string; danger?: bo
 /** In-app replacement for window.confirm. */
 export function ConfirmDialog({ title, message, confirmLabel, danger, onConfirm, onCancel }: Props) {
   const cancel = useRef<HTMLButtonElement>(null);
+  // Parents pass inline callbacks; keep the latest one without re-running the effects (which would steal focus back to Cancel).
+  const latest = useRef(onCancel);
+  latest.current = onCancel;
+  useEffect(() => { cancel.current?.focus(); }, []);
   useEffect(() => {
-    cancel.current?.focus();
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onCancel(); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") latest.current(); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onCancel]);
+  }, []);
   return <div className="modal-backdrop confirm-backdrop" onClick={onCancel}>
     <div className="modal confirm-dialog" role="alertdialog" aria-modal="true" aria-label={title} onClick={(event) => event.stopPropagation()}>
       <h2>{title}</h2>

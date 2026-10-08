@@ -6,6 +6,7 @@ import { applyIgdbMetadata, resolveIgdbImage } from "../../../lib/metadata";
 import { bestIgdbMatch } from "../../../lib/search";
 import { TagEditor } from "../TagEditor";
 import type { EditorContext } from "./types";
+import { cssUrl } from "../../../lib/metadata/merge";
 
 const providerOf = (ctx: EditorContext, field: "name" | "description" | "categories" | "artwork") => {
   const { draft } = ctx;
@@ -91,7 +92,7 @@ export function MetadataTab({ ctx }: { ctx: EditorContext }) {
         {candidates && <div className="igdb-candidates">{candidates.map((game) => {
           const art = resolveIgdbImage(game.cover?.url, "t_cover_big");
           return <button type="button" key={game.id ?? game.name} className={`igdb-candidate ${game.id && game.id === draft.igdbId ? "selected" : ""}`} onClick={() => apply(game)}>
-            <div className="igdb-candidate-art" style={{ backgroundImage: art ? `url('${art}')` : undefined }} />
+            <div className="igdb-candidate-art" style={{ backgroundImage: art ? cssUrl(art) : undefined }} />
             <div className="igdb-candidate-copy"><strong>{game.name}{year(game) ? ` (${year(game)})` : ""}</strong><small>{game.genres?.map((genre) => genre.name).join(" · ") || "Genre unknown"}</small>{game.summary && <p>{game.summary}</p>}</div>
           </button>;
         })}{!candidates.length && !busy && <p className="metadata-note">No games found for that search.</p>}</div>}

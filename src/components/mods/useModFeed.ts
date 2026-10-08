@@ -56,12 +56,12 @@ export function useModFeed(source: ModSource | null, query: ModFeedQuery, enable
       setState({ items, total: page.total, loading: false, loadingMore: false, error: "", offline: false });
     } catch (error) {
       if (gen === generation.current) setState((previous) => ({ ...previous, loading: false, loadingMore: false, offline: looksOffline(error), error: error instanceof Error ? error.message : "Unable to load mods." }));
-    } finally { inFlight.current = false; }
+    } finally { if (gen === generation.current) inFlight.current = false; }
   }, []);
 
   useEffect(() => {
-    if (!enabled || !source) return;
     generation.current += 1;
+    if (!enabled || !source) return;
     const gen = generation.current;
     inFlight.current = false;
     seen.current = new Set();

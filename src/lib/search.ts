@@ -1,16 +1,16 @@
 import type { IgdbGame } from "./igdb";
 
 export const normalizeText = (value: string) =>
-  value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").normalize("NFC").toLowerCase().replace(/[^\p{L}\p{N}\p{M}]+/gu, " ").trim();
 
 export function editDistance(left: string, right: string): number {
   let row = Array.from({ length: right.length + 1 }, (_v, index) => index);
   for (let i = 1; i <= left.length; i += 1) {
     const next = [i];
-    for (let j = 1; j <= right.length; j += 1) next[j] = Math.min(next[j - 1] + 1, row[j] + 1, row[j - 1] + (left[i - 1] === right[j - 1] ? 0 : 1));
+    for (let j = 1; j <= right.length; j += 1) next[j] = Math.min((next[j - 1] ?? 0) + 1, (row[j] ?? 0) + 1, (row[j - 1] ?? 0) + (left[i - 1] === right[j - 1] ? 0 : 1));
     row = next;
   }
-  return row[right.length];
+  return row[right.length] ?? 0;
 }
 
 /** Forgiving search: substring match, or every query word within a small edit distance of a word in the candidate. */

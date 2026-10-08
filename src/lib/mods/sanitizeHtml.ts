@@ -5,7 +5,7 @@
 
 export type SafeNode = string | { tag: string; attrs: Record<string, string>; children: SafeNode[] };
 
-const MAX_INPUT = 400_000;
+const MAX_INPUT = 300_000;
 const MAX_NODES = 12_000;
 const MAX_DEPTH = 40;
 
@@ -89,7 +89,7 @@ export function sanitizeHtml(html: string): SafeNode[] {
   const top = () => stack[stack.length - 1];
   const pushText = (text: string) => { if (text && count < MAX_NODES) { top().children.push(text); count += 1; } };
 
-  const token = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<![^>]*>|<\?[^>]*>|<\/\s*([a-zA-Z][a-zA-Z0-9]*)[^>]*>|<([a-zA-Z][a-zA-Z0-9]*)((?:"[^"]*"|'[^']*'|[^'">])*)>/g;
+  const token = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<![^>]*>|<\?[^>]*>|<\/\s*([a-zA-Z][a-zA-Z0-9]*)[^>]*>|<([a-zA-Z][a-zA-Z0-9]*)((?:"[^"]*"|'[^']*'|[^'">]){0,2000})>/g;
   let last = 0;
   let match: RegExpExecArray | null;
   while ((match = token.exec(input))) {

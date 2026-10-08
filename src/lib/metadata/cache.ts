@@ -2,6 +2,7 @@ import { readJson, writeJson } from "../storage";
 import type { ProviderId, ProviderResult } from "./types";
 
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
+export const MAX_ENTRIES = 400;
 type Entry = { at: number; result: ProviderResult };
 
 const storageKey = (provider: ProviderId, userId?: string) => `mochi:meta-cache:${provider}:${userId || "local"}`;
@@ -11,7 +12,8 @@ export class ProviderCache {
   private entries: Record<string, Entry>;
   private dirty = false;
   constructor(private provider: ProviderId, private userId?: string) {
-    this.entries = readJson<Record<string, Entry>>(storageKey(provider, userId), {});
+    const stored = readJson<unknown>(storageKey(provider, userId), {});
+    this.entries = stored && typeof stored === "object" && !Array.isArray(stored) ? stored as Record<string, Entry> : {};
   }
   get(key: string, now = Date.now()): ProviderResult | undefined {
     const entry = this.entries[key];
@@ -22,7 +24,12 @@ export class ProviderCache {
   flush() {
     if (!this.dirty) return;
     const now = Date.now();
-    for (const [key, entry] of Object.entries(this.entries)) if (now - entry.at >= TTL_MS) delete this.entries[key];
+    for (const [key, entry] of Object.entries(this.entries)) if (!entry || now - entry.at >= TTL_MS) delete this.entries[key];
+    // Local storage is small and shared with the library: keep only the newest lookups.
+    const keys = Object.keys(this.entries);
+    if (keys.length > MAX_ENTRIES) {
+      keys.sort((a, b) => (this.entries[b]?.at ?? 0) - (this.entries[a]?.at ?? 0)).slice(MAX_ENTRIES).forEach((key) => { delete this.entries[key]; });
+    }
     writeJson(storageKey(this.provider, this.userId), this.entries);
     this.dirty = false;
   }

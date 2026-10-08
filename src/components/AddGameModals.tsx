@@ -7,6 +7,7 @@ import { ImportPicker } from "./ImportPicker";
 import { resolveIgdbImage } from "../lib/metadata";
 import type { LaunchMethodId } from "../lib/platform";
 import { useApp } from "../state/AppContext";
+import { cssUrl } from "../lib/metadata/merge";
 
 const methodLabel = (method: string) => method === "file" ? "Choose file" : method === "app" ? "macOS application" : method === "flatpak" ? "Flatpak" : "Custom";
 
@@ -53,7 +54,7 @@ export function AddGameModals() {
           <div className="igdb-candidates">{add.pendingGame?.candidates.map((game) => {
             const art = resolveIgdbImage(game.cover?.url, "t_cover_big") || resolveIgdbImage(game.artworks?.[0]?.url, "t_720p");
             const released = game.first_release_date ? new Date(game.first_release_date * 1000).getFullYear() : null;
-            return <button type="button" className="igdb-candidate" key={game.id ?? game.name} onClick={() => add.approveIgdbGame(game)}><div className="igdb-candidate-art" style={{ backgroundImage: art ? `url('${art}')` : undefined }} /><div className="igdb-candidate-copy"><strong>{game.name}{released ? ` (${released})` : ""}</strong><small>{game.genres?.map((g) => g.name).join(" · ") || "Genre unknown"}</small>{game.summary && <p>{game.summary}</p>}</div><MochiIcon name="chevron" fallback={ChevronDown} size={16} /></button>;
+            return <button type="button" className="igdb-candidate" key={game.id ?? game.name} onClick={() => add.approveIgdbGame(game)}><div className="igdb-candidate-art" style={{ backgroundImage: art ? cssUrl(art) : undefined }} /><div className="igdb-candidate-copy"><strong>{game.name}{released ? ` (${released})` : ""}</strong><small>{game.genres?.map((g) => g.name).join(" · ") || "Genre unknown"}</small>{game.summary && <p>{game.summary}</p>}</div><MochiIcon name="chevron" fallback={ChevronDown} size={16} /></button>;
           })}</div>
           <div className="igdb-selection-actions"><button type="button" className="secondary-button" onClick={() => add.setStep("form")}>Back</button><button type="button" className="secondary-button" onClick={() => add.approveIgdbGame(null)}>None of these</button></div>
         </>}

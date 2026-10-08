@@ -57,6 +57,10 @@ export function mergeText(results: Array<TextMeta | undefined>): TextMeta {
 
 const sanitizeKey = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, "-");
 
+/** `url('...')` for remote image addresses: quotes, parentheses, backslashes and whitespace are percent-encoded so a URL cannot end the token. */
+export const cssUrl = (url: string) => `url('${url.replace(/['"()\\\s]/g, (char) => "%" + char.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0"))}')`;
+export const coverGradient = (url: string) => `linear-gradient(145deg, rgba(10,15,20,.12), rgba(11,15,20,.88)), ${cssUrl(url)}`;
+
 export type MergeInput = { text?: TextMeta; art?: ArtChoice };
 
 /** True when the user owns this field or the artwork; automatic refreshes must leave it alone. */
@@ -80,7 +84,7 @@ export function applyMetadata(piko: Piko, input: MergeInput): Piko {
     next.artworkUrl = art.url;
     next.artworkCacheKey = piko.artworkCacheKey || sanitizeKey(piko.id);
     next.artworkSource = art.source;
-    next.artwork = `linear-gradient(145deg, rgba(10,15,20,.12), rgba(11,15,20,.88)), url('${art.url}')`;
+    next.artwork = coverGradient(art.url);
   }
   return next;
 }

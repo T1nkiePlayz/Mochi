@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, RefreshCw, WifiOff } from "lucide-react";
 import {
   getModrinthProject, getModrinthVersions, startModrinthDownload,
@@ -60,12 +60,15 @@ export function ModrinthDiscover({ tofu, pikos, nexusConfigured, supabase }: Pro
   const nothingOn = !settings.modrinth && !settings.curseforge && !(settings.nexus && nexusConfigured);
   const preview = useModrinthFeed({ projectType: "mod", sort: "downloads" }, tab.kind === "all" && modrinthOn, 8);
 
+  const detailsRequest = useRef(0);
   const openDetails = async (project: ModrinthProject, version: string) => {
     setMessage("");
+    const mine = ++detailsRequest.current;
     try {
       setDetailsVersion(version);
       const detail = await getModrinthProject(project.project_id);
-      setDetails({ ...project, ...detail, author: project.author || detail.author });
+      // Opening another project while this one loads must not let the slower answer replace it.
+      if (mine === detailsRequest.current) setDetails({ ...project, ...detail, author: project.author || detail.author });
     } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to load project details."); }
   };
 

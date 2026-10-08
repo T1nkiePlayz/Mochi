@@ -63,7 +63,7 @@ async function get<T>(url: string): Promise<T> {
 export async function searchModrinth(query: string, projectType: ModrinthProjectType = "mod"): Promise<ModrinthProject[]> {
   const params = new URLSearchParams({ query: query.trim(), limit: "24", index: "relevance", facets: JSON.stringify([["project_type:" + projectType]]) });
   const result = await get<{ hits: ModrinthProject[] }>(API + "/search?" + params);
-  return result.hits;
+  return Array.isArray(result.hits) ? result.hits : [];
 }
 
 export async function getModrinthProject(projectId: string): Promise<ModrinthProjectDetails> {
@@ -116,11 +116,13 @@ export async function getModrinthVersions(projectId: string, gameVersion?: strin
   const all: ModrinthVersion[] = [];
   let offset = 0;
   const limit = 100;
-  while (true) {
+  // A misbehaving server that ignores `offset` and keeps returning full pages must not loop forever.
+  for (let pages = 0; pages < 50; pages += 1) {
     const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
     if (gameVersion) params.set("game_versions", JSON.stringify([gameVersion]));
     if (loader) params.set("loaders", JSON.stringify([loader]));
     const page = await get<ModrinthVersion[]>(API + "/project/" + encodeURIComponent(projectId) + "/version?" + params);
+    if (!Array.isArray(page)) break;
     all.push(...page);
     if (page.length < limit) break;
     offset += limit;
@@ -177,7 +179,7 @@ export async function applyModProfile(path: string, enabledFiles: string[]): Pro
   await invoke("apply_mod_profile", { path, enabledFiles });
 }
 
-export type ModUpdate = { versionId: string; versionNumber: string; filename: string; url: string; size: number };
+export type ModUpdate = { versionId: string; versionNumber: string; filename: string; url: string; size: number; sha1?: string };
 export type ModAnalysis = {
   filename: string; path: string; enabled: boolean; projectId: string; title: string;
   iconUrl?: string; currentVersion: string; update?: ModUpdate;
@@ -186,5 +188,5 @@ export async function analyzeModFiles(path: string, gameVersion?: string, loader
   return invoke<ModAnalysis[]>("analyze_mod_files", { path, gameVersion: gameVersion || null, loader: loader || null });
 }
 export async function updateModFile(path: string, update: ModUpdate): Promise<void> {
-  await invoke("update_mod_file", { path, url: update.url, filename: update.filename });
+  await invoke("update_mod_file", { path, url: update.url, filename: update.filename, sha1: update.sha1 ?? null });
 }

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { readString, writeString } from "./storage";
 
 export type ThemeManifest = {
   schemaVersion: 1;
@@ -115,7 +116,7 @@ export async function setTheme(themeId: string): Promise<void> {
   try {
     await invoke("set_mochi_theme", { themeId });
   } catch {
-    window.localStorage.setItem("mochi:theme", themeId);
+    writeString("mochi:theme", themeId);
   }
 }
 
@@ -151,20 +152,26 @@ function cssName(name: string): string {
     .toLowerCase();
 }
 
-function buildTokenSheet(theme: LoadedTheme): string {
+/** A token value may not close its declaration or rule, or open a comment: that would let one token rewrite the sheet. */
+export function isSafeCssValue(value: unknown): value is string {
+  return typeof value === "string" && !/[{};]|\/\*|\*\//.test(value) && !/[\r\n]/.test(value);
+}
+
+const cssUrl = (value: string) => 'url("' + value.replace(/[\\"\r\n]/g, (char) => encodeURIComponent(char)) + '")';
+
+export function buildTokenSheet(theme: LoadedTheme): string {
   const lines = [":root {"];
-  for (const [key, value] of Object.entries(theme.colors ?? {})) {
-    lines.push("  --mochi-" + cssName(key) + ": " + value + ";");
-  }
-  for (const section of [theme.ui, theme.typography, theme.layout, theme.effects, theme.components]) {
+  const sections = [theme.colors, theme.ui, theme.typography, theme.layout, theme.effects, theme.components];
+  for (const section of sections) {
     for (const [key, value] of Object.entries(section ?? {})) {
-      lines.push("  --mochi-" + cssName(key) + ": " + value + ";");
+      if (isSafeCssValue(value)) lines.push("  --mochi-" + cssName(key) + ": " + value + ";");
     }
   }
   for (const [key, value] of Object.entries(theme.assetUrls ?? {})) {
+    if (typeof value !== "string") continue;
     const prefix = key.startsWith("icon:") ? "mochi-icon-" : "mochi-asset-";
     const logical = key.startsWith("icon:") ? key.slice(5) : key;
-    lines.push('  --' + prefix + cssName(logical) + ': url("' + value + '");');
+    lines.push('  --' + prefix + cssName(logical) + ': ' + cssUrl(value) + ';');
   }
   lines.push("}");
   return lines.join("\n");
@@ -255,14 +262,16 @@ export function useThemeEngine() {
     return nextThemes;
   };
 
+  const selection = useRef(0);
   const selectTheme = async (themeId: string) => {
+    const mine = ++selection.current;
     setThemeState(themeId);
     await setTheme(themeId);
     const available = await listThemes();
     const descriptor = available.find((candidate) => candidate.id === themeId);
-    if (descriptor) {
-      applyTheme(await loadTheme(descriptor));
-    }
+    const loaded = descriptor ? await loadTheme(descriptor) : null;
+    // Clicking through themes quickly: only the last choice may be applied, whatever order the loads finish in.
+    if (mine === selection.current && loaded) applyTheme(loaded);
     setThemes(available);
   };
 
@@ -283,17 +292,17 @@ export function useThemeEngine() {
         const [info, available] = await Promise.all([getThemeConfig(), listThemes()]);
         if (cancelled) return;
         setConfigInfo(info);
-        const stored = window.localStorage.getItem("mochi:theme");
+        const stored = readString("mochi:theme");
         let legacyTheme = stored;
         if (!legacyTheme) {
           try {
-            const legacySettings = JSON.parse(window.localStorage.getItem("mochi:settings") || "{}");
-            legacyTheme = typeof legacySettings.theme === "string" ? legacySettings.theme : null;
+            const legacySettings = JSON.parse(readString("mochi:settings") || "{}");
+            legacyTheme = typeof legacySettings?.theme === "string" ? legacySettings.theme : null;
           } catch {
             legacyTheme = null;
           }
         }
-        const selected = legacyTheme || (window.localStorage.getItem("mochi:setup-complete") === "true" ? info.selectedTheme || "mochi" : getSystemThemeId());
+        const selected = legacyTheme || (readString("mochi:setup-complete") === "true" ? info.selectedTheme || "mochi" : getSystemThemeId());
         setThemeState(selected);
         if (legacyTheme && legacyTheme !== info.selectedTheme) {
           await setTheme(legacyTheme);
@@ -302,10 +311,12 @@ export function useThemeEngine() {
         const descriptor = available.find((candidate) => candidate.id === selected) ?? available[0];
         if (descriptor) {
           setThemeState(descriptor.id);
-          applyTheme(await loadTheme(descriptor));
+          const loaded = await loadTheme(descriptor);
+          // The user may have picked a theme while the first one was loading.
+          if (!cancelled && selection.current === 0) applyTheme(loaded);
         }
       } catch {
-        const stored = window.localStorage.getItem("mochi:theme") || "mochi";
+        const stored = readString("mochi:theme") || "mochi";
         const available = getBuiltinThemes();
         const descriptor = available.find((candidate) => candidate.id === stored) ?? available[0];
         setThemes(available);

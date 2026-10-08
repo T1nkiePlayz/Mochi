@@ -1,8 +1,8 @@
 import { RemoteImage } from "./RemoteImage";
 import { useEffect, useState } from "react";
 import { ExternalLink, Package } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { openExternalUrl } from "../lib/platform";
 import { searchModrinth, type ModrinthProject } from "../lib/modrinth";
 import { getNexusGames, getNexusMods, type NexusGame, type NexusMod } from "../lib/nexus";
 
@@ -23,7 +23,7 @@ export function LibraryModSearch({ query, nexusEnabled, supabase }: { query: str
           const games = await getNexusGames(supabase, needle);
           const exactish = games.slice(0, 3);
           const mods = await Promise.all(exactish.map(async game => ({ game, mods: await getNexusMods(supabase, game.domainName, { sort: "trending" }) })));
-          return mods.flatMap(({ game, mods }) => mods.mods.map(mod => ({ game, mod })));
+          return mods.flatMap(({ game, mods }) => mods.mods.slice(0, 5).map(mod => ({ game, mod })));
         })() : Promise.resolve([] as Array<{ game: NexusGame; mod: NexusMod }>),
       ]);
       if (!cancelled) {
@@ -44,13 +44,13 @@ export function LibraryModSearch({ query, nexusEnabled, supabase }: { query: str
     <div className="library-mod-results">
       {modrinth.map(project => <article className="library-mod-result" key={`modrinth-${project.project_id}`}>
         <RemoteImage src={project.icon_url} alt="" loading="lazy" fallback={<span className="library-mod-fallback"><Package size={17}/></span>}/>
-        <span><strong>{project.title}</strong><small>Modrinth · {project.downloads.toLocaleString()} downloads</small><small>{project.description}</small></span>
-        <button className="icon-button" aria-label={`Open ${project.title} on Modrinth`} onClick={() => void invoke("open_external_url", { url: `https://modrinth.com/mod/${encodeURIComponent(project.slug)}` })}><ExternalLink size={14}/></button>
+        <span><strong>{project.title}</strong><small>Modrinth · {(project.downloads ?? 0).toLocaleString()} downloads</small><small>{project.description}</small></span>
+        <button className="icon-button" aria-label={`Open ${project.title} on Modrinth`} onClick={() => void openExternalUrl(`https://modrinth.com/mod/${encodeURIComponent(project.slug)}`).catch(() => undefined)}><ExternalLink size={14}/></button>
       </article>)}
       {nexus.map(({ game, mod }) => <article className="library-mod-result" key={`nexus-${game.domainName}-${mod.id}`}>
         <RemoteImage src={mod.pictureUrl} alt="" loading="lazy" fallback={<span className="library-mod-fallback"><Package size={17}/></span>}/>
         <span><strong>{mod.name}</strong><small>Nexus Mods · {game.name}{mod.author ? ` · ${mod.author}` : ""}</small><small>{mod.summary || "Popular mod from the Nexus Mods feed."}</small></span>
-        <button className="icon-button" aria-label={`Open ${mod.name} on Nexus Mods`} onClick={() => void invoke("open_external_url", { url: mod.modPageUrl })}><ExternalLink size={14}/></button>
+        <button className="icon-button" aria-label={`Open ${mod.name} on Nexus Mods`} onClick={() => void openExternalUrl(mod.modPageUrl).catch(() => undefined)}><ExternalLink size={14}/></button>
       </article>)}
     </div>
     {nexusEnabled && nexus.length > 0 && <small className="metadata-note">Nexus search shows its top five trending mods for each matching game.</small>}

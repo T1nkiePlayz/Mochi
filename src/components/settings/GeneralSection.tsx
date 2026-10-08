@@ -3,7 +3,7 @@ import { SettingsGroup, ToggleRow } from "./Section";
 
 export function GeneralSection() {
   const { behavior, setBehavior, account, notifications, storage } = useApp();
-  const set = (patch: Partial<typeof behavior>) => setBehavior({ ...behavior, ...patch });
+  const set = (patch: Partial<typeof behavior>) => setBehavior((current) => ({ ...current, ...patch }));
   return <SettingsGroup title="General" subtitle="Launcher behavior" id="settings-general">
     <ToggleRow title="Launch Mochi on startup" description="Open the launcher when you sign in to your computer." checked={behavior.launchOnStartup} onChange={(launchOnStartup) => set({ launchOnStartup })} />
     <ToggleRow title="Notifications" description="Enable or disable all Mochi notifications." checked={behavior.notificationsEnabled} onChange={(notificationsEnabled) => { set({ notificationsEnabled }); if (!notificationsEnabled) notifications.setShowNotifications(false); }} />

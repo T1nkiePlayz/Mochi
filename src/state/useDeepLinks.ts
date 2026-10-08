@@ -6,6 +6,8 @@ import { parseAuthCallback } from "../lib/deepLinkAuth";
 import type { AccountState } from "./useAccount";
 import { enterBigPicture } from "../bigpicture/mode";
 
+let startupHandled = false;
+
 /** Handles mochi://launch/<id> and the mochi://auth/* sign-in links. */
 export function useDeepLinks(account: AccountState, launchFromLink: (gameId: string) => void) {
   const accountRef = useRef(account);
@@ -24,7 +26,8 @@ export function useDeepLinks(account: AccountState, launchFromLink: (gameId: str
         const parsed = parse(url);
         if (parsed?.protocol === "mochi:" && parsed.hostname === "bigpicture") { enterBigPicture(); return; }
         if (parsed?.protocol === "mochi:" && parsed.hostname === "launch") {
-          const gameId = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
+          let gameId = "";
+          try { gameId = decodeURIComponent(parsed.pathname.replace(/^\//, "")); } catch { /* malformed escape: ignore the link */ }
           if (gameId) launchRef.current(gameId);
           return;
         }
@@ -59,7 +62,10 @@ export function useDeepLinks(account: AccountState, launchFromLink: (gameId: str
         .finally(() => setAuthBusy(false));
     };
 
-    void getCurrent().then((urls) => { if (urls) handle(urls); }).catch((error) => console.warn("Mochi deep-link startup check failed", error));
+    void getCurrent().then((urls) => {
+      // The startup link must only be acted on once, even if the effect runs again (hot reload, strict mode).
+      if (urls && !startupHandled) { startupHandled = true; handle(urls); }
+    }).catch((error) => console.warn("Mochi deep-link startup check failed", error));
     void onOpenUrl(handle).then((remove) => { unlisten = remove; }).catch((error) => console.warn("Mochi deep-link listener failed", error));
     return () => unlisten?.();
   }, []);

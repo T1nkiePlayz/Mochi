@@ -29,12 +29,13 @@ export function parseArgs(input: string): string[] {
 
 /** Parses `KEY=value` lines, ignoring blanks, comments and invalid names. */
 export function parseEnv(input: string): Record<string, string> {
-  const env: Record<string, string> = {};
+  const entries: Array<[string, string]> = [];
   for (const line of input.split("\n")) {
     const match = line.trim().match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-    if (match) env[match[1]] = match[2];
+    if (match && match[1] !== undefined) entries.push([match[1], match[2] ?? ""]);
   }
-  return env;
+  // fromEntries defines own properties, so a variable named __proto__ cannot touch the object's prototype.
+  return Object.fromEntries(entries);
 }
 
 /** The native launcher's representation of a Tofu's launch settings. */

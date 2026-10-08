@@ -2,6 +2,7 @@ import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { Piko } from "../models";
 import { profileStorageKey, readJson, removeKey, storageKeys, writeJson } from "../lib/storage";
+import { sanitizeLibrary } from "../lib/library";
 import { defaultBehavior, normalizeBehavior, type Behavior } from "./settings";
 import type { AppNotification } from "./useNotifications";
 
@@ -58,13 +59,13 @@ export function useProfileStorage(params: Params) {
       }
     }
     const separate = multipleAccountsEnabled && Boolean(user);
-    const nextLibrary = readJson<Piko[]>(scoped("pikos"), separate ? [] : readJson<Piko[]>(storageKeys.pikos, []));
+    const nextLibrary = sanitizeLibrary(readJson<unknown>(scoped("pikos"), separate ? [] : readJson<unknown>(storageKeys.pikos, [])));
     const nextSettings = readJson<Record<string, unknown>>(scoped("settings"), separate ? {} : readJson<Record<string, unknown>>(storageKeys.settings, {}));
     const nextNotifications = readJson<AppNotification[]>(scoped("notifications"), separate ? [] : readJson(storageKeys.notifications, []));
-    setLibrary(Array.isArray(nextLibrary) ? nextLibrary : []);
+    setLibrary(nextLibrary);
     setBehavior(normalizeBehavior(nextSettings));
     setNotifications(Array.isArray(nextNotifications) ? nextNotifications : []);
-    onProfileLoaded(Array.isArray(nextLibrary) ? nextLibrary : []);
+    onProfileLoaded(nextLibrary);
     if (multipleAccountsEnabled) void setTheme(typeof nextSettings.theme === "string" && themeIds.includes(nextSettings.theme) ? nextSettings.theme : "mochi");
     setOwner(ownerKey);
   }, [user?.id, multipleAccountsEnabled, owner, ownerKey]);

@@ -60,7 +60,9 @@ export function useGameMods(piko: Piko): GameMods {
         const matched = autoModLinks(piko, cf, null);
         if (needNexus && !matched?.curseforge && supabase) nexus = await getNexusGames(supabase, piko.name);
         const found = autoModLinks(piko, cf, nexus);
-        if (!cancelled && found) lib.updateGame(piko.id, { modLinks: mergeModLinks(piko.modLinks, found) });
+        // Applied even when the view closed meanwhile (the lookup is remembered as done), and merged into the live
+        // game so a link the user picked in the meantime is not overwritten.
+        if (found) lib.setLibrary((current) => current.map((item) => (item.id === piko.id ? { ...item, modLinks: mergeModLinks(item.modLinks, found) } : item)));
       } catch (error) {
         attempted.delete(attemptKey);
         if (!cancelled) setOffline(true);

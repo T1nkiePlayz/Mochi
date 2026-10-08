@@ -3,7 +3,7 @@ import type { Collection, Piko } from "../models";
 import { profileStorageKey, readJson, storageKeys, writeJson } from "../lib/storage";
 
 /** Collections live next to the library: shared on this device, or per account when profiles are separate. */
-const keyFor = (ownerKey: string) => (ownerKey.startsWith("profiles:") ? profileStorageKey(ownerKey.slice("profiles:".length), "collections") : storageKeys.collections);
+export const collectionsKeyFor = (ownerKey: string) => (ownerKey.startsWith("profiles:") ? profileStorageKey(ownerKey.slice("profiles:".length), "collections") : storageKeys.collections);
 
 const clean = (value: unknown): Collection[] => Array.isArray(value)
   ? value.filter((item): item is Collection => Boolean(item) && typeof (item as Collection).id === "string" && typeof (item as Collection).name === "string")
@@ -11,7 +11,7 @@ const clean = (value: unknown): Collection[] => Array.isArray(value)
 
 /** User collections (name, optional emoji, order = array order), stored locally per profile. */
 export function useCollections(ownerKey: string, ready: boolean, setLibrary: Dispatch<SetStateAction<Piko[]>>) {
-  const storeKey = keyFor(ownerKey);
+  const storeKey = collectionsKeyFor(ownerKey);
   const [state, setState] = useState<{ key: string; items: Collection[] }>({ key: "", items: [] });
 
   useEffect(() => { if (ready) setState({ key: storeKey, items: clean(readJson<unknown>(storeKey, [])) }); }, [ready, storeKey]);
