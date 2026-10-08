@@ -638,4 +638,5 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 .nexus-game-picker-row>svg{color:var(--mochi-text-muted);}
 @media(max-width:700px){.discover-game-tabs{padding-bottom:5px;}.discover-game-tab{min-height:38px;padding:6px 9px;}.discover-game-icon{width:24px;height:24px;flex-basis:24px;}.discover-game-add{width:38px;height:38px;flex-basis:38px;}}
 
-\n[data-mochi-theme="minecraft-ore"] .notification-wrap > .icon-button .mochi-icon-wrap{width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;flex-basis:20px!important}.notification-wrap > .icon-button .mochi-icon-custom{background-size:100% 100%!important}\n
+
+[data-mochi-theme="minecraft-ore"] .notification-wrap > .icon-button .mochi-icon-wrap{width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;flex-basis:20px!important}.notification-wrap > .icon-button .mochi-icon-custom{background-size:100% 100%!important}
