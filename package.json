@@ -10,6 +10,7 @@
     "tauri": "tauri",
     "check:themes": "node scripts/check-themes.mjs",
     "test:metadata": "node --test scripts/metadata.test.mjs",
+    "test:mods": "node --test scripts/mods.test.mjs",
     "build:launcher-art": "node scripts/build-launcher-art.mjs"
   },
   "dependencies": {
