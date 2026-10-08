@@ -38,6 +38,35 @@ function formatBytes(bytes: number) {
   return (bytes / 1024 / 1024 / 1024).toFixed(2) + " GiB";
 }
 
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+}
+
+function normalizeMarkdown(source: string): string {
+  return decodeHtmlEntities(
+    source
+      .replace(/\r/g, "")
+      .replace(/<img\\b([^>]*?)\\bsrc=["']([^"']+)["']([^>]*)>/gi, (_match, before, src, after) => {
+        const attributes = before + after;
+        const alt = attributes.match(/\\balt=["']([^"']*)["']/i)?.[1] || "";
+        return "\n![" + alt + "](" + src + ")\n";
+      })
+      .replace(/<br\\s*\\/?\\s*>/gi, "\n")
+      .replace(/<h([1-6])[^>]*>([\\s\\S]*?)<\\/h\\1>/gi, (_match, level, body) => "\n" + "#".repeat(Number(level)) + " " + body + "\n")
+      .replace(/<li[^>]*>([\\s\\S]*?)<\\/li>/gi, "\n- $1\n")
+      .replace(/<\\/?(?:ul|ol|p|div|section|article|center|figure|figcaption)[^>]*>/gi, "\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/\\n{3,}/g, "\n\n")
+      .trim(),
+  );
+}
+
 function renderInline(text: string): ReactNode[] {
   const parts = text.split(/(\!\[[^\]]*\]\([^\)]+\)|\[[^\]]+\]\([^\)]+\)|\*\*[^*]+\*\*|__[^_]+__|~~[^~]+~~|\x60[^\x60]+\x60|\*[^*]+\*|_[^_]+_)/g);
   return parts.filter(Boolean).map((part, index) => {
