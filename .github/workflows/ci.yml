@@ -25,6 +25,7 @@ jobs:
           filters: |
             backend:
               - 'src-tauri/**'
+              - '.github/workflows/ci.yml'
 
   build:
     runs-on: ubuntu-24.04
