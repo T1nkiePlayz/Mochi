@@ -335,12 +335,122 @@ fn process_tree_alive(root_pid: u32) -> bool {
     parents.len() > 1
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(target_os = "macos")]
+#[derive(Debug, Clone)]
+struct MacProcessInfo {
+    pid: u32,
+    ppid: u32,
+    cmdline: String,
+    start_time: u64,
+}
+
+#[cfg(target_os = "macos")]
+fn mac_process_snapshot() -> HashMap<u32, MacProcessInfo> {
+    let mut processes = HashMap::new();
+    let Ok(output) = std::process::Command::new("ps").args(["-axo", "pid=,ppid=,etime=,command="]).output() else { return processes };
+    if !output.status.success() { return processes; }
+
+    let now = now_seconds();
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        let mut fields = line.split_whitespace();
+        let Some(pid_text) = fields.next() else { continue };
+        let Some(ppid_text) = fields.next() else { continue };
+        let Some(etime_text) = fields.next() else { continue };
+        let command = fields.collect::<Vec<_>>().join(" ");
+        let Ok(pid) = pid_text.parse::<u32>() else { continue };
+        let Ok(ppid) = ppid_text.parse::<u32>() else { continue };
+        let elapsed = parse_ps_elapsed(etime_text);
+        processes.insert(pid, MacProcessInfo { pid, ppid, cmdline: command, start_time: now.saturating_sub(elapsed) });
+    }
+    processes
+}
+
+#[cfg(target_os = "macos")]
+fn parse_ps_elapsed(value: &str) -> u64 {
+    if let Some((days, time)) = value.split_once('-') {
+        return days.parse::<u64>().unwrap_or(0) * 86_400 + parse_ps_elapsed(time);
+    }
+    let parts: Vec<&str> = value.split(':').collect();
+    match parts.as_slice() {
+        [minutes, seconds] => minutes.parse::<u64>().unwrap_or(0) * 60 + seconds.parse::<u64>().unwrap_or(0),
+        [hours, minutes, seconds] => hours.parse::<u64>().unwrap_or(0) * 3_600 + minutes.parse::<u64>().unwrap_or(0) * 60 + seconds.parse::<u64>().unwrap_or(0),
+        _ => 0,
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn mac_is_launcher_process(info: &MacProcessInfo) -> bool {
+    let command = info.cmdline.to_lowercase();
+    ["mochi", "steam", "steamwebhelper", "heroic", "lutris", "bottles", "itch", "open ", "osascript", "sh -c", "bash -c", "python3 -c", "node -e"]
+        .iter()
+        .any(|value| command.contains(value))
+}
+
+#[cfg(target_os = "macos")]
+fn mac_target_matches(info: &MacProcessInfo, target: &str) -> bool {
+    let command = info.cmdline.to_lowercase();
+    let target = target.to_lowercase();
+    if target.is_empty() { return false; }
+    if target.starts_with("steam://") || target.starts_with("heroic://") || target.starts_with("lutris:") || target.starts_with("bottles:") || target.starts_with("itch://") { return false; }
+
+    let path = std::path::Path::new(target.trim_matches('"'));
+    let target_name = path.file_name().and_then(|value| value.to_str()).unwrap_or(&target);
+    if command.contains(target_name) { return true; }
+
+    if target.ends_with(".app") {
+        let bundle_name = path.file_stem().and_then(|value| value.to_str()).unwrap_or(target_name);
+        return command.contains(bundle_name);
+    }
+    false
+}
+
+#[cfg(target_os = "macos")]
+fn process_snapshot_ids() -> HashSet<u32> {
+    mac_process_snapshot().keys().copied().collect()
+}
+
+#[cfg(target_os = "macos")]
+fn wait_for_game_process(target: &str, before: &HashSet<u32>) -> Option<u32> {
+    let started = SystemTime::now();
+    for _ in 0..30 {
+        thread::sleep(Duration::from_secs(1));
+        let snapshot = mac_process_snapshot();
+        let mut candidates: Vec<MacProcessInfo> = snapshot.values()
+            .filter(|process| !before.contains(&process.pid))
+            .filter(|process| !mac_is_launcher_process(process))
+            .filter(|process| mac_target_matches(process, target) || target.starts_with("steam://") || target.starts_with("heroic://") || target.starts_with("lutris:") || target.starts_with("bottles:") || target.starts_with("itch://"))
+            .cloned()
+            .collect();
+        if !candidates.is_empty() {
+            candidates.sort_by_key(|process| process.start_time);
+            return candidates.last().map(|process| process.pid);
+        }
+        if started.elapsed().unwrap_or_default() > Duration::from_secs(30) { break; }
+    }
+    None
+}
+
+#[cfg(target_os = "macos")]
+fn process_tree_alive(root_pid: u32) -> bool {
+    let snapshot = mac_process_snapshot();
+    if snapshot.contains_key(&root_pid) { return true; }
+    let mut parents = HashSet::from([root_pid]);
+    for _ in 0..8 {
+        let mut changed = false;
+        for process in snapshot.values() {
+            if parents.contains(&process.ppid) && parents.insert(process.pid) { changed = true; }
+        }
+        if !changed { break; }
+    }
+    parents.len() > 1
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 fn wait_for_game_process(_target: &str, _before: &HashSet<u32>) -> Option<u32> {
     None
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 fn process_tree_alive(_root_pid: u32) -> bool {
     false
 }
