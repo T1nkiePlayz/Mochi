@@ -201,44 +201,66 @@ function ProjectDetails({ project, gameVersion, onClose }: { project: ModrinthPr
   const [tab, setTab] = useState<"overview" | "versions">("overview");
   const [versions, setVersions] = useState<import("../lib/modrinth").ModrinthVersion[]>([]);
   useEffect(() => { void getModrinthVersions(project.project_id).then(setVersions).catch(() => setVersions([])); }, [project.project_id]);
-  return <div className="discover-modal-backdrop" onMouseDown={onClose}><div className="project-details-window" onMouseDown={event => event.stopPropagation()}>
-    <div className="project-details-header"><div>{project.icon_url ? <img src={project.icon_url} alt="" /> : <div className="discover-card-icon fallback"><PackageOpen size={26}/></div>}<div><p className="eyebrow">{projectTypeLabel(project.project_type)}</p><h2>{project.title}</h2><p>{project.description}</p><small>Created by <strong>{project.author || "Unknown creator"}</strong> · {project.downloads.toLocaleString()} downloads</small></div></div><button className="icon-button" onClick={onClose}><X size={17}/></button></div>
-    <div className="project-tabs"><button className={tab==="overview"?"active":""} onClick={()=>setTab("overview")}>Overview</button><button className={tab==="versions"?"active":""} onClick={()=>setTab("versions")}>Versions</button></div>
-    {tab==="overview" ? <div className="project-overview">
-      <section className="project-creator-primary">
-        <div className="project-creator-primary-avatar">
-          {project.members?.find(member => member.user.username === project.author)?.user.avatar_url || project.members?.[0]?.user.avatar_url
-            ? <img src={project.members?.find(member => member.user.username === project.author)?.user.avatar_url || project.members?.[0]?.user.avatar_url} alt="" />
-            : <div className="project-creator-primary-fallback">{(project.author || "?").slice(0, 1).toUpperCase()}</div>}
+
+  return (
+    <div className="discover-modal-backdrop" onMouseDown={onClose}>
+      <div className="project-details-window" onMouseDown={event => event.stopPropagation()}>
+        <div className="project-details-header">
+          <div>
+            {project.icon_url ? <img src={project.icon_url} alt="" /> : <div className="discover-card-icon fallback"><PackageOpen size={26}/></div>}
+            <div><p className="eyebrow">{projectTypeLabel(project.project_type)}</p><h2>{project.title}</h2><p>{project.description}</p><small>Created by <strong>{project.author || "Unknown creator"}</strong> · {project.downloads.toLocaleString()} downloads</small></div>
+          </div>
+          <button className="icon-button" onClick={onClose}><X size={17}/></button>
         </div>
-        <div><span>Created by</span><strong>{project.author || "Unknown creator"}</strong></div>
-      </section>
-      <div className="project-info-grid">
-        <span><strong>Downloads</strong>{project.downloads.toLocaleString()}</span>
-        <span><strong>Followers</strong>{(project.followers||0).toLocaleString()}</span>
-        <span><strong>Project type</strong>{projectTypeLabel(project.project_type)}</span>
-        <span><strong>Categories</strong>{project.categories?.join(", ")||"Not provided"}</span>
-        <span><strong>License</strong>{project.license?.name||"Not provided"}</span>
-        <span><strong>Members</strong>{project.members?.length ?? 0}</span>
+        <div className="project-tabs">
+          <button className={tab === "overview" ? "active" : ""} onClick={() => setTab("overview")}>Overview</button>
+          <button className={tab === "versions" ? "active" : ""} onClick={() => setTab("versions")}>Versions</button>
+        </div>
+        {tab === "overview" ? (
+          <div className="project-overview">
+            <section className="project-creator-primary">
+              <div className="project-creator-primary-avatar">
+                {project.members?.find(member => member.user.username === project.author)?.user.avatar_url || project.members?.[0]?.user.avatar_url
+                  ? <img src={project.members?.find(member => member.user.username === project.author)?.user.avatar_url || project.members?.[0]?.user.avatar_url} alt="" />
+                  : <div className="project-creator-primary-fallback">{(project.author || "?").slice(0, 1).toUpperCase()}</div>}
+              </div>
+              <div><span>Created by</span><strong>{project.author || "Unknown creator"}</strong></div>
+            </section>
+            <div className="project-info-grid">
+              <span><strong>Downloads</strong>{project.downloads.toLocaleString()}</span>
+              <span><strong>Followers</strong>{(project.followers || 0).toLocaleString()}</span>
+              <span><strong>Project type</strong>{projectTypeLabel(project.project_type)}</span>
+              <span><strong>Categories</strong>{project.categories?.join(", ") || "Not provided"}</span>
+              <span><strong>License</strong>{project.license?.name || "Not provided"}</span>
+              <span><strong>Members</strong>{project.members?.length ?? 0}</span>
+            </div>
+            <h3 className="project-overview-heading">Overview</h3>
+            <Markdown source={project.body || project.description} />
+            {project.members?.length ? (
+              <section className="project-creators">
+                <div className="project-creators-heading"><div><h3>Creators & contributors</h3><p>{project.members.length} team member{project.members.length === 1 ? "" : "s"} credited on Modrinth.</p></div></div>
+                <div className="project-creator-grid">{project.members.map(member => <div className="project-creator" key={member.user.id}><img src={member.user.avatar_url} alt="" /><div><strong>{member.user.name || member.user.username}</strong><small>@{member.user.username} · {member.role}</small></div></div>)}</div>
+              </section>
+            ) : null}
+          </div>
+        ) : (
+          <div className="project-version-list">
+            {versions.length ? versions.map(version => (
+              <article className="project-version" key={version.id}>
+                <div className="project-version-main">
+                  <div className="project-version-heading"><strong>{version.name || version.version_number}</strong><span>{version.version_number}</span></div>
+                  <div className="project-version-meta"><span>{version.version_type || "release"}</span><span>Published {formatDate(version.date_published)}</span><span>{version.files.length} file{version.files.length === 1 ? "" : "s"}</span></div>
+                  <div className="project-version-targets"><span>{version.game_versions.join(", ") || "Unknown Minecraft version"}</span><span>{version.loaders.join(", ") || "Any loader"}</span></div>
+                  {version.changelog ? <details className="project-version-changelog"><summary>View changelog</summary><div className="project-version-changelog-body"><Markdown source={version.changelog} /></div></details> : null}
+                </div>
+                <details className="project-version-files"><summary>Files <span>{version.files.length}</span></summary><div className="project-file-list">{version.files.map(file => <div key={file.filename}><span>{file.filename}</span><small>{formatBytes(file.size)}{file.primary ? " · Primary" : ""}</small></div>)}</div></details>
+              </article>
+            )) : <div className="discover-empty">No versions found for this Minecraft version.</div>}
+          </div>
+        )}
       </div>
-      <h3 className="project-overview-heading">Overview</h3>
-      <Markdown source={project.body || project.description} />
-      {project.members?.length ? <section className="project-creators">
-        <div className="project-creators-heading"><div><h3>Creators & contributors</h3><p>{project.members.length} team member{project.members.length === 1 ? "" : "s"} credited on Modrinth.</p></div></div>
-        <div className="project-creator-grid">{project.members.map(member => <div className="project-creator" key={member.user.id}>
-          <img src={member.user.avatar_url} alt="" />
-          <div><strong>{member.user.name || member.user.username}</strong><small>@{member.user.username} · {member.role}</small></div>
-        </div>)}</div>
-      </section> : null}
-    </div> : <div className="project-version-list">{versions.length ? versions.map(version => <article className="project-version" key={version.id}>
-  <div className="project-version-main">
-    <div className="project-version-heading"><strong>{version.name || version.version_number}</strong><span>{version.version_number}</span></div>
-    <div className="project-version-meta"><span>{version.version_type || "release"}</span><span>Published {formatDate(version.date_published)}</span><span>{version.files.length} file{version.files.length === 1 ? "" : "s"}</span></div>
-    <div className="project-version-targets"><span>{version.game_versions.join(", ") || "Unknown Minecraft version"}</span><span>{version.loaders.join(", ") || "Any loader"}</span></div>
-    {version.changelog ? <details className="project-version-changelog"><summary>View changelog</summary><div className="project-version-changelog-body"><Markdown source={version.changelog} /></div></details> : null}
-  </div>
-  <details className="project-version-files"><summary>Files <span>{version.files.length}</span></summary><div className="project-file-list">{version.files.map(file => <div key={file.filename}><span>{file.filename}</span><small>{formatBytes(file.size)}{file.primary ? " · Primary" : ""}</small></div>)}</div></details>
-</article>) : <div className="discover-empty">No versions found for this Minecraft version.</div>}</div></div>;
+    </div>
+  );
 }
 
 function TofuPicker({ project, pikos, onClose, onInstall }: { project: ModrinthProject; pikos: Piko[]; onClose: () => void; onInstall: (tofu: Tofu) => void }) {
