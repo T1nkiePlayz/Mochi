@@ -30,6 +30,10 @@ function validProvider(value: unknown): value is Provider {
   return value === "igdb" || value === "nexus";
 }
 
+function validNexusApiKey(value: string): boolean {
+  return value.length >= 32 && value.length <= 4096 && /^[!-~]+$/.test(value);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return response({ error: "POST required" }, 405);
@@ -147,6 +151,32 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === "set") {
+      if (body.provider === "nexus") {
+        const apiKey = body.secret.trim();
+        if (!validNexusApiKey(apiKey)) {
+          return response({ error: "Nexus Mods Personal API keys must be at least 32 characters with no spaces or line breaks." }, 400);
+        }
+        let validation: Response;
+        try {
+          validation = await fetch("https://api.nexusmods.com/v1/users/validate.json", {
+            headers: {
+              Accept: "application/json",
+              apikey: apiKey,
+              "Application-Name": "Mochi",
+              "Application-Version": "0.1.0",
+            },
+          });
+        } catch {
+          return response({ error: "Unable to reach Nexus Mods to validate this API key. Try again." }, 502);
+        }
+        if (!validation.ok) {
+          if (validation.status === 401 || validation.status === 403) {
+            return response({ error: "Nexus Mods rejected this API key. Check that you copied the full Personal API Key." }, 422);
+          }
+          return response({ error: "Nexus Mods could not validate this API key (HTTP " + validation.status + "). Try again." }, 502);
+        }
+      }
+
       if (existing.rows[0]?.secret_id) {
         await connection.queryObject(
           "select vault.update_secret($1::uuid, $2, $3, $4)",

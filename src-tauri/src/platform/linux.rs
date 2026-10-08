@@ -113,14 +113,14 @@ pub fn ensure_platform_integration() -> Result<(), String> {
     let home = std::env::var_os("HOME").ok_or("Unable to determine the home directory.")?;
     let applications = std::path::PathBuf::from(&home).join(".local/share/applications");
     std::fs::create_dir_all(&applications).map_err(|e| format!("Unable to create the applications directory: {e}"))?;
-    let executable = std::env::current_exe().map_err(|e| format!("Unable to determine the Mochi executable: {e}"))?;
-    let exec = executable.to_string_lossy().replace('\\', "\\").replace('"', "\"").replace('%', "%%");
+    let executable = installed_executable()?;
+    let exec = desktop_exec_argument(&executable);
     let icons = std::path::PathBuf::from(&home).join(".local/share/icons/hicolor/512x512/apps");
     std::fs::create_dir_all(&icons).map_err(|e| format!("Unable to create the icon directory: {e}"))?;
     std::fs::write(icons.join("mochi.png"), ICON_PNG).map_err(|e| format!("Unable to install the Mochi application icon: {e}"))?;
 
     let desktop = applications.join(DESKTOP_FILE);
-    let content = format!("[Desktop Entry]\nType=Application\nName=Mochi\nComment=Your games, your way.\nExec=\"{exec}\" %U\nTryExec=\"{exec}\"\nIcon=mochi\nTerminal=false\nStartupNotify=true\nStartupWMClass={APP_ID}\nCategories=Game;Utility;\nMimeType=x-scheme-handler/{DESKTOP_SCHEME};\n");
+    let content = format!("[Desktop Entry]\nType=Application\nName=Mochi\nComment=Your games, your way.\nExec={exec} %U\nTryExec={exec}\nIcon=mochi\nTerminal=false\nStartupNotify=true\nStartupWMClass={APP_ID}\nCategories=Game;Utility;\nMimeType=x-scheme-handler/{DESKTOP_SCHEME};\n");
     std::fs::write(&desktop, content).map_err(|e| format!("Unable to write Mochi desktop entry: {e}"))?;
     if command_exists("update-desktop-database") { let _ = std::process::Command::new("update-desktop-database").arg(&applications).status(); }
     Ok(())
@@ -133,11 +133,32 @@ pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> {
     let desktop = autostart.join(DESKTOP_FILE);
     if enabled {
         std::fs::create_dir_all(&autostart).map_err(|e| format!("Unable to create autostart directory: {e}"))?;
-        let exe = std::env::current_exe().map_err(|e| format!("Unable to determine the Mochi executable: {e}"))?;
-        let content = format!("[Desktop Entry]\nType=Application\nName=Mochi\nComment=Launch Mochi when you sign in\nExec=\"{}\"\nTerminal=false\nStartupNotify=false\nX-GNOME-Autostart-enabled=true\n", exe.to_string_lossy().replace('\\', "\\").replace('"', "\""));
+        let exe = installed_executable()?;
+        let content = format!("[Desktop Entry]\nType=Application\nName=Mochi\nComment=Launch Mochi when you sign in\nExec={}\nTerminal=false\nStartupNotify=false\nX-GNOME-Autostart-enabled=true\n", desktop_exec_argument(&exe));
         std::fs::write(&desktop, content).map_err(|e| format!("Unable to install Mochi startup entry: {e}"))?;
     } else if desktop.exists() { std::fs::remove_file(&desktop).map_err(|e| format!("Unable to remove Mochi startup entry: {e}"))?; }
     Ok(())
+}
+
+fn installed_executable() -> Result<std::path::PathBuf, String> {
+    // AppImage mounts its payload under /tmp at runtime. The APPIMAGE variable
+    // points to the permanent file the user launched, so desktop entries must
+    // target that file rather than current_exe() inside the temporary mount.
+    if let Some(appimage) = std::env::var_os("APPIMAGE") {
+        let path = std::path::PathBuf::from(appimage);
+        if path.is_absolute() && path.is_file() {
+            return Ok(path);
+        }
+    }
+    std::env::current_exe().map_err(|e| format!("Unable to determine the Mochi executable: {e}"))
+}
+
+fn desktop_exec_argument(path: &std::path::Path) -> String {
+    let escaped = path.to_string_lossy()
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('%', "%%");
+    format!("\"{escaped}\"")
 }
 
 pub fn open_external_url(url: &str) -> Result<(), String> {

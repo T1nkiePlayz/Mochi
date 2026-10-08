@@ -52,3 +52,13 @@
   object-position:center!important;
   margin:0!important;
 }
+
+/* Cozy noticeboard styling for floating menus. */
+[data-mochi-theme="stardew-valley"] .notification-popover,[data-mochi-theme="stardew-valley"] .account-menu{border:2px solid #65734c;border-radius:8px 16px 10px 16px!important;background:linear-gradient(145deg,#394b31,#2c3b29);box-shadow:5px 6px 0 rgba(0,0,0,.2);}
+[data-mochi-theme="stardew-valley"] .notification-heading{border-bottom:2px solid #65734c;background:#2a3928;color:#fff9e6;}
+[data-mochi-theme="stardew-valley"] .notification-heading button,[data-mochi-theme="stardew-valley"] .account-menu-add>svg{color:#e6a84e;}
+[data-mochi-theme="stardew-valley"] .notification-item,[data-mochi-theme="stardew-valley"] .account-menu-add{border-color:#65734c!important;}
+[data-mochi-theme="stardew-valley"] .notification-item span,[data-mochi-theme="stardew-valley"] .notification-empty,[data-mochi-theme="stardew-valley"] .account-menu small{color:#c6ceae;}
+[data-mochi-theme="stardew-valley"] .account-menu button:hover,[data-mochi-theme="stardew-valley"] .account-menu button.selected{background:#4a5f3d;}
+[data-mochi-theme="stardew-valley"] .discover-game-tab{border:2px solid #65734c;border-radius:6px 14px 8px 14px!important;background:#2c3b29;}
+[data-mochi-theme="stardew-valley"] .discover-game-tab.active{border-color:#e6a84e;background:#4a5f3d;}

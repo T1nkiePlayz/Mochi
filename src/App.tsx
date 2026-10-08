@@ -58,7 +58,7 @@ import {
 } from "./lib/platform";
 import { deletePasskey, enrollTotp, getVerifiedTotpFactor, linkAuthIdentity, listPasskeys, registerPasskey, removeTotp, sendEmailCode, signInWithProvider, verifyEmailCode, verifyEmailToken, verifyMfaCode } from "./lib/auth";
 import { importThemeFile, importThemeFolder, useThemeEngine } from "./lib/theme";
-import { getProviderCredentialStatus, saveProviderCredential } from "./lib/providerCredentials";
+import { getProviderCredentialStatus, saveProviderCredential, validateNexusApiKey } from "./lib/providerCredentials";
 import { getDownloads } from "./lib/modrinth";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -637,6 +637,10 @@ function App() {
       setIgdbMessage("Enter your IGDB Client ID and Client Secret first.");
       return;
     }
+    if (provider === "nexus") {
+      const validationError = validateNexusApiKey(secret);
+      if (validationError) { setIgdbMessage(validationError); return; }
+    }
     if (!secret || secret.length < 8) return;
     setCredentialBusy(provider);
     try {
@@ -1117,7 +1121,7 @@ function App() {
                   </div>
                   <div className="provider-credential-card">
                     <div className="provider-credential-heading"><div><strong>Nexus Mods</strong><small>Your Nexus API key is stored server-side and is never returned to the launcher.</small></div><span className={credentialStatus.nexus ? "credential-status saved" : "credential-status"}>{credentialStatus.nexus ? "Saved" : "Not saved"}</span></div>
-                    {user ? <><input type="password" value={nexusApiKey} onChange={(event) => setNexusApiKey(event.target.value)} placeholder={credentialStatus.nexus ? "Enter a new key to replace the saved key" : "Paste your Nexus Mods API key"} /><button className="secondary-button" onClick={() => void saveCredential("nexus")} disabled={credentialBusy !== null || nexusApiKey.trim().length < 8}>{credentialBusy === "nexus" ? "Saving..." : "Save Nexus securely"}</button></> : <button className="secondary-button" onClick={() => { setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); }}><MochiIcon name="account" fallback={UserRound} size={14} /> Sign in to save</button>}
+                    {user ? <><input type="password" value={nexusApiKey} maxLength={4096} onChange={(event) => setNexusApiKey(event.target.value)} placeholder={credentialStatus.nexus ? "Enter a new key to replace the saved key" : "Paste your Nexus Mods Personal API Key"} autoComplete="off" spellCheck={false} /><small className="metadata-note">Use the full Personal API Key (at least 32 characters). Mochi verifies it with Nexus Mods before saving.</small><button className="secondary-button" onClick={() => void saveCredential("nexus")} disabled={credentialBusy !== null || Boolean(validateNexusApiKey(nexusApiKey))}>{credentialBusy === "nexus" ? "Validating..." : "Save Nexus securely"}</button></> : <button className="secondary-button" onClick={() => { setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); }}><MochiIcon name="account" fallback={UserRound} size={14} /> Sign in to save</button>}
                   </div>
                 </div>
               </div>

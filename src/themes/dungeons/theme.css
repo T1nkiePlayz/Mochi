@@ -9,3 +9,11 @@
 .hero-card{border-radius:3px!important;box-shadow:0 3px 0 rgba(0,0,0,.3),0 20px 45px var(--mochi-shadow)}
 .game-card-art{image-rendering:pixelated}.game-card:hover,.tofu-card:hover{transform:translateY(-1px)}.search-box{border-radius:2px!important;background:#121923}.search-box:focus-within{border-color:var(--mochi-accent)}
 .form-fields input,.form-fields select,.igdb-form input,.provider-credential-card input{border-radius:2px!important}.toggle{border-radius:2px!important}
+
+/* Dungeons-styled account and notification overlays. */
+[data-mochi-theme="dungeons"] .notification-popover,[data-mochi-theme="dungeons"] .account-menu{border:2px solid #465873;border-radius:2px!important;background:linear-gradient(145deg,#1d2a3a,#121923);box-shadow:inset 0 -3px 0 rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.35);}
+[data-mochi-theme="dungeons"] .notification-heading{background:#263246;border-bottom:2px solid #465873;color:#fff;}
+[data-mochi-theme="dungeons"] .notification-heading button,[data-mochi-theme="dungeons"] .account-menu-add>svg{color:#8cc4ff;}
+[data-mochi-theme="dungeons"] .account-menu button:hover,[data-mochi-theme="dungeons"] .account-menu button.selected{background:#33425a;}
+[data-mochi-theme="dungeons"] .discover-game-tab{border-radius:2px!important;border-width:2px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25);}
+[data-mochi-theme="dungeons"] .discover-game-tab.active{border-color:#5fa8ff;background:#263246;}

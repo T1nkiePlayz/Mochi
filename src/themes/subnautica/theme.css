@@ -20,3 +20,11 @@
 [data-mochi-theme="subnautica"] .hero-card{border-radius:5px!important;clip-path:polygon(0 0,calc(100% - 24px) 0,100% 24px,100% 100%,24px 100%,0 calc(100% - 24px))}
 [data-mochi-theme="subnautica"] .modal{border-radius:6px!important;clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px))}
 [data-mochi-theme="subnautica"] .form-fields input,[data-mochi-theme="subnautica"] .form-fields select,[data-mochi-theme="subnautica"] .igdb-form input{border-radius:3px!important}
+
+/* Underwater glass menus with cyan instrument accents. */
+[data-mochi-theme="subnautica"] .notification-popover,[data-mochi-theme="subnautica"] .account-menu{border-color:rgba(94,219,229,.38);border-radius:5px!important;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));background:linear-gradient(145deg,rgba(15,48,57,.97),rgba(4,22,29,.99));backdrop-filter:blur(18px);box-shadow:0 0 32px rgba(94,219,229,.12);}
+[data-mochi-theme="subnautica"] .notification-heading{border-bottom:1px solid rgba(94,219,229,.24);color:#e8ffff;}
+[data-mochi-theme="subnautica"] .notification-heading button,[data-mochi-theme="subnautica"] .account-menu-add>svg{color:#5edbe5;}
+[data-mochi-theme="subnautica"] .notification-item{border-color:rgba(94,219,229,.16);}
+[data-mochi-theme="subnautica"] .discover-game-tab{border-radius:4px!important;}
+[data-mochi-theme="subnautica"] .discover-game-tab.active{box-shadow:0 0 18px rgba(94,219,229,.17),inset 0 0 0 1px rgba(94,219,229,.18);}

@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useEffect, useState, type ReactNode } from "react";
-import minecraftLogo from "../assets/minecraft-core-brand.svg";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Download, Eye, ExternalLink, PackageOpen, Plus, RefreshCw, Search, X } from "lucide-react";
 import {
   getModrinthGameVersions,
@@ -275,13 +274,8 @@ function getPrimaryCreator(project: ModrinthProjectDetails) {
   };
 }
 
-function MinecraftLogo() {
-  return <img
-    className="minecraft-discovery-logo"
-    src={minecraftLogo}
-    alt="Minecraft"
-    draggable={false}
-  />;
+function MinecraftIcon() {
+  return <span className="minecraft-discovery-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path fill="#789b45" d="M2 5.5 12 2l10 3.5v5L12 14 2 10.5z"/><path fill="#5b4128" d="M2 10.5 12 14v10L2 20.5z"/><path fill="#755536" d="m12 14 10-3.5v10L12 24z"/><path fill="#91b85b" d="m2 5.5 10-3.4 10 3.4-10 3.6z"/><path fill="#a8d16b" d="m5 5.4 2.5-.9 2.4.9-2.5.9z"/><path fill="#a8d16b" d="m13.8 4.3 2.4-.8 2.4.8-2.4.9z"/></svg></span>;
 }
 
 
@@ -334,6 +328,7 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
   const [nexusLoading, setNexusLoading] = useState(false);
   const [nexusGameSearch, setNexusGameSearch] = useState("");
   const [nexusGameResults, setNexusGameResults] = useState<NexusGame[]>([]);
+  const nexusSearchRequest = useRef(0);
   const [showNexusGamePicker, setShowNexusGamePicker] = useState(false);
   const [addedNexusDomains, setAddedNexusDomains] = useState<string[]>(() => {
     try {
@@ -381,18 +376,21 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
     }
   };
 
-  const searchNexusGames = async () => {
+  const searchNexusGames = async (query = nexusGameSearch) => {
     if (!nexusVisible || !supabase) return;
+    const requestId = ++nexusSearchRequest.current;
     setNexusLoading(true);
     setMessage("");
     try {
-      const games = await getNexusGames(supabase);
-      setNexusGameResults(games);
+      const games = await getNexusGames(supabase, query);
+      if (requestId === nexusSearchRequest.current) setNexusGameResults(games);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to search Nexus Mods games.");
-      setNexusGameResults([]);
+      if (requestId === nexusSearchRequest.current) {
+        setMessage(error instanceof Error ? error.message : "Unable to search Nexus Mods games.");
+        setNexusGameResults([]);
+      }
     } finally {
-      setNexusLoading(false);
+      if (requestId === nexusSearchRequest.current) setNexusLoading(false);
     }
   };
 
@@ -430,8 +428,9 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
 
   useEffect(() => {
     if (!showNexusGamePicker || !nexusVisible) return;
-    void searchNexusGames();
-  }, [showNexusGamePicker, nexusVisible]);
+    const timer = window.setTimeout(() => void searchNexusGames(nexusGameSearch), nexusGameSearch.trim() ? 220 : 0);
+    return () => window.clearTimeout(timer);
+  }, [showNexusGamePicker, nexusVisible, nexusGameSearch]);
 
   useEffect(() => {
     if (tab.kind === "nexus" && nexusVisible) void refreshNexusMods(tab.game);
@@ -490,12 +489,12 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
       </div>
 
       <div className="discover-game-tabs" role="tablist" aria-label="Game discovery">
-        <button className={tab.kind === "minecraft" ? "discover-game-tab active" : "discover-game-tab"} type="button" role="tab" aria-selected={tab.kind === "minecraft"} onClick={() => { setQuery(""); setTab({ kind: "minecraft", category: "mod" }); }}>
-          <MinecraftLogo />
+        <button className={tab.kind === "minecraft" ? "discover-game-tab active" : "discover-game-tab"} type="button" role="tab" aria-label="Minecraft" title="Minecraft" aria-selected={tab.kind === "minecraft"} onClick={() => { setQuery(""); setTab({ kind: "minecraft", category: "mod" }); }}>
+          <MinecraftIcon /><span className="discover-game-name">Minecraft</span>
         </button>
         {gameTabs.map(game => <button key={game.domainName} className={tab.kind === "nexus" && tab.game.domainName === game.domainName ? "discover-game-tab active" : "discover-game-tab"} type="button" role="tab" aria-selected={tab.kind === "nexus" && tab.game.domainName === game.domainName} onClick={() => { setQuery(""); setTab({ kind: "nexus", game }); }}>
           {game.iconUrl ? <img className="discover-game-icon" src={game.iconUrl} alt="" /> : <span className="discover-game-icon fallback">{game.name.slice(0, 1)}</span>}
-          <span>{game.name}</span>
+          <span className="discover-game-name">{game.name}</span>
         </button>)}
         {nexusVisible && <button className="discover-game-add" type="button" title="Search and add a Nexus Mods game" aria-label="Search and add a Nexus Mods game" onClick={() => { setNexusGameSearch(""); setNexusGameResults([]); setMessage(""); setShowNexusGamePicker(true); }}><Plus size={17} /></button>}
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Gamepad2, KeyRound, Library, LoaderCircle, LogIn, RefreshCw, Sparkles, UserRound } from "lucide-react";
 import type { ThemeDescriptor } from "../lib/theme";
+import { validateNexusApiKey } from "../lib/providerCredentials";
 import { detectImportSources, scanImportGames, type DetectedImportSource, type ImportSourceId, type ImportedGame } from "../lib/sources";
 
 type SetupProps = {
@@ -243,10 +244,10 @@ export function FirstLaunchSetup({
                   {credentialStatus.nexus ? (
                     <div className="setup-provider-configured"><Check size={16} /><strong>Configured</strong><small>Saved securely to your account</small></div>
                   ) : (
-                    <label>API key<input type="password" value={nexusApiKey} onChange={(event) => setNexusApiKey(event.target.value)} placeholder="Nexus Mods API key" /></label>
+                    <label>Personal API key<input type="password" value={nexusApiKey} maxLength={4096} onChange={(event) => setNexusApiKey(event.target.value)} placeholder="Nexus Mods Personal API Key" autoComplete="off" spellCheck={false} /><small>At least 32 characters. Mochi checks the key with Nexus Mods before saving.</small></label>
                   )}
-                  {!credentialStatus.nexus && <button type="button" className="secondary-button" disabled={credentialBusy === "nexus" || !nexusApiKey.trim()} onClick={() => void saveCredential("nexus")}>Save Nexus key</button>}
-                  {credentialStatus.nexus && <button type="button" className="secondary-button" disabled={credentialBusy === "nexus" || !nexusApiKey.trim()} onClick={() => void saveCredential("nexus")}>Replace Nexus key</button>}
+                  {!credentialStatus.nexus && <button type="button" className="secondary-button" disabled={credentialBusy === "nexus" || Boolean(validateNexusApiKey(nexusApiKey))} onClick={() => void saveCredential("nexus")}>Save Nexus key</button>}
+                  {credentialStatus.nexus && <button type="button" className="secondary-button" disabled={credentialBusy === "nexus" || Boolean(validateNexusApiKey(nexusApiKey))} onClick={() => void saveCredential("nexus")}>Replace Nexus key</button>}
                 </div>
               </div>
             )}
