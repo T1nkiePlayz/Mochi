@@ -124,3 +124,21 @@ export async function pushLibrary(client: SupabaseClient, userId: string, librar
     .upsert(tofuRows, { onConflict: "piko_id,local_id" });
   if (tofuError) throw tofuError;
 }
+
+
+export async function getCloudSyncEnabled(client: SupabaseClient, userId: string): Promise<boolean> {
+  const { data, error } = await client
+    .from("profiles")
+    .select("cloud_sync_enabled")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) {
+    const { error: createError } = await client
+      .from("profiles")
+      .upsert({ id: userId, cloud_sync_enabled: false }, { onConflict: "id" });
+    if (createError) throw createError;
+    return false;
+  }
+  return data.cloud_sync_enabled === true;
+}
