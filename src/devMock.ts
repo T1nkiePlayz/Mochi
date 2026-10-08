@@ -5,7 +5,39 @@
 type Handler = (args: Record<string, unknown>) => unknown;
 
 const now = Math.floor(Date.now() / 1000);
+
+/** Deterministic pseudo-random history (about 14 months) so Stats and achievements have something to show. */
+function mockHistory(): unknown[] {
+  const games = [["a", "Minecraft", 0.9], ["b", "Stardew Valley", 0.55], ["c", "Subnautica", 0.3], ["d", "Terraria", 0.25], ["e", "Hades", 0.2], ["f", "Celeste", 0.12]] as const;
+  let seed = 7;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+  const out: unknown[] = [{ gameId: "a", name: "Minecraft", start: now - 500 * 86_400, seconds: 40 * 3600, kind: "historic", count: 0 }];
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  for (let day = 430; day >= 0; day -= 1) {
+    const base = new Date(today); base.setDate(base.getDate() - day);
+    const weekend = base.getDay() === 0 || base.getDay() === 6;
+    if (rnd() > (weekend ? 0.8 : 0.5)) continue;
+    const sessions = 1 + Math.floor(rnd() * (weekend ? 3 : 2));
+    for (let i = 0; i < sessions; i += 1) {
+      const pick = games.find(([, , weight]) => rnd() < weight) ?? games[0];
+      const hour = rnd() < 0.08 ? Math.floor(rnd() * 5) : 17 + Math.floor(rnd() * 7);
+      const start = Math.floor(new Date(base.getFullYear(), base.getMonth(), base.getDate(), hour, Math.floor(rnd() * 60)).getTime() / 1000);
+      const seconds = Math.floor((900 + rnd() * rnd() * 5 * 3600));
+      if (start + seconds > now) continue;
+      out.push({ gameId: pick[0], name: pick[1], start, seconds, kind: day > 400 ? "daily" : "session", count: day > 400 ? 1 : 1 });
+    }
+  }
+  return out;
+}
 const handlers: Record<string, Handler> = {
+  get_playtime_history: (args) => { const since = Number(args.sinceEpoch ?? 0); return mockHistory().filter((r) => { const x = r as { start: number; seconds: number; kind: string }; return x.kind === "historic" || x.start + x.seconds >= since; }); },
+  get_dir_size: () => ({ bytes: 412_000_000, files: 1_284, truncated: false }),
+  analyze_mod_files: () => [
+    { filename: "sodium-0.6.jar", path: "/mods/sodium-0.6.jar", enabled: true, projectId: "AANobbMI", title: "Sodium", currentVersion: "0.6.0", update: { versionId: "v2", versionNumber: "0.6.3", filename: "sodium-0.6.3.jar", url: "https://cdn.modrinth.com/x", size: 930_000 } },
+    { filename: "lithium.jar.disabled", path: "/mods/lithium.jar.disabled", enabled: false, projectId: "gvQqBUqZ", title: "Lithium", currentVersion: "0.12.0" },
+  ],
+  update_mod_file: () => null,
+  open_path_in_file_manager: () => null,
   get_platform_capabilities: () => ({
     platform: "linux", displayName: "Linux", launchMethods: ["file", "flatpak", "custom"], supportsFlatpak: true,
     supportsAppBundles: false, supportsStartup: true, supportsSystemNotifications: true, supportsShortcuts: true,
