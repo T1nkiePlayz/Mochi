@@ -7,3 +7,48 @@
 .search-box{border:2px solid #65734c!important;border-radius:18px!important;background:#223022!important}.play-button{border-radius:8px 16px 8px 16px!important;border:2px solid #b47a2f;box-shadow:0 3px 0 #8b5e25!important}.secondary-button{border-radius:7px 13px 7px 13px!important;border:2px solid #65734c;background:#394b31}
 .game-card,.tofu-card,.new-tofu-card,.settings-group,.theme-card{border:2px solid #65734c!important;border-radius:6px 14px 8px 14px!important;background:linear-gradient(145deg,#394b31,#2c3b29);box-shadow:4px 5px 0 rgba(0,0,0,.16)!important}.game-card:hover,.tofu-card:hover{transform:translateY(-2px) rotate(-.15deg)}
 .hero-card{border:2px solid #879a62!important;border-radius:8px 18px 10px 18px!important;box-shadow:8px 9px 0 rgba(0,0,0,.16)!important}.modal{border:3px solid #879a62!important;border-radius:8px 18px 8px 18px!important;background:#2c3b29}.form-fields input,.form-fields select,.igdb-form input,.provider-credential-card input{border:2px solid #65734c;border-radius:6px 12px 6px 12px!important;background:#182018}.toggle{border-radius:8px!important}.theme-card{position:relative;overflow:hidden}.theme-card:after{content:"✦";position:absolute;right:12px;bottom:7px;color:rgba(230,168,78,.28);font-size:18px}
+/* Stardew controls use the same readable checkbox treatment as Minecraft Ore. */
+[data-mochi-theme="stardew-valley"] .toggle{
+  appearance:none;
+  width:22px;
+  height:22px;
+  min-width:22px;
+  margin:0;
+  border:2px solid #65734c;
+  border-radius:3px!important;
+  background:#182018;
+  box-shadow:inset 0 -2px 0 rgba(0,0,0,.25);
+  position:relative;
+}
+[data-mochi-theme="stardew-valley"] .toggle::after{
+  content:"";
+  position:absolute;
+  inset:3px;
+  width:auto;
+  height:auto;
+  border-radius:0;
+  background:transparent;
+}
+[data-mochi-theme="stardew-valley"] .toggle:checked{
+  border-color:#e6a84e;
+  background:#e6a84e;
+}
+[data-mochi-theme="stardew-valley"] .toggle:checked::after{
+  background:#25170a;
+  clip-path:polygon(14% 48%,0 63%,38% 100%,100% 20%,84% 6%,38% 68%);
+}
+[data-mochi-theme="stardew-valley"] .brand-mark{
+  display:grid!important;
+  place-items:center!important;
+  overflow:hidden!important;
+}
+[data-mochi-theme="stardew-valley"] .brand-mark img{
+  display:block!important;
+  width:72%!important;
+  height:72%!important;
+  max-width:72%!important;
+  max-height:72%!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  margin:0!important;
+}
