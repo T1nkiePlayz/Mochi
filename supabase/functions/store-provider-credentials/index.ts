@@ -12,7 +12,9 @@ type Provider = "igdb" | "nexus";
 type Body =
   | { action: "set"; provider: Provider; secret: string }
   | { action: "status"; provider?: Provider }
-  | { action: "delete"; provider: Provider }\n  | { action: "nexus-games"; query?: string }\n  | { action: "nexus-mods"; gameDomain: string };
+  | { action: "delete"; provider: Provider }
+  | { action: "nexus-games"; query?: string }
+  | { action: "nexus-mods"; gameDomain: string };
 
 const pool = new Pool(Deno.env.get("SUPABASE_DB_URL")!, 1, true);
 
@@ -85,7 +87,7 @@ Deno.serve(async (req) => {
             name: String(game.name),
             domainName: String(game.domain_name),
             iconUrl: typeof game.id === "number" || /^\\d+$/.test(String(game.id ?? ""))
-              ? "https://images.nexusmods.com/images/games/v2/" + String(game.id) + "/thumbnail.jpg"
+              ? "https://staticdelivery.nexusmods.com/images/games/cover_" + String(game.id) + ".jpg"
               : undefined,
             modCount: typeof game.mods === "number" ? game.mods : undefined,
           }))
