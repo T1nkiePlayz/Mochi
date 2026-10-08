@@ -157,7 +157,7 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
       const results = await Promise.all(
         requested.map(async ({ domainName, search }) => {
           const games = await getNexusGames(supabase, search);
-          return games.find(game => game.domainName === domainName) ?? games[0];
+          return games.find(game => game.domainName === domainName);
         }),
       );
       const byDomain = new Map<string, NexusGame>();
