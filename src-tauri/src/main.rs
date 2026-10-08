@@ -10,7 +10,7 @@ mod modrinth;
 mod playtime;
 mod tray;
 
-#[tauri::command]
+#[tauri::command(async)]
 fn send_system_notification(title: String, body: String) -> Result<(), String> {
     platform::send_system_notification(title.trim(), body.trim())
 }
@@ -21,7 +21,7 @@ fn open_external_url(url: String) -> Result<(), String> { platform::open_externa
 #[tauri::command]
 fn set_launch_on_startup(enabled: bool) -> Result<(), String> { platform::set_launch_on_startup(enabled) }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn launch_game(launch_target: String) -> Result<(), String> { platform::launch_game(launch_target.trim()) }
 
 #[tauri::command]
@@ -36,7 +36,7 @@ fn launch_game_tracked(app: tauri::AppHandle, game_id: String, name: String, lau
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn get_playtime() -> Result<Vec<playtime::PlaytimeEntry>, String> {
     playtime::list()
 }
@@ -46,43 +46,45 @@ fn get_downloads() -> Vec<modrinth::DownloadEntry> {
     modrinth::list_downloads()
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn list_flatpaks() -> Result<Vec<platform::FlatpakApp>, String> { platform::list_flatpaks() }
 
 #[tauri::command]
 fn get_platform_capabilities() -> platform::PlatformCapabilities { platform::capabilities() }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn detect_import_sources() -> Vec<sources::DetectedImportSource> { sources::detect_import_sources() }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn scan_import_games(source:String, library_path:Option<String>)->Vec<sources::ImportedGame>{sources::scan_import_games(source.trim(),library_path)}
 
 #[tauri::command]
 fn get_mochi_config_info(app: tauri::AppHandle) -> Result<themes::MochiConfigInfo, String> { themes::get_mochi_config_info(app) }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn move_mochi_config(app: tauri::AppHandle, destination: String) -> Result<String, String> { themes::move_config_location(app, destination) }
 
 #[tauri::command]
 fn set_mochi_theme(app: tauri::AppHandle, theme_id: String) -> Result<(), String> { themes::set_mochi_theme(app, theme_id) }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn list_user_themes(app: tauri::AppHandle) -> Result<Vec<themes::UserThemeDescriptor>, String> { themes::list_user_themes(app) }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn load_user_theme(app: tauri::AppHandle, theme_id: String) -> Result<themes::LoadedUserTheme, String> { themes::load_user_theme(app, theme_id) }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn clear_mochi_app_data(app: tauri::AppHandle) -> Result<(), String> { themes::clear_app_data(app) }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn import_theme(app: tauri::AppHandle, source_path: String) -> Result<themes::UserThemeDescriptor, String> { themes::import_theme(app, source_path) }
 
 fn main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|_app, argv, _cwd| {
-            println!("Mochi received a new invocation: {argv:?}");
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            // The window is hidden to the tray on close, so a second launch or a
+            // mochi:// link must bring it back or it appears to do nothing.
+            tray::show_mochi(app);
         }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_deep_link::init())
@@ -114,6 +116,12 @@ fn main() {
             game_artwork::cache_game_artwork, game_artwork::get_cached_game_artwork, game_artwork::clear_game_artwork_cache,
             modrinth::get_public_api, modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::delete_mod_file, modrinth::start_modrinth_download, modrinth::download_modrinth_file, get_downloads
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Mochi");
+        .build(tauri::generate_context!())
+        .expect("error while building Mochi")
+        .run(|_app, event| {
+            if let tauri::RunEvent::Exit = event {
+                // Credit time for games still running when Mochi quits.
+                playtime::finish_all();
+            }
+        });
 }

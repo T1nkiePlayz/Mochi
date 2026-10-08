@@ -115,12 +115,14 @@ pub fn ensure_platform_integration() -> Result<(), String> {
     std::fs::create_dir_all(&applications).map_err(|e| format!("Unable to create the applications directory: {e}"))?;
     let executable = installed_executable()?;
     let exec = desktop_exec_argument(&executable);
+    // TryExec is a plain path, not a quoted command line like Exec.
+    let try_exec = executable.to_string_lossy();
     let icons = std::path::PathBuf::from(&home).join(".local/share/icons/hicolor/512x512/apps");
     std::fs::create_dir_all(&icons).map_err(|e| format!("Unable to create the icon directory: {e}"))?;
     std::fs::write(icons.join("mochi.png"), ICON_PNG).map_err(|e| format!("Unable to install the Mochi application icon: {e}"))?;
 
     let desktop = applications.join(DESKTOP_FILE);
-    let content = format!("[Desktop Entry]\nType=Application\nName=Mochi\nComment=Your games, your way.\nExec={exec} %U\nTryExec={exec}\nIcon=mochi\nTerminal=false\nStartupNotify=true\nStartupWMClass={APP_ID}\nCategories=Game;Utility;\nMimeType=x-scheme-handler/{DESKTOP_SCHEME};\n");
+    let content = format!("[Desktop Entry]\nType=Application\nName=Mochi\nComment=Your games, your way.\nExec={exec} %U\nTryExec={try_exec}\nIcon=mochi\nTerminal=false\nStartupNotify=true\nStartupWMClass={APP_ID}\nCategories=Game;Utility;\nMimeType=x-scheme-handler/{DESKTOP_SCHEME};\n");
     std::fs::write(&desktop, content).map_err(|e| format!("Unable to write Mochi desktop entry: {e}"))?;
 
     // tauri-plugin-deep-link creates this separate entry and points it at the
@@ -132,7 +134,7 @@ pub fn ensure_platform_integration() -> Result<(), String> {
         .unwrap_or_else(|| "mochi".into());
     let handler = applications.join(format!("{handler_name}-handler.desktop"));
     let handler_content = format!(
-        "[Desktop Entry]\nType=Application\nName=Mochi\nExec={exec} %u\nTryExec={exec}\nTerminal=false\nNoDisplay=true\nMimeType=x-scheme-handler/{DESKTOP_SCHEME};\n"
+        "[Desktop Entry]\nType=Application\nName=Mochi\nExec={exec} %u\nTryExec={try_exec}\nTerminal=false\nNoDisplay=true\nMimeType=x-scheme-handler/{DESKTOP_SCHEME};\n"
     );
     std::fs::write(&handler, handler_content)
         .map_err(|e| format!("Unable to update Mochi URL handler: {e}"))?;
@@ -215,6 +217,6 @@ pub fn open_external_url(url: &str) -> Result<(), String> {
 }
 
 pub fn send_system_notification(title: &str, body: &str) -> Result<(), String> {
-    let status = std::process::Command::new("notify-send").args(["--app-name=Mochi", title.trim(), body.trim()]).status().map_err(|error| format!("Unable to start notify-send: {error}"))?;
+    let status = std::process::Command::new("notify-send").args(["--app-name=Mochi", "--", title.trim(), body.trim()]).status().map_err(|error| format!("Unable to start notify-send: {error}"))?;
     if status.success() { Ok(()) } else { Err("The system notification daemon rejected the notification.".into()) }
 }

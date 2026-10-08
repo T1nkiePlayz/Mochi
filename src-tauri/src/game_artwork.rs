@@ -36,7 +36,11 @@ pub async fn cache_game_artwork(app: AppHandle, url: String, cache_key: String) 
     if parsed.scheme() != "https" || parsed.host_str() != Some("images.igdb.com") || !parsed.path().starts_with("/igdb/image/upload/") {
         return Err("Only IGDB artwork URLs can be cached.".into());
     }
-    let response = reqwest::Client::builder().timeout(std::time::Duration::from_secs(20)).build()
+    let response = reqwest::Client::builder().timeout(std::time::Duration::from_secs(20))
+        .redirect(reqwest::redirect::Policy::custom(|attempt| {
+            if attempt.previous().len() < 3 && attempt.url().scheme() == "https" && attempt.url().host_str() == Some("images.igdb.com") { attempt.follow() } else { attempt.stop() }
+        }))
+        .build()
         .map_err(|error| format!("Unable to prepare artwork request: {error}"))?
         .get(parsed).send().await.map_err(|error| format!("Unable to download game artwork: {error}"))?;
     if !response.status().is_success() { return Err(format!("IGDB artwork returned HTTP {}.", response.status())); }

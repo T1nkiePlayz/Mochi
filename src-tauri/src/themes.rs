@@ -81,7 +81,9 @@ fn config_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let location_file = default_root.join(LOCATION_FILE);
     if let Ok(location) = fs::read_to_string(&location_file) {
         let path = PathBuf::from(location.trim());
-        if path.is_absolute() && path.is_dir() {
+        // The marker is only ever written for a folder named "Mochi"; refuse anything
+        // else so a stray or edited marker can never redirect (or delete) another folder.
+        if path.is_absolute() && path.is_dir() && path.file_name().and_then(|name| name.to_str()) == Some("Mochi") {
             return Ok(path);
         }
     }
@@ -126,9 +128,16 @@ fn ensure_config(app: &AppHandle) -> Result<(PathBuf, Value), String> {
 
     let raw = fs::read_to_string(&path)
         .map_err(|error| format!("Unable to read Mochi config: {error}"))?;
-    let value = serde_json::from_str::<Value>(&raw)
-        .map_err(|error| format!("Mochi config is invalid JSON: {error}"))?;
-    Ok((path, value))
+    match serde_json::from_str::<Value>(&raw) {
+        Ok(value) if value.is_object() => Ok((path, value)),
+        _ => {
+            // A corrupt config must not stop Mochi from starting: keep a copy and start fresh.
+            let _ = fs::rename(&path, path.with_extension("json.corrupt"));
+            let value = json!({ "schemaVersion": 1, "theme": "mochi", "settings": {} });
+            write_json_atomic(&path, &value)?;
+            Ok((path, value))
+        }
+    }
 }
 
 fn write_json_atomic(path: &Path, value: &Value) -> Result<(), String> {
@@ -241,9 +250,13 @@ fn copy_directory_recursive(source: &Path, destination: &Path) -> Result<(), Str
         let entry = entry.map_err(|error| format!("Unable to inspect theme entry: {error}"))?;
         let source_path = entry.path();
         let destination_path = destination.join(entry.file_name());
-        if source_path.is_dir() {
+        // Symlinks could pull in files from outside the theme (or loop forever).
+        let file_type = entry.file_type().map_err(|error| format!("Unable to inspect theme entry: {error}"))?;
+        if file_type.is_symlink() {
+            continue;
+        } else if file_type.is_dir() {
             copy_directory_recursive(&source_path, &destination_path)?;
-        } else if source_path.is_file() {
+        } else if file_type.is_file() {
             fs::copy(&source_path, &destination_path)
                 .map_err(|error| format!("Unable to copy theme file: {error}"))?;
         }
@@ -341,7 +354,10 @@ pub fn load_user_theme(app: AppHandle, theme_id: String) -> Result<LoadedUserThe
         return Err("Theme ID does not match its requested identifier.".into());
     }
 
-    let css_path = if theme_root.is_dir() {
+    // A standalone <id>.json theme shares the themes folder with every other theme,
+    // so only folder themes may supply CSS and assets.
+    let is_folder_theme = theme_root != root;
+    let css_path = if is_folder_theme {
         theme_root.join("theme.css")
     } else {
         PathBuf::new()
@@ -353,7 +369,7 @@ pub fn load_user_theme(app: AppHandle, theme_id: String) -> Result<LoadedUserThe
         String::new()
     };
 
-    let assets = if theme_root.is_dir() {
+    let assets = if is_folder_theme {
         load_assets(&theme_root, &manifest)?
     } else {
         BTreeMap::new()
@@ -422,9 +438,12 @@ fn copy_directory_contents(source: &Path, destination: &Path) -> Result<(), Stri
         if source_path.file_name().and_then(|name| name.to_str()) == Some(LOCATION_FILE) {
             continue;
         }
-        if source_path.is_dir() {
+        let file_type = entry.file_type().map_err(|error| format!("Unable to inspect source entry: {error}"))?;
+        if file_type.is_symlink() {
+            continue;
+        } else if file_type.is_dir() {
             copy_directory_contents(&source_path, &destination_path)?;
-        } else if source_path.is_file() {
+        } else if file_type.is_file() {
             fs::copy(&source_path, &destination_path)
                 .map_err(|error| format!("Unable to copy '{}': {error}", source_path.display()))?;
         }

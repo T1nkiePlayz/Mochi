@@ -30,7 +30,8 @@ pub fn launch_game(target: &str) -> Result<(), String> {
 }
 
 pub fn open_external_url(url: &str) -> Result<(), String> {
-    Command::new("cmd").args(["/C", "start", "", url]).spawn().map(|_| ()).map_err(|error| format!("Unable to open the external URL: {error}"))
+    // Not routed through cmd.exe: `&` in a URL (or a crafted one) would be treated as a command separator.
+    Command::new("rundll32").args(["url.dll,FileProtocolHandler", url]).spawn().map(|_| ()).map_err(|error| format!("Unable to open the external URL: {error}"))
 }
 
 pub fn send_system_notification(_title: &str, _body: &str) -> Result<(), String> {

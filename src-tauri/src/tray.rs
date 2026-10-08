@@ -81,7 +81,7 @@ pub fn refresh(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
     Ok(())
 }
 
-fn show_mochi(app: &tauri::AppHandle) {
+pub fn show_mochi(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.unminimize();
         let _ = window.show();

@@ -110,7 +110,8 @@ function App() {
   const [library, setLibrary] = useState<Piko[]>(() => {
     try {
       const stored = window.localStorage.getItem(storedPikosKey);
-      return stored ? (JSON.parse(stored) as Piko[]) : [];
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed) ? (parsed as Piko[]) : [];
     } catch {
       return [];
     }
@@ -199,6 +200,7 @@ function App() {
     || user?.user_metadata?.preferred_username
     || (user?.email ? user.email.split("@")[0] : null)
     || "Guest";
+  const greeting = (() => { const hour = new Date().getHours(); return hour < 5 || hour >= 18 ? "Good evening" : hour < 12 ? "Good morning" : "Good afternoon"; })();
   const activeProfileId = user?.id || "guest";
   const accountStorageOwnerKey = multipleAccountsEnabled ? `profiles:${activeProfileId}` : "shared";
   const scopedStorageKey = (key: string) => multipleAccountsEnabled ? profileStorageKey(activeProfileId, key) : key;
@@ -323,6 +325,9 @@ function App() {
         const accessToken = parsed.searchParams.get("access_token");
         const refreshToken = parsed.searchParams.get("refresh_token");
         if (accessToken && refreshToken) {
+          // Any web page or app can open mochi:// links, so never switch accounts silently:
+          // a crafted link could otherwise sign this device into an attacker's account.
+          if (!window.confirm("Finish signing in to Mochi with the account from this browser link?")) return;
           setShowAuth(true);
           setAuthBusy(true);
           setAuthError("");
@@ -445,7 +450,9 @@ function App() {
         const cloudLibrary = await pullLibrary(client, user.id);
         if (cancelled) return;
         if (cloudLibrary.length) {
-          setLibrary(cloudLibrary);
+          // Merge instead of replacing so games that only exist on this device are not lost.
+          const cloudIds = new Set(cloudLibrary.map((piko) => piko.id));
+          setLibrary([...cloudLibrary, ...library.filter((piko) => !cloudIds.has(piko.id))]);
         } else {
           await pushLibrary(client, user.id, library);
         }
@@ -520,7 +527,7 @@ function App() {
 
   const selectPiko = (piko: Piko) => {
     setSelectedPikoId(piko.id);
-    setSelectedTofuId(piko.tofus[0].id);
+    setSelectedTofuId(piko.tofus[0]?.id ?? "");
   };
 
   const updateSelectedTofu = (patch: Partial<Tofu>) => {
@@ -549,6 +556,7 @@ function App() {
       setLaunchError("This game does not have an executable path. Add or edit the game to set its executable.");
       return;
     }
+    if (behavior.confirmLaunch && !window.confirm(`Launch ${piko.name}?`)) return;
     setLaunchError("");
     setIsLaunching(true);
     try {
@@ -868,7 +876,7 @@ function App() {
     try {
       const result = await lookupIgdbGame(supabase!, selectedPiko.name);
       if (!result) { setIgdbMessage("Configure IGDB credentials in the API settings first."); return; }
-      const artworkUrl = result.cover?.url?.replace("t_thumb", "t_1080p") || result.artworks?.[0]?.url?.replace("t_thumb", "t_1080p");
+      const artworkUrl = resolveIgdbImage(result.cover?.url, "t_1080p") || resolveIgdbImage(result.artworks?.[0]?.url, "t_1080p");
       setLibrary((current) => current.map((piko) => piko.id === selectedPiko.id ? {
         ...piko, description: result.summary || piko.description, artworkUrl,
         artwork: artworkUrl ? `linear-gradient(145deg, rgba(10,15,20,.2), rgba(11,15,20,.94)), url('${artworkUrl}')` : piko.artwork,
@@ -1103,26 +1111,32 @@ function App() {
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") || "").trim();
     const password = String(form.get("password") || "");
-    const result =
-      authMode === "sign-in"
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: "mochi://auth/verify" } });
-    if (result.error) {
-      setAuthError(result.error.message);
-    } else if (authMode === "sign-up") {
-      setAuthNotice("Account created. Check your email if confirmation is enabled.");
-      setShowAuth(false);
-    } else {
-      const factor = await getVerifiedTotpFactor(supabase);
-      if (factor) {
-        setMfaFactorId(factor.id);
-        setMfaRequired(true);
-        setMfaMessage("MFA is enabled on this account. Enter your authenticator code.");
-      } else {
+    try {
+      const result =
+        authMode === "sign-in"
+          ? await supabase.auth.signInWithPassword({ email, password })
+          : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: "mochi://auth/verify" } });
+      if (result.error) {
+        setAuthError(result.error.message);
+      } else if (authMode === "sign-up") {
+        setAuthNotice("Account created. Check your email if confirmation is enabled.");
         setShowAuth(false);
+      } else {
+        const factor = await getVerifiedTotpFactor(supabase);
+        if (factor) {
+          setMfaFactorId(factor.id);
+          setMfaRequired(true);
+          setMfaMessage("MFA is enabled on this account. Enter your authenticator code.");
+        } else {
+          setShowAuth(false);
+        }
       }
+    } catch (error) {
+      // A network failure must not leave the form stuck on "Connecting...".
+      setAuthError(error instanceof Error ? error.message : "Unable to reach Mochi. Check your connection and try again.");
+    } finally {
+      setAuthBusy(false);
     }
-    setAuthBusy(false);
   };
 
   const signOut = async () => {
@@ -1143,7 +1157,7 @@ function App() {
     <div className="modal-header"><div className="auth-brand"><img src="/mochi.png" alt="Mochi" /><div><p className="eyebrow">Mochi Cloud</p><h2>{emailCodeStep ? "Check your email." : authMode === "sign-in" ? "Welcome back." : "Create your account."}</h2></div></div><button className="icon-button" type="button" onClick={() => setShowAuth(false)}><MochiIcon name="close" fallback={X} size={17} /></button></div>
     {emailCodeStep ? <>
       <p className="modal-description">We sent a six-digit verification code to <strong>{emailCodeEmail}</strong>. Enter it below to finish signing in.</p>
-      <div className="form-fields"><label>Verification code<input className="mfa-input" inputMode="numeric" autoComplete="one-time-code" value={emailCode} onChange={(e) => setEmailCode(e.target.value.replace(/\\D/g, "").slice(0, 6))} placeholder="123456" maxLength={6} /></label></div>
+      <div className="form-fields"><label>Verification code<input className="mfa-input" inputMode="numeric" autoComplete="one-time-code" value={emailCode} onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="123456" maxLength={6} /></label></div>
       {authError && <p className="auth-error">{authError}</p>}
       {authNotice && <p className="auth-notice">{authNotice}</p>}
       <button className="play-button form-submit" type="button" disabled={authBusy || emailCode.length !== 6} onClick={submitEmailCode}>{authBusy ? "Verifying..." : "Verify and sign in"}</button>
@@ -1244,7 +1258,7 @@ function App() {
 
         <div className="content">
           <section className="page-heading">
-            <div><p className="eyebrow">Your collection</p><h1>{activeNav === "Library" ? "Good evening, Ashton." : activeNav}</h1></div>
+            <div><p className="eyebrow">Your collection</p><h1>{activeNav === "Library" ? `${greeting}${user ? ", " + currentUsername : ""}.` : activeNav}</h1></div>
             {activeNav === "Library" && <button className="secondary-button" onClick={() => setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> Add Piko</button>}
           </section>
 
@@ -1290,11 +1304,11 @@ function App() {
               <section className="details-strip">
                 <div><span className="detail-label">Selected Tofu</span><strong>🧊 {selectedTofu.name}</strong></div>
                 <div><span className="detail-label">Runtime</span><strong>{selectedTofu.runtime} <span className="muted">· {selectedTofu.version}</span></strong></div>
-                <div><span className="detail-label">Install location</span><strong className="path-text">{selectedTofu.path || "~/Games/" + selectedPiko.name.replace(" ", "")}</strong></div>
+                <div><span className="detail-label">Install location</span><strong className="path-text">{selectedTofu.path || "~/Games/" + selectedPiko.name.replace(/\s+/g, "")}</strong></div>
                 <button className="icon-button"><MochiIcon name="settings" fallback={Settings} size={16} /></button>
               </section>
 
-              <ModrinthManager tofu={selectedTofu} onPathChange={(path) => updateSelectedTofu({ path })} />
+              <ModrinthManager key={selectedTofu.id} tofu={selectedTofu} onPathChange={(path) => updateSelectedTofu({ path })} />
             </>
           ) : activeNav === "Settings" ? (
             <section className="settings-page">
@@ -1365,7 +1379,7 @@ function App() {
                           <Unlink size={13} /> {canUnlink ? "Unlink" : "Required"}
                         </button>
                       ) : (
-                        <button type="button" className="secondary-button security-provider-action" onClick={() => { if (supabase) void linkAuthIdentity(supabase, provider).catch(() => {}); }} disabled={securityBusy}>Connect</button>
+                        <button type="button" className="secondary-button security-provider-action" onClick={() => { if (supabase) void linkAuthIdentity(supabase, provider).then(({ error }) => { if (error) setAuthNotice(error.message); }).catch((error) => setAuthNotice(error instanceof Error ? error.message : "Unable to connect this account.")); }} disabled={securityBusy}>Connect</button>
                       )}
                     </div>;
                   })}</div>
@@ -1448,7 +1462,7 @@ function App() {
           </> : <>
             <p className="modal-description">{pendingGame?.candidates.length ? "Mochi found these matches. Approve the best match to use its artwork, description and categories." : "Mochi could not find a confident match. You can add the game without IGDB metadata."}</p>
             <div className="igdb-candidates">{pendingGame?.candidates.map((game) => {
-              const art = game.cover?.url?.replace("t_thumb", "t_1080p") || game.artworks?.[0]?.url?.replace("t_thumb", "t_1080p");
+              const art = resolveIgdbImage(game.cover?.url, "t_cover_big") || resolveIgdbImage(game.artworks?.[0]?.url, "t_720p");
               return <button type="button" className="igdb-candidate" key={game.id ?? game.name} onClick={() => approveIgdbGame(game)}><div className="igdb-candidate-art" style={{ backgroundImage: art ? `url('${art}')` : undefined }} /><div className="igdb-candidate-copy"><strong>{game.name}</strong><small>{game.genres?.map((g) => g.name).join(" · ") || "Genre unknown"}</small>{game.summary && <p>{game.summary}</p>}</div><MochiIcon name="chevron" fallback={ChevronDown} size={16} /></button>;
             })}</div>
             <div className="igdb-selection-actions"><button type="button" className="secondary-button" onClick={() => setAddGameStep("form")}>Back</button><button type="button" className="play-button" onClick={() => approveIgdbGame(null)}>Add without IGDB</button></div>

@@ -9,6 +9,7 @@ fn read(path: &Path) -> Option<String> { fs::read_to_string(path).ok() }
 fn json(path: &Path) -> Option<Value> { serde_json::from_str(&read(path)?).ok() }
 fn field<'a>(value: &'a Value, keys: &[&str]) -> Option<&'a Value> { value.as_object().and_then(|object| keys.iter().find_map(|key| object.get(*key))) }
 fn string(value: &Value, keys: &[&str]) -> Option<String> { field(value, keys).and_then(Value::as_str).map(str::to_owned) }
+fn enc(value: &str) -> String { value.bytes().fold(String::new(), |mut out, byte| { if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b'~') { out.push(byte as char) } else { out.push_str(&format!("%{byte:02X}")) } out }) }
 fn make(id: String, name: String, source: &str, target: String, path: Option<String>) -> ImportedGame { ImportedGame { id, name, source: source.into(), launch_target: target, install_path: path } }
 fn quote_value(line: &str, key: &str) -> Option<String> { let marker = format!("\"{key}\""); let remainder = line.split_once(&marker)?.1.trim().strip_prefix('"')?; Some(remainder[..remainder.find('"')?].replace("\\\\", "\\")) }
 
@@ -61,7 +62,7 @@ fn heroic_walk(value: &Value, games: &mut Vec<ImportedGame>, seen: &mut HashSet<
             if let (Some(id), Some(name), Some(path)) = (id, name, path) {
                 if Path::new(&path).is_dir() {
                     let key = format!("heroic:{runner}:{id}");
-                    if seen.insert(key.clone()) { games.push(make(key, name, "heroic", format!("heroic://launch?appName={id}&runner={runner}"), Some(path))); }
+                    if seen.insert(key.clone()) { games.push(make(key, name, "heroic", format!("heroic://launch?appName={}&runner={}", enc(&id), enc(&runner)), Some(path))); }
                 }
             }
             for item in object.values() { heroic_walk(item, games, seen); }
@@ -126,7 +127,7 @@ fn scan_bottles() -> Vec<ImportedGame> {
         for program in items {
             let Some(name) = string(&program, &["name", "title"]) else { continue };
             let executable = string(&program, &["name", "executable"]).unwrap_or_else(|| name.clone());
-            games.push(make(format!("bottles:{bottle}:{executable}"), name, "bottles", format!("bottles:run/{bottle}/{executable}"), string(&program, &["path"])));
+            games.push(make(format!("bottles:{bottle}:{executable}"), name, "bottles", format!("bottles:run/{}/{}", enc(bottle), enc(&executable)), string(&program, &["path"])));
         }
     }
     games.sort_by_key(|game| game.name.to_lowercase());

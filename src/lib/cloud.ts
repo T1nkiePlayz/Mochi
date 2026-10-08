@@ -77,7 +77,8 @@ export async function pullLibrary(client: SupabaseClient, userId: string): Promi
     screenshots: piko.screenshots ?? [],
     trailerId: piko.trailer_id ?? undefined,
     firstReleaseDate: piko.first_release_date ?? undefined,
-    tofus: tofusByPiko.get(piko.id) ?? [],
+    // The UI assumes every Piko has at least one Tofu, so never hand it an empty list.
+    tofus: tofusByPiko.get(piko.id) ?? [{ id: "default", name: "Default", version: "Local", runtime: "Native", mods: 0, status: "Ready" as const }],
   }));
 }
 
@@ -132,8 +133,9 @@ export async function pushLibrary(client: SupabaseClient, userId: string, librar
     .eq("user_id", userId)
     .not("local_id", "in", `(${library.map((piko) => `"${piko.id.replace(/"/g, '""')}"`).join(",") || '""'})`);
   if (deletePikosError) throw deletePikosError;
-  if (!tofuRows.length) return;
 
+  // Stale Tofus are removed even when no Tofus remain locally, otherwise deleting
+  // the last one would leave it behind in the cloud forever.
   for (const piko of library) {
     const cloudPikoId = cloudIds.get(piko.id);
     if (!cloudPikoId) continue;
@@ -146,6 +148,7 @@ export async function pushLibrary(client: SupabaseClient, userId: string, librar
     if (staleTofusError) throw staleTofusError;
   }
 
+  if (!tofuRows.length) return;
   const { error: tofuError } = await client
     .from("tofus")
     .upsert(tofuRows, { onConflict: "piko_id,local_id" });
