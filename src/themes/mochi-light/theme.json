@@ -61,6 +61,7 @@
     "mods": "assets/icons-mods.svg"
   },
   "components": {
+    "inputBorder": "#8d9490",
     "buttonHeight": "38px",
     "inputHeight": "38px",
     "cardRadius": "18px",
