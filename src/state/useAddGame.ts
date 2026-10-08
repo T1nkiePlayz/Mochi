@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { supabase } from "../lib/supabase";
 import { lookupIgdbGames, type IgdbGame } from "../lib/igdb";
-import { applyIgdbMetadata, sanitizeKey } from "../lib/metadata";
+import { importedGameToPiko } from "../lib/importMapping";
+import { applyIgdbMetadata } from "../lib/metadata";
 import { cacheArtwork } from "./useMetadata";
 import { listInstalledFlatpaks, normalizeLaunchTarget, chooseGameAppBundle, chooseGameTarget, type FlatpakApp, type LaunchMethodId } from "../lib/platform";
 import type { ImportedGame } from "../lib/sources";
@@ -11,8 +12,7 @@ import type { MetadataState } from "./useMetadata";
 
 type PendingGame = { name: string; executablePath: string; platformCategory: string; candidates: IgdbGame[] };
 
-const platformLabels: Record<string, string> = { steam: "Steam", heroic: "Heroic", lutris: "Lutris", bottles: "Bottles", itch: "itch.io", apps: "Applications", flatpak: "Flatpak" };
-export const platformLabel = (source: string) => platformLabels[source] ?? "Other";
+export { platformLabel } from "../lib/importMapping";
 
 /** The "Add a Piko" flows: custom games, importing from other launchers and picking a Flatpak. */
 export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: boolean, igdbConfigured: boolean, setLaunchError: (message: string) => void) {
@@ -69,23 +69,9 @@ export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: 
   const importGames = (games: ImportedGame[]) => {
     const now = Date.now();
     const known = new Set(lib.library.map((piko) => piko.name.trim().toLowerCase()));
-    const created = games.filter((game) => !known.has(game.name.trim().toLowerCase())).map((game): Piko => ({
-      id: `imported-${game.source}-${sanitizeKey(game.id)}-${now}`,
-      name: game.name,
-      description: `Imported from ${game.source}. The original launcher remains responsible for the installation and runtime.`,
-      accent: "#a99ad6",
-      artwork: "",
-      artworkCacheKey: sanitizeKey(`${game.source}-${game.id}`),
-      executablePath: game.launchTarget,
-      installPath: game.installPath ?? undefined,
-      source: "custom",
-      sourceId: game.source,
-      platformCategory: platformLabel(game.source),
-      categories: [],
-      tofus: [{ id: "default", name: "Default", version: "Imported", runtime: game.source, mods: 0, status: "Ready" }],
-    }));
+    const created = games.filter((game) => !known.has(game.name.trim().toLowerCase())).map((game) => importedGameToPiko(game, now));
     lib.setLibrary((current) => [...current, ...created.filter((piko) => !current.some((item) => item.id === piko.id))]);
-    if (created.length && igdbConfigured) void metadata.enrich(created);
+    if (created.length && igdbConfigured) void metadata.enrich(created.filter((piko) => piko.kind !== "launcher"));
     if (created[0]) { lib.setSelectedPikoId(created[0].id); lib.setSelectedTofuId("default"); }
     setShowAddPiko(false);
     setShowImportPicker(false);

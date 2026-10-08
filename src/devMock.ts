@@ -34,14 +34,26 @@ const handlers: Record<string, Handler> = {
   get_mochi_config_info: () => ({ configPath: "~/.config/Mochi/config.json", themesPath: "~/.config/Mochi/themes", selectedTheme: localStorage.getItem("mochi:theme") ?? "mochi" }),
   set_mochi_theme: (args) => { localStorage.setItem("mochi:theme", String(args.themeId)); return null; },
   detect_import_sources: () => [
-    { id: "steam", name: "Steam", description: "Games installed through Steam and its libraries.", detected: true, gameCount: 24 },
-    { id: "heroic", name: "Heroic Games Launcher", description: "Epic, GOG and Amazon games managed by Heroic.", detected: true, gameCount: 6 },
-    { id: "apps", name: "Desktop applications", description: "Games registered in your application menu.", detected: true, gameCount: 3 },
+    { id: "steam", name: "Steam", description: "Games installed through Steam and its libraries.", detected: true, installed: true, gameCount: 240, launcherCount: 1 },
+    { id: "heroic", name: "Heroic Games Launcher", description: "Epic, GOG and Amazon games managed by Heroic.", detected: true, installed: true, gameCount: 6, launcherCount: 0 },
+    { id: "lutris", name: "Lutris", description: "Existing Lutris games and launch configurations.", detected: false, installed: true, gameCount: 0, launcherCount: 0 },
+    { id: "apps", name: "Desktop applications", description: "Games registered in your application menu.", detected: true, installed: true, gameCount: 2, launcherCount: 3 },
   ],
-  scan_import_games: () => [
-    { id: "steam:220", name: "Half-Life 2", source: "steam", launchTarget: "steam://rungameid/220", installPath: "/games/hl2" },
-    { id: "steam:105600", name: "Terraria", source: "steam", launchTarget: "steam://rungameid/105600", installPath: "/games/terraria" },
-  ],
+  scan_import_games: (args) => {
+    if (args.source === "steam") return [
+      ...Array.from({ length: 240 }, (_, i) => ({ id: `steam:${1000 + i}`, name: `Steam Game ${String(i + 1).padStart(3, "0")}`, source: "steam", launchTarget: `steam://rungameid/${1000 + i}`, installPath: `/games/steam/game-${i}`, kind: "game", launcherId: null })),
+      { id: "launcher:steam", name: "Steam", source: "steam", launchTarget: "steam://open/main", installPath: null, kind: "launcher", launcherId: "steam" },
+    ];
+    if (args.source === "heroic") return ["Hades", "Celeste", "Control", "Dishonored 2", "Fez", "Inside"].map((name) => ({ id: `heroic:${name}`, name, source: "heroic", launchTarget: `heroic://launch?appName=${name}`, installPath: `/games/heroic/${name}`, kind: "game", launcherId: null }));
+    if (args.source === "apps") return [
+      { id: "apps:supertux", name: "SuperTux", source: "apps", launchTarget: "supertux2", installPath: null, kind: "game", launcherId: null },
+      { id: "apps:xonotic", name: "Xonotic", source: "apps", launchTarget: "xonotic", installPath: null, kind: "game", launcherId: null },
+      { id: "apps:prism", name: "Prism Launcher", source: "apps", launchTarget: "prismlauncher", installPath: null, kind: "launcher", launcherId: "prism" },
+      { id: "apps:jagex", name: "Jagex Launcher", source: "apps", launchTarget: "jagex-launcher", installPath: null, kind: "launcher", launcherId: "jagex" },
+      { id: "apps:mcpe", name: "Minecraft Bedrock Launcher", source: "apps", launchTarget: "mcpelauncher-ui-qt", installPath: null, kind: "launcher", launcherId: "minecraft-bedrock" },
+    ];
+    return [];
+  },
 };
 
 export function installDevMock() {
