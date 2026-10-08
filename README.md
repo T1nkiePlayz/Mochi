@@ -130,6 +130,14 @@ When IGDB is configured, adding a custom game searches for several possible matc
 
 Mochi provides one interface for several launch styles while leaving the actual installation under the user's control.
 
+### Community content discovery
+
+Mochi includes a Discovery experience for community game content. Minecraft content is powered by Modrinth and currently supports popular mods, modpacks, resource packs, and shaders, with Minecraft-version and mod-loader filters, project details, version/changelog browsing, creator information, and installation into a selected Tofu instance.
+
+Mochi also has an **experimental Nexus Mods integration** for supported accounts. When experimental features are enabled and a Nexus Mods API key is configured, Discovery can load Nexus game tabs and trending mods. The current default games are Satisfactory, Five Nights at Freddy's Security Breach, Subnautica, Subnautica 2, Subnautica: Below Zero, and Stardew Valley. The `+` game picker performs a live Nexus game-catalog search so additional games can be added as persistent Discovery tabs. Nexus game artwork is sourced from Nexus Mods, and the launcher links users to the original mod page rather than downloading Nexus mods directly.
+
+Nexus Mods credentials are handled through the provider-credential backend boundary; the API key is not returned to the launcher. Nexus discovery remains experimental while the integration and game coverage mature.
+
 ### Native file and folder selection
 
 Adding a file-based game uses the Tauri native file dialog. The import flow also uses a native folder picker when a source needs a manually supplied library path.
@@ -197,6 +205,10 @@ The import system currently supports Linux-first discovery for:
 The standalone **Import Games** flow can rescan sources, select individual games, and manually point Mochi at a supported library path when automatic detection does not find a source.
 
 Imports are non-destructive. Mochi does not move, copy, uninstall, or take ownership of the underlying game installation. Instead, it records a source-aware launch target and hands execution back to the original launcher when appropriate.
+
+### Community discovery launch/install boundary
+
+Discovery integrations are metadata and content-discovery features rather than replacements for the source platforms. Modrinth downloads can be queued into a chosen local Tofu instance. Nexus Mods discovery currently provides game and mod metadata plus links back to Nexus Mods for the original content.
 
 ### Source launch handoff
 
@@ -541,6 +553,9 @@ The roadmap is intentionally evolutionary rather than a promise of fixed release
 - [x] Account avatars with provider/Gravatar fallback
 - [x] Automated frontend and Tauri backend CI checks
 - [x] Formal platform/source architecture documentation
+- [x] Modrinth community content discovery with project details and Tofu installation
+- [x] Experimental Nexus Mods game discovery and trending-mod tabs
+- [x] Live Nexus Mods game search and persistent custom Discovery tabs
 - [ ] Full Tofu management
 - [ ] Game process management
 - [ ] Runtime management
