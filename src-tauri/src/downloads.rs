@@ -1,8 +1,9 @@
 //! Provider-aware mod downloader: host allow-lists, size cap, SHA-1 verification and safe zip extraction.
 use crate::modrinth::{
-    active_download_count, cleanup_downloads, lock_downloads, now_ms, update_download, validate_download_filename, validate_path, DownloadEntry,
+    active_download_count, cleanup_downloads, lock_downloads, update_download, validate_download_filename, validate_path, DownloadEntry,
     MAX_DOWNLOAD_BYTES, NEXT_DOWNLOAD_ID,
 };
+use crate::util::{hex, http, now_ms, MutexExt};
 use serde::Deserialize;
 use sha1::{Digest, Sha1};
 use std::{
@@ -28,13 +29,13 @@ struct DestinationGuard(PathBuf);
 
 impl DestinationGuard {
     fn acquire(path: &Path) -> Result<Self, String> {
-        let mut set = in_flight().lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let mut set = in_flight().lock_recover();
         if set.insert(path.to_path_buf()) { Ok(Self(path.to_path_buf())) } else { Err("That file is already being downloaded.".into()) }
     }
 }
 
 impl Drop for DestinationGuard {
-    fn drop(&mut self) { in_flight().lock().unwrap_or_else(std::sync::PoisonError::into_inner).remove(&self.0); }
+    fn drop(&mut self) { in_flight().lock_recover().remove(&self.0); }
 }
 
 /// Removes `*.mochi-download-N` leftovers from crashed or killed sessions (never one that is still fresh).
@@ -102,22 +103,21 @@ pub(crate) fn parse_download_url(provider: Provider, url: &str) -> Result<reqwes
 
 fn client_for(provider: Provider) -> Result<&'static reqwest::Client, String> {
     if provider == Provider::Modrinth { return crate::modrinth::client(); }
-    static CURSEFORGE: OnceLock<Result<reqwest::Client, String>> = OnceLock::new();
-    static NEXUS: OnceLock<Result<reqwest::Client, String>> = OnceLock::new();
+    static CURSEFORGE: http::SharedClient = http::SharedClient::new();
+    static NEXUS: http::SharedClient = http::SharedClient::new();
     let cell = if provider == Provider::Curseforge { &CURSEFORGE } else { &NEXUS };
-    cell.get_or_init(|| {
+    cell.get(|| {
         // Redirects may only land on the same provider's hosts.
         let policy = reqwest::redirect::Policy::custom(move |attempt| {
             if attempt.previous().len() < 5 && url_allowed(provider, attempt.url()) { attempt.follow() } else { attempt.stop() }
         });
-        reqwest::Client::builder()
+        http::builder()
             .user_agent("T1nkiePlayz/Mochi/0.1.0 (https://github.com/T1nkiePlayz/Mochi)")
             .redirect(policy)
             .connect_timeout(std::time::Duration::from_secs(20))
             .read_timeout(std::time::Duration::from_secs(45))
             .build()
-            .map_err(|e| format!("Unable to prepare {} downloads: {e}", provider.label()))
-    }).as_ref().map_err(Clone::clone)
+    }, &format!("Unable to prepare {} downloads", provider.label()))
 }
 
 pub(crate) fn normalize_sha1(value: &str) -> Result<String, String> {
@@ -145,7 +145,8 @@ pub(crate) async fn fetch_to_file(
     let name = destination.file_name().and_then(|n| n.to_str()).unwrap_or("download");
     let temp = destination.with_file_name(format!("{name}{TEMP_MARKER}{}", NEXT_DOWNLOAD_ID.fetch_add(1, Ordering::Relaxed)));
     let result: Result<(), String> = async {
-        let mut file = fs::File::create(&temp).map_err(|e| format!("Unable to create temporary download: {e}"))?;
+        // Chunks arrive in ~16 KiB pieces; buffering turns thousands of tiny writes into a few large ones.
+        let mut file = std::io::BufWriter::with_capacity(256 * 1024, fs::File::create(&temp).map_err(|e| format!("Unable to create temporary download: {e}"))?);
         let mut hasher = Sha1::new();
         let mut downloaded = 0u64;
         while let Some(chunk) = response.chunk().await.map_err(|e| format!("Unable to read download: {e}"))? {
@@ -157,11 +158,10 @@ pub(crate) async fn fetch_to_file(
         }
         file.flush().map_err(|e| format!("Unable to finalize downloaded file: {e}"))?;
         // Make sure a power cut right after the rename cannot leave an empty "completed" file.
-        file.sync_all().map_err(|e| format!("Unable to finalize downloaded file: {e}"))?;
+        file.get_ref().sync_all().map_err(|e| format!("Unable to finalize downloaded file: {e}"))?;
         drop(file);
         if let Some(expected) = expected_sha1 {
-            let actual: String = hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect();
-            check_sha1(&actual, expected)?;
+            check_sha1(&hex(&hasher.finalize()), expected)?;
         }
         fs::rename(&temp, destination).map_err(|e| format!("Unable to finalize downloaded file: {e}"))
     }.await;
@@ -352,7 +352,7 @@ mod tests {
 
     #[test]
     fn sha1_values_are_checked() {
-        let digest: String = Sha1::digest(b"hello").iter().map(|b| format!("{b:02x}")).collect();
+        let digest = hex(&Sha1::digest(b"hello"));
         assert!(check_sha1(&digest, &digest.to_ascii_uppercase()).is_ok());
         assert!(check_sha1(&digest, "0000000000000000000000000000000000000000").is_err());
         assert!(normalize_sha1("not-a-hash").is_err());

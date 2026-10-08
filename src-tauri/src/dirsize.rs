@@ -1,19 +1,45 @@
 //! Bounded directory size measurement for the Installed view.
 
 use serde::Serialize;
-use std::{fs, path::Path, time::{Duration, Instant}};
+use crate::util::MutexExt;
+use std::{collections::HashMap, fs, path::Path, sync::Mutex, time::{Duration, Instant, SystemTime}};
 
 const MAX_ENTRIES: u64 = 250_000;
 const MAX_DEPTH: usize = 24;
 const TIME_BUDGET: Duration = Duration::from_secs(8);
 
-#[derive(Debug, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct DirSize {
     pub bytes: u64,
     pub files: u64,
     /// True when the walk hit the entry or time cap, so `bytes` is a lower bound.
     pub truncated: bool,
+}
+
+/// A measured folder is reused this long (the Installed view asks again on every visit); a changed top-level
+/// folder (files added, removed or renamed there, which is where mods live) invalidates it immediately.
+const CACHE_TTL: Duration = Duration::from_secs(30);
+const CACHE_MAX_ENTRIES: usize = 256;
+
+type Cache = HashMap<String, (Instant, Option<SystemTime>, DirSize)>;
+
+/// `dir_size` with a short-lived cache. Failed or truncated measurements are never cached.
+pub fn dir_size_cached(path: &str) -> Result<DirSize, String> {
+    static CACHE: Mutex<Option<Cache>> = Mutex::new(None);
+    let modified = fs::metadata(path).and_then(|meta| meta.modified()).ok();
+    if let Some((at, stamp, size)) = CACHE.lock_recover().get_or_insert_with(HashMap::new).get(path) {
+        if at.elapsed() < CACHE_TTL && *stamp == modified { return Ok(size.clone()); }
+    }
+    let size = dir_size(path)?;
+    if !size.truncated {
+        let mut guard = CACHE.lock_recover();
+        let cache = guard.get_or_insert_with(HashMap::new);
+        if cache.len() >= CACHE_MAX_ENTRIES { cache.retain(|_, (at, _, _)| at.elapsed() < CACHE_TTL); }
+        if cache.len() >= CACHE_MAX_ENTRIES { cache.clear(); }
+        cache.insert(path.to_string(), (Instant::now(), modified, size.clone()));
+    }
+    Ok(size)
 }
 
 /// Sums file sizes below `path`. Symlinks are never followed; the walk stops at a cap or deadline.
@@ -59,6 +85,25 @@ mod tests {
         let size = dir_size(root.to_str().unwrap()).unwrap();
         assert_eq!((size.bytes, size.files, size.truncated), (42, 2, false));
         assert!(dir_size(root.join("x").to_str().unwrap()).is_err());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn cached_sizes_are_reused_until_the_folder_changes() {
+        let root = std::env::temp_dir().join(format!("mochi-dirsize-cache-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("sub")).unwrap();
+        fs::write(root.join("a"), [0u8; 5]).unwrap();
+        let path = root.to_str().unwrap();
+        assert_eq!(dir_size_cached(path).unwrap().bytes, 5);
+        // A change below the top level is not noticed within the TTL...
+        fs::write(root.join("sub/b"), [0u8; 5]).unwrap();
+        assert_eq!(dir_size_cached(path).unwrap().bytes, 5);
+        // ...but a change at the top level is, at once. (Force a distinct mtime so coarse clocks cannot hide it.)
+        fs::write(root.join("c"), [0u8; 5]).unwrap();
+        fs::File::open(&root).unwrap().set_modified(SystemTime::now() + Duration::from_secs(5)).unwrap();
+        assert_eq!(dir_size_cached(path).unwrap().bytes, 15);
+        assert!(dir_size_cached(root.join("missing").to_str().unwrap()).is_err());
         let _ = fs::remove_dir_all(&root);
     }
 

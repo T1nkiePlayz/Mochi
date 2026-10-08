@@ -17,6 +17,7 @@ mod steam_store;
 mod themes;
 mod tracking;
 mod tray;
+mod util;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -73,7 +74,7 @@ fn get_playtime() -> Result<Vec<playtime::PlaytimeEntry>, String> { playtime::li
 fn get_playtime_history(since_epoch: Option<u64>) -> Result<Vec<playtime::Session>, String> { playtime::history(since_epoch) }
 
 #[tauri::command(async)]
-fn get_dir_size(path: String) -> Result<dirsize::DirSize, String> { dirsize::dir_size(&path) }
+fn get_dir_size(path: String) -> Result<dirsize::DirSize, String> { dirsize::dir_size_cached(&path) }
 
 #[tauri::command]
 fn get_downloads() -> Vec<modrinth::DownloadEntry> { modrinth::list_downloads() }
@@ -128,6 +129,11 @@ fn clear_mochi_app_data(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command(async)]
 fn import_theme(app: tauri::AppHandle, source_path: String) -> Result<themes::UserThemeDescriptor, String> { themes::import_theme(app, source_path) }
 
+/// Prints how long each setup step took when `MOCHI_STARTUP_TRACE` is set (off by default).
+fn startup_mark(since: std::time::Instant, step: &str) {
+    if std::env::var_os("MOCHI_STARTUP_TRACE").is_some() { eprintln!("[mochi startup] {step}: {:.1} ms", since.elapsed().as_secs_f64() * 1000.0); }
+}
+
 fn main() {
     #[cfg(target_os = "linux")]
     platform::prepare_linux_webview_environment();
@@ -146,22 +152,34 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
-            #[cfg(target_os = "linux")]
+            let startup = std::time::Instant::now();
+            // Desktop integration (registering the mochi:// handler, copying the AppImage, writing desktop
+            // entries) spawns helper processes and touches several folders; it must neither delay
+            // startup nor stop Mochi from opening. The handler entry is registered first because
+            // the integration step rewrites it.
             {
-                use tauri_plugin_deep_link::DeepLinkExt;
-                app.deep_link().register_all()?;
+                let handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    #[cfg(target_os = "linux")]
+                    {
+                        use tauri_plugin_deep_link::DeepLinkExt;
+                        if let Err(error) = handle.deep_link().register_all() { eprintln!("Mochi deep link registration: {error}"); }
+                    }
+                    #[cfg(not(target_os = "linux"))]
+                    let _ = handle;
+                    if let Err(error) = platform::ensure_platform_integration() { eprintln!("Mochi platform integration: {error}"); }
+                });
             }
-            // Desktop integration copies the AppImage and writes desktop entries;
-            // it must neither delay startup nor stop Mochi from opening.
-            std::thread::spawn(|| {
-                if let Err(error) = platform::ensure_platform_integration() { eprintln!("Mochi platform integration: {error}"); }
-            });
             // An unwritable config folder must not stop Mochi from opening; commands report the problem when used.
             if let Err(error) = themes::initialize_config(app.handle()) { eprintln!("Mochi config: {error}"); }
+            startup_mark(startup, "config");
             let data_dir = app.path().app_data_dir()?;
             playtime::initialize(data_dir).map_err(std::io::Error::other)?;
+            startup_mark(startup, "playtime");
             tray::initialize(app);
+            startup_mark(startup, "tray");
             gamepad::start(app.handle().clone());
+            startup_mark(startup, "gamepad");
             if let Some(window) = app.get_webview_window("main") {
                 window.clone().on_window_event(move |event| {
                     if let WindowEvent::CloseRequested { api, .. } = event {
