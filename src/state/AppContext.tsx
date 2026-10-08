@@ -20,6 +20,7 @@ import { useMetadata } from "./useMetadata";
 import { useAddGame } from "./useAddGame";
 import { useGameActions } from "./useGameActions";
 import { useDeepLinks } from "./useDeepLinks";
+import { AchievementWatcher } from "../components/stats/AchievementWatcher";
 
 export type NavId = "Library" | "Installed" | "Discover" | "Downloads" | "Stats" | "Settings";
 
@@ -131,7 +132,7 @@ const AppContext = createContext<AppController | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const controller = useAppController();
-  return <AppContext.Provider value={controller}>{children}</AppContext.Provider>;
+  return <AppContext.Provider value={controller}><AchievementWatcher />{children}</AppContext.Provider>;
 }
 
 export function useApp(): AppController {
