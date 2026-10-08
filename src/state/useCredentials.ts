@@ -48,7 +48,7 @@ export function useCredentials(user: User | null, requireSignIn: () => void) {
 
   const save = async (provider: ProviderCredential) => {
     if (!supabase || !user) { requireSignIn(); return; }
-    let secret = "";
+    let secret: string;
     if (provider === "igdb") {
       if (!igdbClientId.trim() || !igdbClientSecret.trim()) { setMessage("Enter your IGDB Client ID and Client Secret first."); return; }
       secret = JSON.stringify({ clientId: igdbClientId.trim(), clientSecret: igdbClientSecret.trim() });

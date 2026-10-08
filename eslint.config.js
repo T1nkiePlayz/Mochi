@@ -30,6 +30,7 @@ export default tseslint.config(
       "no-dupe-else-if": "error",
       "no-unreachable": "error",
       "no-prototype-builtins": "off",
+      "preserve-caught-error": "off",
     },
   },
 );
