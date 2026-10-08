@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabase";
-import { ModrinthDiscover } from "../components/ModrinthDiscover";
+import { ModrinthDiscover } from "../components/discover/ModrinthDiscover";
 import { useApp } from "../state/AppContext";
 
 export function DiscoverView() {

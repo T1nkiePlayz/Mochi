@@ -7,6 +7,7 @@ import { DataSection } from "./DataSection";
 import { HelpSection } from "./HelpSection";
 import { UpdateSection } from "./UpdateSection";
 import { BigPictureSection, ControllerSection } from "./ControllerSection";
+import { ExperimentalSection } from "./ExperimentalSection";
 
 /**
  * Settings sections in display order. To add one, create a component in this folder
@@ -21,5 +22,6 @@ export const settingsSections: Array<{ id: string; Section: ComponentType }> = [
   { id: "security", Section: SecuritySection },
   { id: "updates", Section: UpdateSection },
   { id: "data", Section: DataSection },
+  { id: "experimental", Section: ExperimentalSection },
   { id: "help", Section: HelpSection },
 ];

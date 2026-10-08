@@ -1,0 +1,24 @@
+/* Discover: infinite list, skeletons, error and offline states. Cards themselves live in index.css. */
+.discover-grid .discover-card { content-visibility: auto; contain-intrinsic-size: auto 150px; }
+.discover-controls.minecraft-controls { grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(140px, 190px)); }
+.discover-controls.minecraft-controls.no-loader { grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(140px, 190px)); }
+.discover-controls .mochi-select { display: block; width: 100%; }
+.discover-controls .mochi-select-trigger { min-height: 38px; }
+@media (max-width: 900px) { .discover-controls.minecraft-controls, .discover-controls.minecraft-controls.no-loader { grid-template-columns: 1fr; } }
+
+.discover-sentinel { height: 1px; }
+.discover-end { margin: 14px 0 4px; text-align: center; color: var(--mochi-text-muted); font-size: 12px; }
+.discover-offline { display: flex; align-items: center; gap: 6px; }
+.discover-error { display: grid; justify-items: center; gap: 6px; padding: 24px 16px; text-align: center; border: 1px dashed var(--mochi-danger, var(--mochi-border-strong)); border-radius: var(--mochi-radius-lg, 12px); color: var(--mochi-text); }
+.discover-error p { margin: 0; font-weight: 600; }
+.discover-error small { color: var(--mochi-text-muted); max-width: 52ch; overflow-wrap: anywhere; }
+.discover-empty { flex-direction: column; text-align: center; padding: 20px; }
+.discover-empty p { margin: 0; }
+
+.discover-card-skeleton .discover-card-icon,
+.skeleton-line { background: linear-gradient(90deg, var(--mochi-surface-raised) 25%, var(--mochi-surface-hover) 50%, var(--mochi-surface-raised) 75%); background-size: 200% 100%; animation: discover-shimmer 1.3s linear infinite; }
+.skeleton-line { display: block; height: 10px; width: 70%; border-radius: 999px; margin-top: 4px; }
+.skeleton-line.wide { width: 90%; height: 13px; }
+.skeleton-line.short { width: 40%; }
+@keyframes discover-shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .discover-card-skeleton .discover-card-icon, .skeleton-line { animation: none; } }

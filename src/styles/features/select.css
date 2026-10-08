@@ -1,10 +1,11 @@
 .mochi-select { position: relative; display: inline-block; min-width: 0; }
 .mochi-select-trigger {
-  display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; padding: 0 10px;
+  display: flex; align-items: center; gap: 8px; width: 100%; min-height: var(--mochi-input-height, 36px); padding: 0 10px;
   color: var(--mochi-text); background: var(--mochi-input-background); box-shadow: var(--mochi-input-shadow);
-  border: 1px solid var(--mochi-input-border); border-radius: var(--mochi-input-radius);
+  border: var(--mochi-border-width, 1px) solid var(--mochi-input-border); border-radius: var(--mochi-input-radius);
   font: inherit; text-align: left; cursor: pointer;
 }
+.mochi-select-trigger:focus-visible { outline: none; box-shadow: var(--mochi-focus-ring); border-color: var(--mochi-input-focus-border); }
 .mochi-select-trigger:hover:not(:disabled), .mochi-select.open .mochi-select-trigger { border-color: var(--mochi-input-focus-border); }
 .mochi-select-trigger:disabled { opacity: .5; cursor: not-allowed; }
 .mochi-select-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -14,13 +15,14 @@
 .mochi-select-popover {
   position: absolute; z-index: 60; top: calc(100% + 6px); left: 0; min-width: 100%; width: max-content; max-width: min(360px, 90vw);
   display: flex; flex-direction: column; overflow: hidden;
-  background: var(--mochi-modal-background); border: 1px solid var(--mochi-modal-border);
+  background: var(--mochi-modal-background); border: var(--mochi-border-width, 1px) solid var(--mochi-modal-border);
   border-radius: var(--mochi-input-radius); box-shadow: var(--mochi-modal-shadow);
 }
 .mochi-select[data-align="end"] .mochi-select-popover { left: auto; right: 0; }
 .mochi-select-search { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--mochi-border); color: var(--mochi-text-muted); }
 .mochi-select-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--mochi-text); font: inherit; }
-.mochi-select-list { margin: 0; padding: 4px; list-style: none; max-height: 280px; overflow-y: auto; }
+.mochi-select[data-placement="top"] .mochi-select-popover { top: auto; bottom: calc(100% + 6px); }
+.mochi-select-list { margin: 0; padding: 4px; list-style: none; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .mochi-select-group { padding: 8px 8px 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--mochi-text-faint); }
 .mochi-select-option { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: calc(var(--mochi-input-radius) - 2px); cursor: pointer; color: var(--mochi-text); }
 .mochi-select-option.active { background: var(--mochi-surface-hover); }
@@ -30,3 +32,56 @@
 .mochi-select-option-copy small { color: var(--mochi-text-muted); font-size: 11px; }
 .mochi-select-empty { padding: 12px; color: var(--mochi-text-muted); font-size: 13px; }
 .mochi-select-icon { display: inline-flex; flex: none; }
+
+/* Minecraft version picker (discover/VersionPicker.tsx) */
+.version-picker-popover { min-width: 260px; }
+.version-picker-switch { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--mochi-border); cursor: pointer; color: var(--mochi-text); font-size: 12px; }
+.version-picker-switch small { grid-column: 2; color: var(--mochi-text-muted); font-size: 11px; }
+.version-picker-switch input { accent-color: var(--mochi-accent); }
+.version-picker-note { font-size: 11px; padding: 8px; }
+.modrinth-controls .mochi-select.compact-select { min-width: 140px; }
+
+/* Per-theme dressing. Most of the look comes from the --mochi-input-* and --mochi-modal-* tokens; these
+ * only add the pieces a theme builds with shapes and bevels rather than tokens. */
+[data-mochi-theme="minecraft-ore"] .mochi-select-trigger { border-width: 2px; box-shadow: var(--mochi-input-shadow), inset 0 0 0 2px #39393B; color: #fff; }
+[data-mochi-theme="minecraft-ore"] .mochi-select-popover { border-width: 2px; box-shadow: inset 0 0 0 2px #39393B; }
+[data-mochi-theme="minecraft-ore"] .mochi-select-option.active { background: #39393B; }
+[data-mochi-theme="minecraft-ore"] .mochi-select-option.selected { background: #1855D1; color: #fff; }
+
+[data-mochi-theme="pipboy"] .mochi-select-trigger, [data-mochi-theme="pipboy"] .mochi-select-popover { font-family: inherit; text-transform: uppercase; letter-spacing: .04em; }
+[data-mochi-theme="pipboy"] .mochi-select-option.active, [data-mochi-theme="pipboy"] .mochi-select-option.selected { background: var(--mochi-accent); color: #021006; }
+[data-mochi-theme="pipboy"] .mochi-select-option.active small, [data-mochi-theme="pipboy"] .mochi-select-option.selected small { color: #0f7a36; }
+
+[data-mochi-theme="cyberpunk"] .mochi-select-trigger { clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); }
+[data-mochi-theme="cyberpunk"] .mochi-select-popover { clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); }
+[data-mochi-theme="cyberpunk"] .mochi-select-option.active { background: #fcee09; color: #050505; }
+[data-mochi-theme="cyberpunk"] .mochi-select-option.selected { color: #00f0ff; }
+
+[data-mochi-theme="stardew-valley"] .mochi-select-trigger { box-shadow: var(--mochi-input-shadow), 0 0 0 2px #d9822b; border-width: 3px; }
+[data-mochi-theme="stardew-valley"] .mochi-select-popover { border-width: 3px; box-shadow: 0 0 0 3px #d9822b, 0 0 0 6px #5c2c0c; }
+[data-mochi-theme="stardew-valley"] .mochi-select-option.active { background: #f0c27a; }
+[data-mochi-theme="stardew-valley"] .mochi-select-option.selected { color: #b3261e; }
+
+[data-mochi-theme="runescape"] .mochi-select-trigger { border-width: 2px; }
+[data-mochi-theme="runescape"] .mochi-select-option.active { background: #5a4d3b; box-shadow: inset 1px 1px 0 #14100b; }
+[data-mochi-theme="runescape"] .mochi-select-option.selected { color: #ff981f; }
+
+[data-mochi-theme="subnautica"] .mochi-select-popover { backdrop-filter: blur(10px); clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+[data-mochi-theme="subnautica"] .mochi-select-trigger { backdrop-filter: blur(4px); }
+[data-mochi-theme="subnautica"] .mochi-select-option.active { background: rgba(77, 232, 255, .16); }
+
+[data-mochi-theme="dungeons"] .mochi-select-trigger { border-width: 2px; box-shadow: var(--mochi-input-shadow), inset 0 0 0 1px rgba(166, 124, 46, .45); }
+[data-mochi-theme="dungeons"] .mochi-select-popover { border-width: 2px; }
+[data-mochi-theme="dungeons"] .mochi-select-option.active { background: rgba(240, 168, 48, .18); }
+[data-mochi-theme="dungeons"] .mochi-select-option.selected { color: #ffc857; }
+
+[data-mochi-theme="animal-crossing"] .mochi-select-trigger { border-radius: 999px; padding: 0 16px; border-width: 2px; }
+[data-mochi-theme="animal-crossing"] .mochi-select-popover { border-radius: 22px; border-width: 3px; }
+[data-mochi-theme="animal-crossing"] .mochi-select-option { border-radius: 999px; }
+[data-mochi-theme="animal-crossing"] .mochi-select-option.active { background: #e8f6d6; }
+
+[data-mochi-theme="terraria"] .mochi-select-trigger { border-width: 2px; }
+[data-mochi-theme="terraria"] .mochi-select-popover { border-width: 3px; }
+[data-mochi-theme="terraria"] .mochi-select-option { border: 2px solid transparent; }
+[data-mochi-theme="terraria"] .mochi-select-option.active { background: #3a46a8; border-color: #8a96ff; }
+[data-mochi-theme="terraria"] .mochi-select-option.selected { color: #ffd54a; }

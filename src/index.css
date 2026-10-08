@@ -108,11 +108,6 @@ footer { display:flex; justify-content:space-between; margin-top:50px; color:var
 .theme-card-meta{grid-column:2;color:var(--mochi-text-faint,#606675)!important;font-size:9px}.theme-actions{display:flex;flex-wrap:wrap;gap:8px;padding:0 17px 15px}.theme-actions .secondary-button{font-size:10px}.theme-config-path{display:grid;gap:5px;padding:12px 17px 15px;border-top:1px solid var(--mochi-border,#292d37);color:var(--mochi-text-muted,#858b9b);font-size:9px}.theme-config-path code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mochi-text-faint,#606675);font:9px monospace}@media(max-width:700px){.theme-actions{display:grid;grid-template-columns:1fr}}
 
 /* Themeable logical icons */
-.mochi-icon-wrap { position:relative; display:inline-grid; place-items:center; width:1em; height:1em; flex:0 0 auto; }
-.mochi-icon-wrap > svg { display:block; }
-.mochi-icon-custom { position:absolute; inset:0; display:none; width:100%; height:100%; background:currentColor; -webkit-mask-image:var(--mochi-icon-image); mask-image:var(--mochi-icon-image); -webkit-mask-size:contain; mask-size:contain; -webkit-mask-position:center; mask-position:center; -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; }
-.mochi-icon-wrap:has(.mochi-icon-custom[style*="url"]) > .mochi-icon-custom { display:block; }
-.mochi-icon-wrap:has(.mochi-icon-custom[style*="url"]) > svg { visibility:hidden; }
 
 .provider-credential-card{display:grid;gap:10px;padding:14px;border:1px solid var(--mochi-border);border-radius:var(--mochi-radius-md);background:var(--mochi-surface-raised);margin-top:10px;}
 .provider-credential-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
@@ -261,8 +256,6 @@ footer { display:flex; justify-content:space-between; margin-top:50px; color:var
 
 
 /* Deterministic component alignment */
-.mochi-icon-wrap{display:inline-grid;place-items:center;flex:0 0 auto;width:auto;height:auto;line-height:0;vertical-align:middle;}
-.mochi-icon-custom{display:block;width:1em;height:1em;background:var(--mochi-icon-image) center/contain no-repeat;}
 .secondary-button,.play-button{line-height:1;min-height:38px;}
 .secondary-button .mochi-icon-wrap,.play-button .mochi-icon-wrap,.nav-item .mochi-icon-wrap{width:16px;height:16px;}
 .empty-icon{display:grid!important;place-items:center!important;}
@@ -373,12 +366,9 @@ footer { display:flex; justify-content:space-between; margin-top:50px; color:var
   margin:0 0 3px;
   flex:0 0 auto;
 }
-.theme-card > .mochi-icon-wrap .mochi-icon-custom{width:100%;height:100%;}
 .theme-card strong{display:block;}
 .theme-card small{display:block;line-height:1.45;}
 .theme-card .theme-card-meta{grid-column:auto;}
-.mochi-icon-wrap{vertical-align:middle;}
-.mochi-icon-custom{background-repeat:no-repeat;background-position:center;background-size:contain;}
 .account-avatar{
   width:34px;
   height:34px;
@@ -440,25 +430,16 @@ footer { display:flex; justify-content:space-between; margin-top:50px; color:var
 @media(max-width:700px){.project-details-header{padding:17px}.project-details-header img,.project-details-header .discover-card-icon{width:56px;height:56px;flex-basis:56px}.project-info-grid{grid-template-columns:1fr}.project-overview,.project-version-list{padding:17px}.project-tabs{padding:0 17px;}.tofu-picker-window{padding:17px;}.discover-modal-backdrop{padding:14px;}}
 
 
-/* Final icon/avatar containment: generic span rules must never stretch component primitives. */
-.mochi-icon-wrap{
-  display:inline-grid!important;
-  place-items:center!important;
-  flex:0 0 auto!important;
-  line-height:0!important;
-  overflow:hidden;
-}
-.mochi-icon-custom{
-  display:block!important;
-  width:100%!important;
-  height:100%!important;
-  min-width:0!important;
-  min-height:0!important;
-  background-position:center!important;
-  background-size:contain!important;
-  background-repeat:no-repeat!important;
-  flex:0 0 auto!important;
-}
+/*
+ * MochiIcon: the single icon implementation. The component sets the box size inline and picks a mode
+ * from the resolved theme asset: "mask" for monochrome SVGs (tinted with currentColor), "image" for
+ * raster and multi-colour artwork (drawn as authored; --mochi-icon-rendering: pixelated for pixel art).
+ */
+.mochi-icon-wrap{display:inline-grid;place-items:center;flex:0 0 auto;line-height:0;vertical-align:middle;overflow:hidden;}
+.mochi-icon-wrap>svg{display:block;}
+.mochi-icon-custom{display:block;width:100%;height:100%;background-repeat:no-repeat;background-position:center;background-size:contain;image-rendering:var(--mochi-icon-rendering,auto);}
+.mochi-icon-custom[data-mode="image"]{background-image:var(--mochi-icon-src);}
+.mochi-icon-custom[data-mode="mask"]{background-color:currentColor;-webkit-mask:var(--mochi-icon-src) center/contain no-repeat;mask:var(--mochi-icon-src) center/contain no-repeat;}
 .sidebar-account>.account-avatar{
   display:grid!important;
   width:34px!important;
@@ -544,7 +525,7 @@ footer { display:flex; justify-content:space-between; margin-top:50px; color:var
 .discover-instance-card .secondary-button{align-self:flex-start;margin-top:auto;}
 @media(max-width:700px){.discover-instance-grid{grid-template-columns:1fr;}.discover-instance-stats{grid-template-columns:1fr;}}
 
-.search-box>.mochi-icon-wrap{display:grid!important;place-items:center!important;flex:0 0 16px!important;width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;overflow:hidden}.search-box>.mochi-icon-wrap .mochi-icon-custom{display:block!important;width:100%!important;height:100%!important;background-position:center!important;background-size:100% 100%!important;background-repeat:no-repeat!important}
+.search-box>.mochi-icon-wrap{display:grid!important;place-items:center!important;flex:0 0 16px!important;width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;overflow:hidden}
 
 /* Compact Modrinth versions: readable at a glance, with changelogs kept one click away. */
 .project-version{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:14px 16px;border:1px solid var(--mochi-border);border-radius:10px;background:var(--mochi-surface-raised);}
@@ -582,8 +563,6 @@ footer { display:flex; justify-content:space-between; margin-top:50px; color:var
 .discover-controls{align-items:end;}
 .discover-select-wrap{display:grid;gap:6px;min-width:0;}
 .discover-select-wrap>span{color:var(--mochi-text-muted);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;}
-.discover-select{width:100%;min-width:0;padding:9px 32px 9px 11px;border:1px solid var(--mochi-border);border-radius:8px;color:var(--mochi-text);background:var(--mochi-surface);outline:0;font-size:11px;}
-.discover-select:focus{border-color:var(--mochi-accent);}
 .project-details-window{width:min(920px,calc(100vw - 32px));height:min(780px,calc(100vh - 32px));max-height:calc(100vh - 32px);min-height:0;overflow:hidden;display:flex;flex-direction:column;}
 .project-details-header,.project-tabs{flex:0 0 auto;}
 .project-overview,.project-version-list{min-width:0;overflow:auto;}
@@ -656,7 +635,7 @@ footer { display:flex; justify-content:space-between; margin-top:50px; color:var
 @media(max-width:700px){.discover-game-tabs{padding-bottom:5px;}.discover-game-tab{width:38px;min-width:38px;min-height:38px;height:38px;padding:5px;}.discover-game-icon,.minecraft-discovery-icon{width:26px;height:26px;flex-basis:26px;}.discover-game-add{width:38px;height:38px;flex-basis:38px;}.project-details-header-actions{gap:5px;}.project-details-header-actions .secondary-button{font-size:9px;padding:7px 8px;}}
 
 
-[data-mochi-theme="minecraft-ore"] .notification-wrap > .icon-button .mochi-icon-wrap{width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;flex-basis:20px!important}.notification-wrap > .icon-button .mochi-icon-custom{background-size:100% 100%!important}
+
 
 /* Issue 46: game and settings screens use the active theme tokens. */
 .game-details-page{display:grid;gap:18px;max-width:1100px;margin:0 auto;padding-top:6px;color:var(--mochi-text)}
