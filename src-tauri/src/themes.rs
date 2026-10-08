@@ -6,8 +6,9 @@ use std::{
     fs,
     io::Read,
     path::{Component, Path, PathBuf},
-    sync::{atomic::{AtomicU64, Ordering}, Mutex},
+    sync::Mutex,
 };
+use crate::util::{fsio::write_atomic_durable, valid_id as valid_segment, MutexExt};
 use tauri::{AppHandle, Manager};
 
 const CONFIG_FILE: &str = "config.json";
@@ -21,10 +22,9 @@ const MAX_THEME_ASSET_TOTAL_BYTES: u64 = 48 * 1024 * 1024;
 
 /// Serialises every read-modify-write of config.json (theme switches can race with startup or a location move).
 static CONFIG_LOCK: Mutex<()> = Mutex::new(());
-static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 fn config_guard() -> std::sync::MutexGuard<'static, ()> {
-    CONFIG_LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    CONFIG_LOCK.lock_recover()
 }
 
 /// A themes folder import may not drag in an unbounded tree.
@@ -183,29 +183,10 @@ fn ensure_config_in(root: &Path) -> Result<(PathBuf, Value), String> {
 fn write_json_atomic(path: &Path, value: &Value) -> Result<(), String> {
     let content = serde_json::to_string_pretty(value)
         .map_err(|error| format!("Unable to serialize Mochi config: {error}"))?;
-    write_file_atomic(path, format!("{content}\n").as_bytes()).map_err(|error| format!("Unable to write Mochi config: {error}"))
+    write_atomic_durable(path, format!("{content}\n").as_bytes()).map_err(|error| format!("Unable to write Mochi config: {error}"))
 }
 
-/// Writes to a uniquely named sibling, flushes it to disk, then renames over `path`.
-fn write_file_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
-    use std::io::Write;
-    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("file");
-    let temp = path.with_file_name(format!(".{name}.{}-{}.tmp", std::process::id(), TEMP_COUNTER.fetch_add(1, Ordering::Relaxed)));
-    let result = (|| {
-        let mut file = fs::File::create(&temp)?;
-        file.write_all(bytes)?;
-        file.sync_all()?;
-        fs::rename(&temp, path)
-    })();
-    if result.is_err() { let _ = fs::remove_file(&temp); }
-    result
-}
-
-fn valid_id(id: &str) -> bool {
-    !id.is_empty()
-        && id.len() <= 80
-        && id.chars().all(|character| character.is_ascii_alphanumeric() || character == '-' || character == '_')
-}
+fn valid_id(id: &str) -> bool { valid_segment(id, 80) }
 
 fn validate_manifest(manifest: &ThemeManifest) -> Result<(), String> {
     if manifest.schema_version != 1 {
@@ -635,7 +616,7 @@ pub fn move_config_location(app: AppHandle, destination: String) -> Result<Strin
         copy_directory_contents(&current, &destination)?;
         fs::create_dir_all(&default_root)
             .map_err(|error| format!("Unable to prepare the Mochi location marker: {error}"))?;
-        write_file_atomic(&default_root.join(LOCATION_FILE), format!("{}\n", destination.display()).as_bytes())
+        write_atomic_durable(&default_root.join(LOCATION_FILE), format!("{}\n", destination.display()).as_bytes())
             .map_err(|error| format!("Unable to save the Mochi data location: {error}"))
     })();
     if let Err(error) = attempt {
@@ -677,8 +658,10 @@ pub fn clear_app_data(app: AppHandle) -> Result<(), String> {
 mod tests {
     use super::*;
 
+    static TEMP_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
     fn temp_dir(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("mochi-themes-{name}-{}-{}", std::process::id(), TEMP_COUNTER.fetch_add(1, Ordering::Relaxed)));
+        let dir = std::env::temp_dir().join(format!("mochi-themes-{name}-{}-{}", std::process::id(), TEMP_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed)));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -787,17 +770,6 @@ mod tests {
     }
 
     #[test]
-    fn atomic_writes_use_unique_temp_files_and_replace_content() {
-        let dir = temp_dir("atomic");
-        let path = dir.join("config.json");
-        write_file_atomic(&path, b"one").unwrap();
-        write_file_atomic(&path, b"two").unwrap();
-        assert_eq!(fs::read(&path).unwrap(), b"two");
-        assert_eq!(fs::read_dir(&dir).unwrap().count(), 1, "no temp files left behind");
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
     fn corrupt_or_non_utf8_config_is_replaced_instead_of_blocking_startup() {
         let dir = temp_dir("config");
         let (path, value) = ensure_config_in(&dir).unwrap();
@@ -811,10 +783,5 @@ mod tests {
         fs::write(&path, br#"{"schemaVersion":1,"theme":"dark","settings":{}}"#).unwrap();
         assert_eq!(ensure_config_in(&dir).unwrap().1["theme"], "dark");
         let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn ids_are_restricted() {
-        assert!(valid_id("a-b_C1") && !valid_id("") && !valid_id("a/b") && !valid_id("a.b") && !valid_id(&"a".repeat(81)));
     }
 }

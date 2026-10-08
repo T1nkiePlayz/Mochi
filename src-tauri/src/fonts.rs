@@ -4,10 +4,10 @@
 //! declare `fonts` URLs. CSS and woff2 files are downloaded once into `<config>/fonts/<theme-id>/`
 //! and later served from disk, so a theme never needs the network after its first load.
 use base64::{engine::general_purpose::STANDARD, Engine as _};
+use crate::util::{fsio::write_atomic, http, valid_id};
 use std::{
     fs,
     path::{Path, PathBuf},
-    sync::atomic::{AtomicU64, Ordering},
     time::Duration,
 };
 use tauri::AppHandle;
@@ -18,12 +18,9 @@ const MAX_FONT_BYTES: usize = 2 * 1024 * 1024;
 const MAX_FONTS_PER_THEME: usize = 48;
 /// Fonts are inlined as base64 data URLs, so the combined result is capped (the raw limits alone allow hundreds of MiB).
 const MAX_OUTPUT_BYTES: usize = 12 * 1024 * 1024;
-static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-fn valid_theme_id(id: &str) -> bool {
-    !id.is_empty() && id.len() <= 80 && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
-}
+fn valid_theme_id(id: &str) -> bool { valid_id(id, 80) }
 
 fn parsed_https(url: &str, host: &str) -> Option<reqwest::Url> {
     if url.len() > 2048 || url.chars().any(|c| c.is_control() || c.is_whitespace() || c == '\\') {
@@ -124,28 +121,11 @@ fn read_cache(dir: &Path, css_file: &Path) -> Option<String> {
 
 async fn download(client: &reqwest::Client, url: reqwest::Url, max: usize) -> Option<Vec<u8>> {
     let mut response = client.get(url).send().await.ok()?;
-    if !response.status().is_success() || response.content_length().is_some_and(|len| len as usize > max) {
+    if !response.status().is_success() {
         return None;
     }
-    // Stream with a cap: a chunked response has no Content-Length and must not be buffered unbounded.
-    let mut bytes = Vec::new();
-    while let Some(chunk) = response.chunk().await.ok()? {
-        if bytes.len() + chunk.len() > max {
-            return None;
-        }
-        bytes.extend_from_slice(&chunk);
-    }
+    let bytes = http::read_capped(&mut response, max).await.ok()?;
     (!bytes.is_empty()).then_some(bytes)
-}
-
-fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
-    // Unique per call: two concurrent loads of the same theme must not interleave writes into one temp file.
-    let temp = path.with_extension(format!("{}-{}.tmp", std::process::id(), TEMP_COUNTER.fetch_add(1, Ordering::Relaxed)));
-    let result = fs::write(&temp, bytes).and_then(|()| fs::rename(&temp, path));
-    if result.is_err() {
-        let _ = fs::remove_file(&temp);
-    }
-    result
 }
 
 async fn fetch_stylesheet(client: &reqwest::Client, dir: &Path, css_url: reqwest::Url) -> Option<String> {
@@ -165,7 +145,9 @@ async fn fetch_stylesheet(client: &reqwest::Client, dir: &Path, css_url: reqwest
         let name = font_file_name(&url);
         let target = dir.join(&name);
         if !target.exists() {
-            write_atomic(&target, &download(client, font_url, MAX_FONT_BYTES).await?).ok()?;
+            let bytes = download(client, font_url, MAX_FONT_BYTES).await?;
+            let path = target.clone();
+            crate::util::blocking(move || write_atomic(&path, &bytes)).await.ok()?.ok()?;
         }
         rewritten.push_str(&format!("@font-face {{ {}url({}){} }}\n", &face[..start], name, &face[end..]));
     }
@@ -176,6 +158,11 @@ fn theme_font_dir(app: &AppHandle, theme_id: &str) -> Result<PathBuf, String> {
     let dir = crate::themes::config_dir(app)?.join("fonts").join(theme_id);
     fs::create_dir_all(&dir).map_err(|error| format!("Unable to create the theme font cache: {error}"))?;
     Ok(dir)
+}
+
+async fn cached_css(dir: &Path, css_file: &Path) -> Option<String> {
+    let (dir, css_file) = (dir.to_path_buf(), css_file.to_path_buf());
+    crate::util::blocking(move || read_cache(&dir, &css_file)).await.ok().flatten()
 }
 
 /// Returns `@font-face` CSS (fonts inlined as data URLs) for the theme's Google Fonts URLs.
@@ -196,12 +183,12 @@ pub async fn cache_theme_fonts(app: AppHandle, theme_id: String, urls: Vec<Strin
         return Ok(String::new());
     }
     let dir = theme_font_dir(&app, &theme_id)?;
-    let client = reqwest::Client::builder()
+    static CLIENT: http::SharedClient = http::SharedClient::new();
+    let client = CLIENT.get(|| http::builder()
         .timeout(Duration::from_secs(15))
         .redirect(reqwest::redirect::Policy::none())
         .user_agent(USER_AGENT)
-        .build()
-        .map_err(|error| format!("Unable to prepare font request: {error}"))?;
+        .build(), "Unable to prepare font request")?;
 
     let mut output = String::new();
     for (url, css_url) in parsed {
@@ -209,13 +196,14 @@ pub async fn cache_theme_fonts(app: AppHandle, theme_id: String, urls: Vec<Strin
         if output.len() > MAX_OUTPUT_BYTES {
             break;
         }
-        if let Some(cached) = read_cache(&dir, &css_file) {
+        // Reading and base64-encoding cached fonts is disk and CPU work: keep it off the async workers.
+        if let Some(cached) = cached_css(&dir, &css_file).await {
             output.push_str(&cached);
             continue;
         }
-        if let Some(rewritten) = fetch_stylesheet(&client, &dir, css_url).await {
+        if let Some(rewritten) = fetch_stylesheet(client, &dir, css_url).await {
             if write_atomic(&css_file, rewritten.as_bytes()).is_ok() {
-                if let Some(cached) = read_cache(&dir, &css_file) {
+                if let Some(cached) = cached_css(&dir, &css_file).await {
                     output.push_str(&cached);
                 }
             }
@@ -272,19 +260,6 @@ mod tests {
         assert!(!safe_cache_name("../x.woff2"));
         assert!(!safe_cache_name("a/b.woff2"));
         assert!(!safe_cache_name("x.css"));
-    }
-
-    #[test]
-    fn temp_files_are_unique_and_cleaned() {
-        let dir = std::env::temp_dir().join(format!("mochi-fonts-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).unwrap();
-        let target = dir.join("a.woff2");
-        write_atomic(&target, b"1").unwrap();
-        write_atomic(&target, b"22").unwrap();
-        assert_eq!(fs::read(&target).unwrap(), b"22");
-        assert_eq!(fs::read_dir(&dir).unwrap().count(), 1);
-        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]

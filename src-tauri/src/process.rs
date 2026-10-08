@@ -1,11 +1,18 @@
 //! Process inspection and termination used by game session tracking.
 
-use std::{collections::HashMap, time::Duration};
+use crate::util::MutexExt;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+    time::{Duration, Instant},
+};
 
 #[derive(Debug, Clone)]
 pub struct ProcessInfo {
     pub pid: u32,
     pub ppid: u32,
+    /// Read by the macOS group check; Linux checks groups straight from `/proc/<pid>/stat`.
+    #[cfg_attr(target_os = "linux", allow(dead_code))]
     pub pgid: u32,
     /// Space-joined arguments (arguments with spaces are not quoted).
     pub cmdline: String,
@@ -22,12 +29,7 @@ pub fn snapshot() -> HashMap<u32, ProcessInfo> {
         let Some(pid) = entry.file_name().to_str().and_then(|name| name.parse::<u32>().ok()) else { continue };
         let Ok(stat) = std::fs::read_to_string(entry.path().join("stat")) else { continue };
         let Ok(cmdline) = std::fs::read(entry.path().join("cmdline")) else { continue };
-        // The command name is wrapped in parentheses and may itself contain spaces or ')'.
-        let Some(close) = stat.rfind(')') else { continue };
-        let fields: Vec<&str> = stat[close + 1..].split_whitespace().collect();
-        // After the name: state(0) ppid(1) pgrp(2) ... starttime(19)
-        let (Some(ppid), Some(pgid), Some(start)) = (fields.get(1), fields.get(2), fields.get(19)) else { continue };
-        let (Ok(ppid), Ok(pgid), Ok(start_time)) = (ppid.parse(), pgid.parse(), start.parse()) else { continue };
+        let Some((_, ppid, pgid, start_time)) = parse_stat(&stat) else { continue };
         let argv0 = String::from_utf8_lossy(cmdline.split(|byte| *byte == 0).next().unwrap_or_default()).into_owned();
         let cmdline = String::from_utf8_lossy(&cmdline).trim_end_matches('\0').replace('\0', " ");
         // Kernel threads have no command line and can never be a game.
@@ -35,6 +37,20 @@ pub fn snapshot() -> HashMap<u32, ProcessInfo> {
         processes.insert(pid, ProcessInfo { pid, ppid, pgid, cmdline, argv0, start_time });
     }
     processes
+}
+
+/// `(state, ppid, pgid, starttime)` from `/proc/<pid>/stat`.
+#[cfg(any(target_os = "linux", test))]
+fn parse_stat(stat: &str) -> Option<(char, u32, u32, u64)> {
+    // The command name is wrapped in parentheses and may itself contain spaces or ')'.
+    let close = stat.rfind(')')?;
+    let mut fields = stat[close + 1..].split_whitespace();
+    // After the name: state(0) ppid(1) pgrp(2) ... starttime(19)
+    let state = fields.next()?.chars().next()?;
+    let ppid = fields.next()?.parse().ok()?;
+    let pgid = fields.next()?.parse().ok()?;
+    let start_time = fields.nth(16)?.parse().ok()?;
+    Some((state, ppid, pgid, start_time))
 }
 
 /// The environment of `pid` as NUL-separated `NAME=value` text. Only Linux exposes it without
@@ -100,7 +116,32 @@ fn parse_elapsed(value: &str) -> u64 {
     }
 }
 
+/// A recent snapshot shared by every caller within `max_age`, so several tracked games (and their
+/// watchers) cost one process-table scan per interval instead of one each.
+pub fn shared_snapshot(max_age: Duration) -> Arc<HashMap<u32, ProcessInfo>> {
+    type Cached = Option<(Instant, Arc<HashMap<u32, ProcessInfo>>)>;
+    static CACHE: Mutex<Cached> = Mutex::new(None);
+    let mut cache = CACHE.lock_recover();
+    if let Some((at, table)) = cache.as_ref() {
+        if at.elapsed() < max_age { return table.clone(); }
+    }
+    let table = Arc::new(snapshot());
+    *cache = Some((Instant::now(), table.clone()));
+    table
+}
+
 /// True while any process still belongs to the process group we created.
+#[cfg(target_os = "linux")]
+pub fn group_alive(pgid: u32) -> bool {
+    // Only `stat` is needed here (no command line, no allocation per process); zombies do not count.
+    let Ok(entries) = std::fs::read_dir("/proc") else { return false };
+    entries.flatten().any(|entry| {
+        if !entry.file_name().to_str().is_some_and(|name| name.bytes().all(|b| b.is_ascii_digit())) { return false; }
+        std::fs::read_to_string(entry.path().join("stat")).ok().and_then(|stat| parse_stat(&stat)).is_some_and(|(state, _, group, _)| group == pgid && state != 'Z')
+    })
+}
+
+#[cfg(not(target_os = "linux"))]
 pub fn group_alive(pgid: u32) -> bool {
     snapshot().values().any(|process| process.pgid == pgid)
 }
@@ -131,7 +172,36 @@ pub fn terminate(pid: u32, is_group: bool) {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_elapsed, parse_ps};
+    use super::{parse_elapsed, parse_ps, parse_stat};
+
+    #[test]
+    fn parses_proc_stat_even_when_the_name_has_spaces_and_parens() {
+        // pid (comm) state ppid pgrp session tty tpgid flags minflt cminflt majflt cmajflt utime stime cutime cstime priority nice threads itrealvalue starttime
+        let stat = "42 (my (odd) game) S 7 99 99 0 -1 4194560 100 0 0 0 1 2 0 0 20 0 3 0 123456 1000 200";
+        assert_eq!(parse_stat(stat), Some(('S', 7, 99, 123_456)));
+        assert_eq!(parse_stat("42 (x) Z 1 2 3 0 -1 0 0 0 0 0 0 0 0 0 20 0 1 0 5 0 0").map(|s| s.0), Some('Z'));
+        assert_eq!(parse_stat("42 (short) S 1"), None);
+        assert_eq!(parse_stat("garbage"), None);
+    }
+
+    #[test]
+    fn shared_snapshot_reuses_a_fresh_table() {
+        let first = super::shared_snapshot(std::time::Duration::from_secs(30));
+        let second = super::shared_snapshot(std::time::Duration::from_secs(30));
+        assert!(std::sync::Arc::ptr_eq(&first, &second));
+        let third = super::shared_snapshot(std::time::Duration::ZERO);
+        assert!(!std::sync::Arc::ptr_eq(&first, &third));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn group_alive_sees_our_own_group_and_not_a_bogus_one() {
+        // SAFETY: getpgrp has no preconditions.
+        let own = unsafe { libc::getpgrp() } as u32;
+        assert!(super::group_alive(own));
+        assert!(!super::group_alive(u32::MAX - 1));
+        assert!(super::snapshot().contains_key(&std::process::id()));
+    }
 
     #[test]
     fn parses_macos_ps_output() {

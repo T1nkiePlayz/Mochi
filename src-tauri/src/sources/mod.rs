@@ -8,13 +8,14 @@ use crate::platform::home_dir;
 use crate::platform::run_capture;
 use serde::Serialize;
 use serde_json::Value;
+use crate::util::MutexExt;
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
+    sync::{Mutex, OnceLock},
+    time::{Duration, Instant},
 };
-#[cfg(target_os = "linux")]
-use std::time::Duration;
 
 #[cfg(target_os = "linux")]
 mod linux;
@@ -478,10 +479,19 @@ pub fn detect_import_sources() -> Vec<DetectedImportSource> {
     let Some(home) = home_dir() else { return Vec::new() };
     let defs = os::source_defs();
     // Launcher CLIs can be slow, so scan every source at once.
-    let counts: Vec<(usize, usize)> = std::thread::scope(|scope| {
-        let handles: Vec<_> = defs.iter().map(|def| { let home = &home; scope.spawn(move || count_kinds(&scan(def.id, home))) }).collect();
-        handles.into_iter().map(|handle| handle.join().unwrap_or((0, 0))).collect()
+    let scans: Vec<Vec<ImportedGame>> = std::thread::scope(|scope| {
+        let handles: Vec<_> = defs.iter().map(|def| { let home = &home; scope.spawn(move || scan(def.id, home)) }).collect();
+        handles.into_iter().map(|handle| handle.join().unwrap_or_default()).collect()
     });
+    let counts: Vec<(usize, usize)> = scans.iter().map(|games| count_kinds(games)).collect();
+    // The import dialog lists sources and then scans the one the user picks: hand that scan the result
+    // we already have instead of walking the same folders and running the same launcher CLIs again.
+    {
+        let mut prescan = prescan().lock_recover();
+        prescan.clear();
+        let now = Instant::now();
+        for (def, games) in defs.iter().zip(scans) { prescan.insert(def.id, (now, games)); }
+    }
     defs.iter().zip(counts).map(|(def, (games, launchers))| DetectedImportSource {
         id: def.id.into(),
         name: def.name.into(),
@@ -493,6 +503,22 @@ pub fn detect_import_sources() -> Vec<DetectedImportSource> {
     }).collect()
 }
 
+/// Scans from the last `detect_import_sources`, each usable once and only briefly, so pressing
+/// "rescan" always looks at the disk again.
+type Prescan = HashMap<&'static str, (Instant, Vec<ImportedGame>)>;
+const PRESCAN_TTL: Duration = Duration::from_secs(15);
+
+fn prescan() -> &'static Mutex<Prescan> {
+    static CACHE: OnceLock<Mutex<Prescan>> = OnceLock::new();
+    CACHE.get_or_init(Default::default)
+}
+
+fn take_prescan(source: &str) -> Option<Vec<ImportedGame>> {
+    let mut cache = prescan().lock_recover();
+    let (at, games) = cache.remove(source)?;
+    (at.elapsed() < PRESCAN_TTL).then_some(games)
+}
+
 pub fn scan_import_games(source: &str, library_path: Option<String>) -> Vec<ImportedGame> {
     let Some(home) = home_dir() else { return Vec::new() };
     let manual = library_path.as_deref().map(str::trim).filter(|path| !path.is_empty()).map(PathBuf::from).filter(|path| path.is_absolute());
@@ -500,7 +526,7 @@ pub fn scan_import_games(source: &str, library_path: Option<String>) -> Vec<Impo
         ("steam", Some(path)) => scan_steam_path(&path),
         ("heroic", Some(path)) => scan_heroic(&[path]),
         ("itch", Some(path)) => scan_itch(&[path]),
-        _ => scan(source, &home),
+        _ => take_prescan(source).unwrap_or_else(|| scan(source, &home)),
     }
 }
 
