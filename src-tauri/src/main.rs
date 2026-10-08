@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use tauri::{Manager, WindowEvent};
 
+mod dirsize;
 mod game_artwork;
 mod modrinth;
 mod platform;
@@ -60,6 +61,12 @@ fn get_active_sessions() -> Result<Vec<playtime::ActiveSessionInfo>, String> { p
 
 #[tauri::command]
 fn get_playtime() -> Result<Vec<playtime::PlaytimeEntry>, String> { playtime::list() }
+
+#[tauri::command]
+fn get_playtime_history(since_epoch: Option<u64>) -> Result<Vec<playtime::Session>, String> { playtime::history(since_epoch) }
+
+#[tauri::command(async)]
+fn get_dir_size(path: String) -> Result<dirsize::DirSize, String> { dirsize::dir_size(&path) }
 
 #[tauri::command]
 fn get_downloads() -> Vec<modrinth::DownloadEntry> { modrinth::list_downloads() }
@@ -142,7 +149,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             send_system_notification, open_external_url, open_path_in_file_manager, set_launch_on_startup,
-            launch_game_tracked, stop_game, get_active_sessions, get_playtime, get_downloads,
+            launch_game_tracked, stop_game, get_active_sessions, get_playtime, get_playtime_history, get_dir_size, get_downloads,
             list_flatpaks, list_runtimes, get_platform_capabilities, create_game_shortcut, remove_game_shortcut,
             detect_import_sources, scan_import_games,
             get_mochi_config_info, move_mochi_config, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
