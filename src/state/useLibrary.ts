@@ -115,6 +115,11 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
   const toggleFavorite = useCallback((gameId: string) =>
     setLibrary((current) => current.map((piko) => (piko.id === gameId ? { ...piko, favorite: !piko.favorite } : piko))), []);
 
+  const setFavorites = useCallback((gameIds: string[], on: boolean) => {
+    const ids = new Set(gameIds);
+    setLibrary((current) => current.map((piko) => (ids.has(piko.id) ? { ...piko, favorite: on } : piko)));
+  }, []);
+
   const setCollectionMembership = useCallback((gameIds: string[], collectionId: string, on: boolean) => {
     const ids = new Set(gameIds);
     setLibrary((current) => current.map((piko) => (ids.has(piko.id) ? { ...piko, collectionIds: toggleInList(piko.collectionIds, collectionId, on) } : piko)));
@@ -148,7 +153,7 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
     search, setSearch, librarySort, setLibrarySort, selectedPiko, selectedTofu, visiblePikos, groupedPikos, continuePlaying,
     selectPiko, updateGame, updateSelectedTofu, createTofu,
     filter, setFilter, tagFilters, setTagFilters, toggleTagFilter, filterCounts, installed, searchedPikos,
-    toggleFavorite, setCollectionMembership, addTagToGames, removeGames,
+    toggleFavorite, setFavorites, setCollectionMembership, addTagToGames, removeGames,
   };
 }
 

@@ -1,4 +1,14 @@
-import { Gamepad2, Play, Plus, SlidersHorizontal, Settings, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { CheckSquare, Gamepad2, Play, Plus, SlidersHorizontal, Settings, X } from "lucide-react";
+import { BulkActionBar } from "../components/library/BulkActionBar";
+import { ConfirmDialog } from "../components/library/ConfirmDialog";
+import { CollectionManager } from "../components/library/CollectionManager";
+import { GameCard } from "../components/library/GameCard";
+import { GameContextMenu } from "../components/library/GameContextMenu";
+import { LibraryFilterBar } from "../components/library/LibraryFilterBar";
+import { removeGameShortcut } from "../lib/platform";
+import { tagCounts } from "../lib/library";
+import type { Piko } from "../models";
 import { GameArtwork } from "../components/GameArtwork";
 import { GameDetails } from "../components/GameDetails";
 import { LibraryModSearch } from "../components/LibraryModSearch";
@@ -15,9 +25,24 @@ const greeting = () => { const hour = new Date().getHours(); return hour < 5 || 
 
 export function LibraryView() {
   const app = useApp();
-  const { lib, actions, sessions, playtime, cloud, add, account, credentials, platformCapabilities } = app;
+  const { lib, actions, sessions, playtime, cloud, add, account, credentials, platformCapabilities, collections } = app;
   const { selectedPiko, selectedTofu, gameDetailsId, search } = lib;
   const details = lib.library.find((piko) => piko.id === gameDetailsId);
+  const [menu, setMenu] = useState<{ gameId: string; x: number; y: number } | null>(null);
+  const [selecting, setSelecting] = useState(false);
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [showCollections, setShowCollections] = useState(false);
+  const [removal, setRemoval] = useState<Piko[] | null>(null);
+  const allTags = useMemo(() => tagCounts(lib.library), [lib.library]);
+  const menuGame = menu ? lib.library.find((piko) => piko.id === menu.gameId) : undefined;
+  const checkedGames = lib.library.filter((piko) => checked.has(piko.id));
+  const endSelecting = () => { setSelecting(false); setChecked(new Set()); };
+  const hasFolder = (game: Piko) => Boolean(game.installPath || game.executablePath?.startsWith("/"));
+  const collectionCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    lib.library.forEach((piko) => piko.collectionIds?.forEach((id) => counts.set(id, (counts.get(id) ?? 0) + 1)));
+    return counts;
+  }, [lib.library]);
 
   const addButton = <button className="secondary-button" onClick={() => add.setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> Add Piko</button>;
 
@@ -36,6 +61,12 @@ export function LibraryView() {
       onStop={() => void actions.stopRunningGame(details)}
       onEdit={() => app.setEditingGameId(details.id)}
       onRemove={() => actions.removeGame(details)}
+      collections={collections.collections}
+      tagSuggestions={allTags.map(([tag]) => tag)}
+      onToggleFavorite={() => lib.toggleFavorite(details.id)}
+      onToggleCollection={(collectionId, on) => lib.setCollectionMembership([details.id], collectionId, on)}
+      onCreateCollection={(name) => collections.createCollection(name)}
+      onTagsChange={(tags) => lib.updateGame(details.id, { tags })}
       onOpenFolder={() => actions.openGameFolder(details)}
       onShortcut={() => void actions.addShortcut(details)}
       workspace={<>
@@ -89,20 +120,48 @@ export function LibraryView() {
       </article>)}</div>
       {actions.launchError && <p className="metadata-note">{actions.launchError}</p>}
     </section>}
+    <LibraryFilterBar lib={lib} collections={collections.collections} tags={allTags} onManageCollections={() => setShowCollections(true)} />
     <section className="library-toolbar">
       <span className="library-count">{lib.visiblePikos.length} game{lib.visiblePikos.length === 1 ? "" : "s"}{search.trim() ? ` matching “${search.trim()}”` : ""}</span>
-      <div className="library-sort"><span>Sort by</span><Select<LibrarySort> label="Sort by" value={lib.librarySort} onChange={lib.setLibrarySort} align="end" options={[{ value: "category", label: "Category" }, { value: "name", label: "Name" }, { value: "recent", label: "Recently played" }, { value: "playtime", label: "Most played" }]} /></div>
+      <div className="library-toolbar-actions">
+        <button type="button" className={`secondary-button ${selecting ? "active" : ""}`} aria-pressed={selecting} onClick={() => (selecting ? endSelecting() : setSelecting(true))}><CheckSquare size={14} /> {selecting ? "Done selecting" : "Select"}</button>
+        <div className="library-sort"><span>Sort by</span><Select<LibrarySort> label="Sort by" value={lib.librarySort} onChange={lib.setLibrarySort} align="end" options={[{ value: "category", label: "Category" }, { value: "name", label: "Name" }, { value: "recent", label: "Recently played" }, { value: "playtime", label: "Most played" }]} /></div>
+      </div>
     </section>
+    {selecting && <BulkActionBar games={checkedGames} collections={collections.collections}
+      onToggleCollection={(collectionId, on) => lib.setCollectionMembership(checkedGames.map((piko) => piko.id), collectionId, on)}
+      onCreateCollection={(name) => collections.createCollection(name)}
+      onAddTag={(tag) => lib.addTagToGames(checkedGames.map((piko) => piko.id), tag)}
+      onFavorite={(on) => lib.setFavorites(checkedGames.map((piko) => piko.id), on)}
+      onRemove={() => setRemoval(checkedGames)}
+      onSelectAll={() => setChecked(new Set(lib.visiblePikos.map((piko) => piko.id)))}
+      onDone={endSelecting} />}
+    {!lib.visiblePikos.length && <div className="empty-state library-no-match"><h2>No games match.</h2><p>Try another filter or clear the search.</p><button type="button" className="secondary-button" onClick={() => { lib.setFilter({ kind: "smart", id: "all" }); lib.setTagFilters([]); lib.setSearch(""); }}>Show everything</button></div>}
     <section className="library-grid-view">
       {lib.groupedPikos.map(([category, games]) => <div className="library-category" key={category}>
         <div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div>
-        <div className="game-card-grid">{games.map((piko) => <button className={`game-card ${selectedPiko.id === piko.id ? "selected" : ""}`} key={piko.id} onClick={() => { lib.selectPiko(piko); lib.setGameDetailsId(piko.id); }}>
-          <GameArtwork className="game-card-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} />
-          <div className="game-card-copy"><strong>{piko.name}<span className={`game-cloud-status ${cloud.syncState === "synced" ? "is-synced" : "not-synced"}`} title={cloud.syncState === "synced" ? "Synced to Mochi Cloud" : "Not synced to Mochi Cloud"}>{cloud.syncState === "synced" ? "✓" : "!"}</span></strong><small>{sessions.isRunning(piko.id) ? "Running now" : piko.categories?.join(" · ") || piko.platformCategory || "Other"}</small></div>
-          <span className="game-card-play"><MochiIcon name="play" fallback={Play} size={15} fill="currentColor"/></span>
-        </button>)}</div>
+        <div className="game-card-grid">{games.map((piko) => <GameCard key={piko.id} piko={piko}
+          selected={selectedPiko.id === piko.id} running={sessions.isRunning(piko.id)} synced={cloud.syncState === "synced"}
+          selecting={selecting} checked={checked.has(piko.id)}
+          onOpen={() => { lib.selectPiko(piko); lib.setGameDetailsId(piko.id); }}
+          onToggleFavorite={() => lib.toggleFavorite(piko.id)}
+          onToggleChecked={() => setChecked((current) => { const next = new Set(current); if (!next.delete(piko.id)) next.add(piko.id); return next; })}
+          onMenu={(x, y) => setMenu({ gameId: piko.id, x, y })} />)}</div>
       </div>)}
     </section>
+    {menu && menuGame && <GameContextMenu game={menuGame} x={menu.x} y={menu.y} collections={collections.collections} canOpenFolder={hasFolder(menuGame)}
+      onClose={() => setMenu(null)}
+      onPlay={() => { lib.selectPiko(menuGame); void actions.launchGame(menuGame); }}
+      onFavorite={() => lib.toggleFavorite(menuGame.id)}
+      onToggleCollection={(collectionId, on) => lib.setCollectionMembership([menuGame.id], collectionId, on)}
+      onCreateCollection={(name) => collections.createCollection(name)}
+      onEdit={() => app.setEditingGameId(menuGame.id)}
+      onOpenFolder={() => actions.openGameFolder(menuGame)}
+      onRemove={() => setRemoval([menuGame])} />}
+    {showCollections && <CollectionManager state={collections} counts={collectionCounts} onClose={() => setShowCollections(false)} />}
+    {removal && <ConfirmDialog title={removal.length === 1 ? `Remove ${removal[0].name}?` : `Remove ${removal.length} games?`} message="They are removed from your Mochi library only. Nothing is uninstalled." confirmLabel="Remove" danger
+      onCancel={() => setRemoval(null)}
+      onConfirm={() => { removal.forEach((game) => void removeGameShortcut(game.id).catch(() => {})); lib.removeGames(removal.map((game) => game.id)); setChecked(new Set()); setRemoval(null); }} />}
     <LibraryModSearch query={search} nexusEnabled={credentials.status.nexus} supabase={supabase} />
   </>;
 }
