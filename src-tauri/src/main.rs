@@ -12,6 +12,7 @@ mod platform;
 mod playtime;
 mod process;
 mod sources;
+mod steam_achievements;
 mod steam_store;
 mod themes;
 mod tracking;
@@ -185,7 +186,7 @@ fn main() {
             game_artwork::cache_game_artwork, game_artwork::get_cached_game_artwork, game_artwork::clear_game_artwork_cache,
             game_artwork::prepare_artwork_preview, game_artwork::save_custom_artwork, game_artwork::delete_game_artwork, platform::check_launch_targets,
             modrinth::get_public_api, modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::apply_mod_profile,
-            steam_store::get_steam_store_details,
+            steam_store::get_steam_store_details, steam_achievements::get_steam_achievements, steam_achievements::get_steam_achievement_totals,
             modrinth::delete_mod_file, modrinth::start_modrinth_download, downloads::start_mod_download, modrinth::update_mod_file, modrinth::analyze_mod_files,
         ])
         .build(tauri::generate_context!())

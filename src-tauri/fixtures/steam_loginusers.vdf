@@ -1,0 +1,17 @@
+"users"
+{
+	"76561197960287930"
+	{
+		"AccountName"		"old"
+		"PersonaName"		"Old"
+		"MostRecent"		"0"
+		"Timestamp"		"1600000000"
+	}
+	"76561198000000001"
+	{
+		"AccountName"		"new"
+		"PersonaName"		"New"
+		"MostRecent"		"1"
+		"Timestamp"		"1500000000"
+	}
+}

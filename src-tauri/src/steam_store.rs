@@ -92,7 +92,7 @@ fn decode_numeric_entities(text: &str) -> String {
     out
 }
 
-fn decode_entities(text: &str) -> String {
+pub(crate) fn decode_entities(text: &str) -> String {
     decode_numeric_entities(text).replace("&quot;", "\"").replace("&#39;", "'").replace("&apos;", "'").replace("&lt;", "<").replace("&gt;", ">").replace("&nbsp;", " ").replace("&amp;", "&")
 }
 

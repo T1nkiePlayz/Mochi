@@ -28,6 +28,11 @@ use macos as os;
 pub mod classify;
 mod vdf;
 
+/// Steam install folders for this OS (used to find the signed-in account).
+pub fn steam_install_roots(home: &Path) -> Vec<PathBuf> { os::steam_roots(home) }
+/// `"key"  "value"` from one VDF line.
+pub fn quoted_vdf_value(line: &str, key: &str) -> Option<String> { vdf::quoted_value(line, key) }
+
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DetectedImportSource {
