@@ -43,7 +43,7 @@ import { FirstLaunchSetup } from "./components/FirstLaunchSetup";
 import { ImportPicker } from "./components/ImportPicker";
 import type { ImportedGame, ImportSourceId } from "./lib/sources";
 import { isCloudConfigured, supabase } from "./lib/supabase";
-import { pullLibrary, pushLibrary } from "./lib/cloud";
+import { getCloudSyncEnabled, pullLibrary, pushLibrary } from "./lib/cloud";
 import type { Piko, Tofu } from "./models";
 import { lookupIgdbGame, lookupIgdbGames, type IgdbGame, type IgdbSettings } from "./lib/igdb";
 import {
@@ -323,6 +323,7 @@ function App() {
   useEffect(() => {
     if (!supabase || !user) {
       syncInitialized.current = false;
+      setCloudSyncEnabled(false);
       setSyncState("offline");
       return;
     }
@@ -330,8 +331,16 @@ function App() {
     let cancelled = false;
     const client = supabase;
     setSyncState("syncing");
-    void pullLibrary(client, user.id)
-      .then(async (cloudLibrary) => {
+    void getCloudSyncEnabled(client, user.id)
+      .then(async (enabled) => {
+        if (cancelled) return;
+        setCloudSyncEnabled(enabled);
+        if (!enabled) {
+          syncInitialized.current = false;
+          setSyncState("offline");
+          return;
+        }
+        const cloudLibrary = await pullLibrary(client, user.id);
         if (cancelled) return;
         if (cloudLibrary.length) {
           setLibrary(cloudLibrary);
@@ -344,15 +353,17 @@ function App() {
       .catch((error: unknown) => {
         if (cancelled) return;
         console.error("Mochi cloud sync failed", error);
+        syncInitialized.current = false;
+        setCloudSyncEnabled(false);
         setSyncState("error");
       });
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
-    if (!supabase || !user || !syncInitialized.current) return;
+    if (!supabase || !user || !cloudSyncEnabled || !syncInitialized.current) return;
     const client = supabase;
     setSyncState("syncing");
     void pushLibrary(client, user.id, library)
@@ -361,7 +372,7 @@ function App() {
         console.error("Mochi cloud sync failed", error);
         setSyncState("error");
       });
-  }, [library, user]);
+  }, [library, user?.id, cloudSyncEnabled]);
 
   const finishFirstLaunchSetup = (games: ImportedGame[], sources: ImportSourceId[]) => {
     window.localStorage.setItem(setupCompleteKey, "true");
@@ -1155,7 +1166,7 @@ function App() {
           ) : (
             <div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>{activeNav} is ready when you are.</h2><p>This part of Mochi is taking shape. Your local library remains available offline.</p><button className="secondary-button" onClick={() => setActiveNav("Library")}><MochiIcon name="library" fallback={Library} size={16} /> Back to library</button></div>
           )}
-          <footer><span>Mochi v0.1.0 · Local-first by design</span><span><MochiIcon name="cloud" fallback={Cloud} size={13} /> Cloud sync unavailable</span></footer>
+          <footer><span>Mochi v0.1.0 · Local-first by design</span><span><MochiIcon name="cloud" fallback={Cloud} size={13} /> {syncState === "syncing" ? "Cloud sync syncing…" : syncState === "synced" ? "Cloud sync active" : syncState === "error" ? "Cloud sync error" : user && !cloudSyncEnabled ? "Cloud sync disabled" : "Cloud sync unavailable"}</span></footer>
         </div>
       </main>
 
