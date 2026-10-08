@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Gamepad2 } from "lucide-react";
 import { AddGameModals } from "./components/AddGameModals";
 import { AuthModal } from "./components/AuthModal";
@@ -14,6 +14,9 @@ import { LibraryView } from "./views/LibraryView";
 import { AppProvider, useApp } from "./state/AppContext";
 import { BigPictureGate } from "./bigpicture/BigPictureGate";
 import { ControllerRuntime } from "./controller/ControllerRuntime";
+import { AccessibilityProvider } from "./state/accessibility";
+import { ShortcutsHelp } from "./components/ShortcutsHelp";
+import { installAccessibilityEnhancer } from "./lib/dialogs";
 import { Cloud } from "lucide-react";
 import { OfflineBanner } from "./components/OfflineBanner";
 
@@ -47,6 +50,10 @@ function Footer() {
   return <footer><span>Mochi v{__APP_VERSION__} · Local-first by design</span><span><MochiIcon name="cloud" fallback={Cloud} size={13} /> {label}</span></footer>;
 }
 
+function SkipLink() {
+  return <a className="skip-link" href="#main-content" onClick={(event) => { event.preventDefault(); const main = document.getElementById("main-content"); main?.focus(); main?.scrollIntoView(); }}>Skip to content</a>;
+}
+
 function Shell() {
   const app = useApp();
   const { lib, credentials, account, themeEngine } = app;
@@ -70,8 +77,9 @@ function Shell() {
 
   const editing = lib.library.find((piko) => piko.id === app.editingGameId);
   return <div className="app-shell">
+    <SkipLink />
     <Sidebar />
-    <main className="main-content">
+    <main className="main-content" id="main-content" tabIndex={-1}>
       <Topbar />
       <UpdateBanner />
       <div className="content">
@@ -90,5 +98,6 @@ function Shell() {
 }
 
 export default function App() {
-  return <AppProvider><ControllerRuntime /><BigPictureGate><Shell /></BigPictureGate></AppProvider>;
+  useEffect(() => installAccessibilityEnhancer(), []);
+  return <AccessibilityProvider><AppProvider><ControllerRuntime /><BigPictureGate><Shell /></BigPictureGate><ShortcutsHelp /></AppProvider></AccessibilityProvider>;
 }
