@@ -73,7 +73,7 @@ pub fn launch_game(target: &str) -> Result<(), String> {
     } else if target.ends_with(".js") {
         spawn_with_error(std::process::Command::new("node").arg(target), "JavaScript script")
     } else {
-        spawn_with_error(std::process::Command::new(target), "game or executable")
+        spawn_with_error(&mut std::process::Command::new(target), "game or executable")
     }
 }
 
