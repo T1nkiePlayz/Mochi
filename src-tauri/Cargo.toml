@@ -38,4 +38,4 @@ default = ["custom-protocol"]
 lto = "fat"
 codegen-units = 1
 strip = true
-opt-level = 3
+opt-level = "s"
