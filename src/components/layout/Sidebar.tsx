@@ -3,6 +3,7 @@ import { AccountAvatar } from "../AccountAvatar";
 import { MochiIcon } from "../MochiIcon";
 import { useApp, type NavId } from "../../state/AppContext";
 import { usernameOf } from "../../state/useAccount";
+import { useExperimentalStatus } from "../../state/useExperimental";
 
 export const navItems: Array<{ id: NavId; icon: typeof Library; iconName: string }> = [
   { id: "Library", icon: Library, iconName: "library" },
@@ -15,6 +16,7 @@ export const navItems: Array<{ id: NavId; icon: typeof Library; iconName: string
 export function Sidebar() {
   const { account, activeNav, setActiveNav, storage } = useApp();
   const { user } = account;
+  const { unseenCount } = useExperimentalStatus();
   return <aside className="sidebar">
     <div className="brand"><div className="brand-mark"><img src="/mochi.png" alt="Mochi" /></div><div><strong>Mochi</strong><span>Your games, your way.</span></div></div>
     <div className="sidebar-account-wrap">
@@ -38,6 +40,7 @@ export function Sidebar() {
       <button className={`nav-item ${activeNav === "Settings" ? "active" : ""}`} aria-current={activeNav === "Settings" ? "page" : undefined} onClick={() => setActiveNav("Settings")}>
         <MochiIcon name="settings" fallback={Settings} size={17} strokeWidth={1.8} />
         <span>Settings</span>
+        {unseenCount > 0 && <span className="nav-new-dot" role="img" aria-label="New experimental features" />}
       </button>
     </div>
   </aside>;
