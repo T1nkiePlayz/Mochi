@@ -99,6 +99,7 @@ impl SystemStatus {
 
 /// Parses `pmset -g batt` output such as
 /// `Now drawing from 'Battery Power'\n -InternalBattery-0 (id=1) 87%; discharging; 4:12 remaining present: true`.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub fn parse_pmset(text: &str) -> SystemStatus {
     let Some(line) = text.lines().find(|line| line.contains('%')) else { return SystemStatus::NONE };
     let percent = line.split('%').next().and_then(|head| {
@@ -111,6 +112,7 @@ pub fn parse_pmset(text: &str) -> SystemStatus {
 }
 
 /// Interprets one `/sys/class/power_supply/*` entry; `None` when it is not the system battery.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub fn parse_power_supply(kind: &str, scope: &str, capacity: &str, status: &str) -> Option<SystemStatus> {
     if kind.trim() != "Battery" || scope.trim().eq_ignore_ascii_case("Device") { return None; }
     let percent = capacity.trim().parse::<u16>().ok()?.min(100) as u8;

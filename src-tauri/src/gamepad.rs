@@ -231,7 +231,7 @@ fn run(app: AppHandle, commands: Receiver<Command>) {
 fn rumble(gilrs: &mut Gilrs, id: Option<usize>, strong: f32, weak: f32, millis: u32) -> Option<(Effect, Instant)> {
     let targets: Vec<GamepadId> = gilrs
         .gamepads()
-        .filter(|(pad_id, pad)| pad.is_ff_supported() && id.map_or(true, |wanted| usize::from(*pad_id) == wanted))
+        .filter(|(pad_id, pad)| pad.is_ff_supported() && id.is_none_or(|wanted| usize::from(*pad_id) == wanted))
         .map(|(pad_id, _)| pad_id)
         .collect();
     if targets.is_empty() { return None; }
