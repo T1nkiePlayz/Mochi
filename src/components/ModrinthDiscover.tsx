@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import minecraftLogo from "../assets/minecraft-core-brand.svg";
 import { Download, Eye, PackageOpen, Plus, RefreshCw, Search, X } from "lucide-react";
 import {
   getModrinthGameVersions,
@@ -203,7 +204,7 @@ function getPrimaryCreator(project: ModrinthProjectDetails) {
 function MinecraftLogo() {
   return <img
     className="minecraft-discovery-logo"
-    src="https://raw.githubusercontent.com/Mojang/web-theme-bootstrap/main/assets/svg/logos/minecraft-core-brand.svg"
+    src={minecraftLogo}
     alt="Minecraft"
     draggable={false}
   />;
