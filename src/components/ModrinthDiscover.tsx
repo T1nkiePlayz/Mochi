@@ -230,8 +230,15 @@ function ProjectDetails({ project, gameVersion, onClose }: { project: ModrinthPr
           <div><strong>{member.user.name || member.user.username}</strong><small>@{member.user.username} · {member.role}</small></div>
         </div>)}</div>
       </section> : null}
-    </div> : <div className="project-version-list">{versions.length ? versions.map(version=><div className="project-version" key={version.id}><div><strong>{version.name || version.version_number}</strong><small><strong>{version.version_number}</strong> · {version.version_type || "release"} · Published {formatDate(version.date_published)}</small><small>Minecraft: {version.game_versions.join(", ") || "Unknown"} · Loaders: {version.loaders.join(", ") || "Unknown"} · {version.files.length} file{version.files.length === 1 ? "" : "s"} · {version.dependencies.length} dependenc{version.dependencies.length === 1 ? "y" : "ies"}</small>{version.changelog ? <details><summary>Changelog</summary><Markdown source={version.changelog} /></details> : null}<details><summary>Files</summary><div className="project-file-list">{version.files.map(file => <div key={file.filename}><span>{file.filename}</span><small>{formatBytes(file.size)}{file.primary ? " · Primary" : ""}</small></div>)}</div></details></div><span>{version.files.length} file{version.files.length===1?"":"s"}</span></div>) : <div className="discover-empty">No versions found for this Minecraft version.</div>}</div>}
-  </div></div>;
+    </div> : <div className="project-version-list">{versions.length ? versions.map(version => <article className="project-version" key={version.id}>
+  <div className="project-version-main">
+    <div className="project-version-heading"><strong>{version.name || version.version_number}</strong><span>{version.version_number}</span></div>
+    <div className="project-version-meta"><span>{version.version_type || "release"}</span><span>Published {formatDate(version.date_published)}</span><span>{version.files.length} file{version.files.length === 1 ? "" : "s"}</span></div>
+    <div className="project-version-targets"><span>{version.game_versions.join(", ") || "Unknown Minecraft version"}</span><span>{version.loaders.join(", ") || "Any loader"}</span></div>
+    {version.changelog ? <details className="project-version-changelog"><summary>View changelog</summary><div className="project-version-changelog-body"><Markdown source={version.changelog} /></div></details> : null}
+  </div>
+  <details className="project-version-files"><summary>Files <span>{version.files.length}</span></summary><div className="project-file-list">{version.files.map(file => <div key={file.filename}><span>{file.filename}</span><small>{formatBytes(file.size)}{file.primary ? " · Primary" : ""}</small></div>)}</div></details>
+</article>) : <div className="discover-empty">No versions found for this Minecraft version.</div>}</div>  </div></div>;
 }
 
 function TofuPicker({ project, pikos, onClose, onInstall }: { project: ModrinthProject; pikos: Piko[]; onClose: () => void; onInstall: (tofu: Tofu) => void }) {
