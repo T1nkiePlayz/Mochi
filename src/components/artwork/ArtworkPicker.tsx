@@ -27,14 +27,18 @@ export function ArtworkPicker({ gameName, onChange, current }: Props) {
   const crop = useRef<CropRect | null>(null);
   const zone = useRef<HTMLDivElement>(null);
 
+  const loadSeq = useRef(0);
   const load = useCallback(async (next: string) => {
+    const mine = ++loadSeq.current;
     setBusy(true); setError(""); setSearching(false);
     try {
       const prepared = await prepareArtworkPreview(next);
+      // The newest request wins when a paste and a drop (or two URLs) overlap.
+      if (mine !== loadSeq.current) return;
       crop.current = null;
       setSource(next); setPreview(prepared);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
-    finally { setBusy(false); }
+    } catch (reason) { if (mine === loadSeq.current) setError(reason instanceof Error ? reason.message : String(reason)); }
+    finally { if (mine === loadSeq.current) setBusy(false); }
   }, []);
 
   const loadBlob = useCallback(async (blob: Blob) => {

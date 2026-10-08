@@ -37,7 +37,7 @@ pub struct DownloadEntry {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ModUpdate { pub version_id: String, pub version_number: String, pub filename: String, pub url: String, pub size: u64 }
+pub struct ModUpdate { pub version_id: String, pub version_number: String, pub filename: String, pub url: String, pub size: u64, pub sha1: Option<String> }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -68,6 +68,16 @@ pub(crate) fn downloads() -> &'static Mutex<HashMap<String, DownloadEntry>> {
     DOWNLOADS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+/// A panic while the lock was held must not disable download tracking for the rest of the session.
+pub(crate) fn lock_downloads() -> std::sync::MutexGuard<'static, HashMap<String, DownloadEntry>> {
+    downloads().lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+/// Downloads that have not finished yet.
+pub(crate) fn active_download_count() -> usize {
+    lock_downloads().values().filter(|entry| entry.finished_at.is_none()).count()
+}
+
 pub(crate) fn now_ms() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or_default()
 }
@@ -96,10 +106,17 @@ fn validate_content_path(path: &str) -> Result<PathBuf, String> {
 
 pub(crate) fn validate_download_filename(filename: &str) -> Result<&str, String> {
     let name = filename.trim();
-    if name.is_empty() || name == "." || name == ".." || name.contains(['/', '\\']) || name.chars().any(char::is_control) || !CONTENT_EXTENSIONS.contains(&content_extension(name).as_str()) {
+    // `.disabled` is Mochi's own marker (set_mod_file_enabled); a download may not arrive pre-disabled or collide with it.
+    if name.is_empty() || name.len() > 200 || name == "." || name == ".." || name.contains(['/', '\\']) || name.chars().any(char::is_control)
+        || name.ends_with(".disabled") || !CONTENT_EXTENSIONS.contains(&content_extension(name).as_str()) {
         return Err("Invalid download filename.".into());
     }
     Ok(name)
+}
+
+fn modrinth_redirect_allowed(url: &reqwest::Url) -> bool {
+    url.scheme() == "https" && url.port().is_none() && url.username().is_empty() && url.password().is_none()
+        && matches!(url.host_str(), Some("cdn.modrinth.com" | "api.modrinth.com"))
 }
 
 /// One shared client: connection reuse, a fixed user agent, and redirects that
@@ -108,13 +125,14 @@ pub(crate) fn client() -> Result<&'static reqwest::Client, String> {
     static CLIENT: OnceLock<Result<reqwest::Client, String>> = OnceLock::new();
     CLIENT.get_or_init(|| {
         let policy = reqwest::redirect::Policy::custom(|attempt| {
-            let allowed = attempt.url().scheme() == "https" && matches!(attempt.url().host_str(), Some("cdn.modrinth.com") | Some("api.modrinth.com"));
-            if attempt.previous().len() < 5 && allowed { attempt.follow() } else { attempt.stop() }
+            if attempt.previous().len() < 5 && modrinth_redirect_allowed(attempt.url()) { attempt.follow() } else { attempt.stop() }
         });
         reqwest::Client::builder()
             .user_agent("T1nkiePlayz/Mochi/0.1.0 (https://github.com/T1nkiePlayz/Mochi)")
             .redirect(policy)
             .connect_timeout(std::time::Duration::from_secs(20))
+            // A stalled transfer must fail instead of leaving a download "downloading" forever.
+            .read_timeout(std::time::Duration::from_secs(45))
             .build()
             .map_err(|e| format!("Unable to prepare Modrinth requests: {e}"))
     }).as_ref().map_err(Clone::clone)
@@ -122,20 +140,16 @@ pub(crate) fn client() -> Result<&'static reqwest::Client, String> {
 
 pub(crate) fn cleanup_downloads() {
     let cutoff = now_ms().saturating_sub(DOWNLOAD_RETENTION_MS);
-    if let Ok(mut state) = downloads().lock() {
-        state.retain(|_, entry| entry.finished_at.map(|finished| finished > cutoff).unwrap_or(true));
-    }
+    lock_downloads().retain(|_, entry| entry.finished_at.map(|finished| finished > cutoff).unwrap_or(true));
 }
 
 pub(crate) fn update_download(id: &str, update: impl FnOnce(&mut DownloadEntry)) {
-    if let Ok(mut state) = downloads().lock() {
-        if let Some(entry) = state.get_mut(id) { update(entry); }
-    }
+    if let Some(entry) = lock_downloads().get_mut(id) { update(entry); }
 }
 
 pub fn list_downloads() -> Vec<DownloadEntry> {
     cleanup_downloads();
-    let mut entries = downloads().lock().map(|state| state.values().cloned().collect::<Vec<_>>()).unwrap_or_default();
+    let mut entries = lock_downloads().values().cloned().collect::<Vec<_>>();
     entries.sort_by_key(|entry| entry.created_at);
     entries
 }
@@ -167,7 +181,8 @@ fn classify_cache_age(age_ms: u64) -> CacheAge {
 /// Only the public Modrinth API over HTTPS may be queried.
 fn parse_api_url(url: &str) -> Result<reqwest::Url, String> {
     let parsed = reqwest::Url::parse(url).map_err(|_| "Invalid Modrinth API URL.".to_string())?;
-    if parsed.scheme() != "https" || parsed.host_str() != Some("api.modrinth.com") || !parsed.path().starts_with("/v2/") || parsed.port().is_some() {
+    if parsed.scheme() != "https" || parsed.host_str() != Some("api.modrinth.com") || !parsed.path().starts_with("/v2/") || parsed.port().is_some()
+        || !parsed.username().is_empty() || parsed.password().is_some() {
         return Err("Mochi only allows requests to the public Modrinth API.".into());
     }
     Ok(parsed)
@@ -272,7 +287,7 @@ fn rename_enabled(path: &Path, enabled: bool) -> Result<(), String> {
         (false, None) => path.with_file_name(format!("{name}.disabled")),
         _ => return Ok(()),
     };
-    if target.exists() { return Err(format!("'{}' already exists.", target.display())); }
+    if fs::symlink_metadata(&target).is_ok() { return Err(format!("'{}' already exists.", target.display())); }
     fs::rename(path, &target).map_err(|e| format!("Unable to change content state: {e}"))
 }
 
@@ -286,21 +301,24 @@ pub fn set_mod_file_enabled(path: String, enabled: bool) -> Result<(), String> {
 pub fn apply_mod_profile(path: String, enabled_files: Vec<String>) -> Result<(), String> {
     let root = validate_path(&path)?;
     let wanted: std::collections::HashSet<&str> = enabled_files.iter().map(String::as_str).collect();
+    // Keep going after a failure so one name clash does not leave the rest of the profile half-applied.
+    let mut first_error = None;
     for file in list_mod_files(path)? {
         let base = file.filename.strip_suffix(".disabled").unwrap_or(&file.filename);
-        rename_enabled(&root.join(&file.filename), wanted.contains(base))?;
+        if let Err(error) = rename_enabled(&root.join(&file.filename), wanted.contains(base)) { first_error.get_or_insert(error); }
     }
-    Ok(())
+    first_error.map_or(Ok(()), Err)
 }
 
 #[tauri::command(async)]
 pub fn delete_mod_file(path: String) -> Result<(), String> {
     let p = validate_content_path(&path)?;
-    if p.exists() { fs::remove_file(p).map_err(|e| format!("Unable to delete content: {e}"))?; }
+    // symlink_metadata so a dangling symlink can still be removed (`exists()` follows it and says "no").
+    if fs::symlink_metadata(&p).is_ok() { fs::remove_file(p).map_err(|e| format!("Unable to delete content: {e}"))?; }
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn start_modrinth_download(url: String, path: String, tofu_id: String, tofu_name: String, item_name: String, filename: String) -> Result<String, String> {
     crate::downloads::start(crate::downloads::ModDownloadRequest {
         provider: crate::downloads::Provider::Modrinth, url, path, tofu_id, tofu_name, item_name, filename,
@@ -310,14 +328,15 @@ pub fn start_modrinth_download(url: String, path: String, tofu_id: String, tofu_
 
 /// Downloads `url` next to `path`, then removes the old file. A disabled mod stays disabled.
 #[tauri::command]
-pub async fn update_mod_file(path: String, url: String, filename: String) -> Result<(), String> {
+pub async fn update_mod_file(path: String, url: String, filename: String, sha1: Option<String>) -> Result<(), String> {
     let old = validate_content_path(&path)?;
     let parsed = crate::downloads::parse_download_url(crate::downloads::Provider::Modrinth, &url)?;
     let filename = validate_download_filename(&filename)?;
+    let sha1 = sha1.as_deref().filter(|value| !value.trim().is_empty()).map(crate::downloads::normalize_sha1).transpose()?;
     let was_disabled = old.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.ends_with(".disabled"));
     let target_name = if was_disabled { format!("{filename}.disabled") } else { filename.to_string() };
     let target = old.with_file_name(target_name);
-    crate::downloads::fetch_to_file(crate::downloads::Provider::Modrinth, parsed, &target, None, |_, _| {}).await?;
+    crate::downloads::fetch_to_file(crate::downloads::Provider::Modrinth, parsed, &target, sha1.as_deref(), |_, _| {}).await?;
     if target != old { let _ = fs::remove_file(&old); }
     Ok(())
 }
@@ -358,11 +377,14 @@ pub async fn analyze_mod_files(path: String, game_version: Option<String>, loade
     let latest = post_versions("version_files/update", filters).await.unwrap_or_default();
 
     let project_ids: Vec<&str> = { let mut ids: Vec<&str> = current.values().map(|v| v.project_id.as_str()).collect(); ids.sort_unstable(); ids.dedup(); ids };
-    let projects: HashMap<String, ApiProject> = if project_ids.is_empty() { HashMap::new() } else {
-        let url = reqwest::Url::parse_with_params(&format!("{API_BASE}/projects"), [("ids", serde_json::to_string(&project_ids).unwrap_or_default())]).map_err(|e| e.to_string())?;
-        let found: Vec<ApiProject> = client()?.get(url).send().await.map_err(|e| e.to_string())?.json().await.unwrap_or_default();
-        found.into_iter().map(|project| (project.id.clone(), project)).collect()
-    };
+    // Chunked so a big mod folder never produces a URL the API rejects; titles fall back to ids on failure.
+    let mut projects: HashMap<String, ApiProject> = HashMap::new();
+    for chunk in project_ids.chunks(100) {
+        let url = reqwest::Url::parse_with_params(&format!("{API_BASE}/projects"), [("ids", serde_json::to_string(chunk).unwrap_or_default())]).map_err(|e| e.to_string())?;
+        let response = client()?.get(url).timeout(std::time::Duration::from_secs(30)).send().await;
+        let found: Vec<ApiProject> = match response { Ok(response) if response.status().is_success() => response.json().await.unwrap_or_default(), _ => Vec::new() };
+        projects.extend(found.into_iter().map(|project| (project.id.clone(), project)));
+    }
 
     Ok(hashed.into_iter().filter_map(|(file, hash)| {
         let version = current.get(&hash)?;
@@ -371,7 +393,7 @@ pub async fn analyze_mod_files(path: String, game_version: Option<String>, loade
             let asset = newest.files.iter().find(|f| f.primary).or_else(|| newest.files.first())?;
             // A "newer" version whose primary file hashes the same is not an update.
             if asset.hashes.get("sha1").is_some_and(|h| *h == hash) { return None; }
-            Some(ModUpdate { version_id: newest.id.clone(), version_number: newest.version_number.clone(), filename: asset.filename.clone(), url: asset.url.clone(), size: asset.size })
+            Some(ModUpdate { version_id: newest.id.clone(), version_number: newest.version_number.clone(), filename: asset.filename.clone(), url: asset.url.clone(), size: asset.size, sha1: asset.hashes.get("sha1").cloned() })
         });
         Some(ModAnalysis {
             enabled: file.enabled, filename: file.filename, path: file.path, project_id: version.project_id.clone(),
@@ -392,6 +414,52 @@ mod tests {
         assert!(validate_content_path("/etc/passwd").is_err());
         assert!(validate_content_path("/tmp/../etc/a.jar").is_err());
         assert!(validate_content_path("relative/a.jar").is_err());
+    }
+
+    #[test]
+    fn api_urls_reject_userinfo() {
+        assert!(parse_api_url("https://user:pw@api.modrinth.com/v2/search").is_err());
+        assert!(parse_api_url("https://user@api.modrinth.com/v2/search").is_err());
+    }
+
+    #[test]
+    fn redirects_stay_on_modrinth() {
+        let ok = |u: &str| modrinth_redirect_allowed(&reqwest::Url::parse(u).unwrap());
+        assert!(ok("https://cdn.modrinth.com/data/a.jar"));
+        assert!(!ok("http://cdn.modrinth.com/a.jar"));
+        assert!(!ok("https://cdn.modrinth.com:444/a.jar"));
+        assert!(!ok("https://u@cdn.modrinth.com/a.jar"));
+        assert!(!ok("https://evil.example/a.jar"));
+    }
+
+    #[test]
+    fn download_filenames_reject_control_and_marker_names() {
+        for bad in ["a\0.jar", "a\n.jar", "a.jar.disabled", ".jar", "..", "a/b.jar"] { assert!(validate_download_filename(bad).is_err(), "{bad:?}"); }
+        assert!(validate_download_filename(&format!("{}.jar", "a".repeat(300))).is_err());
+        assert!(validate_download_filename("  ok.jar ").is_ok());
+    }
+
+    #[test]
+    fn delete_removes_dangling_symlinks_and_profile_applies() {
+        let dir = std::env::temp_dir().join(format!("mochi-mods-{}-{}", std::process::id(), now_ms()));
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("a.jar"), b"a").unwrap();
+        fs::write(dir.join("b.jar.disabled"), b"b").unwrap();
+        apply_mod_profile(dir.to_string_lossy().into_owned(), vec!["b.jar".into()]).unwrap();
+        assert!(dir.join("a.jar.disabled").exists() && dir.join("b.jar").exists());
+        #[cfg(unix)]
+        {
+            let link = dir.join("gone.jar");
+            std::os::unix::fs::symlink(dir.join("missing-target"), &link).unwrap();
+            delete_mod_file(link.to_string_lossy().into_owned()).unwrap();
+            assert!(fs::symlink_metadata(&link).is_err());
+        }
+        // A clash is reported but the rest of the profile is still applied.
+        fs::write(dir.join("a.jar"), b"dup").unwrap();
+        fs::write(dir.join("c.jar"), b"c").unwrap();
+        assert!(apply_mod_profile(dir.to_string_lossy().into_owned(), vec!["a.jar".into()]).is_err());
+        assert!(dir.join("c.jar.disabled").exists());
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]

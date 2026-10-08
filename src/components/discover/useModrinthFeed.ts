@@ -61,14 +61,15 @@ export function useModrinthFeed(query: DiscoverQuery, enabled = true, fillTarget
     } catch (error) {
       if (gen === generation.current) setState((previous) => ({ ...previous, loading: false, loadingMore: false, error: error instanceof Error ? error.message : "Unable to load Modrinth projects." }));
     } finally {
-      inFlight.current = false;
+      // A superseded request must not clear the flag of the newer request that is now running.
+      if (gen === generation.current) inFlight.current = false;
       if (gen === generation.current) setState((previous) => previous.loadingMore ? { ...previous, loadingMore: false } : previous);
     }
   }, [pageSize, fillTarget]);
 
   useEffect(() => {
-    if (!enabled) return;
     generation.current += 1;
+    if (!enabled) return;
     const gen = generation.current;
     inFlight.current = false;
     seen.current = new Set();

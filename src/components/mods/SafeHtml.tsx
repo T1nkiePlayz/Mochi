@@ -9,7 +9,7 @@ function render(nodes: SafeNode[], onLink: (url: string) => void, path = ""): Re
     if (node.tag === "a") {
       const href = node.attrs.href;
       return href
-        ? <a key={key} href={href} title={node.attrs.title} rel="noopener noreferrer nofollow" onClick={(event) => { event.preventDefault(); onLink(href); }}>{render(node.children, onLink, key + ".")}</a>
+        ? <a key={key} href={href} title={node.attrs.title} rel="noopener noreferrer nofollow" onClick={(event) => { event.preventDefault(); onLink(href); }} onAuxClick={(event) => event.preventDefault()}>{render(node.children, onLink, key + ".")}</a>
         : <span key={key}>{render(node.children, onLink, key + ".")}</span>;
     }
     if (node.tag === "img") return <img key={key} src={node.attrs.src} alt={node.attrs.alt ?? ""} loading="lazy" referrerPolicy="no-referrer" />;

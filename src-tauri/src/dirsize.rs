@@ -19,7 +19,8 @@ pub struct DirSize {
 /// Sums file sizes below `path`. Symlinks are never followed; the walk stops at a cap or deadline.
 pub fn dir_size(path: &str) -> Result<DirSize, String> {
     let root = Path::new(path);
-    let meta = fs::symlink_metadata(root).map_err(|e| format!("Unable to read folder: {e}"))?;
+    // Follows a symlink at the root only: a game library folder that is itself a link is common. Links below it are skipped.
+    let meta = fs::metadata(root).map_err(|e| format!("Unable to read folder: {e}"))?;
     if !meta.is_dir() { return Err("Not a folder.".into()); }
     let deadline = Instant::now() + TIME_BUDGET;
     let mut result = DirSize { bytes: 0, files: 0, truncated: false };
@@ -59,5 +60,21 @@ mod tests {
         assert_eq!((size.bytes, size.files, size.truncated), (42, 2, false));
         assert!(dir_size(root.join("x").to_str().unwrap()).is_err());
         let _ = fs::remove_dir_all(&root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn follows_a_symlinked_root_but_not_inner_links() {
+        let base = std::env::temp_dir().join(format!("mochi-dirsize-link-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&base);
+        fs::create_dir_all(base.join("real")).unwrap();
+        fs::write(base.join("real/a"), [0u8; 7]).unwrap();
+        fs::write(base.join("outside"), [0u8; 1000]).unwrap();
+        std::os::unix::fs::symlink(base.join("outside"), base.join("real/inner")).unwrap();
+        std::os::unix::fs::symlink(base.join("real"), base.join("lib")).unwrap();
+        let size = dir_size(base.join("lib").to_str().unwrap()).unwrap();
+        assert_eq!((size.bytes, size.files), (7, 1));
+        assert!(dir_size(base.join("missing").to_str().unwrap()).is_err());
+        let _ = fs::remove_dir_all(&base);
     }
 }

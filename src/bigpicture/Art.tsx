@@ -1,12 +1,13 @@
 import type { CSSProperties } from "react";
 import type { Piko } from "../models";
 import { useArtworkUrl } from "./hooks";
+import { cssUrl } from "../lib/metadata/merge";
 
 /** Legacy libraries stored a fixed purple gradient as "no artwork"; let the theme placeholder show instead. */
 const customFallback = (value: string) => (value && !value.includes("rgba(73,57,103") ? value : undefined);
 
 export function artStyle(url: string, piko: Piko | undefined): CSSProperties | undefined {
-  if (url) return { backgroundImage: `url("${url}")` };
+  if (url) return { backgroundImage: cssUrl(url) };
   const fallback = piko ? customFallback(piko.artwork) : undefined;
   return fallback ? { backgroundImage: fallback } : undefined;
 }

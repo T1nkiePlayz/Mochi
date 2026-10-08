@@ -14,6 +14,7 @@ mod process;
 mod sources;
 mod steam_store;
 mod themes;
+mod tracking;
 mod tray;
 
 #[derive(Deserialize)]
@@ -37,10 +38,10 @@ fn send_system_notification(title: String, body: String) -> Result<(), String> {
     platform::send_system_notification(&title, &body)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn open_external_url(url: String) -> Result<(), String> { platform::open_external_url(&url) }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn open_path_in_file_manager(path: String) -> Result<(), String> { platform::open_path(&path) }
 
 #[tauri::command(async)]
@@ -58,16 +59,16 @@ fn launch_game_tracked(app: tauri::AppHandle, request: LaunchRequest) -> Result<
     playtime::start(app, request, move || platform::launch_game(&target, &config))
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn stop_game(game_id: String) -> Result<(), String> { playtime::stop(&game_id) }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn get_active_sessions() -> Result<Vec<playtime::ActiveSessionInfo>, String> { playtime::active() }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn get_playtime() -> Result<Vec<playtime::PlaytimeEntry>, String> { playtime::list() }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn get_playtime_history(since_epoch: Option<u64>) -> Result<Vec<playtime::Session>, String> { playtime::history(since_epoch) }
 
 #[tauri::command(async)]
@@ -113,12 +114,22 @@ fn list_user_themes(app: tauri::AppHandle) -> Result<Vec<themes::UserThemeDescri
 fn load_user_theme(app: tauri::AppHandle, theme_id: String) -> Result<themes::LoadedUserTheme, String> { themes::load_user_theme(app, theme_id) }
 
 #[tauri::command(async)]
-fn clear_mochi_app_data(app: tauri::AppHandle) -> Result<(), String> { themes::clear_app_data(app) }
+fn clear_mochi_app_data(app: tauri::AppHandle) -> Result<(), String> {
+    themes::clear_app_data(app.clone())?;
+    // Cached API responses live in the per-OS cache folder; wine prefixes are the user's data and stay.
+    if let Ok(cache) = app.path().app_cache_dir() { let _ = std::fs::remove_dir_all(cache.join("modrinth-api")); }
+    if let Ok(data) = app.path().app_data_dir() { let _ = std::fs::remove_dir_all(data.join("steam-store")); }
+    // Playtime of games that are running right now is kept.
+    let _ = playtime::reset();
+    Ok(())
+}
 
 #[tauri::command(async)]
 fn import_theme(app: tauri::AppHandle, source_path: String) -> Result<themes::UserThemeDescriptor, String> { themes::import_theme(app, source_path) }
 
 fn main() {
+    #[cfg(target_os = "linux")]
+    platform::prepare_linux_webview_environment();
     tauri::Builder::default()
         // Tells the frontend how it was started before the first paint.
         .plugin(tauri::plugin::Builder::<tauri::Wry, ()>::new("mochi-boot").js_init_script(bigpicture::boot_script(bigpicture::parse_flags(std::env::args()))).build())
@@ -144,16 +155,20 @@ fn main() {
             std::thread::spawn(|| {
                 if let Err(error) = platform::ensure_platform_integration() { eprintln!("Mochi platform integration: {error}"); }
             });
-            themes::initialize_config(app.handle())?;
+            // An unwritable config folder must not stop Mochi from opening; commands report the problem when used.
+            if let Err(error) = themes::initialize_config(app.handle()) { eprintln!("Mochi config: {error}"); }
             let data_dir = app.path().app_data_dir()?;
             playtime::initialize(data_dir).map_err(std::io::Error::other)?;
-            tray::initialize(app)?;
+            tray::initialize(app);
             gamepad::start(app.handle().clone());
             if let Some(window) = app.get_webview_window("main") {
                 window.clone().on_window_event(move |event| {
                     if let WindowEvent::CloseRequested { api, .. } = event {
-                        api.prevent_close();
-                        let _ = window.hide();
+                        // Without a tray icon there is no way back, so closing really closes.
+                        if tray::close_hides_window() {
+                            api.prevent_close();
+                            let _ = window.hide();
+                        }
                     }
                 });
             }
@@ -181,6 +196,10 @@ fn main() {
             // Clicking the Dock icon should reopen a window that was hidden to the menu bar.
             #[cfg(target_os = "macos")]
             tauri::RunEvent::Reopen { .. } => tray::show_mochi(app),
+            // A mochi:// link opened while Mochi sits in the menu bar must bring the window back
+            // (the deep-link plugin forwards the URL to the frontend itself).
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Opened { .. } => tray::show_mochi(app),
             _ => { let _ = app; }
         });
 }

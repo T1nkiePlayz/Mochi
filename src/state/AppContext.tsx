@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { supabase } from "../lib/supabase";
@@ -75,12 +75,22 @@ function useAppController() {
     void invoke("set_launch_on_startup", { enabled: behavior.launchOnStartup }).catch(() => { /* browser/development mode */ });
   }, [behavior.launchOnStartup]);
 
-  useDeepLinks(account, (gameId) => {
+  // A launch link that arrives before the (per-account) library has loaded waits instead of reporting "not found".
+  const pendingLaunch = useRef("");
+  const launchFromLink = (gameId: string) => {
+    if (!storage.ready) { pendingLaunch.current = gameId; return; }
     const game = lib.library.find((piko) => piko.id === gameId);
     if (!game) { actions.setLaunchError("That game is not in your Mochi library."); return; }
     lib.selectPiko(game);
     void actions.launchGame(game);
-  });
+  };
+  useDeepLinks(account, launchFromLink);
+  useEffect(() => {
+    if (!storage.ready || !pendingLaunch.current) return;
+    const gameId = pendingLaunch.current;
+    pendingLaunch.current = "";
+    launchFromLink(gameId);
+  }, [storage.ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -116,8 +126,10 @@ function useAppController() {
   const resetLocalData = async () => {
     if (!window.confirm("Clear all Mochi app data and return to the welcome screen? Your Mochi account will not be deleted.")) return;
     try { window.localStorage.clear(); } catch { /* storage unavailable */ }
-    if (supabase) await supabase.auth.signOut({ scope: "local" });
-    try { await invoke("clear_mochi_app_data"); } catch { /* browser/development mode */ }
+    try {
+      if (supabase) await supabase.auth.signOut({ scope: "local" });
+      await invoke("clear_mochi_app_data");
+    } catch { /* browser/development mode, or already signed out */ }
     window.location.reload();
   };
 

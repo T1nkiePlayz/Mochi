@@ -18,6 +18,23 @@ pub fn quoted_value(line: &str, key: &str) -> Option<String> {
     None
 }
 
+/// Folder paths listed in `libraryfolders.vdf`: `"path"` entries (current format) or numbered
+/// entries whose value is an absolute path (older format: `"1"  "/mnt/games/Steam"`).
+pub fn library_paths(text: &str) -> Vec<String> {
+    let mut paths = Vec::new();
+    for line in text.lines() {
+        let mut parts = line.trim().splitn(2, char::is_whitespace);
+        let (Some(key), Some(rest)) = (parts.next(), parts.next()) else { continue };
+        let key = key.trim_matches('"');
+        let numbered = !key.is_empty() && key.bytes().all(|b| b.is_ascii_digit());
+        if key != "path" && !numbered { continue; }
+        if let Some(value) = quoted_value(&format!("\"{key}\" {}", rest.trim()), key) {
+            if value.starts_with('/') && !paths.contains(&value) { paths.push(value); }
+        }
+    }
+    paths
+}
+
 #[derive(Default)]
 struct Node {
     strings: HashMap<String, String>,

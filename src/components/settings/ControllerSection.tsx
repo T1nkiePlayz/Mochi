@@ -56,7 +56,7 @@ export function BigPictureSection() {
     <div className="setting-row"><span><strong>Open Big Picture</strong><small>Switch now. You can also press F11, or hold Start and Select on a controller.</small></span>
       <button type="button" className="secondary-button" onClick={enterBigPicture}>Open</button></div>
     <ToggleRow title="Start in Big Picture" description={`Open full screen in Big Picture when Mochi starts, including when it starts at login.${deck ? " On by default in Steam Gaming Mode." : ""}`}
-      checked={effectiveStartup(behavior.bigPictureOnStartup)} onChange={(bigPictureOnStartup) => { markStartupChoice(); setBehavior({ ...behavior, bigPictureOnStartup }); }} />
+      checked={effectiveStartup(behavior.bigPictureOnStartup)} onChange={(bigPictureOnStartup) => { markStartupChoice(); setBehavior((current) => ({ ...current, bigPictureOnStartup })); }} />
     {deck && <div className="setting-row"><span><strong>Steam Deck</strong><small>Detected. Touch targets are larger and the on-screen keyboard is on.</small></span><span className="metadata-note">Detected</span></div>}
   </SettingsGroup>;
 }

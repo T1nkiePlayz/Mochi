@@ -1,15 +1,11 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "bigpicture",
-  "description": "Window permissions Big Picture mode needs to go fullscreen and return to the launcher.",
+  "description": "Big Picture mode toggles fullscreen. Showing and focusing the window is done natively from Rust (tray, single-instance).",
   "windows": [
     "main"
   ],
   "permissions": [
-    "core:window:allow-set-fullscreen",
-    "core:window:allow-is-fullscreen",
-    "core:window:allow-show",
-    "core:window:allow-unminimize",
-    "core:window:allow-set-focus"
+    "core:window:allow-set-fullscreen"
   ]
 }

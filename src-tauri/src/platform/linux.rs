@@ -1,6 +1,6 @@
 use super::{
-    command_exists, command_path, home_dir, safe_launch_id, FlatpakApp, LaunchConfig, PlatformCapabilities, Prepared,
-    RuntimeInfo,
+    command_exists, command_path, home_dir, safe_launch_id, user_dir, FlatpakApp, LaunchConfig, PlatformCapabilities, Prepared,
+    RuntimeInfo, UserDir,
 };
 use std::{
     ffi::OsString,
@@ -10,7 +10,12 @@ use std::{
 };
 
 const APP_ID: &str = "dev.sidequestgames.Mochilauncher";
-const DESKTOP_FILE: &str = "mochi.desktop";
+/// Autostart entry name (kept stable so existing "start at login" settings keep working).
+const AUTOSTART_FILE: &str = "mochi.desktop";
+/// Wayland compositors match a window to its launcher by app id, which is the bundle identifier.
+const DESKTOP_FILE: &str = "dev.sidequestgames.Mochilauncher.desktop";
+/// Name used by earlier versions for the application-menu entry.
+const LEGACY_DESKTOP_FILE: &str = "mochi.desktop";
 const DESKTOP_SCHEME: &str = "mochi";
 const AUTOSTART_DIRECTORY: &str = "autostart";
 const ICON_PNG: &[u8] = include_bytes!("../../icons/icon.png");
@@ -33,13 +38,9 @@ pub fn capabilities() -> PlatformCapabilities {
     }
 }
 
-fn data_home() -> Option<PathBuf> {
-    std::env::var_os("XDG_DATA_HOME").map(PathBuf::from).filter(|path| path.is_absolute()).or_else(|| home_dir().map(|home| home.join(".local/share")))
-}
+fn data_home() -> Option<PathBuf> { user_dir(UserDir::Data) }
 
-fn config_home() -> Option<PathBuf> {
-    std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from).filter(|path| path.is_absolute()).or_else(|| home_dir().map(|home| home.join(".config")))
-}
+fn config_home() -> Option<PathBuf> { user_dir(UserDir::Config) }
 
 // ---------------------------------------------------------------------------
 // Flatpak
@@ -292,19 +293,24 @@ pub fn remove_game_shortcut(game_id: &str) -> Result<(), String> {
 }
 
 pub fn ensure_platform_integration() -> Result<(), String> {
-    let home = home_dir().ok_or("Unable to determine the home directory.")?;
-    let applications = data_home().ok_or("Unable to determine the data directory.")?.join("applications");
+    let data = data_home().ok_or("Unable to determine the data directory.")?;
+    let applications = data.join("applications");
     fs::create_dir_all(&applications).map_err(|e| format!("Unable to create the applications directory: {e}"))?;
     let executable = installed_executable()?;
     let exec = desktop_exec_argument(&executable);
     // TryExec is a plain path, not a quoted command line like Exec.
     let try_exec = executable.to_string_lossy();
-    let icons = home.join(".local/share/icons/hicolor/512x512/apps");
+    let icons = data.join("icons/hicolor/512x512/apps");
     fs::create_dir_all(&icons).map_err(|e| format!("Unable to create the icon directory: {e}"))?;
     fs::write(icons.join("mochi.png"), ICON_PNG).map_err(|e| format!("Unable to install the Mochi application icon: {e}"))?;
 
     let content = format!("[Desktop Entry]\nType=Application\nName=Mochi\nComment=Your games, your way.\nExec={exec} %U\nTryExec={try_exec}\nIcon=mochi\nTerminal=false\nStartupNotify=true\nStartupWMClass={APP_ID}\nCategories=Game;Utility;\nMimeType=x-scheme-handler/{DESKTOP_SCHEME};\n");
     fs::write(applications.join(DESKTOP_FILE), content).map_err(|e| format!("Unable to write Mochi desktop entry: {e}"))?;
+    // Earlier versions wrote `mochi.desktop`; two menu entries would be confusing.
+    let legacy = applications.join(LEGACY_DESKTOP_FILE);
+    if fs::read_to_string(&legacy).is_ok_and(|text| text.contains("Comment=Your games, your way.") && text.contains("StartupWMClass=")) {
+        let _ = fs::remove_file(legacy);
+    }
 
     // tauri-plugin-deep-link creates this separate entry and points it at the
     // source AppImage. Rewrite it to the managed copy so URL launches keep
@@ -321,7 +327,7 @@ pub fn ensure_platform_integration() -> Result<(), String> {
 
 pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> {
     let autostart = config_home().ok_or("Unable to determine the config directory.")?.join(AUTOSTART_DIRECTORY);
-    let desktop = autostart.join(DESKTOP_FILE);
+    let desktop = autostart.join(AUTOSTART_FILE);
     if enabled {
         fs::create_dir_all(&autostart).map_err(|e| format!("Unable to create autostart directory: {e}"))?;
         let exe = installed_executable()?;
@@ -346,6 +352,10 @@ fn installed_executable() -> Result<PathBuf, String> {
 
             let installed = bin.join("mochi.AppImage");
             if fs::canonicalize(&installed).ok().as_deref() == Some(source.as_path()) { return Ok(installed); }
+            // Already installed and not older than the image we are running: do not copy ~100 MB on every launch.
+            if let (Ok(have), Ok(want)) = (installed.metadata(), source.metadata()) {
+                if have.len() == want.len() && have.modified().ok() >= want.modified().ok() { return Ok(installed); }
+            }
 
             use std::os::unix::fs::PermissionsExt;
             let temporary = bin.join(format!(".mochi.AppImage.{}.tmp", std::process::id()));
@@ -371,15 +381,53 @@ fn desktop_exec_argument(path: &Path) -> String {
 }
 
 pub fn open_url(url: &str) -> Result<(), String> {
-    opener(url).spawn().map(|_| ()).map_err(|e| format!("Unable to open the external URL: {e}"))
+    super::spawn_detached(opener(url)).map(|_| ()).map_err(|e| format!("Unable to open the external URL: {e}"))
 }
 
 pub fn open_path(path: &Path) -> Result<(), String> {
     let folder = if path.is_dir() { path } else { path.parent().unwrap_or(path) };
-    opener(folder).spawn().map(|_| ()).map_err(|e| format!("Unable to open the folder: {e}"))
+    super::spawn_detached(opener(folder)).map(|_| ()).map_err(|e| format!("Unable to open the folder: {e}"))
+}
+
+/// Whether something on the session bus can show tray icons (GNOME needs the AppIndicator
+/// extension). When it cannot, hiding the window "to the tray" would strand it.
+pub fn tray_available() -> bool {
+    if !command_exists("gdbus") { return true; }
+    let mut command = Command::new("gdbus");
+    command.args(["call", "--session", "--dest", "org.freedesktop.DBus", "--object-path", "/org/freedesktop/DBus", "--method", "org.freedesktop.DBus.NameHasOwner", "org.kde.StatusNotifierWatcher"]);
+    super::run_capture(command, std::time::Duration::from_secs(2)).map(|out| parse_name_has_owner(&String::from_utf8_lossy(&out))).unwrap_or(true)
+}
+
+/// `(true,)` / `(false,)` as printed by `gdbus call`; unknown output counts as available.
+fn parse_name_has_owner(output: &str) -> bool {
+    !output.trim().starts_with("(false")
 }
 
 pub fn send_system_notification(title: &str, body: &str) -> Result<(), String> {
     let status = Command::new("notify-send").args(["--app-name=Mochi", "--", title, body]).status().map_err(|e| format!("Unable to start notify-send: {e}"))?;
     if status.success() { Ok(()) } else { Err("The system notification daemon rejected the notification.".into()) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn gdbus_answers_are_parsed() {
+        assert!(parse_name_has_owner("(true,)\n"));
+        assert!(!parse_name_has_owner("(false,)\n"));
+        assert!(parse_name_has_owner(""));
+    }
+
+    #[test]
+    fn desktop_exec_is_quoted_and_escaped() {
+        assert_eq!(desktop_exec_argument(Path::new("/home/me/My Apps/mochi")), "\"/home/me/My Apps/mochi\"");
+        assert_eq!(desktop_exec_argument(Path::new("/a/$b\"c%")), "\"/a/\\$b\\\"c%%\"");
+    }
+
+    #[test]
+    fn shortcut_names_are_sanitised() {
+        assert_eq!(sanitize_file_stem("../etc/passwd"), "---etc-passwd");
+        assert_eq!(percent_encode("a b/é"), "a%20b%2F%C3%A9");
+    }
 }

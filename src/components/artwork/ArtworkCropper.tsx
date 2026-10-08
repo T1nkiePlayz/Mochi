@@ -23,6 +23,7 @@ export function ArtworkCropper({ src, width, height, title, onChange }: Props) {
   const crop = cropFromView(width, height, COVER_RATIO, zoom, center[0], center[1]);
 
   const apply = (nextZoom: number, nextCenter: [number, number]) => {
+    if (!Number.isFinite(nextZoom) || !Number.isFinite(nextCenter[0]) || !Number.isFinite(nextCenter[1])) return;
     const z = Math.min(MAX_ZOOM, Math.max(1, nextZoom));
     const next = cropFromView(width, height, COVER_RATIO, z, nextCenter[0], nextCenter[1]);
     setZoom(z);
@@ -39,6 +40,8 @@ export function ArtworkCropper({ src, width, height, title, onChange }: Props) {
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (!drag.current || !stage.current) return;
     const box = stage.current.getBoundingClientRect();
+    // A hidden or collapsed stage has no size; dividing by it would turn the crop into NaN.
+    if (!(box.width > 0 && box.height > 0)) return;
     const dx = (event.clientX - drag.current.x) / box.width * crop.width;
     const dy = (event.clientY - drag.current.y) / box.height * crop.height;
     apply(zoom, [drag.current.center[0] - dx, drag.current.center[1] - dy]);

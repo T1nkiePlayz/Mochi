@@ -155,7 +155,8 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
     try {
       clearProviderCaches(user?.id);
       removeKey(igdbCacheKey(user?.id));
-      const candidates = library;
+      // Launchers (Steam, Lutris...) are shortcuts, not games: looking them up would overwrite their name and art.
+      const candidates = library.filter((piko) => piko.kind !== "launcher");
       notify("Metadata refresh started", `Refreshing metadata for ${candidates.length} library games.`);
       await enrich(candidates, { force: true });
       notify("Metadata refresh finished", `Updated metadata for ${candidates.length} library games.`);

@@ -1,5 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ReactNode } from "react";
+import { safeHttpUrl } from "../../lib/mods/sanitizeHtml";
+
+/** Project descriptions are remote; cap their size and nesting so crafted text cannot freeze or overflow the renderer. */
+const MAX_SOURCE = 50_000;
+const MAX_DEPTH = 6;
 
 function decodeHtmlEntities(value: string): string {
   return value
@@ -65,15 +70,17 @@ function findClosingBracket(source: string, start: number): number {
   return -1;
 }
 
-function parseInlineElement(source: string, start: number): { node: ReactNode; end: number } | null {
+function parseInlineElement(source: string, start: number, depth: number): { node: ReactNode; end: number } | null {
   if (source.startsWith("![", start)) {
     const labelEnd = findClosingBracket(source, start + 1);
     if (labelEnd < 0 || source[labelEnd + 1] !== "(") return null;
     const urlEnd = findClosingParenthesis(source, labelEnd + 1);
     if (urlEnd < 0) return null;
     const alt = source.slice(start + 2, labelEnd);
-    const url = source.slice(labelEnd + 2, urlEnd).trim();
-    return { node: <img className="project-markdown-image" src={url} alt={alt} loading="lazy" />, end: urlEnd + 1 };
+    const url = safeHttpUrl(source.slice(labelEnd + 2, urlEnd).trim());
+    // Only http(s) images load; anything else (data:, file:, javascript:) is shown as its alt text.
+    if (!url) return { node: alt, end: urlEnd + 1 };
+    return { node: <img className="project-markdown-image" src={url} alt={alt} loading="lazy" referrerPolicy="no-referrer" />, end: urlEnd + 1 };
   }
 
   if (source[start] === "[") {
@@ -82,9 +89,11 @@ function parseInlineElement(source: string, start: number): { node: ReactNode; e
     const urlEnd = findClosingParenthesis(source, labelEnd + 1);
     if (urlEnd < 0) return null;
     const label = source.slice(start + 1, labelEnd);
-    const url = source.slice(labelEnd + 2, urlEnd).trim();
+    const url = safeHttpUrl(source.slice(labelEnd + 2, urlEnd).trim());
+    // Links to other schemes (file:, mochi:, javascript:...) are shown as plain text instead of being opened.
+    if (!url) return { node: <>{renderInline(label, depth + 1)}</>, end: urlEnd + 1 };
     return {
-      node: <a href={url} target="_blank" rel="noreferrer noopener" onClick={(event) => { event.preventDefault(); void invoke("open_external_url", { url }); }}>{renderInline(label)}</a>,
+      node: <a href={url} target="_blank" rel="noreferrer noopener" onClick={(event) => { event.preventDefault(); void invoke("open_external_url", { url }).catch(() => undefined); }} onAuxClick={(event) => event.preventDefault()}>{renderInline(label, depth + 1)}</a>,
       end: urlEnd + 1,
     };
   }
@@ -93,7 +102,7 @@ function parseInlineElement(source: string, start: number): { node: ReactNode; e
   if (marker === "**" || marker === "__" || marker === "~~") {
     const end = findClosingDelimiter(source, start + 2, marker);
     if (end >= 0) {
-      const inner = renderInline(source.slice(start + 2, end));
+      const inner = renderInline(source.slice(start + 2, end), depth + 1);
       if (marker === "~~") return { node: <del>{inner}</del>, end: end + 2 };
       return { node: <strong>{inner}</strong>, end: end + 2 };
     }
@@ -107,13 +116,14 @@ function parseInlineElement(source: string, start: number): { node: ReactNode; e
   if (source[start] === "*" || source[start] === "_") {
     const delimiter = source[start];
     const end = findClosingDelimiter(source, start + 1, delimiter);
-    if (end > start + 1) return { node: <em>{renderInline(source.slice(start + 1, end))}</em>, end: end + 1 };
+    if (end > start + 1) return { node: <em>{renderInline(source.slice(start + 1, end), depth + 1)}</em>, end: end + 1 };
   }
 
   return null;
 }
 
-function renderInline(text: string): ReactNode[] {
+function renderInline(text: string, depth = 0): ReactNode[] {
+  if (depth > MAX_DEPTH) return [text];
   const nodes: ReactNode[] = [];
   let plain = "";
   const flushPlain = () => {
@@ -124,7 +134,7 @@ function renderInline(text: string): ReactNode[] {
   };
 
   for (let index = 0; index < text.length;) {
-    const candidate = parseInlineElement(text, index);
+    const candidate = parseInlineElement(text, index, depth);
     if (candidate) {
       flushPlain();
       nodes.push(<span key={nodes.length}>{candidate.node}</span>);
@@ -140,7 +150,7 @@ function renderInline(text: string): ReactNode[] {
 }
 
 export function Markdown({ source }: { source: string }) {
-  const lines = normalizeMarkdown(source).split(/\n/);
+  const lines = normalizeMarkdown(source.length > MAX_SOURCE ? source.slice(0, MAX_SOURCE) : source).split(/\n/);
   const nodes: ReactNode[] = [];
   let listItems: string[] = [];
   let orderedItems: string[] = [];

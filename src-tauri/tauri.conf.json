@@ -175,10 +175,20 @@
     "longDescription": "Mochi is a local-first game launcher that organises games from Steam, Heroic, Lutris, Bottles, itch.io, Flatpak and more in one library, with optional cloud metadata sync.",
     "linux": {
       "deb": {
-        "section": "games"
+        "section": "games",
+        "depends": [
+          "libudev1",
+          "xdg-utils"
+        ],
+        "recommends": [
+          "libnotify-bin"
+        ]
       },
       "rpm": {
-        "release": "1"
+        "release": "1",
+        "depends": [
+          "libudev.so.1()(64bit)"
+        ]
       }
     },
     "createUpdaterArtifacts": true

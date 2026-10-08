@@ -1,12 +1,13 @@
 import type { Piko } from "../models";
 import type { IgdbGame } from "./igdb";
+import { coverGradient } from "./metadata/merge";
 
 export const sanitizeKey = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, "-");
 
 export const resolveIgdbImage = (url?: string, size = "t_cover_big") =>
   url ? (url.startsWith("//") ? `https:${url}` : url).replace(/t_[a-z0-9_]+(?=\/)/, size) : undefined;
 
-export const coverGradient = (url: string) => `linear-gradient(145deg, rgba(10,15,20,.12), rgba(11,15,20,.88)), url('${url}')`;
+export { coverGradient } from "./metadata/merge";
 
 /** Applies an IGDB match to a Piko. Fields the user edited by hand are kept. */
 export function applyIgdbMetadata(piko: Piko, metadata: IgdbGame | null): Piko {

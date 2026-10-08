@@ -71,8 +71,29 @@ fn now_secs() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
 }
 
+/// Decodes `&#39;`, `&#x27;` and `&#8217;` style references (Steam descriptions use them freely).
+fn decode_numeric_entities(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(start) = rest.find("&#") {
+        out.push_str(&rest[..start]);
+        let tail = &rest[start + 2..];
+        let decoded = tail.find(';').filter(|end| *end <= 8).and_then(|end| {
+            let digits = &tail[..end];
+            let code = match digits.strip_prefix(['x', 'X']) { Some(hex) => u32::from_str_radix(hex, 16).ok(), None => digits.parse::<u32>().ok() };
+            code.and_then(char::from_u32).filter(|c| !c.is_control()).map(|c| (c, end + 1))
+        });
+        match decoded {
+            Some((character, consumed)) => { out.push(character); rest = &tail[consumed..]; }
+            None => { out.push_str("&#"); rest = tail; }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
 fn decode_entities(text: &str) -> String {
-    text.replace("&quot;", "\"").replace("&#39;", "'").replace("&apos;", "'").replace("&lt;", "<").replace("&gt;", ">").replace("&nbsp;", " ").replace("&amp;", "&")
+    decode_numeric_entities(text).replace("&quot;", "\"").replace("&#39;", "'").replace("&apos;", "'").replace("&lt;", "<").replace("&gt;", ">").replace("&nbsp;", " ").replace("&amp;", "&")
 }
 
 fn strip_query(url: &str) -> String {
@@ -129,19 +150,19 @@ pub fn parse_app_details(appid: u32, body: &str) -> Result<Option<SteamStoreDeta
     let movies = data.get("movies").and_then(Value::as_array).map(|items| {
         items.iter().take(6).map(|m| SteamMovie {
             name: m.get("name").and_then(Value::as_str).unwrap_or("Trailer").to_string(),
-            thumbnail: m.get("thumbnail").and_then(Value::as_str).map(strip_query),
-            hls_url: m.get("hls_h264").and_then(Value::as_str).map(str::to_string),
+            thumbnail: m.get("thumbnail").and_then(Value::as_str).map(strip_query).filter(|u| u.starts_with("https://")),
+            hls_url: m.get("hls_h264").and_then(Value::as_str).map(str::to_string).filter(|u| u.starts_with("https://")),
         }).collect()
     }).unwrap_or_default();
     Ok(Some(SteamStoreDetails {
         appid,
         name,
         description: decode_entities(data.get("short_description").and_then(Value::as_str).unwrap_or("").trim()),
-        genres: string_list(data.get("genres"), "description"),
+        genres: string_list(data.get("genres"), "description").into_iter().take(24).collect(),
         screenshots,
         movies,
-        developers: string_list(data.get("developers"), ""),
-        publishers: string_list(data.get("publishers"), ""),
+        developers: string_list(data.get("developers"), "").into_iter().take(24).collect(),
+        publishers: string_list(data.get("publishers"), "").into_iter().take(24).collect(),
         release_date: if coming_soon { None } else { release_text.as_deref().and_then(parse_release_date) },
         release_date_text: release_text,
         cover_url: format!("{CDN}/{appid}/library_600x900.jpg"),
@@ -162,13 +183,16 @@ fn read_cache(path: &Option<PathBuf>) -> Option<CacheEntry> {
 
 fn write_cache(path: &Option<PathBuf>, entry: &CacheEntry) {
     if let (Some(path), Ok(bytes)) = (path, serde_json::to_vec(entry)) {
-        let tmp = path.with_extension("tmp");
+        let tmp = path.with_extension(format!("{}.tmp", std::process::id()));
         if fs::write(&tmp, bytes).is_ok() { let _ = fs::rename(&tmp, path); }
     }
 }
 
 async fn fetch_body(appid: u32) -> Result<String, FetchError> {
-    let client = reqwest::Client::builder().user_agent(USER_AGENT).connect_timeout(Duration::from_secs(8)).timeout(Duration::from_secs(20)).build()
+    let client = reqwest::Client::builder().user_agent(USER_AGENT)
+        // appdetails is a single fixed endpoint; a redirect to anywhere else is not a valid answer.
+        .redirect(reqwest::redirect::Policy::none())
+        .connect_timeout(Duration::from_secs(8)).timeout(Duration::from_secs(20)).build()
         .map_err(|error| FetchError::Other(format!("Unable to prepare the Steam request: {error}")))?;
     let url = format!("https://store.steampowered.com/api/appdetails?appids={appid}&l=english");
     let mut response = client.get(url).send().await.map_err(|error| {
@@ -256,6 +280,38 @@ mod tests {
         assert_eq!(parse_release_date("1970"), Some(0));
         assert_eq!(parse_release_date("Coming soon"), None);
         assert_eq!(parse_release_date("To be announced"), None);
+    }
+
+    #[test]
+    fn insecure_media_urls_are_dropped() {
+        let body = r#"{"9":{"success":true,"data":{"name":"X","movies":[{"name":"t","thumbnail":"http://evil/a.jpg?t=1","hls_h264":"javascript:alert(1)"},{"name":"u","thumbnail":"https://ok/a.jpg?t=1","hls_h264":"https://ok/a.m3u8"}],"screenshots":[{"path_full":"http://x/a.jpg"}]}}}"#;
+        let details = parse_app_details(9, body).unwrap().unwrap();
+        assert_eq!(details.movies[0].thumbnail, None);
+        assert_eq!(details.movies[0].hls_url, None);
+        assert_eq!(details.movies[1].thumbnail.as_deref(), Some("https://ok/a.jpg"));
+        assert!(details.screenshots.is_empty());
+    }
+
+    #[test]
+    fn parser_survives_hostile_shapes() {
+        for body in ["null", "[]", r#"{"1":null}"#, r#"{"1":{"success":true}}"#, r#"{"1":{"success":true,"data":[]}}"#,
+            r#"{"1":{"success":true,"data":{"name":"A","genres":"x","movies":5,"screenshots":[1,null],"release_date":{"date":5}}}}"#] {
+            let _ = parse_app_details(1, body);
+        }
+        assert!(parse_app_details(1, r#"{"1":{"success":true,"data":{"name":"A","genres":"x","movies":5}}}"#).unwrap().is_some());
+    }
+
+    #[test]
+    fn release_dates_never_panic_on_odd_text() {
+        for text in ["", ",", "  ", "é é", "99999999999999999999", "Nov 99999999999999999999", "-5", "Q4 2025", "0000", "Jan 2004 2005", "31 Feb, 2004", "\u{1F600} 2020"] {
+            let _ = parse_release_date(text);
+        }
+    }
+
+    #[test]
+    fn decodes_numeric_entities() {
+        assert_eq!(decode_entities("Don&#39;t &#x27;stop&#x27; &#8217; &#xZZ; &#; &# &#99999999999; &amp;lt;"), "Don't 'stop' \u{2019} &#xZZ; &#; &# &#99999999999; &lt;");
+        assert_eq!(decode_entities("é&#233;"), "éé");
     }
 
     #[test]

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ARTWORK_CHANGED_EVENT } from "../lib/artwork";
+import { cssUrl } from "../lib/metadata/merge";
 
 export function GameArtwork({ className, cacheKey, fallback }: { className: string; cacheKey?: string; fallback: string }) {
   const [cached, setCached] = useState("");
@@ -21,5 +22,5 @@ export function GameArtwork({ className, cacheKey, fallback }: { className: stri
   }, [cacheKey, revision]);
   // Older libraries stored a hard-coded purple gradient as "no artwork"; let the theme's placeholder show instead.
   const custom = fallback && !fallback.includes("rgba(73,57,103") ? fallback : undefined;
-  return <div className={className} style={{ backgroundImage: cached ? `linear-gradient(145deg, rgba(10,15,20,.12), rgba(11,15,20,.88)), url("${cached}")` : custom }} />;
+  return <div className={className} style={{ backgroundImage: cached ? `linear-gradient(145deg, rgba(10,15,20,.12), rgba(11,15,20,.88)), ${cssUrl(cached)}` : custom }} />;
 }

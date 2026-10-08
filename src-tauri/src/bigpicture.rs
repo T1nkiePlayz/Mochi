@@ -107,7 +107,8 @@ pub fn parse_pmset(text: &str) -> SystemStatus {
         digits.parse::<u16>().ok()
     });
     let lower = line.to_ascii_lowercase();
-    let charging = if lower.contains("discharging") { Some(false) } else if lower.contains("charging") || lower.contains("charged") || lower.contains("finishing charge") { Some(true) } else { None };
+    // "not charging" (AC attached but the battery is held, e.g. optimised charging) also contains "charging".
+    let charging = if lower.contains("discharging") || lower.contains("not charging") { Some(false) } else if lower.contains("charging") || lower.contains("charged") || lower.contains("finishing charge") { Some(true) } else { None };
     SystemStatus { has_battery: percent.is_some(), battery_percent: percent.map(|value| value.min(100) as u8), charging }
 }
 
@@ -229,6 +230,11 @@ mod tests {
         let text = "Now drawing from 'AC Power'\n -InternalBattery-0 (id=1)\t100%; charged; 0:00 remaining present: true";
         assert_eq!(parse_pmset(text).charging, Some(true));
         assert_eq!(parse_pmset("Now drawing from 'AC Power'\n"), SystemStatus::NONE);
+        let held = " -InternalBattery-0 (id=1)\t80%; AC attached; not charging present: true";
+        assert_eq!(parse_pmset(held).charging, Some(false));
+        let charging = " -InternalBattery-0 (id=1)\t55%; charging; 1:10 remaining present: true";
+        assert_eq!(parse_pmset(charging).charging, Some(true));
+        assert_eq!(parse_pmset("garbage % %% é%").battery_percent, None);
     }
 
     #[test]

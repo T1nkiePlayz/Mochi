@@ -15,12 +15,18 @@ export function ModalShell({ label, className, onClose, children }: { label: str
     const first = root.current?.querySelector<HTMLElement>("[data-autofocus]") ?? root.current?.querySelector<HTMLElement>(focusable);
     (first ?? root.current)?.focus();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { event.stopPropagation(); close.current(); return; }
+      if (event.key === "Escape") {
+        // An open dropdown inside the dialog closes first; only the next Escape closes the dialog itself.
+        const target = event.target as HTMLElement | null;
+        if (root.current?.querySelector("[aria-expanded='true']") || target?.closest?.("[role='listbox'], [role='menu']")) return;
+        event.stopPropagation(); close.current(); return;
+      }
       if (event.key !== "Tab" || !root.current) return;
       const items = [...root.current.querySelectorAll<HTMLElement>(focusable)].filter((item) => item.offsetParent !== null);
       if (!items.length) return;
       const firstItem = items[0];
       const lastItem = items[items.length - 1];
+      if (!firstItem || !lastItem) return;
       if (event.shiftKey && document.activeElement === firstItem) { event.preventDefault(); lastItem.focus(); }
       else if (!event.shiftKey && document.activeElement === lastItem) { event.preventDefault(); firstItem.focus(); }
     };

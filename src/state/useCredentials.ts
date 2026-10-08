@@ -23,10 +23,15 @@ export function useCredentials(user: User | null, requireSignIn: () => void) {
   const [steamGridDbKey, setSteamGridDbKey] = useState("");
 
   useEffect(() => {
-    if (!supabase || !user) { setStatus(none); setLoaded(false); return; }
+    // Never keep another account's status or half-typed secrets when the signed-in user changes.
+    setStatus(none); setLoaded(false);
+    setIgdbClientId(""); setIgdbClientSecret(""); setNexusApiKey(""); setSteamGridDbKey("");
+    if (!supabase || !user) return;
+    let cancelled = false;
     void getProviderCredentialStatuses(supabase)
-      .then((statuses) => { setStatus(statuses); setLoaded(true); })
+      .then((statuses) => { if (!cancelled) { setStatus(statuses); setLoaded(true); } })
       .catch((error) => console.warn("Mochi provider credential status unavailable", error));
+    return () => { cancelled = true; };
   }, [user?.id]);
 
   const remove = async (provider: ProviderCredential) => {
@@ -43,7 +48,7 @@ export function useCredentials(user: User | null, requireSignIn: () => void) {
 
   const save = async (provider: ProviderCredential) => {
     if (!supabase || !user) { requireSignIn(); return; }
-    let secret = "";
+    let secret: string;
     if (provider === "igdb") {
       if (!igdbClientId.trim() || !igdbClientSecret.trim()) { setMessage("Enter your IGDB Client ID and Client Secret first."); return; }
       secret = JSON.stringify({ clientId: igdbClientId.trim(), clientSecret: igdbClientSecret.trim() });

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
-import { clearAccountCloudData, getCloudAccountSettings, pullLibrary, pushLibrary } from "../lib/cloud";
+import { clearAccountCloudData, getCloudAccountSettings, mergeCloudLibrary, pullLibrary, pushLibrary } from "../lib/cloud";
 import type { Piko } from "../models";
 import { isNetworkError } from "../lib/offline";
 
@@ -25,6 +25,8 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
     }
     let cancelled = false;
     const client = supabase;
+    // A different account must never inherit the previous account's "ready to push" state while its own settings load.
+    initialized.current = false;
     setSyncState("syncing");
     void getCloudAccountSettings(client, user.id)
       .then(async (settings) => {
@@ -35,9 +37,8 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
         const cloudLibrary = await pullLibrary(client, user.id);
         if (cancelled) return;
         if (cloudLibrary.length) {
-          // Merge instead of replacing so games that only exist on this device are not lost.
-          const cloudIds = new Set(cloudLibrary.map((piko) => piko.id));
-          setLibrary((local) => [...cloudLibrary, ...local.filter((piko) => !cloudIds.has(piko.id))]);
+          // Merge instead of replacing so games and settings that only exist on this device are not lost.
+          setLibrary((local) => mergeCloudLibrary(local, cloudLibrary));
         } else {
           await pushLibrary(client, library);
         }

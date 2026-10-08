@@ -23,15 +23,21 @@ const FIRST_CHECK_DELAY_MS = 10_000;
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const STORAGE_KEY = "mochi:updater";
 
-const saved = readJson<{ lastChecked?: number; dismissed?: string }>(STORAGE_KEY, {});
-let state: UpdaterState = { status: "idle", lastChecked: saved.lastChecked, dismissed: saved.dismissed };
+const saved = readJson<{ lastChecked?: unknown; dismissed?: unknown }>(STORAGE_KEY, {});
+let state: UpdaterState = {
+  status: "idle",
+  ...(typeof saved.lastChecked === "number" ? { lastChecked: saved.lastChecked } : {}),
+  ...(typeof saved.dismissed === "string" ? { dismissed: saved.dismissed } : {}),
+};
 const listeners = new Set<() => void>();
 let inFlight = false;
 let notifiedVersion = "";
 
 function setState(patch: Partial<UpdaterState>) {
+  const persist = "lastChecked" in patch || "dismissed" in patch;
   state = { ...state, ...patch };
-  writeJson(STORAGE_KEY, { lastChecked: state.lastChecked, dismissed: state.dismissed });
+  // Download progress ticks many times a second; only the fields that survive a restart touch storage.
+  if (persist) writeJson(STORAGE_KEY, { lastChecked: state.lastChecked, dismissed: state.dismissed });
   listeners.forEach((listener) => listener());
 }
 
@@ -52,6 +58,9 @@ export async function checkNow(): Promise<string | null> {
       case "offline": setState({ status: "offline", info: state.info, error: undefined }); break;
       case "error": setState({ status: "error", error: result.message, lastChecked }); break;
     }
+    return null;
+  } catch (error) {
+    setState({ status: "error", error: error instanceof Error ? error.message : String(error) });
     return null;
   } finally {
     inFlight = false;
