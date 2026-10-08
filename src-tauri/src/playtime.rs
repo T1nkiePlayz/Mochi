@@ -552,6 +552,17 @@ fn finish(game_id: &str, token: Option<u64>, credit: bool, idle_tail: u64) -> Re
     })?
 }
 
+/// Forgets all recorded playtime (part of "clear app data"). Does nothing while a game is running.
+pub fn reset() -> Result<(), String> {
+    lock(&state(), |guard| {
+        if !guard.active.is_empty() { return Ok(()); }
+        guard.games.clear();
+        guard.history.clear();
+        if let Some(path) = &guard.history_path { write_atomic(path, b"")?; }
+        persist(guard)
+    })?
+}
+
 /// Asks a running game to quit (then force-kills it if it will not). A game Mochi has not
 /// detected yet is simply cancelled, without crediting any time.
 pub fn stop(game_id: &str) -> Result<(), String> {

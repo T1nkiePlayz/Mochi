@@ -1,4 +1,5 @@
 use crate::playtime;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
@@ -41,7 +42,29 @@ pub fn build_menu(app: &tauri::AppHandle) -> Result<Menu<tauri::Wry>, tauri::Err
     builder.item(&quit).build()
 }
 
-pub fn initialize(app: &mut tauri::App) -> Result<(), tauri::Error> {
+/// Whether closing the window may hide it: only when a tray / menu-bar icon exists to bring it back.
+static HIDE_ON_CLOSE: AtomicBool = AtomicBool::new(false);
+
+pub fn close_hides_window() -> bool { HIDE_ON_CLOSE.load(Ordering::Relaxed) }
+
+/// Creates the tray icon. A desktop without tray support (GNOME without the AppIndicator
+/// extension, a missing indicator library) must not stop Mochi from starting or leave a hidden
+/// window nobody can restore, so failures only turn off close-to-tray.
+pub fn initialize(app: &mut tauri::App) {
+    if !crate::platform::tray_available() {
+        eprintln!("Mochi: no system tray is available on this desktop; closing the window will quit Mochi.");
+        return;
+    }
+    // Loading the indicator library can panic when it is not installed.
+    let created = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| build_tray(app)));
+    match created {
+        Ok(Ok(())) => HIDE_ON_CLOSE.store(true, Ordering::Relaxed),
+        Ok(Err(error)) => eprintln!("Mochi: unable to create the tray icon: {error}"),
+        Err(_) => eprintln!("Mochi: the tray icon library is unavailable; closing the window will quit Mochi."),
+    }
+}
+
+fn build_tray(app: &mut tauri::App) -> Result<(), tauri::Error> {
     let menu = build_menu(app.handle())?;
     let icon = app
         .default_window_icon()
