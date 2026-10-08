@@ -19,7 +19,7 @@ Mochi updates itself from GitHub releases. Nothing is downloaded without the use
 
 1. Push a tag `vX.Y.Z` on the current `main` commit (see `.github/workflows/release.yml`).
 2. `tauri-action` builds Linux (AppImage/deb/rpm) and macOS (Apple silicon + Intel DMG), because
-   `bundle.createUpdaterArtifacts` is on it also produces `*.AppImage.tar.gz`/`*.app.tar.gz` plus `.sig`
+   `bundle.createUpdaterArtifacts` is on (only the release workflow turns it on, via a `--config` override, so local `tauri build` works without the signing key) it also produces `*.AppImage.tar.gz`/`*.app.tar.gz` plus `.sig`
    files, and `includeUpdaterJson: true` uploads/merges `latest.json` into the release.
 3. Installed apps read `https://github.com/T1nkiePlayz/Mochi/releases/latest/download/latest.json`
    (`plugins.updater.endpoints` in `src-tauri/tauri.conf.json`) and verify each download against
