@@ -574,3 +574,43 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 .project-version-files .project-file-list span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mochi-text);}
 .project-version-files .project-file-list small{flex:0 0 auto;color:var(--mochi-text-muted);}
 @media(max-width:700px){.project-version{display:grid;gap:10px}.project-version-files{justify-self:start}.project-version-files .project-file-list{width:min(100%,420px)}}
+
+/* Discovery polish and responsive Modrinth project rendering. */
+.discover-platform-tabs{padding:2px 0 4px;}
+.discover-platform-tab{min-height:42px;padding:8px 14px;border-radius:9px;background:var(--mochi-surface);box-shadow:inset 0 0 0 1px rgba(255,255,255,.015);}
+.discover-platform-tab:hover{border-color:var(--mochi-border-strong);background:var(--mochi-surface-raised);}
+.minecraft-discovery-logo{display:block;width:118px;height:23px;max-width:100%;object-fit:contain;object-position:left center;}
+.discover-controls{align-items:end;}
+.discover-select-wrap{display:grid;gap:6px;min-width:0;}
+.discover-select-wrap>span{color:var(--mochi-text-muted);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;}
+.discover-select{width:100%;min-width:0;padding:9px 32px 9px 11px;border:1px solid var(--mochi-border);border-radius:8px;color:var(--mochi-text);background:var(--mochi-surface);outline:0;font-size:11px;}
+.discover-select:focus{border-color:var(--mochi-accent);}
+.project-details-window{width:min(920px,calc(100vw - 32px));height:min(780px,calc(100vh - 32px));max-height:calc(100vh - 32px);min-height:0;overflow:hidden;display:flex;flex-direction:column;}
+.project-details-header,.project-tabs{flex:0 0 auto;}
+.project-overview,.project-version-list{min-width:0;overflow:auto;}
+.project-overview{overflow-x:hidden;}
+.project-markdown{min-width:0;white-space:normal;overflow-wrap:anywhere;word-break:break-word;}
+.project-markdown>p{margin:0 0 12px;}
+.project-markdown>p:last-child{margin-bottom:0;}
+.project-markdown h1,.project-markdown h2,.project-markdown h3,.project-markdown h4,.project-markdown h5,.project-markdown h6{margin:20px 0 9px;color:var(--mochi-text-strong);line-height:1.25;}
+.project-markdown h1{font-size:23px}.project-markdown h2{font-size:20px}.project-markdown h3{font-size:17px}.project-markdown h4{font-size:15px}.project-markdown h5,.project-markdown h6{font-size:13px;}
+.project-markdown>h1:first-child,.project-markdown>h2:first-child,.project-markdown>h3:first-child{margin-top:0;}
+.project-markdown ul,.project-markdown ol{margin:4px 0 14px;padding-left:22px;color:var(--mochi-text);}
+.project-markdown li{margin:4px 0;padding-left:3px;}
+.project-markdown li::marker{color:var(--mochi-accent-strong);}
+.project-markdown blockquote{margin:12px 0;padding:9px 12px;border-left:3px solid var(--mochi-accent);border-radius:0 7px 7px 0;background:var(--mochi-surface-raised);color:var(--mochi-text-muted);}
+.project-markdown hr{margin:18px 0;border:0;border-top:1px solid var(--mochi-border);}
+.project-markdown code{padding:2px 5px;border-radius:4px;background:var(--mochi-surface-raised);font:10px var(--mochi-mono);color:var(--mochi-accent-strong);}
+.project-markdown pre{max-width:100%;margin:12px 0;padding:12px;overflow:auto;border:1px solid var(--mochi-border);border-radius:8px;background:var(--mochi-surface-raised);}
+.project-markdown pre code{padding:0;background:transparent;}
+.project-markdown-image{display:block;width:auto;max-width:100%;height:auto;max-height:55vh;margin:12px auto;border-radius:8px;object-fit:contain;}
+.project-markdown a{color:var(--mochi-accent-strong);overflow-wrap:anywhere;}
+.project-markdown strong{color:var(--mochi-text-strong);}
+@media(max-width:700px){
+  .minecraft-discovery-logo{width:102px;height:20px;}
+  .project-details-window{width:calc(100vw - 20px);height:calc(100vh - 20px);max-height:calc(100vh - 20px);}
+  .project-details-header{gap:10px;}
+  .project-details-header>div{gap:10px;}
+  .project-details-header h2{font-size:20px;}
+  .project-markdown-image{max-height:45vh;}
+}
