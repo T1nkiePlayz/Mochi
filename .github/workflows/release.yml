@@ -1,16 +1,14 @@
 name: Release Mochi
 
 on:
-  push:
-    tags:
-      - "v*"
+  create
 
 permissions:
   contents: write
 
 jobs:
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     name: Build and release Linux packages
     runs-on: ubuntu-24.04
 
