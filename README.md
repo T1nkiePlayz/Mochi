@@ -17,629 +17,216 @@
   <img src="https://img.shields.io/badge/status-early%20development-orange?style=flat-square" alt="Early development">
 </p>
 
-> 🚧 **Early development:** Mochi is actively being built. Features, APIs, storage formats, platform support, and UI behavior may change before the first stable release.
+> [!WARNING]
+> **Mochi builds are NOT code-signed or notarized.**
+>
+> - There is no Apple Developer account behind this project. The macOS DMG is **ad-hoc signed only**, so **Gatekeeper will block the first launch**. See [Install](#install) for how to open it.
+> - Linux packages (AppImage, deb, rpm) are not signed either. The only integrity check is the `SHA256SUMS.txt` published with each release.
+> - Only download Mochi from the official [GitHub Releases](https://github.com/T1nkiePlayz/Mochi/releases) page and verify `SHA256SUMS.txt` before running anything.
+> - **Early development:** storage formats, features and UI may change between versions. Do not treat Mochi as the only copy of data you care about (library, collections, playtime history). Keep your own backups.
 
 ## Table of contents
 
+- [Install](#install)
 - [Overview](#overview)
-- [Design philosophy](#design-philosophy)
 - [Piko and Tofu](#piko-and-tofu)
 - [Features](#features)
-- [Launch targets](#launch-targets)
-- [IGDB metadata](#igdb-metadata)
-- [Local-first storage](#local-first-storage)
-- [Accounts and cloud sync](#accounts-and-cloud-sync)
-- [First-launch setup and importing](#first-launch-setup-and-importing)
-- [Architecture](#architecture)
+- [Importing games and launching](#importing-games-and-launching)
+- [Accounts, cloud sync and offline use](#accounts-cloud-sync-and-offline-use)
 - [Platform support](#platform-support)
-- [Technology stack](#technology-stack)
-- [Repository structure](#repository-structure)
-- [Development setup](#development-setup)
-- [Environment configuration](#environment-configuration)
-- [Building](#building)
-- [Development notes](#development-notes)
+- [Security model](#security-model)
+- [Development](#development)
+- [Releasing](#releasing)
 - [Current limitations](#current-limitations)
 - [Roadmap](#roadmap)
-- [Related projects](#related-projects)
+- [Documentation index](#documentation-index)
 - [Contributing](#contributing)
-- [Security and privacy](#security-and-privacy)
 - [License](#license)
 
-## Overview
+## Install
 
-Mochi is a desktop game launcher intended to sit above existing game ecosystems rather than replace them.
+Download from the [Releases page](https://github.com/T1nkiePlayz/Mochi/releases) only.
 
-The goal is simple: give the user one flexible library for games that already exist on their computer. Mochi does not need every game to come from the same store, publisher, or distribution platform. A library entry can point to an executable, desktop entry, Flatpak application, script, or another supported launch target.
+**Verify the download** (all platforms), with `SHA256SUMS.txt` from the same release in the same folder:
 
-Mochi is deliberately **local-first**. Your game installations stay on your device. The launcher keeps the information required to organise and launch those games locally, while optional account features can synchronise selected metadata between devices.
-
-The application is also designed around a clear separation between web UI code and operating-system code. React handles the interface, while Tauri and Rust handle native operations.
-
-## Design philosophy
-
-Mochi is guided by several principles:
-
-1. **Your games should belong to you, not your launcher.** Mochi organises and launches games without taking ownership of their installations.
-2. **Local first, cloud optional.** A cloud service should never be a requirement for a local library to remain useful.
-3. **Use native capabilities where they matter.** File dialogs, application discovery, and process launching belong in the desktop layer.
-4. **Stay flexible.** Mochi should work with different ways of obtaining and installing software instead of assuming one store.
-5. **Keep the model understandable.** Pikos represent games, while Tofus represent individual environments or ways of running those games.
-6. **Keep platform behavior isolated.** Operating-system-specific behavior should live in platform adapters rather than being scattered through the React application.
-
-## Piko and Tofu
-
-Mochi uses two names for its core library concepts.
-
-### 🐣 Piko — the game
-
-A **Piko** represents a game managed by Mochi.
-
-A Piko can contain:
-
-- Name and description
-- Artwork
-- Categories or genres
-- Local launch target
-- Source information
-- One or more Tofus
-- Other metadata used by the launcher
-
-The Piko is the identity of the game. It is not tied to one particular runtime, modpack, profile, or installation environment.
-
-### 🧊 Tofu — the environment
-
-A **Tofu** represents an individual environment, instance, profile, runtime, or configuration belonging to a Piko.
-
-A Tofu can eventually represent:
-
-- A default installation
-- A specific game version
-- A modded profile
-- A custom runtime
-- A testing configuration
-- Other future managed environments
-
-One Piko can therefore have multiple Tofus without duplicating the game's identity.
-
-**Piko = what you play. Tofu = how you play it.**
-
-## Features
-
-### Launcher experience
-
-- Library search across game names, descriptions, and categories, with **Ctrl+K / Cmd+K** focus shortcut.
-- Eleven built-in themes, each with its own layout and visual language: Mochi, Mochi Light, Minecraft Ore (after Prism's Ore UI Dark Diamond), Minecraft Dungeons, Subnautica, Stardew Valley, RuneScape, Fallout Pip-Boy, Cyberpunk 2077, Animal Crossing and Terraria.
-- Every colour, shape, surface, font and layout position is a design token, so a JSON-only theme can retint the whole launcher and a `theme.css` can restyle any of its screens; see `docs/theme-architecture.md`.
-- A game library with *Continue playing*, sorting, and a per-game page that holds playtime, Tofus and mod management.
-- Guided first-launch setup with separated Welcome, account, IGDB, and import stages.
-- Setup navigation with Previous on the left and Next on the right.
-- In-app notification centre with unread indicator and native desktop notifications on Linux (`notify-send`) and macOS (`osascript`).
-- Account control beneath the Mochi branding, showing username when available and supporting up to **five saved accounts**.
-
-### Account switching and security
-
-The launcher now mirrors the important account-security controls available in the Mochi Website dashboard. Signed-in users can manage TOTP authenticators, connected Google/GitHub identities, and passkeys without leaving the desktop application. TOTP setup includes QR/manual-secret enrollment and six-digit verification.
-
-The sign-in flow also provides a dedicated, polished two-factor authentication challenge when MFA is required.
-
-
-### Interactive game setup
-
-When IGDB is configured, adding a custom game searches for several possible matches and shows a dedicated confirmation step. The user can approve the correct game or add it without IGDB metadata.
-
-### Flexible game launching
-
-Mochi provides one interface for several launch styles while leaving the actual installation under the user's control.
-
-### Community content discovery
-
-Mochi includes a Discovery experience for community game content. Minecraft content is powered by Modrinth and currently supports popular mods, modpacks, resource packs, and shaders, with Minecraft-version and mod-loader filters, project details, version/changelog browsing, creator information, and installation into a selected Tofu instance.
-
-Mochi also has an **experimental Nexus Mods integration** for supported accounts. When experimental features are enabled and a Nexus Mods API key is configured, Discovery can load Nexus game tabs and trending mods. The current default games are Satisfactory, Five Nights at Freddy's Security Breach, Subnautica, Subnautica 2, Subnautica: Below Zero, and Stardew Valley. The `+` game picker performs a live Nexus game-catalog search so additional games can be added as persistent Discovery tabs. Nexus game artwork is sourced from Nexus Mods, and the launcher links users to the original mod page rather than downloading Nexus mods directly.
-
-**CurseForge** is also available in Discovery. Mochi uses its own CurseForge API key held server-side in a Supabase edge function, so you do not need a CurseForge account. CurseForge data is never cached on disk, and mods whose authors disabled third-party downloads link to CurseForge instead. Owner setup and deployment: [docs/curseforge.md](docs/curseforge.md).
-
-Nexus Mods credentials are handled through the provider-credential backend boundary; the API key is not returned to the launcher. Nexus discovery remains experimental while the integration and game coverage mature.
-
-### Tofu management
-
-Every Piko can have several Tofus. **Manage** opens a Tofu manager where you can create, rename, duplicate and delete Tofus, point each at its own content folder, and give each its own launch settings. Launching a game always uses the selected Tofu's settings, and a Tofu's mod count reflects what is actually installed in its folder.
-
-### Runtime management
-
-Each Tofu stores how its game is started: a compatibility runtime, launch wrappers, command-line arguments, environment variables and a working directory. Mochi detects what is installed:
-
-- **Linux:** Wine, every Proton build under Steam (`compatibilitytools.d` and `steamapps/common`), and the GameMode and MangoHud wrappers. Windows programs run in a per-Tofu prefix under Mochi's data directory.
-- **macOS:** CrossOver and Whisky, used to open Windows programs.
-
-### Game process management
-
-Mochi follows launched games: the Play button turns into **Stop** while a game runs, library cards show *Running now*, and playtime is credited when the game exits (or when Mochi quits). Games Mochi starts directly are tracked through their process group; games handed to another launcher (Steam, Heroic, ...) are followed by their install folder. Stop asks the game to quit and force-closes it if it does not.
-
-### Mod and profile management
-
-The Tofu workspace installs mods, resource packs and shaders from Modrinth, enables, disables and deletes them, and shows downloads as they finish. **Profiles** save which mods are enabled and switch between sets in one click. **Updates** identifies installed files on Modrinth by hash and updates them in place (a disabled mod stays disabled).
-
-### Native file and folder selection
-
-Adding a file-based game uses the Tauri native file dialog. The import flow also uses a native folder picker when a source needs a manually supplied library path.
-
-### Steam library and shortcut import
-
-On Linux, Mochi imports installed Steam games from Steam library manifests and also discovers **non-Steam games added to Steam as shortcuts**. Non-Steam shortcuts remain Steam-owned launch targets, so Mochi starts them through Steam instead of bypassing Steam's launch context.
-
-### Linux desktop integration
-
-Beyond launching, Mochi integrates with the Linux desktop: it registers the `mochi://` URL scheme, installs a managed AppImage copy so desktop and autostart entries survive moves, can add any game to the **application menu** (a `.desktop` shortcut that opens `mochi://launch/<id>`), opens game folders in the file manager, imports games from the **Desktop applications** source (anything in your menu categorised as a Game), and reads Flatpak metadata without spawning a process per application.
-
-### Flatpak discovery
-
-On Linux, Mochi can discover installed Flatpak applications and display them in a selection interface. Applications are currently grouped into:
-
-- Games
-- Other applications
-
-Games are shown first to make the list easier to use.
-
-### Game identity matching
-
-When IGDB is configured, Mochi can search for possible matches after a game is added. The user can review the candidates before accepting metadata.
-
-Metadata can come from several providers, chosen in **Settings > Metadata source** (see [docs/metadata.md](docs/metadata.md)):
-
-- **IGDB** (text, genres, screenshots, trailers): needs a free Twitch Client ID and Secret.
-- **SteamGridDB** (artwork only): needs a free personal API key from your SteamGridDB preferences page.
-- **Steam Store**: no key; used automatically for games that launch through Steam.
-
-Keys are saved to your Mochi account (Supabase Vault) and never leave the server. Hand-edited fields and custom artwork are never overwritten, and everything keeps working offline from cached data.
-
-### Local themes and settings
-
-Mochi includes eleven visual themes (with colour previews in Settings) and stores launcher preferences locally. Settings include appearance, launcher behavior, and optional IGDB configuration.
-
-### Account integration
-
-An optional Mochi account allows library metadata to be synchronised. The account system is separate from the local launch mechanism, so signing in does not mean that game installations are uploaded.
-
-Supported authentication flows currently include:
-
-- Email/password authentication
-- Google and GitHub OAuth
-- Email verification
-- Passkey sign-in and registration
-- TOTP authenticator-based multi-factor authentication
-- Connected Google and GitHub identities
-- Local account switching (up to five saved accounts)
-
-Mochi also supports custom verification deep links so email verification can return directly to the desktop application.
-
-Account avatars are displayed without requiring Mochi to host image files. Provider avatars are preferred when available, with a Gravatar-derived fallback and a local initial fallback.
-
-## First-launch setup and importing
-
-Mochi includes a guided first-launch experience designed to get a new installation ready without making any step mandatory.
-
-The setup flow covers:
-
-1. **Welcome** — introduces Mochi.
-2. **Account** — optionally signs in to Mochi Cloud.
-3. **IGDB** — optionally configures local IGDB credentials.
-4. **Game imports** — detects supported game sources and lets the user choose which detected sources to scan.
-
-The import system has native platform adapters for Linux and macOS. Linux supports Flatpak, Steam, Steam non-Steam shortcuts, Heroic Games Launcher, Lutris, Bottles, and itch.io. macOS supports Steam, Heroic Games Launcher (Epic, GOG, Amazon, sideloaded), the Epic Games Launcher, itch.io, Whisky pins, and any game `.app` in /Applications or ~/Applications when their local data is present. Lutris and Bottles are Linux-only. See [docs/macos.md](docs/macos.md).
-
-The standalone **Import Games** flow can rescan sources, select individual games, and manually point Mochi at a supported library path when automatic detection does not find a source.
-
-Imports are non-destructive. Mochi does not move, copy, uninstall, or take ownership of the underlying game installation. Instead, it records a source-aware launch target and hands execution back to the original launcher when appropriate.
-
-### Community discovery launch/install boundary
-
-Discovery integrations are metadata and content-discovery features rather than replacements for the source platforms. Modrinth downloads can be queued into a chosen local Tofu instance. Nexus Mods discovery currently provides game and mod metadata plus links back to Nexus Mods for the original content.
-
-### Source launch handoff
-
-Source integrations intentionally preserve the original launcher's responsibility for its game runtime:
-
-| Source | Mochi launch handoff |
-| --- | --- |
-| Steam | steam://rungameid/<id> |
-| Heroic | Heroic launch URI |
-| Lutris | lutris:rungameid/<id> |
-| Bottles | bottles:run/<bottle>/<program> |
-| itch.io | itch-setup game launch |
-| Flatpak | Flatpak application ID |
-
-This avoids bypassing source-specific runtime, Proton/Wine, prefix, authentication, overlay, or configuration behavior where the source launcher owns those responsibilities.
-
-## Launch targets
-
-The current launch layer recognises several target types:
-
-| Target | Behavior |
-| --- | --- |
-| Executable | Launches the native executable |
-| .desktop | Uses the desktop application's launch mechanism |
-| Flatpak | Runs an installed Flatpak application by ID |
-| .sh / .bash | Runs the script through sh |
-| .py | Runs the script through python3 |
-| .js | Runs the script through node |
-| macOS `.app` | Opens the application bundle through macOS |
-| `.exe` / `.bat` | Runs through the Tofu's compatibility runtime (Wine/Proton on Linux, CrossOver/Whisky on macOS) |
-| `steam://`, `heroic://`, `lutris:`, `bottles:`, `itch://` | Handed to the owning launcher |
-| `mochi://launch/<id>` | Starts a library game from outside Mochi (used by application-menu shortcuts) |
-| Custom | Preserves a supported custom launch target |
-
-The exact capabilities are reported by the native platform adapter. Platform-specific values such as launch methods, application-bundle support, startup support, notifications, and native paths are kept inside the relevant adapter rather than being hard-coded in shared UI code.
-
-The frontend normalises launch targets before sending them to the native backend. For Flatpak, Mochi stores a normalised application identifier rather than requiring the user to remember the full command.
-
-## IGDB metadata
-
-IGDB integration is optional.
-
-When the required local credentials are configured, adding a game can follow this flow:
-
-1. Enter the game name.
-2. Select or enter its launch target.
-3. Mochi searches IGDB.
-4. Candidate games are displayed for review.
-5. The user approves the correct match or continues without metadata.
-6. The selected metadata becomes part of the local Piko.
-
-Metadata can include the game's name, description, genres, cover artwork, and other available artwork.
-
-If IGDB is unavailable, incorrectly configured, or unable to find a useful match, the game can still be added as a custom Piko.
-
-IGDB credentials are configured locally and are not part of the ordinary Piko/Tofu cloud synchronization model.
-
-## Local-first storage
-
-Mochi is designed to remain useful without an account or an active internet connection.
-
-The local library stores the information required to display Pikos, manage their Tofus, and launch configured targets. Launcher preferences are also stored locally.
-
-Cloud synchronization is an optional layer on top of this local state.
-
-Mochi's cloud system is **metadata synchronization, not game backup**. Complete game installations, arbitrary files, and the contents of a user's game directories are not uploaded as part of normal library synchronization.
-
-A local launch target can also be machine-specific. A path that works on one computer may need to be configured again on another.
-
-## Security and provider credentials
-
-Mochi supports passkey authentication and TOTP-based MFA. TOTP is the second-factor flow after password authentication; passkeys provide a separate WebAuthn sign-in path.
-
-Supported provider credentials currently include IGDB and Nexus Mods. Provider credentials are handled separately from ordinary Piko/Tofu metadata. The Nexus Mods key is stored server-side and is not returned to the launcher.
-
-## Accounts and cloud sync
-
-Authenticated users can optionally synchronize library metadata.
-
-The current cloud model is based around three main record types:
-
-- profiles — account/profile information
-- pikos — games owned by an account
-- tofus — instances associated with Pikos
-
-The relationship is approximately:
-
-    Account
-      |
-      +-- Pikos
-            |
-            +-- Tofu
-            +-- Tofu
-            +-- Tofu
-
-The launcher can pull a user's cloud library after authentication. If the cloud library is empty, the local library can be used as the initial source for a push. Later local library changes can be pushed back to the account.
-
-The cloud layer does not replace local installation management. Piko and Tofu metadata can move between devices, but machine-specific files and paths remain local.
-
-## Architecture
-
-Mochi is split into a React frontend and a native Tauri/Rust backend.
-
-    React UI
-       |
-       v
-    src/lib/platform.ts
-       |
-       v
-    Tauri command
-       |
-       v
-    Rust platform adapter
-       |
-       +-- Linux
-       +-- macOS
-       +-- unsupported fallback
-       |
-       v
-    Operating system
-       |
-       v
-    Game / launcher / application
-
-### React frontend
-
-The frontend is responsible for:
-
-- Library presentation
-- Navigation
-- Piko and Tofu interfaces
-- Settings
-- Authentication UI
-- Cloud synchronization state
-- IGDB configuration and lookup
-- Calling native functionality through small wrappers
-
-Native operations are exposed to React through src/lib/platform.ts so the main application does not need to contain platform-specific process-launching logic.
-
-### Tauri and Rust
-
-Tauri provides the desktop application boundary around the React UI.
-
-Rust handles operations that require native operating-system access, including:
-
-- Launching targets
-- Discovering installed Flatpaks where supported
-- Reporting platform capabilities
-- Platform-specific application launching
-
-### Platform adapters
-
-Platform-specific implementations live under src-tauri/src/platform/.
-
-### Game source adapters
-
-Game-source discovery is intentionally separate from operating-system support. Linux source integrations live under src-tauri/src/sources/ and currently cover Flatpak, Steam, Heroic Games Launcher, Lutris, Bottles, and itch.io. Mochi reads existing local launcher state without modifying or uninstalling the source installation, then stores a launch target that hands execution back to the source launcher where appropriate. This keeps Wine/Proton prefixes, Steam runtime behavior, launcher authentication, and source-specific configuration owned by the original platform.
-
-The current structure separates Linux, macOS, and unsupported-platform behavior. Each platform adapter owns its configurable native commands, paths, launch methods, startup integration, notifications, and capability values. This keeps future platform work out of unrelated components.
-
-## Platform support
+    sha256sum -c --ignore-missing SHA256SUMS.txt      # Linux
+    shasum -a 256 -c --ignore-missing SHA256SUMS.txt  # macOS
 
 ### Linux
 
-Linux is Mochi's primary development platform.
+AppImage, `.deb` and `.rpm` are published, and the repository has an Arch `PKGBUILD` (`packaging/arch`). For the AppImage: `chmod +x Mochi*.AppImage && ./Mochi*.AppImage`. The AppImage and the macOS app update themselves in place; deb, rpm and AUR installs only get an "Open release page" prompt.
 
-The Linux implementation currently has the strongest native integration, including Flatpak discovery, source import, source-aware launch handoff, and Steam shortcut support. The project is designed with modern Linux desktop environments and Wayland-based workflows in mind.
+### macOS (12.0 or newer, Apple silicon and Intel)
 
-### macOS
+One universal DMG is published. Because the app is only ad-hoc signed, macOS will say it cannot verify Mochi on first launch. Drag `Mochi.app` to Applications, then either:
 
-macOS has a dedicated native platform adapter and supports `.app` bundle selection/launching, native executables and scripts, source discovery for supported local launchers, process tracking for playtime, launch-at-login through LaunchAgents, native URL opening, desktop notifications, and static `mochi://` deep-link registration. The Tauri configuration also defines a macOS-specific minimum system version and hardened runtime settings.
+1. **Right-click (Control-click) Mochi.app > Open > Open**, or
+2. Try to open it once, then go to **System Settings > Privacy & Security**, scroll down and click **Open Anyway** next to the Mochi message, or
+3. Advanced users, in Terminal: `xattr -dr com.apple.quarantine /Applications/Mochi.app`
 
-The application is validated in CI on both Intel and Apple-silicon macOS runners. The release workflow builds DMGs for both architectures and signs and notarizes them when these repository secrets exist: `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD` and `APPLE_TEAM_ID`. Without them the DMGs are produced unsigned.
+You only need to do this once per downloaded copy. Details and file locations: [docs/macos.md](docs/macos.md).
 
-macOS also discovers games from your Applications folders (apps categorised as games), supports Steam, Heroic and itch.io libraries, and handles the Dock icon reopening a window hidden to the menu bar.
+## Overview
 
-Mochi supports Linux and macOS only.
+Mochi is a cross-platform (Linux and macOS) desktop game launcher that sits above existing game ecosystems instead of replacing them. It gives you one library for games that already live on your computer: Steam, Heroic, Epic, itch.io, Flatpak, Lutris, Bottles, Whisky/CrossOver, plain executables, scripts and apps.
 
-## Technology stack
+- **Local first.** Installations stay where they are; the library, launching, playtime, themes and settings work without an account or a network. Cloud sync is optional and metadata-only.
+- **Native where it matters.** React/TypeScript for the UI; Tauri 2 and Rust for launching, discovery, process tracking and downloads. OS-specific code lives in `src-tauri/src/platform/` and `src-tauri/src/sources/`, and the UI asks `get_platform_capabilities` instead of assuming an OS.
+- **Your launcher stays in charge of its games.** Imported games are launched through the owning launcher (Steam, Heroic, ...) so prefixes, overlays and authentication keep working.
 
-| Technology | Purpose |
-| --- | --- |
-| Rust | Native backend and platform integration |
-| Tauri 2 | Desktop application framework |
-| React | User interface |
-| TypeScript | Frontend type safety |
-| Vite | Frontend tooling and builds |
-| Lucide React | Interface icons |
-| Supabase | Optional authentication and cloud metadata |
+## Piko and Tofu
 
-## Repository structure
+**Piko = what you play. Tofu = how you play it.**
 
-    Mochi/
-    ├── src/
-    │   ├── components/       # Reusable React components
-    │   ├── lib/              # Auth, cloud, IGDB and platform helpers
-    │   └── models.ts         # Piko and Tofu data models
-    │
-    ├── src-tauri/
-    │   └── src/
-    │       ├── platform/     # OS-specific native behavior
-    │       └── sources/      # Game-source discovery and import adapters
-    │
-    ├── packaging/            # Arch PKGBUILD and desktop entry
-    ├── scripts/              # Release tooling
-    ├── docs/                 # Architecture and project documentation
-    ├── supabase/             # Database migrations/backend definitions
-    ├── public/               # Static assets, including the Mochi logo
-    ├── .github/workflows/    # CI and release automation
-    ├── .env.example          # Environment template
-    ├── package.json          # Scripts and dependencies
-    └── README.md
+A **Piko** is a game in your library: name, artwork, genres, launch target, source, playtime and metadata. A **Tofu** is an environment belonging to a Piko: a default install, a specific version, a modded profile, a custom runtime. One Piko can have several Tofus. Each Tofu has its own content folder and launch settings (compatibility runtime, wrappers, arguments, environment variables, working directory) and its own mods.
 
-## Development setup
+## Features
 
-### Requirements
+### Library
+- Search across names, descriptions and categories (**Ctrl+K / Cmd+K**), sorting, and a *Continue playing* shelf.
+- **Favourites, tags and collections** (user-named, optional emoji, stored per profile) and **smart filters**: All, Favourites, Installed, Recently played, Unplayed, Most played, Launchers, Running now. Filter by source too.
+- Per-game page with playtime, Tofus, metadata, screenshots/trailer, Steam achievements and mod management.
+- Guided first-launch setup (welcome, account, accessibility, import) and an import picker with per-game selection.
+- In-app notification centre plus desktop notifications (`notify-send` on Linux, `osascript` on macOS).
 
-You need:
+### Themes
+Eleven built-in themes: Mochi, Mochi Light, Minecraft Ore, Minecraft Dungeons, Subnautica, Stardew Valley, RuneScape, Fallout Pip-Boy, Cyberpunk 2077, Animal Crossing and Terraria. Themes are packages: a JSON manifest of design tokens (colours, shapes, fonts, shell position) and an optional `theme.css` and assets. You can import a theme file or folder in Settings > Appearance. The build validates themes, including contrast. See [src/themes/README.md](src/themes/README.md), [docs/theme-architecture.md](docs/theme-architecture.md) and [docs/theme-hooks.md](docs/theme-hooks.md).
 
-- Node.js and npm
-- Rust and Cargo
-- Tauri 2's native dependencies for your operating system
-- A working desktop environment for native application testing
-- Flatpak for Flatpak-specific testing on Linux
+### Big Picture, controller and Steam Deck
+- **Big Picture mode**: a full-screen, controller-first interface with shelves, game pages, a side menu and a button legend. Enter from the top bar, F11, Start + Select, the tray, `mochi --big-picture` or `mochi://bigpicture`; it can also be the startup mode and is the default under gamescope.
+- **Controller support** (Xbox, PlayStation, Switch Pro, Steam Deck, generic pads) for the whole app: spatial navigation, on-screen keyboard, configurable layout and prompts.
+- **Steam Deck** detection, 44px touch targets and instructions for adding Mochi to Steam.
+- See [docs/controller.md](docs/controller.md) and [docs/steam-deck.md](docs/steam-deck.md).
 
-### Clone
+### Metadata and artwork
+- Providers: **IGDB** (text, genres, screenshots, trailer, covers; needs a free Twitch Client ID/Secret), **SteamGridDB** (artwork; needs a free API key) and the **Steam Store** (no key, Steam games only). Choose the behaviour in Settings; IGDB matches are confirmed by you.
+- **Custom artwork**: pick, drop or crop your own image, or search SteamGridDB. Hand-edited fields and custom artwork are never overwritten by refreshes.
+- Results are cached and everything works offline from the cache. See [docs/metadata.md](docs/metadata.md).
+
+### Playtime, stats and achievements
+- Playtime is credited when a game exits, for games Mochi starts directly and for games handed to another launcher (followed by process group or install folder; Linux and macOS). The Play button turns into **Stop**.
+- A **Stats** view shows playtime and activity.
+- **77 Mochi achievements** across Playtime, Streaks, Habits, Variety, Library, Explore, Mods and Steam categories, with rarities.
+- **Steam achievements** per game, read from your local Steam account and public profile (optionally with your own Web API key, kept only on your device). See [docs/improvements/achievements.md](docs/improvements/achievements.md).
+
+### Discover and mods
+- **Discover** browses community content from **Modrinth**, **CurseForge** and **Nexus Mods**. Each source can be switched off in Settings > Mod sources, and fixed rules pick the source per game (Minecraft Java: Modrinth and CurseForge; other CurseForge games: CurseForge; otherwise Nexus when you saved a Nexus key).
+- **Mods per Tofu**: install into a chosen Tofu, enable/disable/delete, **profiles** (saved mod sets), and **updates** for Modrinth files by hash. Downloads are done by Rust with a per-provider host allow-list, size cap, SHA-1 check and safe zip extraction. Nexus free accounts are linked out; `nxm://` links are not supported.
+- CurseForge uses Mochi's own server-side key (you need no account), shows "Powered by CurseForge", never caches CurseForge data and links back when an author disabled third-party downloads.
+- See [docs/mods.md](docs/mods.md) and [docs/curseforge.md](docs/curseforge.md).
+
+### Accessibility
+Settings > Accessibility covers text and interface size (85-150%), high contrast, colour-blind palettes, reduced motion/transparency, focus ring styling, a readable font, spacing, larger targets and text labels. Dialogs get focus traps, Escape handling and screen-reader names; `?` opens the shortcuts list. See [docs/accessibility.md](docs/accessibility.md).
+
+### Updates
+Background check 10 seconds after start and every 6 hours (Settings > Updates > Auto-update), never installing without you pressing **Install & restart**. Updates are verified against an embedded public key. See [docs/updates.md](docs/updates.md).
+
+### Linux and macOS integration
+Application-menu shortcuts (`mochi://launch/<id>`), start at login, tray icon, managed AppImage copy and `mochi://` handler on Linux; LaunchAgent, Dock reopen and menu-bar hiding on macOS. Experimental opt-in features live in Settings > Experimental ([docs/experimental-features.md](docs/experimental-features.md)).
+
+## Importing games and launching
+
+| Source | Linux | macOS | Launch handoff |
+| --- | --- | --- | --- |
+| Steam (libraries and non-Steam shortcuts) | yes | yes | `steam://rungameid/<id>` |
+| Heroic (Epic, GOG, Amazon, sideloaded) | yes | yes | `heroic://launch?...` |
+| Epic Games Launcher | no | yes | `com.epicgames.launcher://` |
+| itch.io | yes | yes | itch URI, or the game's `.app` on macOS |
+| Flatpak | yes | no | Flatpak application ID |
+| Lutris | yes | no | `lutris:rungameid/<id>` |
+| Bottles | yes | no | `bottles:run/<bottle>/<program>` |
+| Whisky bottle pins | no | yes | `open -a Whisky.app <exe>` |
+| Desktop apps categorised as games | yes | `.app` bundles in /Applications (also CrossOver launchers and known launchers) | the app itself |
+
+Not imported: Battle.net and GOG Galaxy libraries, and Prism/MultiMC instances (Prism itself is listed as a launcher on macOS). The Whisky pin format was inferred from its source and is not verified on a real machine. Imports never move, copy or uninstall anything, and you can point Mochi at a library folder manually when detection misses it.
+
+Manually added games can target: executables, `.desktop` files, Flatpak IDs, `.sh`/`.bash`, `.py`, `.js`, macOS `.app` bundles, `.exe`/`.bat` through the Tofu's runtime (Wine or Proton, GameMode and MangoHud on Linux; CrossOver or Whisky on macOS), and the launcher URIs above. Runtimes are detected, not installed.
+
+## Accounts, cloud sync and offline use
+
+An account is optional. It enables sync of library metadata (profiles, Pikos, Tofus, including favourites, tags, artwork source and kind) through Supabase; game files and local paths are never uploaded, and a synced path may need fixing on another machine. Sign in with email/password, Google or GitHub, with passkeys and TOTP multi-factor authentication, and keep up to five saved accounts on a device. IGDB, SteamGridDB and Nexus keys are stored server-side in Supabase Vault and never returned to the app.
+
+Offline, the library, launching, playtime, stats, themes, settings, installed-mod management and cached artwork all work. Fonts for built-in themes are bundled, so themes render without a network. Metadata, Discover, sign-in, trailers and downloads need a connection and fail quietly. Full table: [docs/offline.md](docs/offline.md).
+
+## Platform support
+
+- **Linux** is the primary development platform and the best tested one.
+- **macOS** has a full native adapter (universal DMG, minimum macOS 12) and is built and tested in CI on Apple-silicon and Intel runners, but has had far less real-world use than Linux. Data locations: `~/Library/Application Support/Mochi` for config, themes and artwork, and `~/Library/Application Support/dev.sidequestgames.Mochilauncher` for playtime and Wine prefixes ([docs/macos.md](docs/macos.md)).
+- **Windows is not supported.**
+
+## Security model
+
+- A strict Content Security Policy (`script-src 'self'`, no remote scripts, an explicit host list for images and connections) and a web view with no asset-protocol access. Details and how to add hosts: [docs/security-csp.md](docs/security-csp.md).
+- Mod downloads happen in Rust against a per-provider URL allow-list, with size and hash checks and path-traversal-safe extraction. Third-party HTML (mod descriptions) is rendered through a strict sanitiser.
+- **No secrets in the client.** The app ships only the public Supabase URL and publishable key. The CurseForge API key exists only as a Supabase edge-function secret; user provider keys live in Supabase Vault.
+- Auth uses Supabase; provider sign-in opens the system browser and returns through `mochi://auth/callback`, and the app asks before installing a session.
+- Releases are not code-signed (see the warning above). The updater verifies its own signature key independently of OS signing.
+- Mochi does not host or distribute game content. You are responsible for what you choose to run.
+
+## Development
+
+Requirements: Node 20+, a stable Rust toolchain and the [Tauri 2 prerequisites](https://tauri.app/start/prerequisites/) for your OS.
 
     git clone https://github.com/T1nkiePlayz/Mochi.git
     cd Mochi
+    npm ci
+    npm run tauri dev     # full desktop app
+    npm run dev           # browser-only UI with a dev mock backend
 
-### Install dependencies
+The repository's `.env` holds only the public `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; point them at your own Supabase project if you run one. Never commit secrets.
 
-    npm install
+Checks (the same ones CI runs):
 
-### Configure environment
+    npm run build             # validates themes, type-checks, bundles
+    npm run lint
+    npm test                  # vitest + metadata and mods tests
+    npm run typecheck:tests
+    cd src-tauri && cargo clippy --all-targets -- -D warnings && cargo test
 
-    cp .env.example .env
+`npm run tauri build` works locally without the updater signing key (updater artifacts are only enabled by the release workflow).
 
-Fill in the values required by your development environment. Never commit real secrets.
+**Supabase setup.** Migrations are in `supabase/migrations/` (apply in order; never edit an applied one). Edge functions: `store-provider-credentials` and `curseforge-proxy` (deploy with `--no-verify-jwt`; secret `CURSEFORGE_API_KEY`), see [docs/curseforge.md](docs/curseforge.md). Under Authentication > URL Configuration > Redirect URLs add **`mochi://auth/callback`** and **`mochi://auth/verify`**, otherwise sign-in links cannot return to the app.
 
-### Run the desktop application
+Layout: `src/` (React UI, `lib/` wrappers, `themes/`, `bigpicture/`, `controller/`), `src-tauri/src/` (`platform/`, `sources/`, downloads, playtime, gamepad, Steam/artwork helpers), `supabase/`, `packaging/`, `scripts/`, `docs/`.
 
-    npm run tauri dev
+## Releasing
 
-For frontend-only development:
-
-    npm run dev
-
-## Environment configuration
-
-Public configuration templates belong in .env.example. Local development values belong in .env.
-
-Backend/account configuration should be treated as infrastructure configuration. Secrets, private tokens, and local environment files must not be committed.
-
-IGDB credentials are configured separately inside Mochi and are intended to remain local to the launcher.
-
-## Building
-
-### Frontend
-
-    npm run build
-
-This performs TypeScript checking and creates the Vite production build.
-
-### Desktop application
-
-For development:
-
-    npm run tauri dev
-
-For a production desktop build:
-
-    npm run tauri build
-
-GitHub Actions also runs the frontend production build and Rust/Tauri backend check on pushes and pull requests. The release workflow is triggered by version tags beginning with `v`.
-
-Tauri packages the application for the target operating system using the configured release settings.
-
-The exact package formats depend on the target platform and release configuration.
-
-## Development notes
-
-### Machine-specific paths
-
-Cloud synchronization can move a Piko between devices, but a local executable path may not be valid on another machine. This is expected for a launcher that keeps installations local.
-
-### Native operations
-
-When functionality depends on the operating system, prefer adding a small Tauri command and implementing the behavior inside the relevant platform adapter.
-
-### Cloud boundaries
-
-Do not treat cloud metadata as a file storage system. The intended synchronization boundary is launcher metadata, not arbitrary user files or complete game installations.
-
-### Evolving data model
-
-Pikos and Tofus are still early concepts. Their fields and relationships may evolve as runtime, profile, mod, and installation management become more complete.
+Push a tag `vX.Y.Z` (`-beta.N` for pre-releases) on the commit to ship. The release workflow builds AppImage, deb, rpm and a universal macOS DMG, generates `SHA256SUMS.txt` and publishes the release. Without Apple secrets the DMG is ad-hoc signed and unnotarized (what is published today). Secrets, checklist and re-runs: [docs/release.md](docs/release.md).
 
 ## Current limitations
 
-Mochi is not yet a finished replacement for dedicated game stores or specialised game managers.
-
-Current limitations include:
-
-- Source scanners depend on the source launcher's local configuration format or CLI and may require compatibility work as those launchers evolve.
-- Some source scanners depend on the source launcher's local configuration format or CLI and may require future compatibility work as those launchers evolve.
-- Manual library-path scanning is currently most complete for Steam; source-specific path semantics for the other integrations will continue to mature.
-- Mod profiles and update checks are built around Modrinth; Nexus Mods content is link-out only.
-- Games handed to another launcher can only be stopped once Mochi detects them (they need a known install folder).
-- Runtimes are detected, not installed: Mochi does not download Wine, Proton or CrossOver for you.
-- Synced paths may not work on another machine.
-- Linux has the strongest platform integration.
-- macOS public release packaging still requires signing and notarization.
-- Cloud synchronization is metadata-only.
-- APIs, storage formats, and UI behavior may change before a stable release.
+- Builds are unsigned and unnotarized; macOS needs the manual Gatekeeper steps above.
+- macOS support is newer and less tested than Linux; some paths (Whisky, entitlements) are unverified on real hardware.
+- Source scanners read other launchers' local formats and may break when those change. Battle.net, GOG Galaxy and Prism/MultiMC libraries are not imported.
+- Runtimes (Wine, Proton, CrossOver) are detected, not installed.
+- Mod profiles and update checks cover Modrinth only; Nexus has no `nxm://` link handling and no automatic dependency install.
+- Games handed to another launcher can only be stopped once Mochi detects them.
+- Synced paths may not work on another machine; sync is metadata-only.
+- Storage formats and UI may change before a stable release.
 
 ## Roadmap
 
-The roadmap is intentionally evolutionary rather than a promise of fixed release dates.
+Not promises or dates.
 
-- [x] Local Piko library foundation
-- [x] Piko/Tofu data model
-- [x] Native launch command architecture
-- [x] Linux Flatpak discovery
-- [x] Native game-target file selection
-- [x] Optional IGDB metadata lookup
-- [x] Interactive IGDB game-match confirmation
-- [x] Account authentication foundation
-- [x] Secure provider credential storage
-- [x] Cloud metadata synchronization foundation
-- [x] Native installed-game source discovery and import
-- [x] First-launch setup flow
-- [x] Guided source import picker with per-game selection
-- [x] Flatpak, Steam (including non-Steam shortcuts), Heroic, Lutris, Bottles and itch.io Linux integrations
-- [x] Source-aware launch handoff for imported games
-- [x] Google and GitHub OAuth
-- [x] Email/password authentication
-- [x] Passkey authentication and registration
-- [x] TOTP multi-factor authentication
-- [x] Account switching with up to five saved accounts
-- [x] In-app and Linux desktop notifications
-- [x] Library search with keyboard shortcut
-- [x] Theme-aware light-mode contrast and icon assets
-- [x] Launcher security controls mirrored from the Mochi Website
-- [x] Email verification deep links
-- [x] Account avatars with provider/Gravatar fallback
-- [x] Automated frontend and Tauri backend CI checks
-- [x] Formal platform/source architecture documentation
-- [x] Modrinth community content discovery with project details and Tofu installation
-- [x] Experimental Nexus Mods game discovery and trending-mod tabs
-- [x] Live Nexus Mods game search and persistent custom Discovery tabs
-- [x] Full Tofu management
-- [x] Game process management
-- [x] Runtime management
-- [x] Mod and profile management
-- [x] More Linux desktop integrations
-- [x] Expanded modular macOS platform support
-- [x] Linux distribution packages (AppImage, DEB, RPM and an Arch `PKGBUILD`)
-- [ ] macOS signed/notarized release packages (the release workflow signs and notarizes once Apple credentials are added as repository secrets)
+- [x] Library, Piko/Tofu model, imports, launch handoff, runtimes, process tracking
+- [x] Themes (11), bundled fonts, accessibility, Big Picture, controller and Steam Deck support
+- [x] Metadata providers, custom artwork, collections, tags, smart filters
+- [x] Playtime, stats, achievements, Steam achievements
+- [x] Discover and mod management (Modrinth, CurseForge, Nexus)
+- [x] Accounts, passkeys, MFA, optional cloud sync, auto-update, Linux packages, universal macOS DMG
+- [ ] Signed and notarized macOS builds (needs an Apple Developer account)
+- [ ] `nxm://` handling, Battle.net / GOG Galaxy / Prism import
+- [ ] Mod profiles and updates beyond Modrinth
 - [ ] Stable release
 
-## Related projects
+## Documentation index
 
-The companion website is maintained separately:
-
-- Mochi Website: https://github.com/T1nkiePlayz/Mochi-Website
-
-The website provides project information, documentation, FAQ material, account access, privacy information, and Terms of Use.
+[accessibility](docs/accessibility.md), [controller](docs/controller.md), [Steam Deck and Big Picture](docs/steam-deck.md), [macOS](docs/macos.md), [metadata](docs/metadata.md), [mods](docs/mods.md), [CurseForge backend](docs/curseforge.md), [offline and fonts](docs/offline.md), [updates](docs/updates.md), [release](docs/release.md), [CSP](docs/security-csp.md), [platform architecture](docs/platform-architecture.md), [themes](docs/theme-architecture.md), [experimental features](docs/experimental-features.md), [achievements](docs/improvements/achievements.md).
 
 ## Contributing
 
-Mochi is still establishing its architecture, so changes should be made with maintainability in mind.
-
-When contributing:
-
-1. Understand the existing implementation before changing it.
-2. Keep changes focused.
-3. Keep platform-specific behavior inside the platform adapters where practical.
-4. Keep native Tauri calls behind frontend wrappers.
-5. Avoid hard-coded operating-system assumptions in shared UI code.
-6. Test both frontend and desktop builds when a change affects both.
-7. Update documentation when user-facing behavior or architecture changes.
-8. Never commit credentials or private environment files.
-
-Bug reports, reproducible examples, and focused feature discussions are especially useful while Mochi is in early development.
-
-## Security and privacy
-
-Mochi is designed with a clear separation between local game installations and optional cloud metadata.
-
-Important boundaries include:
-
-- Game installations remain on the user's device.
-- Cloud synchronization is intended for metadata.
-- IGDB configuration is local.
-- Account access is handled through the configured authentication system.
-- Secrets and tokens must not be committed to the repository.
-- Mochi does not provide, host, or distribute pirated game content.
-
-Users remain responsible for the software, games, scripts, launch targets, and other content they choose to run through the launcher.
-
-For the current public legal and privacy information, see the Mochi Website.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Keep changes focused, keep OS-specific code in the platform adapters, keep the app working offline, and never commit credentials. The companion website is maintained in [Mochi-Website](https://github.com/T1nkiePlayz/Mochi-Website).
 
 ## License
 
-Mochi does not currently declare a final open-source license. Until a license is explicitly added, the source code should not be assumed to be freely reusable, redistributed, or relicensed.
-
-License information will be added as the project approaches its first public release.
+Mochi does not currently declare an open-source license. Until one is added, do not assume the code may be reused, redistributed or relicensed.
