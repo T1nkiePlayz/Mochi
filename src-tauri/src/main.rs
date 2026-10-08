@@ -1,7 +1,9 @@
 use serde::Deserialize;
-use tauri::{Manager, WindowEvent};
+use tauri::{Emitter, Manager, WindowEvent};
 
+mod bigpicture;
 mod game_artwork;
+mod gamepad;
 mod modrinth;
 mod platform;
 mod playtime;
@@ -108,10 +110,14 @@ fn import_theme(app: tauri::AppHandle, source_path: String) -> Result<themes::Us
 
 fn main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+        // Tells the frontend how it was started before the first paint.
+        .plugin(tauri::plugin::Builder::<tauri::Wry, ()>::new("mochi-boot").js_init_script(bigpicture::boot_script(bigpicture::parse_flags(std::env::args()))).build())
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             // The window is hidden to the tray on close, so a second launch or a
             // mochi:// link must bring it back or it appears to do nothing.
             tray::show_mochi(app);
+            // `mochi --big-picture` from a Steam shortcut switches the running instance over.
+            if bigpicture::parse_flags(&argv).big_picture { let _ = app.emit("mochi-bigpicture", true); }
         }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_deep_link::init())
@@ -130,6 +136,7 @@ fn main() {
             let data_dir = app.path().app_data_dir()?;
             playtime::initialize(data_dir).map_err(std::io::Error::other)?;
             tray::initialize(app)?;
+            gamepad::start(app.handle().clone());
             if let Some(window) = app.get_webview_window("main") {
                 window.clone().on_window_event(move |event| {
                     if let WindowEvent::CloseRequested { api, .. } = event {
@@ -145,6 +152,7 @@ fn main() {
             launch_game_tracked, stop_game, get_active_sessions, get_playtime, get_downloads,
             list_flatpaks, list_runtimes, get_platform_capabilities, create_game_shortcut, remove_game_shortcut,
             detect_import_sources, scan_import_games,
+            bigpicture::get_system_status, bigpicture::suspend_system, bigpicture::quit_mochi, gamepad::get_gamepads, gamepad::gamepad_rumble,
             get_mochi_config_info, move_mochi_config, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
             game_artwork::cache_game_artwork, game_artwork::get_cached_game_artwork, game_artwork::clear_game_artwork_cache,
             modrinth::get_public_api, modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::apply_mod_profile,

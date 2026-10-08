@@ -39,6 +39,10 @@ pub struct PlatformCapabilities {
     pub supports_startup: bool,
     pub supports_system_notifications: bool,
     pub supports_shortcuts: bool,
+    /// Running on a Steam Deck (or SteamOS handheld).
+    pub is_steam_deck: bool,
+    /// Running inside a gamescope session (Steam Gaming Mode).
+    pub is_gamescope: bool,
 }
 
 /// A compatibility layer or wrapper that can be applied to a launch.
@@ -180,7 +184,9 @@ pub fn open_path(path: &str) -> Result<(), String> {
 pub fn ensure_platform_integration() -> Result<(), String> { os::ensure_platform_integration() }
 pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> { os::set_launch_on_startup(enabled) }
 pub fn list_flatpaks() -> Result<Vec<FlatpakApp>, String> { os::list_flatpaks() }
-pub fn capabilities() -> PlatformCapabilities { os::capabilities() }
+pub fn capabilities() -> PlatformCapabilities {
+    PlatformCapabilities { is_steam_deck: crate::bigpicture::is_steam_deck(), is_gamescope: crate::bigpicture::is_gamescope(), ..os::capabilities() }
+}
 pub fn list_runtimes() -> Vec<RuntimeInfo> { os::list_runtimes() }
 pub fn send_system_notification(title: &str, body: &str) -> Result<(), String> { os::send_system_notification(title.trim(), body.trim()) }
 pub fn create_game_shortcut(game_id: &str, name: &str) -> Result<String, String> { os::create_game_shortcut(game_id, name) }

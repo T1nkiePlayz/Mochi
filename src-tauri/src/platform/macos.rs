@@ -15,6 +15,8 @@ pub fn capabilities() -> PlatformCapabilities {
         supports_startup: true,
         supports_system_notifications: true,
         supports_shortcuts: false,
+        is_steam_deck: false,
+        is_gamescope: false,
     }
 }
 
@@ -127,7 +129,7 @@ pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> {
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
 <key>Label</key><string>{APP_ID}</string>
-<key>ProgramArguments</key><array><string>{}</string></array>
+<key>ProgramArguments</key><array><string>{}</string><string>--autostart</string></array>
 <key>RunAtLoad</key><true/>
 <key>ProcessType</key><string>Interactive</string>
 </dict></plist>
