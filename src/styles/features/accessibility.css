@@ -168,3 +168,6 @@ html:not([data-color-blind="none"]) :is([class*="status-"].error, [class*="statu
 .a11y-chip.ok { color: var(--mochi-success); } .a11y-chip.warn { color: var(--mochi-warning); } .a11y-chip.bad { color: var(--mochi-danger); }
 .a11y-quick { display: grid; gap: 4px; }
 .a11y-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px; }
+
+/* Legacy rules that removed the outline on styled inputs. */
+.mfa-code-label .mfa-input:focus-visible { outline: var(--mochi-a11y-focus-width) solid var(--mochi-a11y-focus-color); outline-offset: var(--mochi-a11y-focus-offset); }
