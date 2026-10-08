@@ -101,5 +101,5 @@ pub fn send_system_notification(title: &str, body: &str) -> Result<(), String> {
 }
 
 fn applescript_string(value: &str) -> String {
-    format!("\\\"{}\\\"", value.replace('\\\\', "\\\\\\\\").replace('"', "\\\"").replace('\\n', " "))
+    format!("\"{}\"", value.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', " "))
 }
