@@ -36,7 +36,7 @@ jobs:
       - name: Build frontend
         run: npm run build
       - name: Check Tauri backend
-        run: cargo check --locked --manifest-path src-tauri/Cargo.toml
+        run: cargo check --manifest-path src-tauri/Cargo.toml
 
   macos:
     name: macOS backend (${{ matrix.os }})
