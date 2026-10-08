@@ -4,14 +4,14 @@ use sha1::{Digest, Sha1};
 use std::{
     collections::HashMap,
     fs,
-    io::{Read, Write},
+    io::Read,
     path::{Path, PathBuf},
-    sync::{atomic::{AtomicU64, Ordering}, Mutex, OnceLock},
+    sync::{atomic::AtomicU64, Mutex, OnceLock},
     time::{SystemTime, UNIX_EPOCH},
 };
 
 const API_BASE: &str = "https://api.modrinth.com/v2";
-const MAX_DOWNLOAD_BYTES: u64 = 250 * 1024 * 1024;
+pub(crate) const MAX_DOWNLOAD_BYTES: u64 = 250 * 1024 * 1024;
 const CONTENT_EXTENSIONS: [&str; 3] = ["jar", "zip", "mrpack"];
 const DOWNLOAD_RETENTION_MS: u64 = 10 * 60 * 1000;
 
@@ -62,24 +62,24 @@ struct ApiVersion { id: String, project_id: String, version_number: String, #[se
 struct ApiProject { id: String, title: String, icon_url: Option<String> }
 
 static DOWNLOADS: OnceLock<Mutex<HashMap<String, DownloadEntry>>> = OnceLock::new();
-static NEXT_DOWNLOAD_ID: AtomicU64 = AtomicU64::new(1);
+pub(crate) static NEXT_DOWNLOAD_ID: AtomicU64 = AtomicU64::new(1);
 
-fn downloads() -> &'static Mutex<HashMap<String, DownloadEntry>> {
+pub(crate) fn downloads() -> &'static Mutex<HashMap<String, DownloadEntry>> {
     DOWNLOADS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-fn now_ms() -> u64 {
+pub(crate) fn now_ms() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or_default()
 }
 
-fn validate_path(path: &str) -> Result<PathBuf, String> {
+pub(crate) fn validate_path(path: &str) -> Result<PathBuf, String> {
     let p = PathBuf::from(path);
     if !p.is_absolute() { return Err("Mochi requires an absolute Tofu folder path.".into()); }
     if p.components().any(|c| matches!(c, std::path::Component::ParentDir)) { return Err("Paths may not contain '..'.".into()); }
     Ok(p)
 }
 
-fn content_extension(name: &str) -> String {
+pub(crate) fn content_extension(name: &str) -> String {
     let base = name.strip_suffix(".disabled").unwrap_or(name);
     Path::new(base).extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase()
 }
@@ -94,7 +94,7 @@ fn validate_content_path(path: &str) -> Result<PathBuf, String> {
     Ok(p)
 }
 
-fn validate_download_filename(filename: &str) -> Result<&str, String> {
+pub(crate) fn validate_download_filename(filename: &str) -> Result<&str, String> {
     let name = filename.trim();
     if name.is_empty() || name == "." || name == ".." || name.contains(['/', '\\']) || name.chars().any(char::is_control) || !CONTENT_EXTENSIONS.contains(&content_extension(name).as_str()) {
         return Err("Invalid download filename.".into());
@@ -102,19 +102,9 @@ fn validate_download_filename(filename: &str) -> Result<&str, String> {
     Ok(name)
 }
 
-/// Only the Modrinth CDN over HTTPS may serve downloads.
-fn is_modrinth_cdn(url: &reqwest::Url) -> bool {
-    url.scheme() == "https" && url.host_str() == Some("cdn.modrinth.com")
-}
-
-fn parse_cdn_url(url: &str) -> Result<reqwest::Url, String> {
-    let parsed = reqwest::Url::parse(url).map_err(|_| "Invalid Modrinth download URL.".to_string())?;
-    if is_modrinth_cdn(&parsed) { Ok(parsed) } else { Err("Mochi only downloads from the official Modrinth CDN.".into()) }
-}
-
 /// One shared client: connection reuse, a fixed user agent, and redirects that
 /// may only land on Modrinth hosts.
-fn client() -> Result<&'static reqwest::Client, String> {
+pub(crate) fn client() -> Result<&'static reqwest::Client, String> {
     static CLIENT: OnceLock<Result<reqwest::Client, String>> = OnceLock::new();
     CLIENT.get_or_init(|| {
         let policy = reqwest::redirect::Policy::custom(|attempt| {
@@ -130,14 +120,14 @@ fn client() -> Result<&'static reqwest::Client, String> {
     }).as_ref().map_err(Clone::clone)
 }
 
-fn cleanup_downloads() {
+pub(crate) fn cleanup_downloads() {
     let cutoff = now_ms().saturating_sub(DOWNLOAD_RETENTION_MS);
     if let Ok(mut state) = downloads().lock() {
         state.retain(|_, entry| entry.finished_at.map(|finished| finished > cutoff).unwrap_or(true));
     }
 }
 
-fn update_download(id: &str, update: impl FnOnce(&mut DownloadEntry)) {
+pub(crate) fn update_download(id: &str, update: impl FnOnce(&mut DownloadEntry)) {
     if let Ok(mut state) = downloads().lock() {
         if let Some(entry) = state.get_mut(id) { update(entry); }
     }
@@ -310,77 +300,29 @@ pub fn delete_mod_file(path: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Streams `url` into `destination` through a temp file, enforcing the size cap.
-async fn fetch_to_file(url: reqwest::Url, destination: &Path, progress: impl Fn(u64, Option<u64>)) -> Result<(), String> {
-    let mut response = client()?.get(url).send().await.map_err(|e| format!("Modrinth download failed: {e}"))?;
-    if !response.status().is_success() { return Err(format!("Modrinth download failed ({}).", response.status())); }
-    let total = response.content_length();
-    if total.is_some_and(|length| length > MAX_DOWNLOAD_BYTES) { return Err("Modrinth file exceeds Mochi's 250 MiB safety limit.".into()); }
-    progress(0, total);
-
-    let name = destination.file_name().and_then(|n| n.to_str()).unwrap_or("download");
-    let temp = destination.with_file_name(format!("{name}.mochi-download-{}", NEXT_DOWNLOAD_ID.fetch_add(1, Ordering::Relaxed)));
-    let result: Result<(), String> = async {
-        let mut file = fs::File::create(&temp).map_err(|e| format!("Unable to create temporary download: {e}"))?;
-        let mut downloaded = 0u64;
-        while let Some(chunk) = response.chunk().await.map_err(|e| format!("Unable to read download: {e}"))? {
-            downloaded = downloaded.saturating_add(chunk.len() as u64);
-            if downloaded > MAX_DOWNLOAD_BYTES { return Err("Modrinth file exceeds Mochi's 250 MiB safety limit.".into()); }
-            file.write_all(&chunk).map_err(|e| format!("Unable to write downloaded file: {e}"))?;
-            progress(downloaded, total);
-        }
-        file.flush().map_err(|e| format!("Unable to finalize downloaded file: {e}"))?;
-        fs::rename(&temp, destination).map_err(|e| format!("Unable to finalize downloaded file: {e}"))
-    }.await;
-    if result.is_err() { let _ = fs::remove_file(&temp); }
-    result
-}
-
 #[tauri::command]
 pub fn start_modrinth_download(url: String, path: String, tofu_id: String, tofu_name: String, item_name: String, filename: String) -> Result<String, String> {
-    let parsed = parse_cdn_url(&url)?;
-    let root = validate_path(&path)?;
-    let safe_filename = validate_download_filename(&filename)?.to_string();
-    fs::create_dir_all(&root).map_err(|e| format!("Unable to create Tofu folder: {e}"))?;
-
-    cleanup_downloads();
-    let id = format!("download-{}-{}", now_ms(), NEXT_DOWNLOAD_ID.fetch_add(1, Ordering::Relaxed));
-    let entry = DownloadEntry {
-        id: id.clone(), tofu_id, tofu_name, item_name, filename: safe_filename.clone(), downloaded: 0, total: None,
-        status: "downloading".into(), error: None, created_at: now_ms(), finished_at: None,
-    };
-    downloads().lock().map_err(|_| "Download state is unavailable.".to_string())?.insert(id.clone(), entry);
-
-    let destination = root.join(&safe_filename);
-    let task_id = id.clone();
-    tauri::async_runtime::spawn(async move {
-        let result = fetch_to_file(parsed, &destination, |downloaded, total| update_download(&task_id, |entry| { entry.downloaded = downloaded; entry.total = total; })).await;
-        update_download(&task_id, |entry| {
-            entry.finished_at = Some(now_ms());
-            match result {
-                Ok(()) => { entry.status = "completed".into(); entry.error = None; }
-                Err(error) => { entry.status = "failed".into(); entry.error = Some(error); }
-            }
-        });
-    });
-    Ok(id)
+    crate::downloads::start(crate::downloads::ModDownloadRequest {
+        provider: crate::downloads::Provider::Modrinth, url, path, tofu_id, tofu_name, item_name, filename,
+        sha1: None, extract: None, keep_archive: None,
+    })
 }
 
 /// Downloads `url` next to `path`, then removes the old file. A disabled mod stays disabled.
 #[tauri::command]
 pub async fn update_mod_file(path: String, url: String, filename: String) -> Result<(), String> {
     let old = validate_content_path(&path)?;
-    let parsed = parse_cdn_url(&url)?;
+    let parsed = crate::downloads::parse_download_url(crate::downloads::Provider::Modrinth, &url)?;
     let filename = validate_download_filename(&filename)?;
     let was_disabled = old.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.ends_with(".disabled"));
     let target_name = if was_disabled { format!("{filename}.disabled") } else { filename.to_string() };
     let target = old.with_file_name(target_name);
-    fetch_to_file(parsed, &target, |_, _| {}).await?;
+    crate::downloads::fetch_to_file(crate::downloads::Provider::Modrinth, parsed, &target, None, |_, _| {}).await?;
     if target != old { let _ = fs::remove_file(&old); }
     Ok(())
 }
 
-fn sha1_hex(path: &Path) -> Result<String, String> {
+pub(crate) fn sha1_hex(path: &Path) -> Result<String, String> {
     let mut file = fs::File::open(path).map_err(|e| e.to_string())?;
     let mut hasher = Sha1::new();
     let mut buffer = vec![0u8; 64 * 1024];
@@ -457,13 +399,6 @@ mod tests {
         assert!(validate_download_filename("sodium-1.0.jar").is_ok());
         assert!(validate_download_filename("../evil.jar").is_err());
         assert!(validate_download_filename("run.sh").is_err());
-    }
-
-    #[test]
-    fn only_the_modrinth_cdn_is_allowed() {
-        assert!(parse_cdn_url("https://cdn.modrinth.com/data/x/y.jar").is_ok());
-        assert!(parse_cdn_url("http://cdn.modrinth.com/data/x/y.jar").is_err());
-        assert!(parse_cdn_url("https://evil.example/y.jar").is_err());
     }
 
     #[test]
