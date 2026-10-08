@@ -275,12 +275,19 @@ function getPrimaryCreator(project: ModrinthProjectDetails) {
 }
 
 function MinecraftIcon() {
-  return <span className="minecraft-discovery-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path fill="#789b45" d="M2 5.5 12 2l10 3.5v5L12 14 2 10.5z"/><path fill="#5b4128" d="M2 10.5 12 14v10L2 20.5z"/><path fill="#755536" d="m12 14 10-3.5v10L12 24z"/><path fill="#91b85b" d="m2 5.5 10-3.4 10 3.4-10 3.6z"/><path fill="#a8d16b" d="m5 5.4 2.5-.9 2.4.9-2.5.9z"/><path fill="#a8d16b" d="m13.8 4.3 2.4-.8 2.4.8-2.4.9z"/></svg></span>;
+  return <span className="minecraft-discovery-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path fill="#91b85b" d="m12 1.5 10 4v12.8l-10 4.2-10-4.2V5.5z"/><path fill="#a8d16b" d="m2 5.5 10 4 10-4-10-4z"/><path fill="#5b4128" d="m2 5.5 10 4v13l-10-4.2z"/><path fill="#755536" d="m12 9.5 10-4v12.8l-10 4.2z"/></svg></span>;
+}
+
+function DiscoveryImage({ src, className, alt, label }: { src: string; className: string; alt: string; label: string }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [src]);
+  if (failed) return <span className={`${className} fallback`} aria-label={label}>{label.trim().slice(0, 1).toUpperCase() || <PackageOpen size={18}/>}</span>;
+  return <img src={src} className={className} alt={alt} loading="lazy" onError={() => setFailed(true)} />;
 }
 
 
 type MinecraftTab = ModrinthProjectType;
-type DiscoveryTab = { kind: "minecraft"; category: MinecraftTab } | { kind: "nexus"; game: NexusGame };
+type DiscoveryTab = { kind: "all" } | { kind: "minecraft"; category: MinecraftTab } | { kind: "nexus"; game: NexusGame };
 
 const minecraftTabs: Array<{ id: MinecraftTab; label: string }> = [
   { id: "mod", label: "Mods" },
@@ -307,28 +314,33 @@ const defaultNexusGame = ({ domainName, search }: typeof defaultNexusGames[numbe
 type Props = {
   tofu: Tofu;
   pikos: Piko[];
+  playtime?: Array<{ gameId: string; name: string; seconds: number; lastPlayed: number }>;
   experimentalFeatures: boolean;
   nexusConfigured: boolean;
   supabase: SupabaseClient | null;
 };
 
-export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfigured, supabase }: Props) {
+export function ModrinthDiscover({ tofu, pikos, playtime = [], experimentalFeatures, nexusConfigured, supabase }: Props) {
   const [projects, setProjects] = useState<Record<ModrinthProjectType, ModrinthProject[]>>({ mod: [], modpack: [], resourcepack: [], shader: [] });
   const [gameVersion, setGameVersion] = useState(tofu.version === "Local" ? "" : tofu.version);
   const [gameVersions, setGameVersions] = useState<string[]>([]);
   const [loader, setLoader] = useState("");
+  const [projectSort, setProjectSort] = useState<"downloads" | "follows">("downloads");
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
   const [message, setMessage] = useState("");
   const [query, setQuery] = useState("");
   const [details, setDetails] = useState<ModrinthProjectDetails | null>(null);
+  const [nexusDetails, setNexusDetails] = useState<{ game: NexusGame; mod: NexusMod } | null>(null);
   const [tofuPicker, setTofuPicker] = useState<ModrinthProject | null>(null);
+  const [moreLoading, setMoreLoading] = useState(false);
   const [nexusGames, setNexusGames] = useState<NexusGame[]>([]);
-  const [nexusMods, setNexusMods] = useState<NexusMod[]>([]);
+  const [nexusModsByGame, setNexusModsByGame] = useState<Record<string, NexusMod[]>>({});
   const [nexusLoading, setNexusLoading] = useState(false);
   const [nexusGameSearch, setNexusGameSearch] = useState("");
   const [nexusGameResults, setNexusGameResults] = useState<NexusGame[]>([]);
   const nexusSearchRequest = useRef(0);
+  const nexusRequests = useRef(new Map<string, Promise<NexusMod[]>>());
   const [showNexusGamePicker, setShowNexusGamePicker] = useState(false);
   const [addedNexusDomains, setAddedNexusDomains] = useState<string[]>(() => {
     try {
@@ -337,15 +349,15 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
       return [];
     }
   });
-  const [tab, setTab] = useState<DiscoveryTab>({ kind: "minecraft", category: "mod" });
+  const [tab, setTab] = useState<DiscoveryTab>({ kind: "all" });
 
   const nexusVisible = experimentalFeatures && nexusConfigured && Boolean(supabase);
 
-  const refreshMinecraft = async () => {
+  const refreshMinecraft = async (sort = projectSort) => {
     setLoading(true);
     setMessage("");
     try {
-      const values = await Promise.all(minecraftTabs.map(async ({ id }) => [id, await getPopularModrinth(id, gameVersion)] as const));
+      const values = await Promise.all(minecraftTabs.map(async ({ id }) => [id, await getPopularModrinth(id, gameVersion, sort)] as const));
       setProjects(Object.fromEntries(values) as Record<ModrinthProjectType, ModrinthProject[]>);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to load popular Modrinth projects.");
@@ -396,15 +408,41 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
 
   const refreshNexusMods = async (game: NexusGame) => {
     if (!supabase) return;
+    const domain = game.domainName;
     setNexusLoading(true);
     setMessage("");
     try {
-      setNexusMods(await getNexusMods(supabase, game.domainName));
+      const request = getNexusMods(supabase, domain);
+      nexusRequests.current.set(domain, request);
+      const mods = await request;
+      setNexusModsByGame(current => ({ ...current, [domain]: mods }));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to load Nexus Mods.");
-      setNexusMods([]);
+      setNexusModsByGame(current => ({ ...current, [domain]: [] }));
     } finally {
+      nexusRequests.current.delete(domain);
       setNexusLoading(false);
+    }
+  };
+
+  const loadNexusMods = async (game: NexusGame) => {
+    const cached = nexusModsByGame[game.domainName];
+    if (cached) return cached;
+    const pending = nexusRequests.current.get(game.domainName);
+    if (pending) return pending;
+    if (!supabase) return [];
+    const request = getNexusMods(supabase, game.domainName);
+    nexusRequests.current.set(game.domainName, request);
+    try {
+      const mods = await request;
+      setNexusModsByGame(current => ({ ...current, [game.domainName]: mods }));
+      return mods;
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to load Nexus Mods.");
+      setNexusModsByGame(current => ({ ...current, [game.domainName]: [] }));
+      return [];
+    } finally {
+      nexusRequests.current.delete(game.domainName);
     }
   };
 
@@ -415,14 +453,13 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
     }).catch(() => setGameVersions(tofu.version === "Local" ? [] : [tofu.version]));
   }, [tofu.version]);
 
-  useEffect(() => { void refreshMinecraft(); }, [gameVersion]);
   useEffect(() => {
     if (nexusVisible) void refreshNexusGames();
     else {
       setNexusGames([]);
       setNexusGameResults([]);
-      setNexusMods([]);
-      if (tab.kind === "nexus") setTab({ kind: "minecraft", category: "mod" });
+      setNexusModsByGame({});
+      if (tab.kind === "nexus") setTab({ kind: "all" });
     }
   }, [nexusVisible, addedNexusDomains.join("|")]);
 
@@ -433,8 +470,10 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
   }, [showNexusGamePicker, nexusVisible, nexusGameSearch]);
 
   useEffect(() => {
-    if (tab.kind === "nexus" && nexusVisible) void refreshNexusMods(tab.game);
-  }, [tab.kind === "nexus" ? tab.game.domainName : "", nexusVisible]);
+    if (nexusVisible) void Promise.all(nexusGames.map(game => loadNexusMods(game)));
+  }, [nexusVisible, nexusGames.map(game => game.domainName).join("|")]);
+
+  useEffect(() => { void refreshMinecraft(); }, [gameVersion, projectSort]);
 
   useEffect(() => {
     window.localStorage.setItem("mochi:nexus-discovery-games", JSON.stringify(addedNexusDomains));
@@ -478,28 +517,69 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
   };
 
   const gameTabs = nexusVisible ? nexusGames : [];
+  const recentPlay = [...playtime].sort((a, b) => b.lastPlayed - a.lastPlayed).slice(0, 3);
+  const playedPikos = recentPlay.map(entry => pikos.find(piko => piko.id === entry.gameId)).filter((piko): piko is Piko => Boolean(piko));
+  const playedCategories = [...new Set(playedPikos.flatMap(piko => piko.categories || []))].map(value => value.toLowerCase());
+  const suggestedGames = [...gameTabs]
+    .map(game => ({ game, score: playedCategories.filter(category => game.genre?.toLowerCase().includes(category)).length * 1000 + (game.modCount || 0) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4)
+    .map(item => item.game);
+  const loadMoreProjects = async () => {
+    const category = tab.kind === "minecraft" ? tab.category : "mod";
+    const current = projects[category];
+    if (current.length >= 200 || moreLoading) return;
+    setMoreLoading(true);
+    setMessage("");
+    try {
+      const more = await getPopularModrinth(category, gameVersion, projectSort, current.length);
+      setProjects(previous => ({ ...previous, [category]: [...previous[category], ...more] }));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to load more Modrinth projects.");
+    } finally {
+      setMoreLoading(false);
+    }
+  };
+
+  const renderNexusMod = (game: NexusGame, mod: NexusMod, index: number) => <article className="discover-card" key={mod.id || mod.modPageUrl}>
+    {mod.pictureUrl ? <DiscoveryImage src={mod.pictureUrl} alt="" className="discover-card-icon" label={mod.name}/> : <div className="discover-card-icon fallback"><PackageOpen size={20}/></div>}
+    <div className="discover-card-copy"><div className="discover-card-title"><strong>{index + 1}. {mod.name}</strong><span>Nexus Mods</span></div><small>{game.name} · {mod.author || "Nexus Mods creator"}</small><p>{mod.summary || "No summary was provided by Nexus Mods."}</p><div className="discover-card-actions"><button type="button" className="secondary-button" onClick={() => setNexusDetails({ game, mod })}><Eye size={13}/> View</button><button type="button" className="secondary-button" onClick={() => void invoke("open_external_url", { url: mod.modPageUrl })}><ExternalLink size={13}/> Open on Nexus</button></div></div>
+  </article>;
 
   return <>
     <section className="modrinth-discover">
       <div className="discover-header">
         <div><p className="eyebrow">Discovery</p><h2>Discover</h2><p>Browse community content from the platforms and games available to your Mochi setup.</p></div>
-        <button className="secondary-button" onClick={() => tab.kind === "minecraft" ? void refreshMinecraft() : void refreshNexusMods(tab.game)} disabled={loading || nexusLoading}>
+        <button className="secondary-button" onClick={() => tab.kind === "nexus" ? void refreshNexusMods(tab.game) : void refreshMinecraft()} disabled={loading || nexusLoading}>
           {(loading || nexusLoading) ? <RefreshCw size={14} className="spin" /> : <RefreshCw size={14} />} Refresh
         </button>
       </div>
 
       <div className="discover-game-tabs" role="tablist" aria-label="Game discovery">
+        <button className={tab.kind === "all" ? "discover-game-tab active" : "discover-game-tab"} type="button" role="tab" aria-selected={tab.kind === "all"} onClick={() => { setQuery(""); setTab({ kind: "all" }); }}>All</button>
         <button className={tab.kind === "minecraft" ? "discover-game-tab active" : "discover-game-tab"} type="button" role="tab" aria-label="Minecraft" title="Minecraft" aria-selected={tab.kind === "minecraft"} onClick={() => { setQuery(""); setTab({ kind: "minecraft", category: "mod" }); }}>
           <MinecraftIcon /><span className="discover-game-name">Minecraft</span>
         </button>
-        {gameTabs.map(game => <button key={game.domainName} className={tab.kind === "nexus" && tab.game.domainName === game.domainName ? "discover-game-tab active" : "discover-game-tab"} type="button" role="tab" aria-selected={tab.kind === "nexus" && tab.game.domainName === game.domainName} onClick={() => { setQuery(""); setTab({ kind: "nexus", game }); }}>
-          {game.iconUrl ? <img className="discover-game-icon" src={game.iconUrl} alt="" /> : <span className="discover-game-icon fallback">{game.name.slice(0, 1)}</span>}
+        {gameTabs.map(game => <button key={game.domainName} className={tab.kind === "nexus" && tab.game.domainName === game.domainName ? "discover-game-tab active" : "discover-game-tab"} type="button" role="tab" aria-selected={tab.kind === "nexus" && tab.game.domainName === game.domainName} onClick={() => { setQuery(""); setTab({ kind: "nexus", game }); void loadNexusMods(game); }}>
+          {game.iconUrl ? <DiscoveryImage src={game.iconUrl} className="discover-game-icon" alt="" label={game.name} /> : <span className="discover-game-icon fallback">{game.name.slice(0, 1)}</span>}
           <span className="discover-game-name">{game.name}</span>
         </button>)}
         {nexusVisible && <button className="discover-game-add" type="button" title="Search and add a Nexus Mods game" aria-label="Search and add a Nexus Mods game" onClick={() => { setNexusGameSearch(""); setNexusGameResults([]); setMessage(""); setShowNexusGamePicker(true); }}><Plus size={17} /></button>}
       </div>
 
-      {tab.kind === "minecraft" ? <>
+      {tab.kind === "all" ? <>
+        {message && <p className="metadata-note" role="alert">{message}</p>}
+        <section className="discover-section"><div className="discover-section-heading"><div><h3>Popular Minecraft mods</h3><p>The most downloaded Minecraft mods from Modrinth.</p></div><button className="text-button" type="button" onClick={() => setTab({ kind: "minecraft", category: "mod" })}>Browse Minecraft</button></div>
+          {loading ? <div className="discover-loading"><RefreshCw size={18} className="spin"/><span>Loading Minecraft mods...</span></div> : <div className="discover-grid">{projects.mod.slice(0, 8).map((project, index) => <article className="discover-card" key={project.project_id}>{project.icon_url ? <DiscoveryImage src={project.icon_url} className="discover-card-icon" alt="" label={project.title}/> : <div className="discover-card-icon fallback"><PackageOpen size={20}/></div>}<div className="discover-card-copy"><div className="discover-card-title"><strong>{index + 1}. {project.title}</strong><span>Modrinth</span></div><small>{project.author || "Modrinth creator"} · {project.downloads.toLocaleString()} downloads</small><p>{project.description}</p><div className="discover-card-actions"><button className="secondary-button" onClick={() => void openDetails(project)}><Eye size={13}/> View</button><button className="secondary-button" onClick={() => setTofuPicker(project)}><Download size={13}/> Choose Tofu</button></div></div></article>)}</div>}
+        </section>
+        {nexusVisible && gameTabs.map(game => {
+          const mods = nexusModsByGame[game.domainName] || [];
+          return <section className="discover-section all-game-section" key={game.domainName}><div className="discover-section-heading"><div><h3>{game.name}</h3><p>Trending Nexus Mods · up to 5 public results{game.genre ? ` · ${game.genre}` : ""}</p></div><button className="text-button" type="button" onClick={() => setTab({ kind: "nexus", game })}>Browse</button></div>
+            {!Object.prototype.hasOwnProperty.call(nexusModsByGame, game.domainName) ? <div className="discover-loading"><RefreshCw size={16} className="spin"/><span>Loading {game.name}...</span></div> : mods.length ? <div className="discover-grid">{mods.slice(0, 5).map((mod, index) => renderNexusMod(game, mod, index))}</div> : <div className="discover-empty">Nexus Mods did not return trending mods for {game.name}.</div>}
+          </section>;
+        })}
+        {nexusVisible && <section className="discover-section suggested-games"><div className="discover-section-heading"><div><h3>Suggested games</h3><p>{playedPikos.length ? `Based on ${playedPikos[0].name} and your ${playedCategories[0] || "recent play"} interests.` : "Popular games to explore on Nexus Mods."}</p></div></div><div className="suggested-game-list">{suggestedGames.map(game => <button type="button" className="suggested-game-card" key={game.domainName} onClick={() => { setQuery(""); setTab({ kind: "nexus", game }); void loadNexusMods(game); }}>{game.iconUrl ? <DiscoveryImage src={game.iconUrl} className="discover-game-icon" alt="" label={game.name}/> : <span className="discover-game-icon fallback">{game.name.slice(0, 1)}</span>}<span><strong>{game.name}</strong><small>{game.genre || `${(game.modCount || 0).toLocaleString()} mods on Nexus`}</small></span><span className="text-button">Browse</span></button>)}</div></section>}
+      </> : tab.kind === "minecraft" ? <>
         <div className="discover-tabs" role="tablist" aria-label="Minecraft content categories">
           {minecraftTabs.map(item => <button key={item.id} className={tab.category === item.id ? "active" : ""} type="button" role="tab" aria-selected={tab.category === item.id} onClick={() => setTab({ kind: "minecraft", category: item.id })}>{item.label}</button>)}
         </div>
@@ -507,6 +587,7 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
           <label className="search-box"><Search size={15} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder={"Search " + (minecraftTabs.find(item => item.id === tab.category)?.label || "content").toLowerCase() + "..."} /></label>
           <label className="discover-select-wrap"><span>Minecraft</span><select className="discover-select" value={gameVersion} onChange={event => setGameVersion(event.target.value)}><option value="">All versions</option>{gameVersions.map(version => <option key={version} value={version}>{version}</option>)}</select></label>
           {tab.category === "mod" && <label className="discover-select-wrap"><span>Loader</span><select className="discover-select" value={loader} onChange={event => setLoader(event.target.value)}><option value="">Any loader</option><option value="fabric">Fabric</option><option value="forge">Forge</option><option value="neoforge">NeoForge</option><option value="quilt">Quilt</option></select></label>}
+          <label className="discover-select-wrap"><span>Sort</span><select className="discover-select" value={projectSort} onChange={event => setProjectSort(event.target.value as "downloads" | "follows")}><option value="downloads">Most downloaded</option><option value="follows">Most followed</option></select></label>
         </div>
         {message && <p className="metadata-note">{message}</p>}
         {loading ? <div className="discover-loading"><RefreshCw size={20} className="spin" /><span>Loading popular Minecraft content from Modrinth...</span></div> : (() => {
@@ -514,7 +595,8 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
           const visible = projects[tab.category].filter(matches);
           return <div className="discover-sections"><section className="discover-section">
             <div className="discover-section-heading"><div><h3>{section.title}</h3><p>{section.description}</p></div><span>{visible.length} projects</span></div>
-            <div className="discover-grid">{visible.map((project,index) => <article className="discover-card" key={project.project_id}>{project.icon_url ? <img src={project.icon_url} alt="" className="discover-card-icon" /> : <div className="discover-card-icon fallback"><PackageOpen size={20}/></div>}<div className="discover-card-copy"><div className="discover-card-title"><strong>{index+1}. {project.title}</strong><span>{projectTypeLabel(project.project_type)}</span></div><small>{project.author || "Modrinth creator"} · {project.downloads.toLocaleString()} downloads</small><p>{project.description}</p><div className="discover-card-actions"><button className="secondary-button" onClick={() => void openDetails(project)}><Eye size={13}/> View</button><button className="secondary-button" onClick={() => setTofuPicker(project)} disabled={busyId !== ""}><Download size={13}/> Choose Tofu instance</button></div></div></article>)}</div>
+            <div className="discover-grid">{visible.map((project,index) => <article className="discover-card" key={project.project_id}>{project.icon_url ? <DiscoveryImage src={project.icon_url} alt="" className="discover-card-icon" label={project.title}/> : <div className="discover-card-icon fallback"><PackageOpen size={20}/></div>}<div className="discover-card-copy"><div className="discover-card-title"><strong>{index+1}. {project.title}</strong><span>{projectTypeLabel(project.project_type)}</span></div><small>{project.author || "Modrinth creator"} · {project.downloads.toLocaleString()} downloads</small><p>{project.description}</p><div className="discover-card-actions"><button className="secondary-button" onClick={() => void openDetails(project)}><Eye size={13}/> View</button><button className="secondary-button" onClick={() => setTofuPicker(project)} disabled={busyId !== ""}><Download size={13}/> Choose Tofu instance</button></div></div></article>)}</div>
+            {projects[tab.category].length >= 100 && projects[tab.category].length < 200 && <div className="discover-load-more"><button className="secondary-button" type="button" onClick={() => void loadMoreProjects()} disabled={moreLoading}>{moreLoading ? <RefreshCw size={14} className="spin"/> : <Plus size={14}/>} {moreLoading ? "Loading more..." : "Load 100 more"}</button></div>}
             {!visible.length && <div className="discover-empty">No popular {projectTypeLabel(tab.category)} projects match this filter.</div>}
           </section></div>;
         })()}
@@ -523,20 +605,18 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
           <label className="search-box"><Search size={15} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder={"Search " + tab.game.name + " mods..."} /></label>
         </div>
         {message && <p className="metadata-note">{message}</p>}
-        {nexusLoading ? <div className="discover-loading"><RefreshCw size={20} className="spin" /><span>Loading trending mods from Nexus Mods...</span></div> : (() => {
-          const visible = nexusMods.filter(nexusMatches);
+        {nexusLoading || !Object.prototype.hasOwnProperty.call(nexusModsByGame, tab.game.domainName) ? <div className="discover-loading"><RefreshCw size={20} className="spin" /><span>Loading trending mods from Nexus Mods...</span></div> : (() => {
+          const visible = (nexusModsByGame[tab.game.domainName] || []).filter(nexusMatches);
           return <div className="discover-sections"><section className="discover-section">
-            <div className="discover-section-heading"><div><h3>{tab.game.name} Mods</h3><p>Trending mods from Nexus Mods.</p></div><span>{visible.length} mods</span></div>
-            <div className="discover-grid">{visible.map((mod,index) => <article className="discover-card" key={mod.id || mod.modPageUrl}>
-              {mod.pictureUrl ? <img src={mod.pictureUrl} alt="" className="discover-card-icon" /> : <div className="discover-card-icon fallback"><PackageOpen size={20}/></div>}
-              <div className="discover-card-copy"><div className="discover-card-title"><strong>{index+1}. {mod.name}</strong><span>Nexus Mods</span></div><small>{mod.author || "Nexus Mods creator"}</small><p>{mod.summary || "No summary was provided by Nexus Mods."}</p><div className="discover-card-actions"><a className="secondary-button" href={mod.modPageUrl} target="_blank" rel="noreferrer"><ExternalLink size={13}/> Open on Nexus</a></div></div>
-            </article>)}</div>
+            <div className="discover-section-heading"><div><h3>{tab.game.name} Mods</h3><p>Trending mods from Nexus Mods · up to 5 public results.</p></div><span>{visible.length} mods</span></div>
+            <div className="discover-grid">{visible.map((mod,index) => renderNexusMod(tab.game, mod, index))}</div>
             {!visible.length && <div className="discover-empty">No trending mods match this filter.</div>}
           </section></div>;
         })()}
       </>}
     </section>
     {details && <ProjectDetails project={details} gameVersion={gameVersion} onClose={() => setDetails(null)} />}
+    {nexusDetails && <NexusModDetails game={nexusDetails.game} mod={nexusDetails.mod} onClose={() => setNexusDetails(null)} />}
     {tofuPicker && <TofuPicker project={tofuPicker} pikos={pikos} onClose={() => setTofuPicker(null)} onInstall={(target) => { setTofuPicker(null); void install(tofuPicker, target); }} />}
     {showNexusGamePicker && <NexusGamePicker games={nexusGameResults} search={nexusGameSearch} setSearch={setNexusGameSearch} onClose={() => { setShowNexusGamePicker(false); setNexusGameSearch(""); }} onChoose={addNexusGame} loading={nexusLoading} error={message} />}
   </>;
@@ -569,7 +649,7 @@ function ProjectDetails({ project, gameVersion, onClose }: { project: ModrinthPr
   const [versions, setVersions] = useState<import("../lib/modrinth").ModrinthVersion[]>([]);
   useEffect(() => { void getModrinthVersions(project.project_id).then(setVersions).catch(() => setVersions([])); }, [project.project_id]);
   return <div className="discover-modal-backdrop" onMouseDown={onClose}><div className="project-details-window" onMouseDown={event => event.stopPropagation()}>
-    <div className="project-details-header"><div>{project.icon_url ? <img src={project.icon_url} alt="" /> : <div className="discover-card-icon fallback"><PackageOpen size={26}/></div>}<div><p className="eyebrow">{projectTypeLabel(project.project_type)}</p><h2>{project.title}</h2><p>{project.description}</p><small>Created by <strong>{getPrimaryCreator(project).name || "Unknown creator"}</strong> · {project.downloads.toLocaleString()} downloads</small></div></div><button className="icon-button" onClick={onClose}><X size={17}/></button></div>
+    <div className="project-details-header"><div>{project.icon_url ? <DiscoveryImage src={project.icon_url} alt="" className="discover-card-icon" label={project.title}/> : <div className="discover-card-icon fallback"><PackageOpen size={26}/></div>}<div><p className="eyebrow">{projectTypeLabel(project.project_type)}</p><h2>{project.title}</h2><p>{project.description}</p><small>Created by <strong>{getPrimaryCreator(project).name || "Unknown creator"}</strong> · {project.downloads.toLocaleString()} downloads</small></div></div><div className="project-details-header-actions"><button type="button" className="secondary-button" onClick={() => { const url = `https://modrinth.com/${project.project_type}/${project.slug}`; void invoke("open_external_url", { url }); }}><ExternalLink size={13}/> View on Modrinth</button><button className="icon-button" onClick={onClose} aria-label="Close project details"><X size={17}/></button></div></div>
     <div className="project-tabs"><button className={tab==="overview"?"active":""} onClick={()=>setTab("overview")}>Overview</button><button className={tab==="versions"?"active":""} onClick={()=>setTab("versions")}>Versions</button></div>
     {tab==="overview" ? <div className="project-overview">
       <section className="project-creator-primary">
@@ -598,6 +678,13 @@ function ProjectDetails({ project, gameVersion, onClose }: { project: ModrinthPr
         </div>)}</div>
       </section> : null}
     </div> : <div className="project-version-list">{versions.length ? versions.map(version=><div className="project-version" key={version.id}><div><strong>{version.name || version.version_number}</strong><small><strong>{version.version_number}</strong> · {version.version_type || "release"} · Published {formatDate(version.date_published)}</small><small>Minecraft: {version.game_versions.join(", ") || "Unknown"} · Loaders: {version.loaders.join(", ") || "Unknown"} · {version.files.length} file{version.files.length === 1 ? "" : "s"} · {version.dependencies.length} dependenc{version.dependencies.length === 1 ? "y" : "ies"}</small>{version.changelog ? <details><summary>Changelog</summary><Markdown source={version.changelog} /></details> : null}<details><summary>Files</summary><div className="project-file-list">{version.files.map(file => <div key={file.filename}><span>{file.filename}</span><small>{formatBytes(file.size)}{file.primary ? " · Primary" : ""}</small></div>)}</div></details></div><span>{version.files.length} file{version.files.length===1?"":"s"}</span></div>) : <div className="discover-empty">No versions found for this Minecraft version.</div>}</div>}
+  </div></div>;
+}
+
+function NexusModDetails({ game, mod, onClose }: { game: NexusGame; mod: NexusMod; onClose: () => void }) {
+  return <div className="discover-modal-backdrop" onMouseDown={onClose}><div className="project-details-window nexus-mod-details" role="dialog" aria-modal="true" aria-label={`${mod.name} details`} onMouseDown={event => event.stopPropagation()}>
+    <div className="project-details-header"><div>{mod.pictureUrl ? <DiscoveryImage src={mod.pictureUrl} alt="" className="discover-card-icon" label={mod.name}/> : <div className="discover-card-icon fallback"><PackageOpen size={26}/></div>}<div><p className="eyebrow">{game.name} · Nexus Mods</p><h2>{mod.name}</h2><p>{mod.summary || "No summary was provided by Nexus Mods."}</p><small>Created by <strong>{mod.author || "Unknown creator"}</strong></small></div></div><button className="icon-button" onClick={onClose} aria-label="Close mod details"><X size={17}/></button></div>
+    <div className="project-overview"><h3>About this mod</h3><p className="nexus-mod-summary">{mod.summary || "Nexus Mods does not provide a description in its public trending feed."}</p><p className="metadata-note">Open the Nexus page for full description, files, requirements, and installation instructions.</p><button type="button" className="secondary-button" onClick={() => void invoke("open_external_url", { url: mod.modPageUrl })}><ExternalLink size={14}/> Open on Nexus</button></div>
   </div></div>;
 }
 

@@ -1169,7 +1169,7 @@ function App() {
               <button className="reset-button" onClick={resetLocalData}>Clear all Mochi app data</button>
             </section>
           ) : activeNav === "Discover" ? (
-            <ModrinthDiscover tofu={selectedTofu} pikos={library} experimentalFeatures={behavior.experimentalFeatures} nexusConfigured={credentialStatus.nexus} supabase={supabase} />
+            <ModrinthDiscover tofu={selectedTofu} pikos={library} playtime={playtime} experimentalFeatures={behavior.experimentalFeatures} nexusConfigured={credentialStatus.nexus} supabase={supabase} />
           ) : activeNav === "Downloads" ? (
             <section className="downloads-page">
               <div className="downloads-intro"><p className="eyebrow">Activity</p><h2>Downloads</h2><p>Concurrent Modrinth downloads continue while Mochi is hidden in the tray. Completed downloads stay here for 10 minutes.</p></div>

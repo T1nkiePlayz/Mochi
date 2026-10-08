@@ -6,6 +6,7 @@ export type NexusGame = {
   domainName: string;
   iconUrl?: string;
   modCount?: number;
+  genre?: string;
 };
 
 export type NexusMod = {
@@ -52,6 +53,7 @@ function normalizeNexusGame(value: any): NexusGame | null {
     domainName,
     ...(resolvedIconUrl ? { iconUrl: resolvedIconUrl } : {}),
     ...(Number.isFinite(modCount) && modCount > 0 ? { modCount } : {}),
+    ...(typeof value.genre === "string" && value.genre.trim() ? { genre: value.genre.trim() } : {}),
   };
 }
 

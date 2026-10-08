@@ -67,13 +67,19 @@ export async function getModrinthProject(projectId: string): Promise<ModrinthPro
   return project;
 }
 
-export async function getPopularModrinth(projectType: ModrinthProjectType, gameVersion?: string): Promise<ModrinthProject[]> {
+export async function getPopularModrinth(
+  projectType: ModrinthProjectType,
+  gameVersion?: string,
+  sort: "downloads" | "follows" = "downloads",
+  offset = 0,
+): Promise<ModrinthProject[]> {
   const facets: string[][] = [["project_type:" + projectType]];
   if (gameVersion?.trim()) facets.push(["versions:" + gameVersion.trim()]);
   const params = new URLSearchParams({
     query: "",
-    limit: "12",
-    index: "downloads",
+    limit: "100",
+    offset: String(Math.max(0, offset)),
+    index: sort,
     facets: JSON.stringify(facets),
   });
   const result = await get<{ hits: ModrinthProject[] }>(API + "/search?" + params);

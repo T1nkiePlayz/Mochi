@@ -163,6 +163,7 @@ Deno.serve(async (req) => {
           domainName: String(game.domain_name),
           iconUrl: game.id != null ? `https://staticdelivery.nexusmods.com/images/games/cover_${String(game.id)}.jpg` : undefined,
           modCount: typeof game.mods === "number" ? game.mods : undefined,
+          genre: typeof game.genre === "string" ? game.genre : undefined,
         }))
         .filter((game) => game.id && game.name && game.domainName);
       return response({ games: filtered });
