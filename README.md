@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Your games, your way.</strong><br>
-  A Linux-first game launcher built around local control, flexible launch targets, and optional cloud metadata.
+  A cross-platform desktop game launcher built around local control, flexible launch targets, and optional cloud metadata.
 </p>
 
 <p align="center">
@@ -192,15 +192,7 @@ The setup flow covers:
 3. **IGDB** — optionally configures local IGDB credentials.
 4. **Game imports** — detects supported game sources and lets the user choose which detected sources to scan.
 
-The import system currently supports Linux-first discovery for:
-
-- Flatpak
-- Steam
-- Steam non-Steam shortcuts
-- Heroic Games Launcher
-- Lutris
-- Bottles
-- itch.io
+The import system has native platform adapters for Linux and macOS. Linux supports Flatpak, Steam, Steam non-Steam shortcuts, Heroic Games Launcher, Lutris, Bottles, and itch.io. macOS supports Steam, Heroic Games Launcher, Lutris, Bottles, and itch.io when their native applications and local data are present.
 
 The standalone **Import Games** flow can rescan sources, select individual games, and manually point Mochi at a supported library path when automatic detection does not find a source.
 
@@ -239,7 +231,7 @@ The current launch layer recognises several target types:
 | .js | Runs the script through node |
 | Custom | Preserves a supported custom launch target |
 
-The exact capabilities are reported by the native platform adapter. Linux currently provides the broadest integration.
+The exact capabilities are reported by the native platform adapter. Platform-specific values such as launch methods, application-bundle support, startup support, notifications, and native paths are kept inside the relevant adapter rather than being hard-coded in shared UI code.
 
 The frontend normalises launch targets before sending them to the native backend. For Flatpak, Mochi stores a normalised application identifier rather than requiring the user to remember the full command.
 
@@ -375,9 +367,9 @@ The Linux implementation currently has the strongest native integration, includi
 
 ### macOS
 
-Mochi has a separate macOS platform implementation so that macOS support can mature without changing the Linux architecture. Application-bundle launching is part of this platform design.
+macOS has a dedicated native platform adapter and now supports `.app` bundle selection/launching, native executables and scripts, source discovery for supported local launchers, process tracking for playtime, launch-at-login through LaunchAgents, native URL opening, desktop notifications, and static `mochi://` deep-link registration. The Tauri configuration also defines a macOS-specific minimum system version and hardened runtime settings.
 
-macOS should currently be considered development-stage rather than a fully released platform.
+The application is validated in CI on both Intel and Apple-silicon macOS runners. Public distribution still needs Apple signing and notarization before it should be considered a release-ready macOS build.
 
 ### Windows
 
@@ -507,7 +499,7 @@ Mochi is not yet a finished replacement for dedicated game stores or specialised
 
 Current limitations include:
 
-- Source-specific game discovery is currently Linux-first; macOS source ingestion remains future work.
+- Source scanners depend on the source launcher's local configuration format or CLI and may require compatibility work as those launchers evolve.
 - Some source scanners depend on the source launcher's local configuration format or CLI and may require future compatibility work as those launchers evolve.
 - Manual library-path scanning is currently most complete for Steam; source-specific path semantics for the other integrations will continue to mature.
 - Tofu management is early-stage.
@@ -516,7 +508,7 @@ Current limitations include:
 - Mod and profile management is planned.
 - Synced paths may not work on another machine.
 - Linux has the strongest platform integration.
-- macOS support is still developing.
+- macOS public release packaging still requires signing and notarization.
 - Windows is not currently a development target.
 - Cloud synchronization is metadata-only.
 - APIs, storage formats, and UI behavior may change before a stable release.
@@ -561,9 +553,9 @@ The roadmap is intentionally evolutionary rather than a promise of fixed release
 - [ ] Runtime management
 - [ ] Mod and profile management
 - [ ] More Linux desktop integrations
-- [ ] Mature macOS support
+- [x] Expanded modular macOS platform support
 - [ ] Linux distribution packages
-- [ ] macOS release packages
+- [ ] macOS signed/notarized release packages
 - [ ] Stable release
 
 ## Related projects
