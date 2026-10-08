@@ -8,19 +8,27 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-type Provider = "igdb" | "nexus";
+type Provider = "igdb" | "nexus" | "steamgriddb";
+type SgdbKind = "grids" | "heroes" | "logos" | "icons";
 type Body =
   | { action: "set"; provider: Provider; secret: string }
   | { action: "status"; provider?: Provider }
   | { action: "delete"; provider: Provider }
   | { action: "nexus-games"; query?: string }
   | { action: "nexus-mods"; gameDomain: string; sort?: "catalog" | "trending"; offset?: number; limit?: number }
-  | { action: "igdb-search"; query: string; limit?: number };
+  | { action: "igdb-search"; query: string; limit?: number }
+  | { action: "sgdb-search"; query: string }
+  | {
+    action: "sgdb-assets"; gameId?: number; steamAppId?: number; kinds?: SgdbKind[]; dimensions?: string[]; styles?: string[];
+    limit?: number; page?: number;
+  };
 
 type IgdbCredential = { clientId: string; clientSecret: string };
 
 const pool = new Pool(Deno.env.get("SUPABASE_DB_URL")!, 1, true);
-const ACTIONS = new Set(["set", "status", "delete", "nexus-games", "nexus-mods", "igdb-search"]);
+const ACTIONS = new Set(["set", "status", "delete", "nexus-games", "nexus-mods", "igdb-search", "sgdb-search", "sgdb-assets"]);
+const SGDB_API = "https://www.steamgriddb.com/api/v2";
+const SGDB_KINDS = new Set<SgdbKind>(["grids", "heroes", "logos", "icons"]);
 const MAX_BODY_BYTES = 16 * 1024;
 const RATE_LIMIT = 60; // requests per user per minute (best effort: per function instance)
 const rateWindow = new Map<string, { start: number; count: number }>();
@@ -53,12 +61,44 @@ function response(body: unknown, status = 200) {
 }
 
 function validProvider(value: unknown): value is Provider {
-  return value === "igdb" || value === "nexus";
+  return value === "igdb" || value === "nexus" || value === "steamgriddb";
 }
 
 function validNexusApiKey(value: string): boolean {
   return value.length >= 32 && value.length <= 4096 && /^[!-~]+$/.test(value);
 }
+
+function validSteamGridDbKey(value: string): boolean {
+  return /^[A-Za-z0-9_-]{16,256}$/.test(value);
+}
+
+async function sgdbFetch(apiKey: string, path: string): Promise<Record<string, unknown>> {
+  const upstream = await fetch(`${SGDB_API}${path}`, {
+    headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (upstream.status === 401 || upstream.status === 403) throw new SgdbError("SteamGridDB rejected the saved API key. Save a new key in Settings.", 422);
+  if (upstream.status === 404) return { data: [] }; // unknown game: no assets, not an error
+  if (!upstream.ok) throw new SgdbError(`SteamGridDB request failed (${upstream.status}).`, upstreamStatus(upstream.status));
+  return await upstream.json() as Record<string, unknown>;
+}
+
+class SgdbError extends Error {
+  constructor(message: string, readonly status: number) { super(message); }
+}
+
+async function sgdbKey(userId: string): Promise<string> {
+  const key = await getStoredSecret(userId, "steamgriddb");
+  if (!key) throw new SgdbError("SteamGridDB API key is not configured for this Mochi account.", 400);
+  return key;
+}
+
+const safeToken = (value: unknown) => typeof value === "string" && /^[a-z0-9_]{1,24}$/.test(value);
+const safeDimension = (value: unknown) => typeof value === "string" && /^\d{2,4}x\d{2,4}$/.test(value);
+const isHttps = (value: unknown): value is string => {
+  if (typeof value !== "string") return false;
+  try { const url = new URL(value); return url.protocol === "https:" && url.hostname.endsWith("steamgriddb.com"); } catch { return false; }
+};
 
 let cachedPublishableKey: string | null = null;
 function publishableKey(): string {
@@ -192,6 +232,73 @@ Deno.serve(async (req) => {
     }
   }
 
+  if (body.action === "sgdb-search") {
+    if (typeof body.query !== "string" || !body.query.trim() || body.query.length > 200) {
+      return response({ error: "SteamGridDB search query is invalid." }, 400);
+    }
+    try {
+      const key = await sgdbKey(user.id);
+      // Path segment, so encode everything that could change the route.
+      const payload = await sgdbFetch(key, `/search/autocomplete/${encodeURIComponent(body.query.trim())}`);
+      const games = (Array.isArray(payload.data) ? payload.data as Array<Record<string, unknown>> : []).slice(0, 10)
+        .filter((game) => typeof game.id === "number" && typeof game.name === "string")
+        .map((game) => ({
+          id: game.id as number, name: game.name as string, verified: game.verified === true,
+          release_date: typeof game.release_date === "number" ? game.release_date : undefined,
+        }));
+      return response({ games });
+    } catch (error) {
+      console.error("SteamGridDB search failed", error instanceof Error ? error.message : error);
+      if (error instanceof SgdbError) return response({ error: error.message }, error.status);
+      return response({ error: "SteamGridDB search failed." }, 502);
+    }
+  }
+
+  if (body.action === "sgdb-assets") {
+    const gameId = body.gameId === undefined ? undefined : Number(body.gameId);
+    const steamAppId = body.steamAppId === undefined ? undefined : Number(body.steamAppId);
+    if ((gameId === undefined) === (steamAppId === undefined)) return response({ error: "Provide either gameId or steamAppId." }, 400);
+    const id = (gameId ?? steamAppId) as number;
+    if (!Number.isInteger(id) || id <= 0 || id > 2_147_483_647) return response({ error: "Invalid game id." }, 400);
+    const kinds = body.kinds === undefined ? ["grids" as SgdbKind] : body.kinds;
+    if (!Array.isArray(kinds) || !kinds.length || kinds.length > 4 || !kinds.every((kind) => SGDB_KINDS.has(kind))) {
+      return response({ error: "Invalid asset kind." }, 400);
+    }
+    const dimensions = body.dimensions ?? [];
+    const styles = body.styles ?? [];
+    if (!Array.isArray(dimensions) || dimensions.length > 6 || !dimensions.every(safeDimension)) return response({ error: "Invalid dimensions filter." }, 400);
+    if (!Array.isArray(styles) || styles.length > 6 || !styles.every(safeToken)) return response({ error: "Invalid style filter." }, 400);
+    const limit = Math.max(1, Math.min(Math.floor(Number(body.limit) || 12), 50));
+    const page = Math.max(0, Math.min(Math.floor(Number(body.page) || 0), 100));
+    try {
+      const key = await sgdbKey(user.id);
+      const items: Array<Record<string, unknown>> = [];
+      for (const kind of new Set(kinds)) {
+        const params = new URLSearchParams({ nsfw: "false", epilepsy: "false", page: String(page) });
+        // Dimensions only apply to grids, heroes and icons; logos have no fixed sizes.
+        if (dimensions.length && kind !== "logos") params.set("dimensions", dimensions.join(","));
+        if (styles.length) params.set("styles", styles.join(","));
+        const route = steamAppId !== undefined ? `/${kind}/steam/${id}` : `/${kind}/game/${id}`;
+        const payload = await sgdbFetch(key, `${route}?${params}`);
+        for (const item of (Array.isArray(payload.data) ? payload.data as Array<Record<string, unknown>> : []).slice(0, limit)) {
+          if (typeof item.id !== "number" || !isHttps(item.url)) continue;
+          const author = item.author as { name?: unknown } | undefined;
+          items.push({
+            id: item.id, kind, url: item.url, thumb: isHttps(item.thumb) ? item.thumb : item.url,
+            width: typeof item.width === "number" ? item.width : 0, height: typeof item.height === "number" ? item.height : 0,
+            style: typeof item.style === "string" ? item.style : undefined,
+            author: typeof author?.name === "string" ? author.name : undefined,
+          });
+        }
+      }
+      return response({ items });
+    } catch (error) {
+      console.error("SteamGridDB asset request failed", error instanceof Error ? error.message : error);
+      if (error instanceof SgdbError) return response({ error: error.message }, error.status);
+      return response({ error: "SteamGridDB asset request failed." }, 502);
+    }
+  }
+
   if (body.action === "nexus-games") {
     try {
       const headers = await nexusHeaders(user.id);
@@ -293,6 +400,10 @@ Deno.serve(async (req) => {
     return response({ error: "Nexus Mods Personal API keys must be at least 32 characters with no spaces or line breaks." }, 400);
   }
 
+  if (body.action === "set" && body.provider === "steamgriddb" && !validSteamGridDbKey(body.secret.trim())) {
+    return response({ error: "SteamGridDB API keys only contain letters, numbers, dashes and underscores (16 to 256 characters)." }, 400);
+  }
+
   const connection = await pool.connect();
   try {
     const existing = await connection.queryObject<{ secret_id: string }>(
@@ -325,6 +436,24 @@ Deno.serve(async (req) => {
             return response({ error: "Nexus Mods rejected this API key. Check that you copied the full Personal API Key." }, 422);
           }
           return response({ error: `Nexus Mods could not validate this API key (HTTP ${validation.status}). Try again.` }, 502);
+        }
+      }
+
+      if (body.provider === "steamgriddb") {
+        let validation: Response;
+        try {
+          validation = await fetch(`${SGDB_API}/search/autocomplete/test`, {
+            headers: { Authorization: `Bearer ${secret}`, Accept: "application/json" },
+            signal: AbortSignal.timeout(15_000),
+          });
+        } catch {
+          return response({ error: "Unable to reach SteamGridDB to validate this API key. Try again." }, 502);
+        }
+        if (!validation.ok) {
+          if (validation.status === 401 || validation.status === 403) {
+            return response({ error: "SteamGridDB rejected this API key. Copy it again from your SteamGridDB preferences page." }, 422);
+          }
+          return response({ error: `SteamGridDB could not validate this API key (HTTP ${validation.status}). Try again.` }, 502);
         }
       }
 
