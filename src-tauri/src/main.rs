@@ -147,6 +147,7 @@ fn main() {
             detect_import_sources, scan_import_games,
             get_mochi_config_info, move_mochi_config, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
             game_artwork::cache_game_artwork, game_artwork::get_cached_game_artwork, game_artwork::clear_game_artwork_cache,
+            game_artwork::prepare_artwork_preview, game_artwork::save_custom_artwork, game_artwork::delete_game_artwork, platform::check_launch_targets,
             modrinth::get_public_api, modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::apply_mod_profile,
             modrinth::delete_mod_file, modrinth::start_modrinth_download, modrinth::update_mod_file, modrinth::analyze_mod_files,
         ])
