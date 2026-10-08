@@ -1,7 +1,7 @@
 # Rust audit: themes, downloads, mods, artwork, fonts, Steam store, gamepad, Big Picture, capabilities
 
 Scope: `themes.rs`, `modrinth.rs`, `downloads.rs`, `fonts.rs`, `game_artwork.rs`, `steam_store.rs`, `gamepad.rs`, `bigpicture.rs` (non-autostart parts), `dirsize.rs`, `main.rs`, `capabilities/*`.
-Line numbers are in the fixed files. "Test" names are in the same file's `mod tests`. Verification: `cargo clippy --all-targets -- -D warnings` and `cargo test` (101 tests, was 76 before this pass counting other workers' files), `cargo audit`.
+Line numbers are in the fixed files. "Test" names are in the same file's `mod tests`. Verification: `cargo clippy --all-targets -- -D warnings` and `cargo test` (102 tests, 76 before this pass), `cargo audit`.
 
 Severity totals: critical 0, high 4, medium 19, low 17 (40 defects), plus 5 hardening notes and 6 open items outside this worker's files.
 
