@@ -8,7 +8,8 @@
     "build": "node scripts/check-themes.mjs && tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "check:themes": "node scripts/check-themes.mjs"
+    "check:themes": "node scripts/check-themes.mjs",
+    "build:launcher-art": "node scripts/build-launcher-art.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
@@ -25,6 +26,7 @@
     "@tauri-apps/cli": "^2.12.1",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "simple-icons": "^16.34.0",
     "typescript": "^5.7.2"
   },
   "allowScripts": {
