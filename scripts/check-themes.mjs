@@ -1,6 +1,7 @@
 // Validates every built-in theme: manifest shape, unique ids, asset files, fonts, and token names.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { a11yThemeReport, printContrastReport } from "./lib/contrast.mjs";
 
 const root = "src/themes";
 const SHELLS = ["left", "right", "top", "bottom", "rail"];
@@ -13,6 +14,8 @@ const defined = new Set([...readFileSync("src/styles/tokens.css", "utf8").matchA
 const kebab = (name) => name.replace(/([a-z])([A-Z])/g, "$1-$2").replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase();
 
 const errors = [];
+const a11yReports = [];
+const defaultsCss = readFileSync("src/styles/tokens.css", "utf8");
 const ids = new Set();
 for (const folder of readdirSync(root, { withFileTypes: true }).filter((entry) => entry.isDirectory())) {
   const dir = join(root, folder.name);
@@ -37,12 +40,19 @@ for (const folder of readdirSync(root, { withFileTypes: true }).filter((entry) =
     if (path.includes("..") || path.startsWith("/")) fail(`asset "${name}" must be a relative path inside the theme`);
     else if (!existsSync(join(dir, path))) fail(`asset "${name}" points at missing file ${path}`);
   }
+  if (manifest.colors && manifest.id === folder.name) {
+    const report = a11yThemeReport(dir, manifest, defaultsCss);
+    a11yReports.push({ id: manifest.id, ...report });
+    for (const message of report.errors) fail(`a11y ${message}`);
+  }
   for (const section of SECTIONS) {
     for (const key of Object.keys(manifest[section] ?? {})) {
       if (!defined.has(kebab(key)) && !css.includes(`--mochi-${kebab(key)}`)) fail(`${section}.${key} (--mochi-${kebab(key)}) is not a token the launcher reads`);
     }
   }
 }
+
+printContrastReport(a11yReports, process.argv.includes("--verbose"));
 
 if (errors.length) {
   console.error(errors.map((error) => `✗ ${error}`).join("\n"));
