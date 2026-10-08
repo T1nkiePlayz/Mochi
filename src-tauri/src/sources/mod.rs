@@ -18,7 +18,7 @@ use std::time::Duration;
 
 #[cfg(target_os = "linux")]
 mod linux;
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", test))]
 mod macos;
 #[cfg(target_os = "linux")]
 use linux as os;
@@ -42,7 +42,7 @@ pub struct DetectedImportSource {
     pub launcher_count: Option<u32>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Serialize, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum ImportKind {
     Game,
@@ -93,13 +93,41 @@ fn sort_games(mut games: Vec<ImportedGame>) -> Vec<ImportedGame> {
     games
 }
 
-fn read(path: &Path) -> Option<String> { fs::read_to_string(path).ok() }
+/// Largest launcher metadata file Mochi will read (library caches can be big, but never this big).
+const MAX_METADATA_BYTES: u64 = 16 * 1024 * 1024;
+
+/// Reads a text file, tolerating invalid UTF-8 (launchers write names in whatever encoding the game used).
+fn read(path: &Path) -> Option<String> {
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    fs::File::open(path).ok()?.take(MAX_METADATA_BYTES).read_to_end(&mut bytes).ok()?;
+    Some(String::from_utf8_lossy(&bytes).into_owned())
+}
 
 fn json(path: &Path) -> Option<Value> { serde_json::from_str(&read(path)?).ok() }
 
 fn string(value: &Value, keys: &[&str]) -> Option<String> {
     let object = value.as_object()?;
     keys.iter().find_map(|key| object.get(*key)).and_then(Value::as_str).map(str::to_owned)
+}
+
+/// Decodes `%XX` escapes; `None` when the result is not valid UTF-8.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn percent_decode(value: &str) -> Option<String> {
+    let bytes = value.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'%' {
+            let hex = value.get(index + 1..index + 3)?;
+            out.push(u8::from_str_radix(hex, 16).ok()?);
+            index += 3;
+        } else {
+            out.push(bytes[index]);
+            index += 1;
+        }
+    }
+    String::from_utf8(out).ok()
 }
 
 fn encode(value: &str) -> String {
@@ -126,7 +154,7 @@ fn steam_libraries(steam_roots: &[PathBuf]) -> Vec<PathBuf> {
         if !apps.is_dir() { continue; }
         let mut candidates = vec![apps.clone()];
         if let Some(text) = read(&apps.join("libraryfolders.vdf")) {
-            candidates.extend(text.lines().filter_map(|line| vdf::quoted_value(line, "path")).map(|path| PathBuf::from(path).join("steamapps")));
+            candidates.extend(vdf::library_paths(&text).into_iter().map(|path| PathBuf::from(path).join("steamapps")));
         }
         for candidate in candidates {
             let key = fs::canonicalize(&candidate).unwrap_or_else(|_| candidate.clone());
@@ -202,40 +230,123 @@ fn scan_steam_path(path: &Path) -> Vec<ImportedGame> {
 // Heroic
 // ---------------------------------------------------------------------------
 
-fn heroic_walk(value: &Value, out: &mut Vec<ImportedGame>, seen: &mut HashSet<String>) {
+/// One installed game as Heroic records it, before names are resolved.
+#[derive(Debug, PartialEq, Eq)]
+struct HeroicInstall {
+    id: String,
+    title: Option<String>,
+    path: String,
+    runner: String,
+}
+
+const HEROIC_ID_KEYS: [&str; 5] = ["app_name", "appName", "appname", "app_id", "appId"];
+const HEROIC_TITLE_KEYS: [&str; 3] = ["title", "name", "displayName"];
+
+/// Finds installed games in any of Heroic's `installed.json` shapes (an object keyed by app name,
+/// `{"installed": [...]}`, or a bare array). `loose` also accepts the short `id` / `path` keys
+/// that Amazon (nile) installs use; it is only enabled for files known to hold installs.
+fn heroic_installs(value: &Value, default_runner: &str, loose: bool, depth: usize, out: &mut Vec<HeroicInstall>) {
+    if depth > 8 { return; }
     match value {
-        Value::Array(items) => items.iter().for_each(|item| heroic_walk(item, out, seen)),
+        Value::Array(items) => items.iter().for_each(|item| heroic_installs(item, default_runner, loose, depth + 1, out)),
         Value::Object(object) => {
-            let id = string(value, &["app_name", "appName", "appname", "app_id", "appId"]);
-            let name = string(value, &["title", "name", "displayName"]);
-            let path = string(value, &["install_path", "installPath", "install_location"]);
-            let runner = string(value, &["runner"]).unwrap_or_else(|| "legendary".into());
-            if let (Some(id), Some(name), Some(path)) = (id, name, path) {
-                if Path::new(&path).is_dir() {
-                    let key = format!("heroic:{runner}:{id}");
-                    if seen.insert(key.clone()) {
-                        out.push(make(key, name, "heroic", format!("heroic://launch?appName={}&runner={}", encode(&id), encode(&runner)), Some(path)));
-                    }
-                }
+            let id = string(value, &HEROIC_ID_KEYS).or_else(|| loose.then(|| string(value, &["id"])).flatten());
+            let mut path_keys = vec!["install_path", "installPath", "install_location", "folder_name"];
+            if loose { path_keys.push("path"); }
+            let path = string(value, &path_keys);
+            let installed = object.get("is_installed").and_then(Value::as_bool) != Some(false) && object.get("is_dlc").and_then(Value::as_bool) != Some(true);
+            if let (Some(id), Some(path), true) = (id, path, installed) {
+                let runner = string(value, &["runner"]).unwrap_or_else(|| default_runner.to_owned());
+                out.push(HeroicInstall { id, title: string(value, &HEROIC_TITLE_KEYS), path, runner });
             }
-            object.values().for_each(|item| heroic_walk(item, out, seen));
+            object.values().for_each(|item| heroic_installs(item, default_runner, loose, depth + 1, out));
         }
         _ => {}
     }
 }
 
+/// Collects `app name -> title` pairs from Heroic's library caches.
+fn heroic_titles(value: &Value, depth: usize, out: &mut std::collections::HashMap<String, String>) {
+    if depth > 8 { return; }
+    match value {
+        Value::Array(items) => items.iter().for_each(|item| heroic_titles(item, depth + 1, out)),
+        Value::Object(object) => {
+            if let (Some(id), Some(title)) = (string(value, &HEROIC_ID_KEYS), string(value, &["title"])) { out.entry(id).or_insert(title); }
+            object.values().for_each(|item| heroic_titles(item, depth + 1, out));
+        }
+        _ => {}
+    }
+}
+
+/// Files under a Heroic config folder that list installed games: (path, default runner, loose keys).
+const HEROIC_INSTALL_FILES: [(&str, &str, bool); 4] = [
+    ("legendaryConfig/legendary/installed.json", "legendary", false),
+    ("gog_store/installed.json", "gog", true),
+    ("nile_config/nile/installed.json", "nile", true),
+    ("sideload_apps/library.json", "sideload", false),
+];
+const HEROIC_LIBRARY_FILES: [&str; 5] = [
+    "store_cache/legendary_library.json", "gog_store/library.json", "store_cache/gog_library.json", "store_cache/nile_library.json", "sideload_apps/library.json",
+];
+
 fn scan_heroic(roots: &[PathBuf]) -> Vec<ImportedGame> {
     let mut out = Vec::new();
     let mut seen = HashSet::new();
     for root in roots.iter().filter(|root| root.is_dir()) {
-        if let Some(value) = json(&root.join("legendaryConfig/legendary/installed.json")) { heroic_walk(&value, &mut out, &mut seen); }
+        let mut titles = std::collections::HashMap::new();
+        for file in HEROIC_LIBRARY_FILES { if let Some(value) = json(&root.join(file)) { heroic_titles(&value, 0, &mut titles); } }
+        let mut installs = Vec::new();
+        for (file, runner, loose) in HEROIC_INSTALL_FILES {
+            if let Some(value) = json(&root.join(file)) { heroic_installs(&value, runner, loose, 0, &mut installs); }
+        }
         if let Ok(entries) = fs::read_dir(root.join("GamesConfig")) {
             for entry in entries.flatten().filter(|e| e.path().extension().and_then(|x| x.to_str()) == Some("json")) {
-                if let Some(value) = json(&entry.path()) { heroic_walk(&value, &mut out, &mut seen); }
+                if let Some(value) = json(&entry.path()) { heroic_installs(&value, "legendary", false, 0, &mut installs); }
+            }
+        }
+        for install in installs {
+            // Heroic keeps an entry for games whose folder is gone; those cannot be launched.
+            if !Path::new(&install.path).is_dir() { continue; }
+            let title = install.title.or_else(|| titles.get(&install.id).cloned())
+                .or_else(|| Path::new(&install.path).file_name().map(|name| name.to_string_lossy().into_owned()))
+                .unwrap_or_else(|| install.id.clone());
+            let key = format!("heroic:{}:{}", install.runner, install.id);
+            if seen.insert(key.clone()) {
+                out.push(make(key, title, "heroic", format!("heroic://launch?appName={}&runner={}", encode(&install.id), encode(&install.runner)), Some(install.path)));
             }
         }
     }
     sort_games(out)
+}
+
+// ---------------------------------------------------------------------------
+// Epic Games Launcher (macOS keeps one `.item` manifest per installed game)
+// ---------------------------------------------------------------------------
+
+/// Reads one Epic manifest. DLC and add-ons (`AppName` differs from `MainGameAppName`), unfinished
+/// installs and entries whose folder is gone are skipped.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn parse_epic_manifest(text: &str) -> Option<ImportedGame> {
+    let value: Value = serde_json::from_str(text).ok()?;
+    let app_name = string(&value, &["AppName"])?;
+    let name = string(&value, &["DisplayName"]).filter(|name| !name.trim().is_empty())?;
+    let location = string(&value, &["InstallLocation"])?;
+    if string(&value, &["MainGameAppName"]).is_some_and(|main| main != app_name) { return None; }
+    if value.get("bIsIncompleteInstall").and_then(Value::as_bool) == Some(true) || !Path::new(&location).is_dir() { return None; }
+    if !app_name.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.')) { return None; }
+    Some(make(format!("epic:{app_name}"), name, "epic", format!("com.epicgames.launcher://apps/{app_name}?action=launch&silent=true"), Some(location)))
+}
+
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn scan_epic_manifests(dir: &Path) -> Vec<ImportedGame> {
+    let Ok(entries) = fs::read_dir(dir) else { return Vec::new() };
+    let mut seen = HashSet::new();
+    let games = entries.flatten()
+        .filter(|entry| entry.path().extension().and_then(|ext| ext.to_str()) == Some("item"))
+        .filter_map(|entry| read(&entry.path()).and_then(|text| parse_epic_manifest(&text)))
+        .filter(|game| seen.insert(game.id.clone()))
+        .collect();
+    sort_games(games)
 }
 
 // ---------------------------------------------------------------------------
@@ -262,7 +373,21 @@ fn read_receipt(path: &Path) -> Option<Value> {
     serde_json::from_str(&text).ok()
 }
 
+/// The single `.app` bundle directly inside an itch game folder, which is what macOS launches.
+fn itch_bundle(game_dir: &Path) -> Option<PathBuf> {
+    let mut bundles = fs::read_dir(game_dir).ok()?.flatten().map(|entry| entry.path())
+        .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("app") && path.is_dir());
+    let first = bundles.next()?;
+    bundles.next().is_none().then_some(first).filter(|path| path.to_str().is_some())
+}
+
 fn scan_itch(roots: &[PathBuf]) -> Vec<ImportedGame> {
+    scan_itch_with(roots, cfg!(target_os = "macos"))
+}
+
+/// `prefer_bundles`: launch a game's own `.app` directly (macOS). Otherwise, and for games
+/// without a unique bundle, ask the itch app to launch it.
+fn scan_itch_with(roots: &[PathBuf], prefer_bundles: bool) -> Vec<ImportedGame> {
     let mut receipts = Vec::new();
     roots.iter().for_each(|root| find_receipts(root, 0, &mut receipts));
     let mut seen = HashSet::new();
@@ -274,7 +399,14 @@ fn scan_itch(roots: &[PathBuf]) -> Vec<ImportedGame> {
         let Some(id) = id else { continue };
         if !seen.insert(id) { continue; }
         let name = game.and_then(|g| string(g, &["title", "name"])).or_else(|| string(&value, &["title", "name"])).unwrap_or_else(|| "itch.io game".into());
-        out.push(make(format!("itch:{id}"), name, "itch", format!("itch://run-game/{id}"), receipt.parent().and_then(Path::parent).map(|p| p.to_string_lossy().into())));
+        let install = receipt.parent().and_then(Path::parent);
+        let bundle = if prefer_bundles { install.and_then(itch_bundle) } else { None };
+        let target = match bundle {
+            Some(bundle) => bundle.to_string_lossy().into_owned(),
+            None if prefer_bundles => format!("itch://games/{id}"),
+            None => format!("itch://run-game/{id}"),
+        };
+        out.push(make(format!("itch:{id}"), name, "itch", target, install.map(|p| p.to_string_lossy().into())));
     }
     sort_games(out)
 }
@@ -376,6 +508,122 @@ pub fn scan_import_games(source: &str, library_path: Option<String>) -> Vec<Impo
 mod tests {
     use super::*;
 
+    use super::testutil::temp_dir;
+
+    fn write(path: &Path, text: &str) {
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, text).unwrap();
+    }
+
+    #[test]
+    fn steam_libraries_are_read_in_both_vdf_formats() {
+        let root = temp_dir("steam");
+        let extra = temp_dir("steam-extra");
+        let old = temp_dir("steam-old");
+        write(&root.join("steamapps/libraryfolders.vdf"), &format!("\"libraryfolders\"\n{{\n\t\"0\"\n\t{{\n\t\t\"path\"\t\t\"{}\"\n\t\t\"label\"\t\"\"\n\t}}\n\t\"1\"\t\t\"{}\"\n\t\"2\"\t\t\"/Volumes/Unplugged/Steam\"\n}}\n", extra.display(), old.display()));
+        for (library, id, name, dir) in [(&root, "10", "Counter-Strike", "Counter-Strike"), (&extra, "620", "Portal 2", "Portal 2"), (&old, "440", "Team Fortress 2", "tf2")] {
+            write(&library.join(format!("steamapps/appmanifest_{id}.acf")), &format!("\"AppState\"\n{{\n\t\"appid\"\t\t\"{id}\"\n\t\"name\"\t\t\"{name}\"\n\t\"installdir\"\t\t\"{dir}\"\n}}\n"));
+            fs::create_dir_all(library.join("steamapps/common").join(dir)).unwrap();
+        }
+        // Proton, a broken manifest and a path-traversal install dir are not games.
+        write(&root.join("steamapps/appmanifest_1.acf"), "\"AppState\"\n{\n\"appid\" \"1\"\n\"name\" \"Proton 9.0\"\n\"installdir\" \"Proton 9.0\"\n}");
+        fs::create_dir_all(root.join("steamapps/common/Proton 9.0")).unwrap();
+        write(&root.join("steamapps/appmanifest_2.acf"), "garbage \u{0} \"appid\"");
+        write(&root.join("steamapps/appmanifest_3.acf"), "\"AppState\"\n{\n\"appid\" \"3\"\n\"name\" \"Evil\"\n\"installdir\" \"../../etc\"\n}");
+        let games = scan_steam(&[root.clone()], true);
+        let names: Vec<_> = games.iter().map(|game| game.name.as_str()).collect();
+        assert_eq!(names, ["Counter-Strike", "Portal 2", "Team Fortress 2", "Steam"]);
+        assert_eq!(games[1].launch_target, "steam://rungameid/620");
+        for dir in [root, extra, old] { let _ = fs::remove_dir_all(dir); }
+    }
+
+    #[test]
+    fn heroic_reads_legendary_gog_nile_and_sideloaded_installs() {
+        let root = temp_dir("heroic");
+        let games = temp_dir("heroic-games");
+        for dir in ["Celeste", "Witcher", "Prime", "Side"] { fs::create_dir_all(games.join(dir)).unwrap(); }
+        let p = |dir: &str| games.join(dir).display().to_string();
+        write(&root.join("legendaryConfig/legendary/installed.json"), &format!(r#"{{"Sugar":{{"app_name":"Sugar","title":"Celeste","install_path":"{}","platform":"Mac"}},"Ghost":{{"app_name":"Ghost","title":"Gone","install_path":"/does/not/exist"}}}}"#, p("Celeste")));
+        write(&root.join("gog_store/installed.json"), &format!(r#"{{"installed":[{{"appName":"1207","install_path":"{}","platform":"osx"}},{{"appName":"9","install_path":"{}","is_dlc":true}}]}}"#, p("Witcher"), p("Witcher")));
+        write(&root.join("gog_store/library.json"), r#"{"games":[{"app_name":"1207","title":"The Witcher"}]}"#);
+        write(&root.join("nile_config/nile/installed.json"), &format!(r#"[{{"id":"amzn1.adg.product.X","path":"{}"}}]"#, p("Prime")));
+        write(&root.join("sideload_apps/library.json"), &format!(r#"{{"games":[{{"app_name":"side1","title":"My Side Game","runner":"sideload","folder_name":"{}","is_installed":true}},{{"app_name":"side2","title":"Not Installed","folder_name":"{}","is_installed":false}}]}}"#, p("Side"), p("Side")));
+        write(&root.join("GamesConfig/Sugar.json"), r#"{"Sugar":{"wineVersion":{"bin":"/x/wine"}}}"#);
+        write(&root.join("GamesConfig/corrupt.json"), "{ not json");
+        let found = scan_heroic(&[root.clone(), PathBuf::from("/no/such/heroic")]);
+        let summary: Vec<_> = found.iter().map(|game| (game.name.as_str(), game.id.as_str())).collect();
+        assert_eq!(summary, [("amzn1.adg.product.X".get(..0).map(|_| "Prime").unwrap(), "heroic:nile:amzn1.adg.product.X"), ("Celeste", "heroic:legendary:Sugar"), ("My Side Game", "heroic:sideload:side1"), ("The Witcher", "heroic:gog:1207")].iter().map(|(n, i)| (*n, *i)).collect::<Vec<_>>());
+        let witcher = found.iter().find(|game| game.name == "The Witcher").unwrap();
+        assert_eq!(witcher.launch_target, "heroic://launch?appName=1207&runner=gog");
+        let _ = fs::remove_dir_all(&root);
+        let _ = fs::remove_dir_all(&games);
+    }
+
+    #[test]
+    fn epic_manifests_skip_dlc_unfinished_and_missing_installs() {
+        let dir = temp_dir("epic");
+        let game = temp_dir("epic-game");
+        let item = |app: &str, main: &str, name: &str, location: &Path, incomplete: bool| format!(r#"{{"FormatVersion":0,"bIsIncompleteInstall":{incomplete},"AppName":"{app}","MainGameAppName":"{main}","DisplayName":"{name}","InstallLocation":"{}","LaunchExecutable":"G.app/Contents/MacOS/G"}}"#, location.display());
+        write(&dir.join("A.item"), &item("Fortnite", "Fortnite", "Fortnite", &game, false));
+        write(&dir.join("B.item"), &item("FortniteDLC", "Fortnite", "Fortnite DLC", &game, false));
+        write(&dir.join("C.item"), &item("Half", "Half", "Half Installed", &game, true));
+        write(&dir.join("D.item"), &item("Gone", "Gone", "Gone", Path::new("/not/here"), false));
+        write(&dir.join("E.item"), &item("Bad Name!", "Bad Name!", "Bad", &game, false));
+        write(&dir.join("F.item"), "{ nope");
+        write(&dir.join("ignored.txt"), "x");
+        let games = scan_epic_manifests(&dir);
+        assert_eq!(games.len(), 1);
+        assert_eq!(games[0].launch_target, "com.epicgames.launcher://apps/Fortnite?action=launch&silent=true");
+        assert!(scan_epic_manifests(Path::new("/no/manifests")).is_empty());
+        let _ = fs::remove_dir_all(&dir);
+        let _ = fs::remove_dir_all(&game);
+    }
+
+    #[test]
+    fn itch_games_launch_their_own_bundle_on_macos() {
+        use std::io::Write;
+        let root = temp_dir("itch");
+        let receipt = |name: &str, id: i64, bundles: &[&str]| {
+            let dir = root.join("apps").join(name);
+            for bundle in bundles { fs::create_dir_all(dir.join(bundle)).unwrap(); }
+            fs::create_dir_all(dir.join(".itch")).unwrap();
+            let mut encoder = flate2::write::GzEncoder::new(fs::File::create(dir.join(".itch/receipt.json.gz")).unwrap(), flate2::Compression::fast());
+            write!(encoder, r#"{{"game":{{"id":{id},"title":"{name}"}}}}"#).unwrap();
+            encoder.finish().unwrap();
+        };
+        receipt("One Bundle", 1, &["One.app"]);
+        receipt("No Bundle", 2, &[]);
+        receipt("Two Bundles", 3, &["A.app", "B.app"]);
+        let on_mac = scan_itch_with(&[root.clone()], true);
+        let target = |games: &[ImportedGame], name: &str| games.iter().find(|game| game.name == name).unwrap().launch_target.clone();
+        assert!(target(&on_mac, "One Bundle").ends_with("One Bundle/One.app"));
+        assert_eq!(target(&on_mac, "No Bundle"), "itch://games/2");
+        assert_eq!(target(&on_mac, "Two Bundles"), "itch://games/3");
+        assert_eq!(target(&scan_itch_with(&[root.clone()], false), "One Bundle"), "itch://run-game/1");
+        // A corrupt receipt is skipped.
+        fs::write(root.join("apps/No Bundle/.itch/receipt.json.gz"), b"not gzip").unwrap();
+        assert_eq!(scan_itch_with(&[root.clone()], true).len(), 2);
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn percent_escapes_are_decoded_strictly() {
+        assert_eq!(percent_decode("a%20b%2Fc").as_deref(), Some("a b/c"));
+        assert_eq!(percent_decode("100%"), None);
+        assert_eq!(percent_decode("%zz"), None);
+        assert_eq!(percent_decode("%FF"), None);
+    }
+
+    #[test]
+    fn oversized_or_binary_metadata_is_read_safely() {
+        let dir = temp_dir("read");
+        write(&dir.join("latin1.acf"), "x");
+        fs::write(dir.join("latin1.acf"), [b'"', 0xE9, b'"']).unwrap();
+        assert_eq!(read(&dir.join("latin1.acf")).as_deref(), Some("\"\u{FFFD}\""));
+        assert!(read(&dir.join("missing")).is_none());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
     #[test]
     fn steam_launcher_targets_the_client() {
         let launcher = steam_launcher();
@@ -403,5 +651,22 @@ mod tests {
         ]);
         assert_eq!(items.iter().map(|i| i.name.as_str()).collect::<Vec<_>>(), ["Abe", "Zelda", "Steam"]);
         assert_eq!(count_kinds(&items), (2, 1));
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod testutil {
+    use std::{
+        path::PathBuf,
+        sync::atomic::{AtomicU32, Ordering},
+    };
+
+    /// A fresh empty directory under the system temp folder (callers remove it when done).
+    pub fn temp_dir(tag: &str) -> PathBuf {
+        static NEXT: AtomicU32 = AtomicU32::new(0);
+        let dir = std::env::temp_dir().join(format!("mochi-test-{}-{}-{tag}", std::process::id(), NEXT.fetch_add(1, Ordering::Relaxed)));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        dir
     }
 }

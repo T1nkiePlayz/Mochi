@@ -13,7 +13,9 @@ use std::{
 mod launchagent;
 #[cfg(target_os = "linux")]
 mod linux;
-#[cfg(target_os = "macos")]
+// Compiled on Linux for tests only, so the macOS adapter is type-checked and unit-tested everywhere.
+#[cfg(any(target_os = "macos", test))]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 mod macos;
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
 compile_error!("Mochi supports Linux and macOS only.");
