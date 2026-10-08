@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Piko } from "../models";
 import { createGameShortcut, launchGame as startGame, openPath, removeGameShortcut, stopGame } from "../lib/platform";
 import type { Behavior } from "./settings";
@@ -16,16 +16,21 @@ type Params = {
 export function useGameActions({ lib, behavior, refreshPlaytime, refreshSessions, notify }: Params) {
   const [launchError, setLaunchError] = useState("");
   const [isLaunching, setIsLaunching] = useState(false);
+  // Double clicks, Enter-repeat and deep links must not start the same game twice.
+  const launching = useRef(new Set<string>());
 
   const shortError = (error: unknown) => {
     const text = error instanceof Error ? error.message : String(error);
-    return behavior.detailedErrors ? text : text.split(/(?<=[.!?])\s/)[0];
+    // No regex look-behind: older macOS WebKit rejects it at parse time and the whole app fails to load.
+    return behavior.detailedErrors ? text : (/^.*?[.!?](?=\s|$)/s.exec(text)?.[0] ?? text);
   };
 
   const launchGame = async (piko: Piko = lib.selectedPiko, options: { skipConfirm?: boolean } = {}) => {
     if (piko.id === "__empty" || !piko.executablePath) { setLaunchError("This game does not have a launch target. Edit the game to set one."); return; }
+    if (launching.current.has(piko.id)) return;
     if (behavior.confirmLaunch && !options.skipConfirm && !window.confirm(`Launch ${piko.name}?`)) return;
     setLaunchError("");
+    launching.current.add(piko.id);
     setIsLaunching(true);
     try {
       const tofu = piko.id === lib.selectedPiko.id ? lib.selectedTofu : piko.tofus[0];
@@ -33,7 +38,7 @@ export function useGameActions({ lib, behavior, refreshPlaytime, refreshSessions
       await Promise.all([refreshPlaytime(), refreshSessions()]);
     } catch (error) {
       setLaunchError(shortError(error));
-    } finally { setIsLaunching(false); }
+    } finally { launching.current.delete(piko.id); setIsLaunching(launching.current.size > 0); }
   };
 
   const stopRunningGame = async (piko: Piko) => {

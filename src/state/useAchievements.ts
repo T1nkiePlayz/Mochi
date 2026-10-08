@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useApp } from "./AppContext";
 import { buildFacts, countCollections, evaluate, newlyMet, achievements, type AchievementFlags } from "../lib/achievements";
 import { getPlaytimeHistory, type SessionRecord } from "../lib/stats";
-import { readJson, storageKeys, writeJson } from "../lib/storage";
+import { readJson, writeJson } from "../lib/storage";
+import { collectionsKeyFor } from "./useCollections";
 
 const KEY = "mochi:achievements";
 const CHANGED = "mochi-achievements-changed";
@@ -37,7 +38,7 @@ export function useStoredAchievements() {
  * The first run unlocks everything already earned silently so an existing library does not flood with toasts.
  */
 export function useAchievementWatcher() {
-  const { lib, themeEngine, activeNav, playtime, notifications } = useApp();
+  const { lib, themeEngine, activeNav, playtime, notifications, storage } = useApp();
   const { notify } = notifications;
   const [tick, setTick] = useState(0);
   const recompute = useCallback(() => setTick((value) => value + 1), []);
@@ -53,7 +54,7 @@ export function useAchievementWatcher() {
       let records: SessionRecord[];
       try { records = await getPlaytimeHistory(); } catch { records = []; }
       if (cancelled) return;
-      const collections = readJson<unknown>(storageKeys.collections, []);
+      const collections = readJson<unknown>(collectionsKeyFor(storage.ownerKey), []);
       const progress = evaluate(buildFacts(records, lib.library, flags, countCollections(collections, lib.library)));
       const fresh = newlyMet(progress, stored.unlocked);
       const unlocked = { ...stored.unlocked };
@@ -66,7 +67,7 @@ export function useAchievementWatcher() {
       if (stored.seeded) fresh.forEach((def) => notify("Achievement unlocked", `${def.title}: ${def.description}`));
     }, 800);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [tick, lib.library, themeEngine.theme, activeNav, playtime, notify]);
+  }, [tick, lib.library, themeEngine.theme, activeNav, playtime, notify, storage.ownerKey]);
 
   return { recompute, total: achievements.length };
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ComponentType, type CSSProperties } from "react";
 import type { LucideProps } from "lucide-react";
+import { cssUrl } from "../lib/metadata/merge";
 
 type Mode = "mask" | "image";
 
@@ -92,7 +93,7 @@ export function MochiIcon({ name, fallback: Fallback, size = 16, ...props }: Pro
       style={{ width: size, height: size, minWidth: size, minHeight: size, flex: `0 0 ${size}px` }}
     >
       {customUrl
-        ? <span className="mochi-icon-custom" data-mode={forced || mode} style={{ "--mochi-icon-src": `url("${customUrl}")` } as CSSProperties} />
+        ? <span className="mochi-icon-custom" data-mode={forced || mode} style={{ "--mochi-icon-src": cssUrl(customUrl) } as CSSProperties} />
         : <Fallback size={size} {...props} />}
     </span>
   );

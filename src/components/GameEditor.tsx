@@ -30,6 +30,8 @@ export function GameEditor({ game, capabilities, onSave, onClose }: Props) {
   const app = useApp();
   const [tab, setTab] = useState<TabId>("general");
   const [draft, setDraft] = useState<Piko>(game);
+  // What the editor opened with. Only fields the user changed are saved, so a metadata refresh that landed while the editor was open is not overwritten.
+  const baseline = useRef<Piko>(game).current;
   const [artwork, setArtwork] = useState<ArtworkSelection | null>(null);
   const [artworkReset, setArtworkReset] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
@@ -74,10 +76,10 @@ export function GameEditor({ game, capabilities, onSave, onClose }: Props) {
           if (match) final = applyIgdbMetadata(final, match);
         } catch { /* offline: the fields refresh next time metadata runs */ }
       }
-      if (final.artworkUrl && final.artworkSource !== "custom" && (final.artworkUrl !== game.artworkUrl || artworkReset)) await cacheArtwork(final);
+      if (final.artworkUrl && final.artworkSource !== "custom" && (final.artworkUrl !== baseline.artworkUrl || artworkReset)) await cacheArtwork(final);
       const changes: Partial<Piko> = {};
-      (Object.keys(final) as Array<keyof Piko>).concat(Object.keys(game) as Array<keyof Piko>).forEach((key) => {
-        if (JSON.stringify(final[key]) !== JSON.stringify(game[key])) (changes as Record<string, unknown>)[key] = final[key];
+      (Object.keys(final) as Array<keyof Piko>).concat(Object.keys(baseline) as Array<keyof Piko>).forEach((key) => {
+        if (JSON.stringify(final[key]) !== JSON.stringify(baseline[key])) (changes as Record<string, unknown>)[key] = final[key];
       });
       onSave(changes);
     } catch (reason) {

@@ -25,8 +25,8 @@ export function GameCard({ piko, selected, running, synced, selecting, checked, 
   const cancel = () => window.clearTimeout(timer.current);
 
   const onPointerDown = (event: PointerEvent) => {
-    if (event.pointerType === "mouse") return;
     fired.current = false;
+    if (event.pointerType === "mouse") return;
     const { clientX, clientY } = event;
     timer.current = window.setTimeout(() => { fired.current = true; onMenu(clientX, clientY); }, LONG_PRESS_MS);
   };

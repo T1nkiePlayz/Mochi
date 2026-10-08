@@ -20,7 +20,7 @@ export function UpdateSection() {
     info ? `Mochi ${info.version} is available.` : "";
   return <SettingsGroup title="Updates" subtitle="Keep Mochi current" id="settings-updates" className="update-section">
     <div className="setting-row"><span><strong>Version</strong><small>Mochi v{__APP_VERSION__} · last checked {formatWhen(updater.lastChecked)}</small></span></div>
-    <ToggleRow title="Auto-update" description="Check GitHub for new releases in the background (about every 6 hours). Turn off to only check manually." checked={behavior.autoUpdate} onChange={(autoUpdate) => setBehavior({ ...behavior, autoUpdate })} />
+    <ToggleRow title="Auto-update" description="Check GitHub for new releases in the background (about every 6 hours). Turn off to only check manually." checked={behavior.autoUpdate} onChange={(autoUpdate) => setBehavior((current) => ({ ...current, autoUpdate }))} />
     <div className="setting-row"><span><strong>Check for updates</strong><small role="status" aria-live="polite">{status || "Look for a newer release now."}</small></span>
       <button type="button" className="secondary-button" disabled={busy} onClick={() => void updater.checkNow()}>{updater.status === "checking" ? "Checking…" : "Check now"}</button>
     </div>

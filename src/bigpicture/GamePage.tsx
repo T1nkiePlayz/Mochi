@@ -3,6 +3,7 @@ import { formatPlaytime, formatRelativeTime } from "../lib/format";
 import type { PlaytimeEntry } from "../lib/platform";
 import type { Piko } from "../models";
 import { Art } from "./Art";
+import { cssUrl } from "../lib/metadata/merge";
 
 type Props = {
   piko: Piko;
@@ -37,7 +38,7 @@ export function GamePage({ piko, entry, running, busy, onPlay, onStop, onFavorit
       </div>
       {piko.description ? <p className="bp-game-description">{piko.description}</p> : <p className="bp-game-description bp-muted">No description yet. Edit this game in Mochi to add one.</p>}
       {(piko.screenshots?.length ?? 0) > 0 && <div className="bp-screens" role="list" aria-label="Screenshots">
-        {piko.screenshots!.slice(0, 12).map((url, index) => <button type="button" role="listitem" className="bp-screen" key={url} aria-label={`Screenshot ${index + 1}`} style={{ backgroundImage: `url("${url}")` }} onClick={() => onPreview(url)} />)}
+        {piko.screenshots!.slice(0, 12).map((url, index) => <button type="button" role="listitem" className="bp-screen" key={`${index}-${url}`} aria-label={`Screenshot ${index + 1}`} style={{ backgroundImage: cssUrl(url) }} onClick={() => onPreview(url)} />)}
       </div>}
     </div>
   </section>;

@@ -18,14 +18,18 @@ export const profileStorageKey = (userId: string, key: string) => `mochi:profile
 export function readJson<T>(key: string, fallback: T): T {
   try {
     const value = window.localStorage.getItem(key);
-    return value ? (JSON.parse(value) as T) : fallback;
+    if (!value) return fallback;
+    const parsed = JSON.parse(value) as T | null;
+    // A stored literal `null` must behave like "missing", not crash callers that expect an object or array.
+    return parsed === null ? fallback : parsed;
   } catch {
     return fallback;
   }
 }
 
-export function writeJson(key: string, value: unknown): void {
-  try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable or full */ }
+/** Returns false when the value could not be saved (storage full, unavailable, or not serialisable). */
+export function writeJson(key: string, value: unknown): boolean {
+  try { window.localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; }
 }
 
 export function readString(key: string): string | null {

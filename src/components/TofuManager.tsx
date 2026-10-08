@@ -15,7 +15,7 @@ type Props = {
   onClose: () => void;
 };
 
-const newId = (name: string) => `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "tofu"}-${Date.now()}`;
+const newId = (name: string) => `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "tofu"}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
 export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange, onClose }: Props) {
   const tofus = piko.tofus;

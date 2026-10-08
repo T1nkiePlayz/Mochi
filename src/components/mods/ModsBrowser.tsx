@@ -48,7 +48,12 @@ export function ModsBrowser({ source, target, filter, noun }: Props) {
   const install = useModInstall();
 
   useEffect(() => { const timer = window.setTimeout(() => setDebounced(search.trim()), 300); return () => window.clearTimeout(timer); }, [search]);
-  useEffect(() => { setSort(source.defaultSort); setCategoryId(""); setCategories([]); void source.categories().then(setCategories).catch(() => setCategories([])); }, [source]);
+  useEffect(() => {
+    let live = true;
+    setSort(source.defaultSort); setCategoryId(""); setCategories([]);
+    void source.categories().then((next) => { if (live) setCategories(next); }).catch(() => { if (live) setCategories([]); });
+    return () => { live = false; };
+  }, [source]);
 
   // A text query on a source without ranking by relevance falls back to its first sort; nothing else to adjust.
   const query = useMemo(() => ({ query: debounced, sort, categoryId: categoryId || undefined, gameVersion: filter?.gameVersion || undefined, loader: filter?.loader || undefined }), [debounced, sort, categoryId, filter?.gameVersion, filter?.loader]);

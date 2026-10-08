@@ -41,7 +41,7 @@ export function createModrinthSource(projectType: ModrinthProjectType): ModSourc
     },
     async details(item): Promise<ModDetails> {
       const project = await getModrinthProject(item.id);
-      return { body: { kind: "markdown", text: project.body || project.description }, facts: [{ label: "Downloads", value: project.downloads.toLocaleString() }] };
+      return { body: { kind: "markdown", text: project.body || project.description }, facts: [{ label: "Downloads", value: (project.downloads ?? 0).toLocaleString() }] };
     },
     async files(item, filter) {
       const versions = await getModrinthVersions(item.id, filter?.gameVersion, projectType === "mod" ? filter?.loader : undefined);

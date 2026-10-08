@@ -1,4 +1,7 @@
 import { openExternalUrl } from "./platform";
+import { isNetworkError } from "./offline";
+
+const CHECK_TIMEOUT_MS = 20_000;
 
 /**
  * Update checking and installation. Two paths:
@@ -85,13 +88,17 @@ const isDevMock = () => import.meta.env.DEV && Boolean((window as unknown as Rec
 
 async function checkGithub(currentVersion: string): Promise<CheckResult> {
   try {
-    const response = await fetch(RELEASES_API, { headers: { Accept: "application/vnd.github+json" } });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
+    let response: Response;
+    try { response = await fetch(RELEASES_API, { headers: { Accept: "application/vnd.github+json" }, signal: controller.signal }); }
+    finally { clearTimeout(timer); }
     if (!response.ok) return { kind: "error", message: `GitHub returned HTTP ${response.status}.` };
     const release = parseGithubRelease(await response.json());
     if (!release || !isNewerVersion(release.version, currentVersion)) return { kind: "current" };
     return { kind: "available", info: { version: release.version, notes: release.notes, releaseUrl: release.url, installable: false } };
   } catch (error) {
-    return isOffline() ? { kind: "offline" } : { kind: "error", message: messageOf(error) };
+    return isOffline() || isNetworkError(error) ? { kind: "offline" } : { kind: "error", message: messageOf(error) };
   }
 }
 
@@ -103,7 +110,7 @@ export async function checkForUpdate(currentVersion: string): Promise<CheckResul
   }
   try {
     const { check } = await import("@tauri-apps/plugin-updater");
-    const update = await check();
+    const update = await check({ timeout: CHECK_TIMEOUT_MS });
     if (!update) return { kind: "current" };
     if (!isNewerVersion(update.version, currentVersion)) return { kind: "current" };
     pendingNative = update as unknown as NativeUpdate;

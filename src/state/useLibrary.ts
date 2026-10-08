@@ -3,7 +3,7 @@ import type { Piko, Tofu } from "../models";
 import { readJson, storageKeys, writeJson, writeString, readString } from "../lib/storage";
 import { gameSearchMatches } from "../lib/search";
 import type { PlaytimeEntry } from "../lib/platform";
-import { defaultFilter, matchesFilter, mostPlayedIds, smartFilters, sourceLabel, sourceOf, toggleInList, withTag, type FilterContext, type LibraryFilter, type SmartFilterId } from "../lib/library";
+import { sanitizeFilter, sanitizeLibrary, matchesFilter, mostPlayedIds, smartFilters, sourceLabel, sourceOf, toggleInList, withTag, type FilterContext, type LibraryFilter, type SmartFilterId } from "../lib/library";
 import { useInstalledStatus } from "./useInstalledStatus";
 
 export type LibrarySort = "category" | "name" | "recent" | "playtime";
@@ -17,13 +17,12 @@ const emptyPiko: Piko = {
   tofus: [{ id: "default", name: "Default", version: "Local", runtime: "Native", mods: 0, status: "Ready" }],
 };
 
-export const newTofu = (name: string): Tofu => ({ id: `tofu-${Date.now()}`, name, version: "Local", runtime: "Native", mods: 0, status: "Ready" });
+export const newTofu = (name: string): Tofu => ({ id: `tofu-${crypto.randomUUID()}`, name, version: "Local", runtime: "Native", mods: 0, status: "Ready" });
 
 /** The Pikos (games) and Tofus (environments) in the library, plus what is selected and how it is searched/sorted. */
 export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string) => boolean = () => false) {
   const [library, setLibrary] = useState<Piko[]>(() => {
-    const stored = readJson<unknown>(storageKeys.pikos, []);
-    return Array.isArray(stored) ? (stored as Piko[]) : [];
+    return sanitizeLibrary(readJson<unknown>(storageKeys.pikos, []));
   });
   const [selectedPikoId, setSelectedPikoId] = useState("");
   const [selectedTofuId, setSelectedTofuId] = useState("");
@@ -35,10 +34,9 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
   });
   useEffect(() => writeString(storageKeys.librarySort, librarySort), [librarySort]);
   const [filter, setFilter] = useState<LibraryFilter>(() => {
-    const stored = readJson<Partial<LibraryFilter> | null>(storageKeys.libraryFilter, null);
-    return stored && (stored.kind === "smart" || stored.kind === "source" || stored.kind === "collection") && typeof stored.id === "string" ? stored as LibraryFilter : defaultFilter;
+    return sanitizeFilter(readJson<unknown>(storageKeys.libraryFilter, null));
   });
-  useEffect(() => writeJson(storageKeys.libraryFilter, filter), [filter]);
+  useEffect(() => { writeJson(storageKeys.libraryFilter, filter); }, [filter]);
   const [tagFilters, setTagFilters] = useState<string[]>([]);
   const toggleTagFilter = useCallback((tag: string) => setTagFilters((current) => (current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag])), []);
   const installed = useInstalledStatus(library);
@@ -88,7 +86,8 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
     const groups = new Map<string, Piko[]>();
     visiblePikos.forEach((piko) => {
       const category = piko.platformCategory || "Other";
-      groups.set(category, [...(groups.get(category) ?? []), piko]);
+      const group = groups.get(category);
+      if (group) group.push(piko); else groups.set(category, [piko]);
     });
     // Favourites are pinned to the top of their category (the sort is stable).
     return [...groups.entries()].sort(([x], [y]) => x.localeCompare(y))

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { supabase } from "../lib/supabase";
 import { lookupIgdbGames, type IgdbGame } from "../lib/igdb";
@@ -36,12 +36,20 @@ export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: 
   const [flatpakPickerOpen, setFlatpakPickerOpen] = useState(false);
   const [flatpaks, setFlatpaks] = useState<FlatpakApp[]>([]);
   const [flatpakBusy, setFlatpakBusy] = useState(false);
+  const igdbSearchSeq = useRef(0);
+  const addingRef = useRef(false);
 
   const clearForm = () => { setFormName(""); setFormCategory("Custom"); setFormError(""); setCover(null); setAdding(false); };
   const reset = () => { setPendingGame(null); setStep("form"); setShowCustomGame(false); setShowAddPiko(false); setLaunchTarget(""); clearForm(); };
   const openCustom = () => { setShowCustomGame(true); setStep("form"); setPendingGame(null); setLaunchType("file"); setLaunchTarget(""); clearForm(); };
 
   const addToLibrary = async (name: string, executablePath: string, metadataMatch: IgdbGame | null, category = "Custom", coverChoice: ArtworkSelection | null = null) => {
+    if (addingRef.current) return;
+    addingRef.current = true;
+    try { await createGame(name, executablePath, metadataMatch, category, coverChoice); } finally { addingRef.current = false; }
+  };
+
+  const createGame = async (name: string, executablePath: string, metadataMatch: IgdbGame | null, category: string, coverChoice: ArtworkSelection | null) => {
     const id = `custom-${crypto.randomUUID()}`;
     const piko: Piko = {
       id, name, executablePath, source: "custom", platformCategory: category,
@@ -103,10 +111,12 @@ export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: 
   /** "Search again" in the confirm step with a hand-typed query. */
   const searchIgdbAgain = async (query: string) => {
     if (!supabase || !pendingGame || !query.trim()) return;
+    // Only the newest search may write its results; slower, older ones are dropped.
+    const seq = ++igdbSearchSeq.current;
     setIgdbBusy(true);
-    try { const candidates = await lookupIgdbGames(supabase, query); setPendingGame((current) => (current ? { ...current, candidates } : current)); }
-    catch { setPendingGame((current) => (current ? { ...current, candidates: [] } : current)); }
-    finally { setIgdbBusy(false); }
+    try { const candidates = await lookupIgdbGames(supabase, query); if (seq === igdbSearchSeq.current) setPendingGame((current) => (current ? { ...current, candidates } : current)); }
+    catch { if (seq === igdbSearchSeq.current) setPendingGame((current) => (current ? { ...current, candidates: [] } : current)); }
+    finally { if (seq === igdbSearchSeq.current) setIgdbBusy(false); }
   };
 
   const approveIgdbGame = (match: IgdbGame | null) => {

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Bell, Menu, Search, X } from "lucide-react";
 import { MochiIcon } from "../MochiIcon";
 import { useApp } from "../../state/AppContext";
@@ -7,8 +8,21 @@ export function Topbar() {
   const { activeNav, lib, behavior, platformCapabilities, notifications: n } = useApp();
   const { search, setSearch } = lib;
   const showBell = behavior.notificationsEnabled && behavior.inAppNotifications;
+  // Narrow windows (and large text sizes) hide the sidebar; the menu button shows it as a drawer.
+  const [navOpen, setNavOpen] = useState(false);
+  useEffect(() => { setNavOpen(false); }, [activeNav]);
+  useEffect(() => {
+    document.documentElement.dataset.navOpen = navOpen ? "true" : "false";
+    if (!navOpen) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setNavOpen(false); };
+    const onClick = (event: MouseEvent) => { if (!(event.target as Element | null)?.closest?.(".sidebar, .mobile-menu")) setNavOpen(false); };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("click", onClick);
+    return () => { document.removeEventListener("keydown", onKey); document.removeEventListener("click", onClick); };
+  }, [navOpen]);
+  useEffect(() => () => { document.documentElement.dataset.navOpen = "false"; }, []);
   return <header className="topbar">
-    <button className="mobile-menu icon-button" aria-label="Open menu"><MochiIcon name="menu" fallback={Menu} size={18} /></button>
+    <button type="button" className="mobile-menu icon-button" aria-label="Open menu" aria-expanded={navOpen} onClick={() => setNavOpen((value) => !value)}><MochiIcon name="menu" fallback={Menu} size={18} /></button>
     <div className="breadcrumb"><span>Mochi</span><span className="breadcrumb-slash">/</span><strong>{activeNav === "Library" ? lib.selectedPiko.name : activeNav}</strong></div>
     <div className="topbar-actions">
       <label className="search-box">

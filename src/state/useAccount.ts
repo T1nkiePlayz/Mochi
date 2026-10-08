@@ -10,23 +10,37 @@ import { readJson, storageKeys, writeJson } from "../lib/storage";
 
 export type SavedAccount = { id: string; username: string; email: string; refreshToken: string; avatarUrl?: string };
 
+const text = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
+
 export const usernameOf = (user: User | null | undefined): string =>
-  user?.user_metadata?.username
-  || user?.user_metadata?.user_name
-  || user?.user_metadata?.preferred_username
+  text(user?.user_metadata?.username)
+  || text(user?.user_metadata?.user_name)
+  || text(user?.user_metadata?.preferred_username)
   || (user?.email ? user.email.split("@")[0] : null)
   || "Guest";
+
+/** Saved accounts come from storage: drop malformed entries and shorten e-mail style names. */
+export function sanitizeSavedAccounts(value: unknown): SavedAccount[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const accounts: SavedAccount[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const { id, username, email, refreshToken, avatarUrl } = item as Record<string, unknown>;
+    if (typeof id !== "string" || !id || typeof refreshToken !== "string" || seen.has(id)) continue;
+    seen.add(id);
+    const name = typeof username === "string" && username ? username : typeof email === "string" ? email : "Account";
+    accounts.push({ id, username: name.includes("@") ? name.split("@")[0] || name : name, email: typeof email === "string" ? email : "", refreshToken, ...(typeof avatarUrl === "string" ? { avatarUrl } : {}) });
+  }
+  return accounts.slice(0, 5);
+}
 
 /** Everything about who is signed in: sessions, the sign-in modal, saved accounts and security settings. */
 export function useAccount(notify: (title: string, message: string) => void) {
   const [user, setUser] = useState<User | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
-  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>(() =>
-    readJson<SavedAccount[]>(storageKeys.accounts, []).slice(0, 5).map((account) => ({
-      ...account,
-      username: account.username.includes("@") ? account.username.split("@")[0] : account.username,
-    })));
+  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>(() => sanitizeSavedAccounts(readJson<unknown>(storageKeys.accounts, [])));
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [authError, setAuthError] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
@@ -90,6 +104,7 @@ export function useAccount(notify: (title: string, message: string) => void) {
 
   const switchAccount = async (account: SavedAccount) => {
     if (!supabase || account.id === user?.id) { setShowAccountMenu(false); return; }
+    if (authBusy) return;
     setAuthBusy(true);
     try {
       const { data, error } = await supabase.auth.refreshSession({ refresh_token: account.refreshToken });
@@ -177,7 +192,10 @@ export function useAccount(notify: (title: string, message: string) => void) {
 
   const authenticate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!supabase) return;
+    if (!supabase || authBusy) return;
+    // Enter inside the code fields submits this form too; finish the step that is on screen instead of signing in again.
+    if (mfaRequired) { void completeMfa(); return; }
+    if (emailCodeStep) { void submitEmailCode(); return; }
     setAuthBusy(true); setAuthError("");
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") || "").trim();
