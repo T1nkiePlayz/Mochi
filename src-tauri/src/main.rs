@@ -11,16 +11,7 @@ mod tray;
 
 #[tauri::command]
 fn send_system_notification(title: String, body: String) -> Result<(), String> {
-    #[cfg(target_os = "linux")]
-    {
-        let status = std::process::Command::new("notify-send").args(["--app-name=Mochi", title.trim(), body.trim()]).status().map_err(|error| format!("Unable to start notify-send: {error}"))?;
-        if status.success() { Ok(()) } else { Err("The system notification daemon rejected the notification.".into()) }
-    }
-    #[cfg(not(target_os = "linux"))]
-    {
-        let _ = (title, body);
-        Err("System notifications are currently implemented for Linux.".into())
-    }
+    platform::send_system_notification(title.trim(), body.trim())
 }
 
 #[tauri::command]
@@ -95,13 +86,13 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", target_os = "macos"))]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
+                #[cfg(target_os = "linux")]
                 app.deep_link().register_all()?;
             }
-            #[cfg(target_os = "linux")]
-            platform::ensure_desktop_entry()?;
+            platform::ensure_platform_integration()?;
             themes::initialize_config(&app.handle())?;
             let app_data_dir = app.path().app_data_dir()?;
             playtime::initialize(app_data_dir).map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error))?;
