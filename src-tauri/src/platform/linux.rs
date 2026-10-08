@@ -109,6 +109,38 @@ fn launch_itch(id:&str)->Result<(),String>{if command_exists("itch-setup"){retur
 fn command_exists(s:&str)->bool{std::process::Command::new("sh").args(["-c",&format!("command -v {s}")]).output().map(|o|o.status.success()).unwrap_or(false)}
 fn flatpak_installed(s:&str)->bool{std::process::Command::new("flatpak").args(["info",s]).output().map(|o|o.status.success()).unwrap_or(false)}
 
+pub fn ensure_desktop_entry() -> Result<(), String> {
+    let home = std::env::var_os("HOME").ok_or("Unable to determine the home directory.")?;
+    let applications = std::path::PathBuf::from(home).join(".local").join("share").join("applications");
+    std::fs::create_dir_all(&applications)
+        .map_err(|e| format!("Unable to create the applications directory: {e}"))?;
+
+    let executable = std::env::current_exe()
+        .map_err(|e| format!("Unable to determine the Mochi executable: {e}"))?;
+
+    let exec = executable
+        .to_string_lossy()
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('%', "%%");
+
+    let desktop = applications.join("mochi.desktop");
+    let content = format!(
+        "[Desktop Entry]\nType=Application\nName=Mochi\nComment=Your games, your way.\nExec=\"{exec}\" %U\nTryExec=\"{exec}\"\nIcon=mochi\nTerminal=false\nStartupNotify=true\nStartupWMClass=dev.sidequestgames.Mochilauncher\nCategories=Game;Utility;\nMimeType=x-scheme-handler/mochi;\n",
+    );
+
+    std::fs::write(&desktop, content)
+        .map_err(|e| format!("Unable to write Mochi desktop entry: {e}"))?;
+
+    if command_exists("update-desktop-database") {
+        let _ = std::process::Command::new("update-desktop-database")
+            .arg(&applications)
+            .status();
+    }
+
+    Ok(())
+}
+
 pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> {
     let home = std::env::var_os("HOME").ok_or("Unable to determine the home directory.")?;
     let config_root = std::env::var_os("XDG_CONFIG_HOME").map(std::path::PathBuf::from).unwrap_or_else(|| std::path::PathBuf::from(home).join(".config"));
