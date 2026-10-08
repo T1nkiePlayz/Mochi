@@ -67,19 +67,101 @@ function normalizeMarkdown(source: string): string {
   );
 }
 
+function findClosingDelimiter(source: string, start: number, delimiter: string): number {
+  let index = start;
+  while (index < source.length) {
+    const found = source.indexOf(delimiter, index);
+    if (found < 0) return -1;
+    if (found === start || source[found - 1] !== "\\\\") return found;
+    index = found + delimiter.length;
+  }
+  return -1;
+}
+
+function findClosingParenthesis(source: string, start: number): number {
+  let depth = 0;
+  for (let index = start; index < source.length; index += 1) {
+    if (source[index] === "(" && source[index - 1] !== "\\\\") depth += 1;
+    if (source[index] === ")" && source[index - 1] !== "\\\\") {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return -1;
+}
+
+function parseInlineElement(source: string, start: number): { node: ReactNode; end: number } | null {
+  if (source.startsWith("![", start)) {
+    const labelEnd = source.indexOf("]", start + 2);
+    if (labelEnd < 0 || source[labelEnd + 1] !== "(") return null;
+    const urlEnd = findClosingParenthesis(source, labelEnd + 1);
+    if (urlEnd < 0) return null;
+    const alt = source.slice(start + 2, labelEnd);
+    const url = source.slice(labelEnd + 2, urlEnd).trim();
+    return { node: <img className="project-markdown-image" src={url} alt={alt} loading="lazy" />, end: urlEnd + 1 };
+  }
+
+  if (source[start] === "[") {
+    const labelEnd = source.indexOf("]", start + 1);
+    if (labelEnd < 0 || source[labelEnd + 1] !== "(") return null;
+    const urlEnd = findClosingParenthesis(source, labelEnd + 1);
+    if (urlEnd < 0) return null;
+    const label = source.slice(start + 1, labelEnd);
+    const url = source.slice(labelEnd + 2, urlEnd).trim();
+    return {
+      node: <a href={url} target="_blank" rel="noreferrer noopener">{renderInline(label)}</a>,
+      end: urlEnd + 1,
+    };
+  }
+
+  const marker = source.slice(start, start + 2);
+  if (marker === "**" || marker === "__" || marker === "~~") {
+    const end = findClosingDelimiter(source, start + 2, marker);
+    if (end >= 0) {
+      const inner = renderInline(source.slice(start + 2, end));
+      if (marker === "~~") return { node: <del>{inner}</del>, end: end + 2 };
+      return { node: <strong>{inner}</strong>, end: end + 2 };
+    }
+  }
+
+  if (source[start] === "`") {
+    const end = source.indexOf("`", start + 1);
+    if (end > start + 1) return { node: <code>{source.slice(start + 1, end)}</code>, end: end + 1 };
+  }
+
+  if (source[start] === "*" || source[start] === "_") {
+    const delimiter = source[start];
+    const end = findClosingDelimiter(source, start + 1, delimiter);
+    if (end > start + 1) return { node: <em>{renderInline(source.slice(start + 1, end))}</em>, end: end + 1 };
+  }
+
+  return null;
+}
+
 function renderInline(text: string): ReactNode[] {
-  const parts = text.split(/(\!\[[^\]]*\]\([^\)]+\)|\[[^\]]+\]\([^\)]+\)|\*\*[^*]+\*\*|__[^_]+__|~~[^~]+~~|\x60[^\x60]+\x60|\*[^*]+\*|_[^_]+_)/g);
-  return parts.filter(Boolean).map((part, index) => {
-    const image = part.match(/^!\[([^\]]*)\]\(([^\)]+)\)$/);
-    if (image) return <img key={index} className="project-markdown-image" src={image[2]} alt={image[1]} loading="lazy" />;
-    const link = part.match(/^\[([^\]]+)\]\(([^\)]+)\)$/);
-    if (link) return <a key={index} href={link[2]} target="_blank" rel="noreferrer">{link[1]}</a>;
-    if ((part.startsWith("**") && part.endsWith("**")) || (part.startsWith("__") && part.endsWith("__"))) return <strong key={index}>{part.slice(2, -2)}</strong>;
-    if (part.startsWith(String.fromCharCode(96)) && part.endsWith(String.fromCharCode(96))) return <code key={index}>{part.slice(1, -1)}</code>;
-    if (part.startsWith("~~") && part.endsWith("~~")) return <del key={index}>{part.slice(2, -2)}</del>;
-    if ((part.startsWith("*") && part.endsWith("*")) || (part.startsWith("_") && part.endsWith("_"))) return <em key={index}>{part.slice(1, -1)}</em>;
-    return <span key={index}>{part}</span>;
-  });
+  const nodes: ReactNode[] = [];
+  let plain = "";
+  const flushPlain = () => {
+    if (plain) {
+      nodes.push(<span key={nodes.length}>{plain}</span>);
+      plain = "";
+    }
+  };
+
+  for (let index = 0; index < text.length;) {
+    const candidate = parseInlineElement(text, index);
+    if (candidate) {
+      flushPlain();
+      nodes.push(<span key={nodes.length}>{candidate.node}</span>);
+      index = candidate.end;
+      continue;
+    }
+    plain += text[index];
+    index += 1;
+  }
+
+  flushPlain();
+  return nodes;
 }
 
 function Markdown({ source }: { source: string }) {
