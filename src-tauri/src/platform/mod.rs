@@ -24,6 +24,21 @@ mod macos;
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
 mod unsupported;
 
+pub fn ensure_desktop_entry() -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        return linux::ensure_desktop_entry();
+    }
+    #[cfg(target_os = "macos")]
+    {
+        return macos::ensure_desktop_entry();
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    {
+        return unsupported::ensure_desktop_entry();
+    }
+}
+
 pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> {
     #[cfg(target_os = "linux")]
     {
