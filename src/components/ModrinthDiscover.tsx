@@ -90,6 +90,7 @@ const minecraftTabs: Array<{ id: MinecraftTab; label: string }> = [
 
 const defaultNexusGames: Array<{ domainName: string; search: string }> = [
   { domainName: "satisfactory", search: "Satisfactory" },
+  { domainName: "fnafsecuritybreach", search: "Five Nights at Freddy's Security Breach" },
   { domainName: "subnautica", search: "Subnautica" },
   { domainName: "subnautica2", search: "Subnautica 2" },
   { domainName: "subnauticabelowzero", search: "Subnautica: Below Zero" },
