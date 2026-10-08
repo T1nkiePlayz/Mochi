@@ -1,5 +1,5 @@
 import { assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
-import { handle, resetRateLimit } from "./index.ts";
+import { handle, resetRateLimit } from "./handler.ts";
 
 const SECRET = "$2a$10$super-secret-key-value";
 
