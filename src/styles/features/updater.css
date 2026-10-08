@@ -1,0 +1,6 @@
+.update-banner { display: flex; align-items: center; gap: 12px; padding: 10px 16px; margin: 0 0 12px; border: 1px solid var(--mochi-card-border, var(--mochi-accent, currentColor)); border-radius: var(--mochi-card-radius, 10px); background: var(--mochi-card-background, transparent); color: inherit; }
+.update-banner-text { flex: 1; min-width: 0; }
+.update-details { display: grid; gap: 10px; padding: 12px 16px; justify-items: start; }
+.update-notes { width: 100%; max-height: 200px; overflow: auto; margin: 0; padding: 10px 12px; white-space: pre-wrap; font: inherit; font-size: 0.85em; border: 1px solid var(--mochi-border, currentColor); border-radius: var(--mochi-card-radius, 10px); }
+.update-progress { width: 100%; display: grid; gap: 4px; }
+.update-progress progress { width: 100%; accent-color: var(--mochi-accent, auto); }

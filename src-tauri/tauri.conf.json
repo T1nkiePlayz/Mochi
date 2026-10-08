@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Mochi \u2014 Your games, your way.",
+        "title": "Mochi — Your games, your way.",
         "width": 1280,
         "height": 800,
         "minWidth": 960,
@@ -21,7 +21,135 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": {
+        "default-src": [
+          "'self'"
+        ],
+        "script-src": [
+          "'self'"
+        ],
+        "style-src": [
+          "'self'",
+          "'unsafe-inline'",
+          "https://fonts.googleapis.com"
+        ],
+        "font-src": [
+          "'self'",
+          "data:",
+          "https://fonts.gstatic.com"
+        ],
+        "img-src": [
+          "'self'",
+          "data:",
+          "blob:",
+          "https://images.igdb.com",
+          "https://cdn2.steamgriddb.com",
+          "https://*.steamgriddb.com",
+          "https://*.steamstatic.com",
+          "https://cdn.modrinth.com",
+          "https://staticdelivery.nexusmods.com",
+          "https://lh3.googleusercontent.com",
+          "https://avatars.githubusercontent.com",
+          "https://*.supabase.co",
+          "https://www.gravatar.com",
+          "https://cdn.simpleicons.org",
+          "https://raw.githubusercontent.com"
+        ],
+        "media-src": [
+          "'self'",
+          "data:",
+          "blob:"
+        ],
+        "connect-src": [
+          "'self'",
+          "ipc:",
+          "http://ipc.localhost",
+          "https://*.supabase.co",
+          "wss://*.supabase.co",
+          "https://api.modrinth.com",
+          "https://api.github.com"
+        ],
+        "frame-src": [
+          "https://www.youtube-nocookie.com"
+        ],
+        "object-src": [
+          "'none'"
+        ],
+        "base-uri": [
+          "'self'"
+        ],
+        "form-action": [
+          "'self'"
+        ]
+      },
+      "devCsp": {
+        "default-src": [
+          "'self'"
+        ],
+        "script-src": [
+          "'self'",
+          "'unsafe-inline'"
+        ],
+        "style-src": [
+          "'self'",
+          "'unsafe-inline'",
+          "https://fonts.googleapis.com"
+        ],
+        "font-src": [
+          "'self'",
+          "data:",
+          "https://fonts.gstatic.com"
+        ],
+        "img-src": [
+          "'self'",
+          "data:",
+          "blob:",
+          "https://images.igdb.com",
+          "https://cdn2.steamgriddb.com",
+          "https://*.steamgriddb.com",
+          "https://*.steamstatic.com",
+          "https://cdn.modrinth.com",
+          "https://staticdelivery.nexusmods.com",
+          "https://lh3.googleusercontent.com",
+          "https://avatars.githubusercontent.com",
+          "https://*.supabase.co",
+          "https://www.gravatar.com",
+          "https://cdn.simpleicons.org",
+          "https://raw.githubusercontent.com",
+          "http://localhost:5173"
+        ],
+        "media-src": [
+          "'self'",
+          "data:",
+          "blob:"
+        ],
+        "connect-src": [
+          "'self'",
+          "ipc:",
+          "http://ipc.localhost",
+          "https://*.supabase.co",
+          "wss://*.supabase.co",
+          "https://api.modrinth.com",
+          "https://api.github.com",
+          "http://localhost:5173",
+          "ws://localhost:5173"
+        ],
+        "frame-src": [
+          "https://www.youtube-nocookie.com"
+        ],
+        "object-src": [
+          "'none'"
+        ],
+        "base-uri": [
+          "'self'"
+        ],
+        "form-action": [
+          "'self'"
+        ]
+      },
+      "dangerousDisableAssetCspModification": [
+        "style-src"
+      ]
     },
     "appDirectoriesOverride": {
       "config": "$CONFIG/Mochi"
@@ -48,7 +176,8 @@
       "rpm": {
         "release": "1"
       }
-    }
+    },
+    "createUpdaterArtifacts": true
   },
   "plugins": {
     "deep-link": {
@@ -57,6 +186,12 @@
           "mochi"
         ]
       }
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFFMTZBRjA4NUU0MEUzQzkKUldUSjQwQmVDSzhXcnV0TTFtdm9uNHEvb2ViSEp4M0N6V1FrU29BNWxQQjFXaGh0UERVQ2I2STAK",
+      "endpoints": [
+        "https://github.com/T1nkiePlayz/Mochi/releases/latest/download/latest.json"
+      ]
     }
   }
 }

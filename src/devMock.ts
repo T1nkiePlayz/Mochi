@@ -47,6 +47,7 @@ const handlers: Record<string, Handler> = {
 export function installDevMock() {
   const w = window as unknown as Record<string, unknown>;
   if ("__TAURI_INTERNALS__" in w) return;
+  w.__MOCHI_DEV_MOCK__ = true; // lets src/lib/updater.ts fake an available update
   w.__TAURI_INTERNALS__ = {
     invoke: async (command: string, args: Record<string, unknown> = {}) => {
       const handler = handlers[command];
