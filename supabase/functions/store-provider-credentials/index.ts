@@ -16,6 +16,10 @@ type Body =
   | { action: "delete"; provider: Provider }
   | { action: "nexus-games"; query?: string }
   | { action: "nexus-mods"; gameDomain: string; sort?: "catalog" | "trending"; offset?: number; limit?: number }
+  | { action: "nexus-status" }
+  | { action: "nexus-mod"; gameDomain: string; modId: number }
+  | { action: "nexus-files"; gameDomain: string; modId: number }
+  | { action: "nexus-download"; gameDomain: string; modId: number; fileId: number; key?: string; expires?: number | string }
   | { action: "igdb-search"; query: string; limit?: number }
   | { action: "sgdb-search"; query: string }
   | {
@@ -26,7 +30,7 @@ type Body =
 type IgdbCredential = { clientId: string; clientSecret: string };
 
 const pool = new Pool(Deno.env.get("SUPABASE_DB_URL")!, 1, true);
-const ACTIONS = new Set(["set", "status", "delete", "nexus-games", "nexus-mods", "igdb-search", "sgdb-search", "sgdb-assets"]);
+const ACTIONS = new Set(["set", "status", "delete", "nexus-games", "nexus-mods", "nexus-status", "nexus-mod", "nexus-files", "nexus-download", "igdb-search", "sgdb-search", "sgdb-assets"]);
 const SGDB_API = "https://www.steamgriddb.com/api/v2";
 const SGDB_KINDS = new Set<SgdbKind>(["grids", "heroes", "logos", "icons"]);
 const MAX_BODY_BYTES = 16 * 1024;
@@ -198,6 +202,44 @@ async function nexusHeaders(userId: string) {
   };
 }
 
+const NEXUS_V1 = "https://api.nexusmods.com/v1";
+const NEXUS_DOMAIN = /^[a-z0-9_-]{1,64}$/;
+const NEXUS_DL_KEY = /^[A-Za-z0-9_-]{8,256}$/;
+const nexusId = (value: unknown): value is number => typeof value === "number" && Number.isInteger(value) && value > 0 && value <= 2_147_483_647;
+const nexusPictureUrl = (value: unknown): string | undefined => {
+  if (typeof value !== "string") return undefined;
+  try { const url = new URL(value); return url.protocol === "https:" && url.hostname.endsWith("nexusmods.com") ? value : undefined; } catch { return undefined; }
+};
+
+class NexusError extends Error {
+  constructor(message: string, readonly status: number, readonly code?: string) { super(message); }
+}
+
+/** GET against Nexus v1 with the user's own key. Errors are mapped to readable messages and never include the key. */
+async function nexusV1(userId: string, path: string): Promise<unknown> {
+  const headers = await nexusHeaders(userId);
+  let upstream: Response;
+  try {
+    upstream = await fetch(`${NEXUS_V1}${path}`, { headers, signal: AbortSignal.timeout(15_000) });
+  } catch {
+    throw new NexusError("Unable to reach Nexus Mods. Try again.", 502);
+  }
+  if (upstream.status === 401) throw new NexusError("Nexus Mods rejected the saved API key. Save a new key in Settings.", 422);
+  if (upstream.status === 403) throw new NexusError("Nexus Mods denied this request.", 403, "forbidden");
+  if (upstream.status === 404) throw new NexusError("Nexus Mods could not find that item.", 404, "not_found");
+  if (upstream.status === 429) throw new NexusError("Nexus Mods is rate limiting requests. Try again later.", 429);
+  if (!upstream.ok) throw new NexusError(`Nexus Mods request failed (HTTP ${upstream.status}).`, upstreamStatus(upstream.status));
+  try { return await upstream.json(); } catch { throw new NexusError("Nexus Mods returned invalid data.", 502); }
+}
+
+function nexusFailure(error: unknown, fallback: string) {
+  if (error instanceof NexusError) return response({ error: error.message, ...(error.code ? { code: error.code } : {}) }, error.status);
+  // nexusHeaders throws a plain Error when no key is stored.
+  if (error instanceof Error && error.message === "Nexus Mods API key is not configured.") return response({ error: error.message, code: "not_configured" }, 400);
+  console.error(fallback, error instanceof Error ? error.message : "unknown");
+  return response({ error: fallback }, 502);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return response({ error: "POST required" }, 405);
@@ -328,6 +370,87 @@ Deno.serve(async (req) => {
     }
   }
 
+  if (body.action === "nexus-status") {
+    try {
+      const key = await getStoredSecret(user.id, "nexus");
+      if (!key) return response({ configured: false, premium: false });
+      const info = await nexusV1(user.id, "/users/validate.json") as { is_premium?: unknown; name?: unknown };
+      return response({ configured: true, premium: info.is_premium === true, ...(typeof info.name === "string" ? { name: info.name } : {}) });
+    } catch (error) {
+      return nexusFailure(error, "Unable to check Nexus Mods account status.");
+    }
+  }
+
+  if (body.action === "nexus-mod" || body.action === "nexus-files" || body.action === "nexus-download") {
+    if (typeof body.gameDomain !== "string" || !NEXUS_DOMAIN.test(body.gameDomain)) return response({ error: "Invalid Nexus game." }, 400);
+    if (!nexusId(body.modId)) return response({ error: "Invalid Nexus mod id." }, 400);
+    const base = `/games/${body.gameDomain}/mods/${body.modId}`;
+
+    if (body.action === "nexus-mod") {
+      try {
+        const mod = await nexusV1(user.id, `${base}.json`) as Record<string, unknown>;
+        const text = (value: unknown) => typeof value === "string" ? value : undefined;
+        return response({
+          id: body.modId, name: text(mod.name) ?? "Untitled mod", summary: text(mod.summary) ?? "", description: text(mod.description),
+          author: text(mod.author) ?? text(mod.uploaded_by) ?? "", pictureUrl: nexusPictureUrl(mod.picture_url), version: text(mod.version),
+          endorsements: typeof mod.endorsement_count === "number" ? mod.endorsement_count : undefined,
+          modPageUrl: `https://www.nexusmods.com/${body.gameDomain}/mods/${body.modId}`,
+        });
+      } catch (error) {
+        return nexusFailure(error, "Unable to load this Nexus mod.");
+      }
+    }
+
+    if (body.action === "nexus-files") {
+      try {
+        const payload = await nexusV1(user.id, `${base}/files.json`) as { files?: Array<Record<string, unknown>> };
+        const hidden = new Set(["ARCHIVED", "REMOVED", "DELETED"]);
+        const files = (Array.isArray(payload.files) ? payload.files : [])
+          .filter((file) => nexusId(file.file_id) && typeof file.file_name === "string" && !hidden.has(String(file.category_name ?? "").toUpperCase()))
+          .map((file) => ({
+            fileId: file.file_id as number,
+            name: typeof file.name === "string" ? file.name : String(file.file_name),
+            fileName: String(file.file_name),
+            version: typeof file.version === "string" ? file.version : "",
+            category: String(file.category_name ?? "").toLowerCase(),
+            sizeKb: typeof file.size_kb === "number" ? file.size_kb : 0,
+            uploadedAt: typeof file.uploaded_timestamp === "number" ? file.uploaded_timestamp : 0,
+            primary: file.is_primary === true,
+          }));
+        return response({ files });
+      } catch (error) {
+        return nexusFailure(error, "Unable to load Nexus mod files.");
+      }
+    }
+
+    if (!nexusId(body.fileId)) return response({ error: "Invalid Nexus file id." }, 400);
+    const hasKey = body.key !== undefined && body.key !== null;
+    const hasExpires = body.expires !== undefined && body.expires !== null;
+    if (hasKey !== hasExpires) return response({ error: "Provide both key and expires from the Nexus download link." }, 400);
+    const params = new URLSearchParams();
+    if (hasKey) {
+      const expires = Number(body.expires);
+      if (typeof body.key !== "string" || !NEXUS_DL_KEY.test(body.key) || !Number.isInteger(expires) || expires <= 0 || expires > 99_999_999_999) {
+        return response({ error: "The Nexus download link parameters are invalid." }, 400);
+      }
+      params.set("key", body.key);
+      params.set("expires", String(expires));
+    }
+    try {
+      const linksPayload = await nexusV1(user.id, `${base}/files/${body.fileId}/download_link.json${params.size ? `?${params}` : ""}`);
+      const links = Array.isArray(linksPayload) ? linksPayload as Array<Record<string, unknown>> : [];
+      const uri = links.map((link) => link.URI).find((value): value is string => typeof value === "string" && value.startsWith("https://"));
+      if (!uri) return response({ error: "Nexus Mods did not return a download link.", code: "no_link" }, 502);
+      const files = await nexusV1(user.id, `${base}/files/${body.fileId}.json`).catch(() => null) as { file_name?: unknown } | null;
+      return response({ url: uri, fileName: typeof files?.file_name === "string" ? files.file_name : decodeURIComponent(new URL(uri).pathname.split("/").pop() ?? "") });
+    } catch (error) {
+      if (error instanceof NexusError && error.status === 403) {
+        return response({ error: "Nexus Mods only allows premium members to download from outside the website. Use the Download with Mod Manager button on the mod page.", code: "premium_required" }, 403);
+      }
+      return nexusFailure(error, "Unable to get a Nexus download link.");
+    }
+  }
+
   if (body.action === "nexus-mods") {
     if (typeof body.gameDomain !== "string") return response({ error: "Invalid Nexus game." }, 400);
     const domain = body.gameDomain.trim().replace(/[^a-z0-9_-]/gi, "");
@@ -343,6 +466,7 @@ Deno.serve(async (req) => {
         const payload = await upstream.json() as { data?: { mods?: Array<Record<string, unknown>> } };
         const mods = (payload.data?.mods ?? []).map((mod) => ({
           id: String(mod.mod_id ?? mod.id ?? mod.mod_page_url ?? ""),
+          modId: Number.isInteger(Number(mod.mod_id ?? mod.id)) ? Number(mod.mod_id ?? mod.id) : undefined,
           name: String(mod.name ?? "Untitled mod"),
           author: typeof mod.author === "string" ? mod.author : undefined,
           summary: typeof mod.summary === "string" ? mod.summary : undefined,
@@ -368,7 +492,7 @@ Deno.serve(async (req) => {
       const result = payload.data?.mods;
       const mods = (result?.nodes ?? []).map((mod) => {
         const id = String(mod.modId ?? "");
-        return { id, name: String(mod.name ?? "Untitled mod"), modPageUrl: `https://www.nexusmods.com/${encodeURIComponent(domain)}/mods/${encodeURIComponent(id)}` };
+        return { id, modId: Number(id) || undefined, name: String(mod.name ?? "Untitled mod"), modPageUrl: `https://www.nexusmods.com/${encodeURIComponent(domain)}/mods/${encodeURIComponent(id)}` };
       }).filter((mod) => mod.id);
       return response({ mods, total: Number(result?.totalCount ?? mods.length), offset });
     } catch (error) {

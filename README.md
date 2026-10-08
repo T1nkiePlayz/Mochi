@@ -137,6 +137,8 @@ Mochi includes a Discovery experience for community game content. Minecraft cont
 
 Mochi also has an **experimental Nexus Mods integration** for supported accounts. When experimental features are enabled and a Nexus Mods API key is configured, Discovery can load Nexus game tabs and trending mods. The current default games are Satisfactory, Five Nights at Freddy's Security Breach, Subnautica, Subnautica 2, Subnautica: Below Zero, and Stardew Valley. The `+` game picker performs a live Nexus game-catalog search so additional games can be added as persistent Discovery tabs. Nexus game artwork is sourced from Nexus Mods, and the launcher links users to the original mod page rather than downloading Nexus mods directly.
 
+**CurseForge** is also available in Discovery. Mochi uses its own CurseForge API key held server-side in a Supabase edge function, so you do not need a CurseForge account. CurseForge data is never cached on disk, and mods whose authors disabled third-party downloads link to CurseForge instead. Owner setup and deployment: [docs/curseforge.md](docs/curseforge.md).
+
 Nexus Mods credentials are handled through the provider-credential backend boundary; the API key is not returned to the launcher. Nexus discovery remains experimental while the integration and game coverage mature.
 
 ### Tofu management

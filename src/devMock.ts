@@ -2,6 +2,7 @@
  * Browser-only stand-in for the Tauri backend so the UI (and every theme) can be
  * developed with plain `npm run dev`. Loaded only in dev builds outside Tauri.
  */
+import { installModsMock } from "./devModsMock";
 type Handler = (args: Record<string, unknown>) => unknown;
 
 
@@ -65,6 +66,7 @@ const handlers: Record<string, Handler> = {
     { filename: "lithium.jar.disabled", path: "/mods/lithium.jar.disabled", enabled: false, projectId: "gvQqBUqZ", title: "Lithium", currentVersion: "0.12.0" },
   ],
   update_mod_file: () => null,
+  start_mod_download: () => `mock-${Date.now()}`,
   open_path_in_file_manager: () => null,
   get_public_api: (args) => {
     const url = new URL(String(args.url));
@@ -188,6 +190,7 @@ const drawMock = (image: HTMLImageElement, sx: number, sy: number, sw: number, s
 export function installDevMock() {
   const w = window as unknown as Record<string, unknown>;
   if ("__TAURI_INTERNALS__" in w) return;
+  installModsMock();
   w.__MOCHI_DEV_MOCK__ = true; // lets src/lib/updater.ts fake an available update
   w.__TAURI_INTERNALS__ = {
     invoke: async (command: string, args: Record<string, unknown> = {}) => {

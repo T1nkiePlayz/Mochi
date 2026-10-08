@@ -6,6 +6,7 @@ mod bigpicture;
 mod dirsize;
 mod game_artwork;
 mod gamepad;
+mod downloads;
 mod modrinth;
 mod platform;
 mod playtime;
@@ -170,7 +171,7 @@ fn main() {
             game_artwork::prepare_artwork_preview, game_artwork::save_custom_artwork, game_artwork::delete_game_artwork, platform::check_launch_targets,
             modrinth::get_public_api, modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::apply_mod_profile,
             steam_store::get_steam_store_details,
-            modrinth::delete_mod_file, modrinth::start_modrinth_download, modrinth::update_mod_file, modrinth::analyze_mod_files,
+            modrinth::delete_mod_file, modrinth::start_modrinth_download, downloads::start_mod_download, modrinth::update_mod_file, modrinth::analyze_mod_files,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Mochi")

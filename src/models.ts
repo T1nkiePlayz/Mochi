@@ -32,6 +32,8 @@ export type Tofu = {
   launch?: TofuLaunchConfig;
   profiles?: ModProfile[];
   activeProfileId?: string;
+  /** Unpack .zip downloads into the folder (for games whose mods are archives, not single files). */
+  extractArchives?: boolean;
 };
 
 export type Piko = {
@@ -65,6 +67,13 @@ export type Piko = {
   artworkSource?: "igdb" | "steamgriddb" | "steam" | "custom";
   /** Metadata the user edited by hand; automatic refreshes leave these alone. */
   lockedFields?: Array<"name" | "description" | "artwork" | "categories">;
+  /** Which mod sites this game is linked to (ids and slugs only; user data, not cached site content). */
+  modLinks?: {
+    curseforge?: { gameId: number; slug: string; name: string };
+    nexus?: { domain: string; name: string };
+    minecraft?: boolean;
+    source: "auto" | "user";
+  };
   tofus: Tofu[];
 };
 

@@ -1,4 +1,5 @@
 import { experimentalIds } from "../lib/experimental";
+import { allSourcesOn, type ModSourceSettings } from "../lib/mods/resolveSources";
 
 export type Behavior = {
   launchOnStartup: boolean;
@@ -18,6 +19,8 @@ export type Behavior = {
   experimental: string[];
   /** Experimental feature ids the user has already been shown. */
   experimentalSeen: string[];
+  /** Which mod sites Mochi may contact and list. Nexus Mods additionally needs a saved key. */
+  modSources: ModSourceSettings;
 };
 
 export const defaultBehavior: Behavior = {
@@ -33,6 +36,7 @@ export const defaultBehavior: Behavior = {
   metadataProvider: "auto",
   experimental: [],
   experimentalSeen: [],
+  modSources: { ...allSourcesOn },
 };
 
 const bool = (value: unknown, fallback: boolean) => (typeof value === "boolean" ? value : fallback);
@@ -43,6 +47,7 @@ export function normalizeBehavior(raw: unknown): Behavior {
   const stored = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const known = new Set(experimentalIds());
   const provider = stored.metadataProvider;
+  const modSources = (stored.modSources && typeof stored.modSources === "object" ? stored.modSources : {}) as Record<string, unknown>;
   return {
     launchOnStartup: bool(stored.launchOnStartup, defaultBehavior.launchOnStartup),
     keepOpen: bool(stored.keepOpen, defaultBehavior.keepOpen),
@@ -56,5 +61,10 @@ export function normalizeBehavior(raw: unknown): Behavior {
     metadataProvider: provider === "igdb" || provider === "steamgriddb" ? provider : "auto",
     experimental: ids(stored.experimental).filter((id) => known.has(id)),
     experimentalSeen: ids(stored.experimentalSeen),
+    modSources: {
+      modrinth: bool(modSources.modrinth, true),
+      curseforge: bool(modSources.curseforge, true),
+      nexus: bool(modSources.nexus, true),
+    },
   };
 }

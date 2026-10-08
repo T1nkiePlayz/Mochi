@@ -1,0 +1,41 @@
+/* Mod browsing for CurseForge and Nexus Mods: browser, cards' extras, details modal, notices, source switch. */
+.mods-browser { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.mods-controls { display: grid; grid-template-columns: minmax(180px, 1fr) repeat(2, minmax(130px, 190px)); gap: 10px; align-items: end; }
+.mods-controls .search-box { width: auto; }
+.mods-controls .mochi-select { display: block; width: 100%; }
+.mods-controls .mochi-select-trigger { min-height: 38px; }
+.mods-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--mochi-text-muted); font-size: 12px; }
+.mods-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); }
+.mods-grid .discover-card { content-visibility: auto; contain-intrinsic-size: auto 150px; }
+.mod-card .discover-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.curseforge-credit { margin: 0; color: var(--mochi-text-muted); font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
+
+.mod-notice { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--mochi-border); border-radius: var(--mochi-radius-lg, 12px); background: var(--mochi-surface-raised); color: var(--mochi-text); font-size: 13px; }
+.mod-notice > span { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.mod-notice.ok { border-color: var(--mochi-accent); }
+.mod-notice.error { border-color: var(--mochi-danger, var(--mochi-border-strong)); }
+
+.mod-source-switch { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--mochi-text-muted); }
+.mod-source-switch button { padding: 6px 12px; border: 1px solid var(--mochi-border); border-radius: 999px; background: var(--mochi-surface); color: var(--mochi-text); cursor: pointer; }
+.mod-source-switch button:hover { border-color: var(--mochi-border-strong); }
+.mod-source-switch button.active { background: var(--mochi-accent-soft); color: var(--mochi-accent-strong); border-color: var(--mochi-accent); }
+.mod-source-switch button:focus-visible { outline: 2px solid var(--mochi-accent); outline-offset: 2px; }
+
+.mod-details .project-overview { overflow: auto; }
+.mod-download-panel { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--mochi-border); border-radius: var(--mochi-radius-lg, 12px); background: var(--mochi-surface-raised); }
+.mod-file-picker { display: grid; gap: 4px; font-size: 12px; color: var(--mochi-text-muted); }
+.mod-file-picker .mochi-select { display: block; width: 100%; }
+.mod-dependencies { margin: 0; font-size: 12px; color: var(--mochi-text-muted); }
+.mod-download-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.mod-html { overflow-wrap: anywhere; }
+.mod-html img { max-width: 100%; height: auto; border-radius: var(--mochi-radius-md, 8px); }
+.mod-html table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+.mod-html th, .mod-html td { padding: 4px 8px; border: 1px solid var(--mochi-border); }
+.mod-html pre { overflow-x: auto; }
+
+.tofu-picker-group + .tofu-picker-group { margin-top: 14px; }
+.tofu-picker-heading { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--mochi-text-muted); }
+.game-mods .discover-empty { margin-top: 8px; }
+
+@media (max-width: 960px) { .mods-controls { grid-template-columns: 1fr 1fr; } .mods-controls .search-box { grid-column: 1 / -1; } }
+@media (max-width: 600px) { .mods-controls { grid-template-columns: 1fr; } }

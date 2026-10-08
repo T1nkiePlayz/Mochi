@@ -20,9 +20,14 @@ hostile image URL cannot phone home or run. `devCsp` is the same policy loosened
 | `form-action` | `'self'` | Forms cannot post to other sites. |
 
 Image hosts: `images.igdb.com` (IGDB), `cdn2.steamgriddb.com` and `*.steamgriddb.com`, `*.steamstatic.com`
-(Steam CDN), `cdn.modrinth.com`, `staticdelivery.nexusmods.com`, `lh3.googleusercontent.com` and
+(Steam CDN), `cdn.modrinth.com`, `staticdelivery.nexusmods.com` and `images.nexusmods.com` (Nexus art), `*.forgecdn.net` (CurseForge logos and screenshots), `lh3.googleusercontent.com` and
 `avatars.githubusercontent.com` (OAuth avatars), `*.supabase.co` (storage), `www.gravatar.com`,
 `cdn.simpleicons.org` and `raw.githubusercontent.com` (source icons in first-launch setup).
+
+CurseForge and Nexus mod downloads are performed by Rust, not the webview, so their download CDNs are not
+in the CSP; they are allow-listed per provider in `src-tauri/src/downloads.rs` instead. CurseForge API calls go
+through the Supabase edge function (`https://*.supabase.co`, already in `connect-src`), so `api.curseforge.com`
+is intentionally absent.
 
 Artwork reaches the webview as `data:` URLs (`game_artwork.rs` caches IGDB images and returns base64) or
 as the remote image URL before it is cached, so no asset-protocol scope is needed

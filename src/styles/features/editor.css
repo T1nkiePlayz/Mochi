@@ -19,7 +19,7 @@
 .metadata-provider-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .metadata-provider-list li { display: grid; grid-template-columns: 90px 1fr auto auto; gap: 10px; align-items: baseline; padding: 8px 10px; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-radius-sm); background: var(--mochi-surface); font-size: 12px; }
 .metadata-value { overflow: hidden; text-overflow: ellipsis; }
-.metadata-source { padding: 2px 8px; border-radius: var(--mochi-pill-radius); background: var(--mochi-accent-soft); color: var(--mochi-accent-text); font-size: 11px; }
+.metadata-source { padding: 2px 8px; border-radius: var(--mochi-pill-radius); background: var(--mochi-accent-soft); color: var(--mochi-text-strong); font-size: 11px; }
 .metadata-match h3 { margin: 4px 0 8px; font-size: 14px; }
 .igdb-candidate.selected { border-color: var(--mochi-accent-strong); }
 

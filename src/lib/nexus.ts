@@ -12,6 +12,8 @@ export type NexusGame = {
 
 export type NexusMod = {
   id: string;
+  /** Numeric Nexus mod id, needed to list files and download. */
+  modId?: number;
   name: string;
   author?: string;
   summary?: string;
@@ -94,3 +96,37 @@ export async function getNexusMods(
     offset: Number(data.offset ?? offset),
   };
 }
+
+/** The numeric Nexus mod id of a listed mod (older server replies only carry it in `id`). */
+export function nexusModId(mod: Pick<NexusMod, "id" | "modId">): number | null {
+  const value = mod.modId ?? Number(mod.id);
+  return Number.isSafeInteger(value) && value > 0 ? value : null;
+}
+
+export type NexusStatus = { configured: boolean; premium: boolean; name?: string };
+export async function getNexusStatus(client: SupabaseClient): Promise<NexusStatus> {
+  const data = await invokeProviderFunction<Partial<NexusStatus>>(client, { action: "nexus-status" });
+  return { configured: data.configured === true, premium: data.premium === true, ...(data.name ? { name: String(data.name) } : {}) };
+}
+
+export type NexusModDetail = {
+  id: number; name: string; summary?: string; description?: string; author?: string; pictureUrl?: string;
+  version?: string; endorsements?: number; modPageUrl: string;
+};
+export async function getNexusModDetail(client: SupabaseClient, gameDomain: string, modId: number): Promise<NexusModDetail> {
+  return invokeProviderFunction<NexusModDetail>(client, { action: "nexus-mod", gameDomain, modId });
+}
+
+export type NexusFile = { fileId: number; name: string; fileName: string; version?: string; category?: string; sizeKb?: number; uploadedAt?: string; primary?: boolean };
+export async function getNexusFiles(client: SupabaseClient, gameDomain: string, modId: number): Promise<NexusFile[]> {
+  const data = await invokeProviderFunction<{ files?: NexusFile[] }>(client, { action: "nexus-files", gameDomain, modId });
+  return Array.isArray(data.files) ? data.files : [];
+}
+
+/** Premium users resolve a link directly; free users need the `key` and `expires` of an nxm:// link. Throws `EdgeFunctionError` with code `premium_required` otherwise. */
+export async function getNexusDownload(client: SupabaseClient, gameDomain: string, modId: number, fileId: number, link?: { key: string; expires: number }): Promise<{ url: string; fileName: string }> {
+  return invokeProviderFunction<{ url: string; fileName: string }>(client, { action: "nexus-download", gameDomain, modId, fileId, ...(link ? { key: link.key, expires: link.expires } : {}) });
+}
+
+export const nexusModPageUrl = (gameDomain: string, modId: number, files = false) =>
+  `https://www.nexusmods.com/${encodeURIComponent(gameDomain)}/mods/${modId}${files ? "?tab=files" : ""}`;

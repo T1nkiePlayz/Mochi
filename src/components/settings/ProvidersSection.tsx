@@ -1,8 +1,12 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { UserRound } from "lucide-react";
 import { Select } from "../ui/Select";
 import { MochiIcon } from "../MochiIcon";
 import { validateNexusApiKey, validateSteamGridDbKey } from "../../lib/providerCredentials";
+import { CF_SITE, CurseforgeError, cfGames } from "../../lib/curseforge";
+import { getNexusStatus, type NexusStatus } from "../../lib/nexus";
+import { openExternalUrl } from "../../lib/platform";
+import { supabase } from "../../lib/supabase";
 import { useApp } from "../../state/AppContext";
 import { SettingsGroup } from "./Section";
 
@@ -16,6 +20,48 @@ const sourceOptions = [
   { value: "igdb" as const, label: "IGDB only", description: "Text, genres, screenshots, trailers and IGDB covers" },
   { value: "steamgriddb" as const, label: "SteamGridDB only", description: "Artwork only; text is left as it is" },
 ];
+
+type CfState = "checking" | "reachable" | "not_configured" | "offline" | "error";
+const cfStateText: Record<CfState, string> = { checking: "Checking...", reachable: "Reachable", not_configured: "Not configured on the server", offline: "Offline", error: "Unavailable" };
+
+/** A cheap one-item `games` request tells whether the proxy works. Nothing it returns is kept. */
+function CurseforgeCard({ enabled }: { enabled: boolean }) {
+  const [state, setState] = useState<CfState>("checking");
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    setState("checking");
+    void cfGames(0, 1).then(() => { if (!cancelled) setState("reachable"); }).catch((error) => {
+      if (cancelled) return;
+      const kind = error instanceof CurseforgeError ? error.kind : "error";
+      setState(kind === "not_configured" ? "not_configured" : kind === "offline" ? "offline" : "error");
+    });
+    return () => { cancelled = true; };
+  }, [enabled]);
+  return <div className="provider-credential-card">
+    <div className="provider-credential-heading"><div><strong>CurseForge</strong><small>No key or account needed. Mochi provides access to CurseForge for you, so mods for most games work out of the box.</small></div>
+      <span className={enabled && state === "reachable" ? "credential-status saved" : "credential-status"} role="status">{enabled ? cfStateText[state] : "Turned off"}</span></div>
+    <small className="metadata-note">Powered by CurseForge. Some authors disable downloads outside CurseForge; Mochi then opens the mod's CurseForge page instead. You can turn CurseForge off under Mod sources.</small>
+    <button type="button" className="secondary-button" onClick={() => void openExternalUrl(CF_SITE).catch(() => undefined)}>Open curseforge.com</button>
+  </div>;
+}
+
+function NexusMembership() {
+  const [status, setStatus] = useState<NexusStatus | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (!supabase) return;
+    let cancelled = false;
+    void getNexusStatus(supabase).then((value) => { if (!cancelled) setStatus(value); }).catch(() => { if (!cancelled) setFailed(true); });
+    return () => { cancelled = true; };
+  }, []);
+  return <small className="metadata-note" role="status">
+    {failed ? "Could not check your Nexus membership right now." : !status ? "Checking your Nexus membership..." : status.premium
+      ? `Nexus Premium${status.name ? ` (${status.name})` : ""}: Mochi can download files directly into a Tofu.`
+      : `Free Nexus account${status.name ? ` (${status.name})` : ""}: you can browse mods and Mochi opens the Nexus page for each file, because Nexus only gives direct download links to Premium members.`}
+    {" "}Nexus is used only for games that are not on CurseForge.
+  </small>;
+}
 
 export function ProvidersSection() {
   const { account, credentials: c, behavior, setBehavior } = useApp();
@@ -55,7 +101,9 @@ export function ProvidersSection() {
           <small className="metadata-note">Use the full Personal API Key (at least 32 characters). Mochi verifies it with Nexus Mods before saving.</small>
           <button className="secondary-button" onClick={() => void c.save("nexus")} disabled={c.busy !== null || Boolean(validateNexusApiKey(c.nexusApiKey))}>{c.busy === "nexus" ? "Validating..." : "Save Nexus securely"}</button>{removeButton("nexus", c.status.nexus)}
         </> : signIn}
+        {user && c.status.nexus && <NexusMembership />}
       </div>
+      <CurseforgeCard enabled={behavior.modSources.curseforge} />
     </div>
     {c.message && <small className="metadata-note settings-note" role="status">{c.message}</small>}
   </SettingsGroup>;

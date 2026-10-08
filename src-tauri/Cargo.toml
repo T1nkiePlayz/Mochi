@@ -21,6 +21,7 @@ base64 = "0.21.7"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 flate2 = "1"
 sha1 = "0.10"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 libc = "0.2"
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp", "gif"] }
 gilrs = "0.11.2"
