@@ -112,7 +112,7 @@ One Piko can therefore have multiple Tofus without duplicating the game's identi
 - A dedicated high-contrast light theme with light-specific icon assets.
 - Guided first-launch setup with separated Welcome, account, IGDB, and import stages.
 - Setup navigation with Previous on the left and Next on the right.
-- In-app notification centre with unread indicator and Linux desktop notifications through `notify-send`.
+- In-app notification centre with unread indicator and native desktop notifications on Linux (`notify-send`) and macOS (`osascript`).
 - Account control beneath the Mochi branding, showing username when available and supporting up to **five saved accounts**.
 
 ### Account switching and security
@@ -356,7 +356,7 @@ Platform-specific implementations live under src-tauri/src/platform/.
 
 Game-source discovery is intentionally separate from operating-system support. Linux source integrations live under src-tauri/src/sources/ and currently cover Flatpak, Steam, Heroic Games Launcher, Lutris, Bottles, and itch.io. Mochi reads existing local launcher state without modifying or uninstalling the source installation, then stores a launch target that hands execution back to the source launcher where appropriate. This keeps Wine/Proton prefixes, Steam runtime behavior, launcher authentication, and source-specific configuration owned by the original platform.
 
-The current structure separates Linux, macOS, and unsupported-platform behavior. This makes future platform work easier to reason about and avoids scattering operating-system checks across unrelated components.
+The current structure separates Linux, macOS, and unsupported-platform behavior. Each platform adapter owns its configurable native commands, paths, launch methods, startup integration, notifications, and capability values. This keeps future platform work out of unrelated components.
 
 ## Platform support
 
