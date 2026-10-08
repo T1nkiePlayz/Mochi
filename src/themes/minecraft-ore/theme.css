@@ -18,6 +18,21 @@
 .sidebar-account:hover { background: #47484A; border-color: #0E0E0F; }
 .account-avatar { border-radius: 0; border: 2px solid #0E0E0F; background: #1C1D1D; image-rendering: pixelated; }
 
+/* Centre the navigation tabs in the top bar. Narrow windows: the tabs sit centred in the space
+ * between the brand and the right-hand controls. Wide windows: centred on the window itself. */
+.primary-nav { order: 1; margin: 0 auto; }
+.sidebar-bottom { order: 2; }
+@media (min-width: 1180px) {
+  .sidebar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; }
+  .sidebar .brand { grid-column: 1; grid-row: 1; justify-self: start; }
+  .sidebar .primary-nav { grid-column: 2; grid-row: 1; margin: 0; justify-self: center; }
+  .sidebar .sidebar-account-wrap { grid-column: 3; grid-row: 1; justify-self: end; margin: 0; width: 230px; }
+  .sidebar .sidebar-bottom { grid-column: 3; grid-row: 1; justify-self: end; margin: 0 242px 0 0; }
+}
+
+/* Icons: this theme's pixel artwork is drawn as authored (not tinted) and kept crisp. */
+:root { --mochi-icon-mode: image; --mochi-icon-rendering: pixelated; }
+
 /* Top bar becomes the Prism toolbar strip */
 .topbar { background: #2A2B2C; box-shadow: inset 0 -2px 0 #39393B; }
 .breadcrumb, .breadcrumb strong { font-family: var(--mochi-font-display); font-size: 14px; }
