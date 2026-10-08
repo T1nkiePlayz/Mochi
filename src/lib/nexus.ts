@@ -62,7 +62,7 @@ export async function getNexusGames(client: SupabaseClient, query = ""): Promise
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
 
-  const values = Array.isArray(data?.games)
+  const values: unknown[] = Array.isArray(data?.games)
     ? data.games
     : Array.isArray(data?.data?.games)
       ? data.data.games
