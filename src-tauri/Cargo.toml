@@ -11,6 +11,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-dialog = "2"
+url = "2"
 tauri-plugin-deep-link = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"

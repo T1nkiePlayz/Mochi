@@ -17,6 +17,7 @@ mod steam_store;
 mod themes;
 mod tracking;
 mod tray;
+mod url_policy;
 mod util;
 
 #[derive(Deserialize)]
@@ -41,7 +42,21 @@ fn send_system_notification(title: String, body: String) -> Result<(), String> {
 }
 
 #[tauri::command(async)]
-fn open_external_url(url: String) -> Result<(), String> { platform::open_external_url(&url) }
+fn open_external_url(app: tauri::AppHandle, url: String) -> Result<(), String> {
+    use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+    match url_policy::evaluate(&url)? {
+        url_policy::UrlDecision::Open(url) => platform::open_external_url(&url),
+        url_policy::UrlDecision::Confirm { url, host } => {
+            let approved = app.dialog()
+                .message(format!("Mochi is about to open this link in your browser:\n\n{url}\n\n{host} is not a site Mochi knows. Only continue if you trust it."))
+                .title("Open external link?")
+                .kind(MessageDialogKind::Warning)
+                .buttons(MessageDialogButtons::OkCancelCustom("Open".into(), "Cancel".into()))
+                .blocking_show();
+            if approved { platform::open_external_url(&url) } else { Err("Cancelled.".into()) }
+        }
+    }
+}
 
 #[tauri::command(async)]
 fn open_path_in_file_manager(path: String) -> Result<(), String> { platform::open_path(&path) }

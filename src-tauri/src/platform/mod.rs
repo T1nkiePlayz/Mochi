@@ -234,11 +234,10 @@ pub fn safe_launch_id(id: &str) -> Result<&str, String> {
 }
 
 pub fn open_external_url(url: &str) -> Result<(), String> {
-    let trimmed = url.trim();
-    if !(trimmed.starts_with("https://") || trimmed.starts_with("http://") || trimmed.starts_with("mochi://")) {
-        return Err("Only http(s) and Mochi URLs can be opened externally.".into());
+    // Callers go through `url_policy::evaluate`; this is the last line of defence.
+    match crate::url_policy::evaluate(url)? {
+        crate::url_policy::UrlDecision::Open(url) | crate::url_policy::UrlDecision::Confirm { url, .. } => os::open_url(&url),
     }
-    os::open_url(trimmed)
 }
 
 /// Opens a folder (or reveals a file) in the system file manager.
