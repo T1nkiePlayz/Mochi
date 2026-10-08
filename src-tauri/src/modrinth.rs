@@ -150,16 +150,114 @@ pub fn list_downloads() -> Vec<DownloadEntry> {
     entries
 }
 
-#[tauri::command]
-pub async fn get_public_api(url: String) -> Result<Value, String> {
-    let parsed = reqwest::Url::parse(&url).map_err(|_| "Invalid Modrinth API URL.".to_string())?;
-    if parsed.scheme() != "https" || parsed.host_str() != Some("api.modrinth.com") || !parsed.path().starts_with("/v2/") {
+/// Public API responses are cached on disk so Discover keeps working offline.
+const API_CACHE_FRESH_MS: u64 = 15 * 60 * 1000;
+const API_CACHE_MAX_STALE_MS: u64 = 30 * 24 * 60 * 60 * 1000;
+const API_CACHE_MAX_ENTRIES: usize = 400;
+const API_MAX_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicApiResponse {
+    pub data: Value,
+    /// Served from the disk cache instead of the network.
+    pub cached: bool,
+    /// Served from the cache because the network request failed (offline, rate limited, ...).
+    pub stale: bool,
+    pub fetched_at: u64,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum CacheAge { Fresh, Usable, Expired }
+
+fn classify_cache_age(age_ms: u64) -> CacheAge {
+    if age_ms <= API_CACHE_FRESH_MS { CacheAge::Fresh } else if age_ms <= API_CACHE_MAX_STALE_MS { CacheAge::Usable } else { CacheAge::Expired }
+}
+
+/// Only the public Modrinth API over HTTPS may be queried.
+fn parse_api_url(url: &str) -> Result<reqwest::Url, String> {
+    let parsed = reqwest::Url::parse(url).map_err(|_| "Invalid Modrinth API URL.".to_string())?;
+    if parsed.scheme() != "https" || parsed.host_str() != Some("api.modrinth.com") || !parsed.path().starts_with("/v2/") || parsed.port().is_some() {
         return Err("Mochi only allows requests to the public Modrinth API.".into());
     }
-    let response = client()?.get(parsed).header(reqwest::header::ACCEPT, "application/json").timeout(std::time::Duration::from_secs(20))
+    Ok(parsed)
+}
+
+fn cache_file(dir: &Path, url: &reqwest::Url) -> PathBuf {
+    let mut hasher = Sha1::new();
+    hasher.update(url.as_str().as_bytes());
+    let hex: String = hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect();
+    dir.join(format!("{hex}.json"))
+}
+
+fn read_cache(path: &Path) -> Option<(Value, u64)> {
+    let parsed: Value = serde_json::from_slice(&fs::read(path).ok()?).ok()?;
+    Some((parsed.get("data")?.clone(), parsed.get("fetchedAt")?.as_u64()?))
+}
+
+fn prune_cache(dir: &Path) {
+    let Ok(read) = fs::read_dir(dir) else { return };
+    let mut entries: Vec<(SystemTime, PathBuf)> = read.flatten()
+        .filter_map(|entry| Some((entry.metadata().ok()?.modified().ok()?, entry.path())))
+        .collect();
+    if entries.len() <= API_CACHE_MAX_ENTRIES { return; }
+    entries.sort_by_key(|(modified, _)| *modified);
+    let excess = entries.len() - API_CACHE_MAX_ENTRIES;
+    for (_, path) in entries.into_iter().take(excess) { let _ = fs::remove_file(path); }
+}
+
+fn write_cache(dir: &Path, path: &Path, data: &Value, fetched_at: u64) {
+    if fs::create_dir_all(dir).is_err() { return; }
+    let body = json!({ "fetchedAt": fetched_at, "data": data });
+    // Write-then-rename so a crash never leaves a truncated cache entry behind.
+    let tmp = path.with_extension("tmp");
+    if serde_json::to_vec(&body).ok().and_then(|bytes| fs::write(&tmp, bytes).ok()).is_some() && fs::rename(&tmp, path).is_err() {
+        let _ = fs::remove_file(&tmp);
+    }
+    prune_cache(dir);
+}
+
+async fn fetch_api(url: reqwest::Url) -> Result<Value, String> {
+    let mut response = client()?.get(url).header(reqwest::header::ACCEPT, "application/json").timeout(std::time::Duration::from_secs(20))
         .send().await.map_err(|error| format!("Unable to reach Modrinth: {error}"))?;
-    if !response.status().is_success() { return Err(format!("Modrinth request failed ({}).", response.status())); }
-    response.json().await.map_err(|error| format!("Modrinth returned invalid data: {error}"))
+    let status = response.status();
+    if status == reqwest::StatusCode::TOO_MANY_REQUESTS { return Err("Modrinth is rate limiting requests right now (429). Try again in a minute.".into()); }
+    if !status.is_success() { return Err(format!("Modrinth request failed ({status}).")); }
+    if response.content_length().map(|length| length as usize > API_MAX_RESPONSE_BYTES).unwrap_or(false) {
+        return Err("Modrinth returned an unexpectedly large response.".into());
+    }
+    let mut body: Vec<u8> = Vec::new();
+    while let Some(chunk) = response.chunk().await.map_err(|error| format!("Modrinth connection dropped: {error}"))? {
+        if body.len() + chunk.len() > API_MAX_RESPONSE_BYTES { return Err("Modrinth returned an unexpectedly large response.".into()); }
+        body.extend_from_slice(&chunk);
+    }
+    serde_json::from_slice(&body).map_err(|error| format!("Modrinth returned invalid data: {error}"))
+}
+
+#[tauri::command]
+pub async fn get_public_api(app: tauri::AppHandle, url: String) -> Result<PublicApiResponse, String> {
+    use tauri::Manager;
+    let parsed = parse_api_url(&url)?;
+    let dir = app.path().app_cache_dir().ok().map(|dir| dir.join("modrinth-api"));
+    let path = dir.as_ref().map(|dir| cache_file(dir, &parsed));
+    let cached = path.as_deref().and_then(read_cache);
+    if let Some((data, fetched_at)) = &cached {
+        if classify_cache_age(now_ms().saturating_sub(*fetched_at)) == CacheAge::Fresh {
+            return Ok(PublicApiResponse { data: data.clone(), cached: true, stale: false, fetched_at: *fetched_at });
+        }
+    }
+    match fetch_api(parsed).await {
+        Ok(data) => {
+            let fetched_at = now_ms();
+            if let (Some(dir), Some(path)) = (&dir, &path) { write_cache(dir, path, &data, fetched_at); }
+            Ok(PublicApiResponse { data, cached: false, stale: false, fetched_at })
+        }
+        Err(error) => match cached {
+            Some((data, fetched_at)) if classify_cache_age(now_ms().saturating_sub(fetched_at)) != CacheAge::Expired =>
+                Ok(PublicApiResponse { data, cached: true, stale: true, fetched_at }),
+            _ => Err(error),
+        },
+    }
 }
 
 #[tauri::command(async)]
@@ -366,5 +464,38 @@ mod tests {
         assert!(parse_cdn_url("https://cdn.modrinth.com/data/x/y.jar").is_ok());
         assert!(parse_cdn_url("http://cdn.modrinth.com/data/x/y.jar").is_err());
         assert!(parse_cdn_url("https://evil.example/y.jar").is_err());
+    }
+
+    #[test]
+    fn api_hosts_are_whitelisted() {
+        assert!(parse_api_url("https://api.modrinth.com/v2/search?limit=1").is_ok());
+        assert!(parse_api_url("http://api.modrinth.com/v2/search").is_err());
+        assert!(parse_api_url("https://api.modrinth.com.evil.example/v2/search").is_err());
+        assert!(parse_api_url("https://evil.example/v2/search").is_err());
+        assert!(parse_api_url("https://api.modrinth.com/other").is_err());
+        assert!(parse_api_url("https://api.modrinth.com:8443/v2/search").is_err());
+    }
+
+    #[test]
+    fn cache_age_is_classified() {
+        assert_eq!(classify_cache_age(0), CacheAge::Fresh);
+        assert_eq!(classify_cache_age(API_CACHE_FRESH_MS), CacheAge::Fresh);
+        assert_eq!(classify_cache_age(API_CACHE_FRESH_MS + 1), CacheAge::Usable);
+        assert_eq!(classify_cache_age(API_CACHE_MAX_STALE_MS), CacheAge::Usable);
+        assert_eq!(classify_cache_age(API_CACHE_MAX_STALE_MS + 1), CacheAge::Expired);
+    }
+
+    #[test]
+    fn cache_round_trips_and_keys_differ_per_url() {
+        let dir = std::env::temp_dir().join(format!("mochi-api-cache-test-{}", now_ms()));
+        let a = reqwest::Url::parse("https://api.modrinth.com/v2/search?offset=0").unwrap();
+        let b = reqwest::Url::parse("https://api.modrinth.com/v2/search?offset=20").unwrap();
+        assert_ne!(cache_file(&dir, &a), cache_file(&dir, &b));
+        assert!(read_cache(&cache_file(&dir, &a)).is_none());
+        write_cache(&dir, &cache_file(&dir, &a), &json!({ "hits": [1, 2] }), 1234);
+        let (data, at) = read_cache(&cache_file(&dir, &a)).expect("cache entry");
+        assert_eq!(at, 1234);
+        assert_eq!(data["hits"][1], 2);
+        let _ = fs::remove_dir_all(&dir);
     }
 }
