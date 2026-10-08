@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Gamepad2 } from "lucide-react";
 import { AddGameModals } from "./components/AddGameModals";
 import { AuthModal } from "./components/AuthModal";
@@ -11,6 +11,9 @@ import { Sidebar } from "./components/layout/Sidebar";
 import { Topbar } from "./components/layout/Topbar";
 import { LibraryView } from "./views/LibraryView";
 import { AppProvider, useApp } from "./state/AppContext";
+import { AccessibilityProvider } from "./state/accessibility";
+import { ShortcutsHelp } from "./components/ShortcutsHelp";
+import { installAccessibilityEnhancer } from "./lib/dialogs";
 import { Cloud } from "lucide-react";
 
 // Everything except the library loads on demand so the launcher reaches an interactive library sooner.
@@ -43,6 +46,10 @@ function Footer() {
   return <footer><span>Mochi v{__APP_VERSION__} · Local-first by design</span><span><MochiIcon name="cloud" fallback={Cloud} size={13} /> {label}</span></footer>;
 }
 
+function SkipLink() {
+  return <a className="skip-link" href="#main-content" onClick={(event) => { event.preventDefault(); const main = document.getElementById("main-content"); main?.focus(); main?.scrollIntoView(); }}>Skip to content</a>;
+}
+
 function Shell() {
   const app = useApp();
   const { lib, credentials, account, themeEngine } = app;
@@ -65,8 +72,9 @@ function Shell() {
 
   const editing = lib.library.find((piko) => piko.id === app.editingGameId);
   return <div className="app-shell">
+    <SkipLink />
     <Sidebar />
-    <main className="main-content">
+    <main className="main-content" id="main-content" tabIndex={-1}>
       <Topbar />
       <div className="content">
         <ErrorBoundary resetKey={app.activeNav}>
@@ -83,5 +91,6 @@ function Shell() {
 }
 
 export default function App() {
-  return <AppProvider><Shell /></AppProvider>;
+  useEffect(() => installAccessibilityEnhancer(), []);
+  return <AccessibilityProvider><AppProvider><Shell /><ShortcutsHelp /></AppProvider></AccessibilityProvider>;
 }

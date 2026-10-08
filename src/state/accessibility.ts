@@ -109,7 +109,7 @@ export function applyAccessibility(a: Accessibility, root: HTMLElement = documen
   set("textLabels", flag(a.textLabels));
   set("keepControls", flag(a.keepControlsVisible));
   set("simpleBackground", flag(a.simpleBackground));
-  set("scheme", getComputedStyle(root).colorScheme.includes("light") && !getComputedStyle(root).colorScheme.includes("dark") ? "light" : "dark");
+  set("scheme", root.style.colorScheme.includes("light") ? "light" : "dark");
   root.style.setProperty("--mochi-ui-scale", String(a.textScale / 100));
   root.style.setProperty("--mochi-a11y-focus-offset", `${a.focusOffset}px`);
 }
@@ -126,9 +126,10 @@ const AccessibilityContext = createContext<Ctx | null>(null);
 
 export function AccessibilityProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Accessibility>(loadAccessibility);
-  const [, setSystemTick] = useState(0);
+  const [systemTick, setSystemTick] = useState(0);
 
-  useEffect(() => { applyAccessibility(settings); writeJson(storageKeys.accessibility, settings); }, [settings]);
+  useEffect(() => { applyAccessibility(settings); }, [settings, systemTick]);
+  useEffect(() => { writeJson(storageKeys.accessibility, settings); }, [settings]);
 
   // Re-resolve "System" choices when the OS preference changes, and track the theme's colour scheme.
   useEffect(() => {
@@ -142,11 +143,10 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["style", "data-mochi-theme"] });
     return () => { lists.forEach((l) => l?.removeEventListener?.("change", onChange)); observer.disconnect(); };
   }, []);
-  useEffect(() => { applyAccessibility(settings); });
 
   const update = useCallback((changes: Partial<Accessibility>) => setSettings((current) => normalizeAccessibility({ ...current, ...changes })), []);
   const reset = useCallback(() => setSettings(defaultAccessibility), []);
-  const value = useMemo(() => ({ settings, update, reset, effective: effectiveAccessibility(settings) }), [settings, update, reset]);
+  const value = useMemo(() => ({ settings, update, reset, effective: effectiveAccessibility(settings) }), [settings, update, reset, systemTick]);
   return createElement(AccessibilityContext.Provider, { value }, children);
 }
 
