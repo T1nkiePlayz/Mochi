@@ -229,6 +229,7 @@ The current launch layer recognises several target types:
 | .sh / .bash | Runs the script through sh |
 | .py | Runs the script through python3 |
 | .js | Runs the script through node |
+| macOS `.app` | Opens the application bundle through macOS |
 | Custom | Preserves a supported custom launch target |
 
 The exact capabilities are reported by the native platform adapter. Platform-specific values such as launch methods, application-bundle support, startup support, notifications, and native paths are kept inside the relevant adapter rather than being hard-coded in shared UI code.
