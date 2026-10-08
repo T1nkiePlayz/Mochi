@@ -226,7 +226,7 @@ The setup flow covers:
 3. **IGDB** — optionally configures local IGDB credentials.
 4. **Game imports** — detects supported game sources and lets the user choose which detected sources to scan.
 
-The import system has native platform adapters for Linux and macOS. Linux supports Flatpak, Steam, Steam non-Steam shortcuts, Heroic Games Launcher, Lutris, Bottles, and itch.io. macOS supports Steam, Heroic Games Launcher, Lutris, Bottles, and itch.io when their native applications and local data are present.
+The import system has native platform adapters for Linux and macOS. Linux supports Flatpak, Steam, Steam non-Steam shortcuts, Heroic Games Launcher, Lutris, Bottles, and itch.io. macOS supports Steam, Heroic Games Launcher (Epic, GOG, Amazon, sideloaded), the Epic Games Launcher, itch.io, Whisky pins, and any game `.app` in /Applications or ~/Applications when their local data is present. Lutris and Bottles are Linux-only. See [docs/macos.md](docs/macos.md).
 
 The standalone **Import Games** flow can rescan sources, select individual games, and manually point Mochi at a supported library path when automatic detection does not find a source.
 

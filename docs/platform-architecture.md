@@ -70,7 +70,7 @@ Current macOS support includes:
 2. Native executable, shell, Python, and JavaScript launching.
 3. Steam library discovery using macOS application-support paths and Steam library manifests.
 4. Steam, Heroic and itch.io source detection/import, plus an Applications-folder source for games that declare the games category.
-5. macOS process tracking for playtime and launcher hand-off detection.
+5. macOS process tracking for playtime and launcher hand-off detection (`ps -axww`, parsed by `process::parse_ps`).
 6. Launch-at-login through a per-user LaunchAgent.
 7. Native URL opening through `open`.
 8. Native desktop notifications through `osascript`.
@@ -84,7 +84,7 @@ Public macOS distribution requires Apple Developer credentials supplied as repos
 
 ## Game sessions
 
-`playtime.rs` owns running-game state. A launch returns whether the child is the game itself; direct launches are tracked by the process group Mochi created, while hand-offs are tracked by install path. `stop_game` signals the group (SIGTERM, then SIGKILL after five seconds). The frontend subscribes to the `game-sessions-changed` event through `src/hooks.ts`.
+`playtime.rs` owns running-game state. A launch returns whether the child is the game itself; direct launches are tracked by the process group Mochi created, while hand-offs (Steam, Heroic, `open`, Flatpak) are followed by `tracking.rs`, a pure matcher over a process-table snapshot: Steam `AppId=` arguments and `SteamAppId`-style environment variables (read only for processes started after the launch), install-folder / `.app` bundle prefixes (also across Flatpak mounts and Wine `Z:\` paths), Flatpak ids, plus every descendant of a matched process. A session ends only after the game has been gone for 12 seconds, and a game Mochi never detects is not credited. `stop_game` signals the group (SIGTERM, then SIGKILL after five seconds). The frontend subscribes to the `game-sessions-changed` event through `src/hooks.ts`.
 
 ## Design rule
 
