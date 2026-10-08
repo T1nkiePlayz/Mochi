@@ -46,9 +46,7 @@ export type InstalledModrinthFile = { filename: string; path: string; enabled: b
 
 const API = "https://api.modrinth.com/v2";
 async function get<T>(url: string): Promise<T> {
-  const response = await fetch(url, { headers: { Accept: "application/json" } });
-  if (!response.ok) throw new Error("Modrinth request failed (" + response.status + ")");
-  return response.json() as Promise<T>;
+  return invoke<T>("get_public_api", { url });
 }
 export async function searchModrinth(query: string, projectType: ModrinthProjectType = "mod"): Promise<ModrinthProject[]> {
   const params = new URLSearchParams({ query: query.trim(), limit: "24", index: "relevance", facets: JSON.stringify([["project_type:" + projectType]]) });

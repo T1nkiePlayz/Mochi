@@ -15,6 +15,12 @@ export type Piko = {
   accent: string;
   artwork: string;
   artworkUrl?: string;
+  artworkCacheKey?: string;
+  igdbId?: number;
+  screenshots?: string[];
+  trailerId?: string;
+  firstReleaseDate?: number;
+  platformCategory?: string;
   executablePath?: string;
   source?: "built-in" | "custom";
   sourceId?: "flatpak" | "heroic" | "steam" | "lutris" | "bottles" | "itch";

@@ -11,7 +11,12 @@ export type IgdbGame = {
   summary?: string;
   cover?: { url?: string };
   artworks?: Array<{ url?: string }>;
+  screenshots?: Array<{ url?: string }>;
+  videos?: Array<{ name?: string; video_id?: string }>;
   genres?: Array<{ name: string }>;
+  themes?: Array<{ name: string }>;
+  game_modes?: Array<{ name: string }>;
+  player_perspectives?: Array<{ name: string }>;
   first_release_date?: number;
 };
 

@@ -33,6 +33,9 @@ function GoogleIcon({ size = 15 }: { size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 12.27c0-.71-.06-1.39-.18-2.04H12v3.86h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.21Z"/><path fill="#34A853" d="M12 21.6c2.63 0 4.84-.87 6.45-2.36l-3.14-2.45c-.87.58-1.98.93-3.31.93-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.6Z"/><path fill="#FBBC05" d="M6.54 13.69A5.84 5.84 0 0 1 6.23 12c0-.59.11-1.16.31-1.69V7.78H3.3A9.72 9.72 0 0 0 2.27 12c0 1.57.38 3.05 1.03 4.22l3.24-2.53Z"/><path fill="#EA4335" d="M12 6.28c1.43 0 2.71.49 3.72 1.46l2.79-2.79C16.83 3.3 14.63 2.4 12 2.4a9.74 9.74 0 0 0-8.7 5.38l3.24 2.53C7.31 8 9.46 6.28 12 6.28Z"/></svg>;
 }
 import { AccountAvatar } from "./components/AccountAvatar";
+import { GameArtwork } from "./components/GameArtwork";
+import { GameDetails } from "./components/GameDetails";
+import { LibraryModSearch } from "./components/LibraryModSearch";
 import { ModrinthManager } from "./components/ModrinthManager";
 import { ModrinthDiscover } from "./components/ModrinthDiscover";
 import { MochiIcon } from "./components/MochiIcon";
@@ -73,6 +76,30 @@ const storedPikosKey = "mochi:pikos";
 const storedSettingsKey = "mochi:settings";
 const setupCompleteKey = "mochi:setup-complete";
 const importSourcesKey = "mochi:import-sources";
+const igdbCacheKey = (userId?: string) => `mochi:igdb-cache:${userId || "local"}`;
+const profileStorageKey = (userId: string, key: string) => `mochi:profile:${userId}:${key}`;
+function gameSearchMatches(query: string, candidate: string): boolean {
+  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const needle = normalize(query);
+  const haystack = normalize(candidate);
+  if (!needle || !haystack) return false;
+  if (haystack.includes(needle)) return true;
+  const words = haystack.split(/\s+/);
+  const distance = (left: string, right: string) => {
+    let row = Array.from({ length: right.length + 1 }, (_v, index) => index);
+    for (let i = 1; i <= left.length; i += 1) {
+      const next = [i];
+      for (let j = 1; j <= right.length; j += 1) next[j] = Math.min(next[j-1] + 1, row[j] + 1, row[j-1] + (left[i-1] === right[j-1] ? 0 : 1));
+      row = next;
+    }
+    return row[right.length];
+  };
+  return needle.split(/\s+/).every((word) => words.some((candidateWord) => {
+    if (candidateWord.includes(word) || word.includes(candidateWord)) return Math.min(candidateWord.length, word.length) >= 3;
+    const threshold = Math.min(candidateWord.length, word.length) >= 9 ? 2 : 1;
+    return Math.min(candidateWord.length, word.length) >= 4 && Math.abs(candidateWord.length - word.length) <= threshold && distance(word, candidateWord) <= threshold;
+  }));
+}
 function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + " KiB";
   if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + " MiB";
@@ -92,6 +119,7 @@ function App() {
   const [selectedPikoId, setSelectedPikoId] = useState("");
   const [selectedTofuId, setSelectedTofuId] = useState("");
   const [search, setSearch] = useState("");
+  const [gameDetailsId, setGameDetailsId] = useState("");
   const [showAddPiko, setShowAddPiko] = useState(false);
   const [showNewTofu, setShowNewTofu] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -109,11 +137,12 @@ function App() {
       return [];
     }
   });
-  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; createdAt: number }>>([]);
+  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; createdAt: number; progress?: { value: number; total: number } }>>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showCustomGame, setShowCustomGame] = useState(false);
   const [addGameStep, setAddGameStep] = useState<"form" | "igdb">("form");
-  const [pendingGame, setPendingGame] = useState<{ name: string; executablePath: string; candidates: IgdbGame[] } | null>(null);
+  const [pendingGame, setPendingGame] = useState<{ name: string; executablePath: string; platformCategory: string; candidates: IgdbGame[] } | null>(null);
+  const [platformCategory, setPlatformCategory] = useState("Custom");
   const [launchType, setLaunchType] = useState<LaunchMethodId>("file");
   const [launchTarget, setLaunchTarget] = useState("");
   const [platformCapabilities, setPlatformCapabilities] = useState<PlatformCapabilities | null>(null);
@@ -122,8 +151,11 @@ function App() {
   const [flatpakBusy, setFlatpakBusy] = useState(false);
   const [settings, setSettings] = useState<IgdbSettings>({ clientId: "", clientSecret: "" });
   const [behavior, setBehavior] = useState(() => {
-    try { const stored = JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}"); return { launchOnStartup: Boolean(stored.launchOnStartup), keepOpen: stored.keepOpen !== false, confirmLaunch: stored.confirmLaunch !== false, detailedErrors: Boolean(stored.detailedErrors), experimentalFeatures: Boolean(stored.experimentalFeatures) }; } catch { return { launchOnStartup: false, keepOpen: true, confirmLaunch: true, detailedErrors: false, experimentalFeatures: false }; }
+    try { const stored = JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}"); return { launchOnStartup: Boolean(stored.launchOnStartup), keepOpen: stored.keepOpen !== false, confirmLaunch: stored.confirmLaunch !== false, detailedErrors: Boolean(stored.detailedErrors), experimentalFeatures: Boolean(stored.experimentalFeatures), notificationsEnabled: stored.notificationsEnabled !== false, inAppNotifications: stored.inAppNotifications !== false, systemNotifications: stored.systemNotifications !== false }; } catch { return { launchOnStartup: false, keepOpen: true, confirmLaunch: true, detailedErrors: false, experimentalFeatures: false, notificationsEnabled: true, inAppNotifications: true, systemNotifications: true }; }
   });
+  const [multipleAccountsEnabled, setMultipleAccountsEnabled] = useState(() => { try { return JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}").multipleAccountsEnabled === true; } catch { return false; } });
+  const [accountStorageOwner, setAccountStorageOwner] = useState("uninitialized");
+  const [igdbRefreshBusy, setIgdbRefreshBusy] = useState(false);
   const [igdbMessage, setIgdbMessage] = useState("");
   const [nexusApiKey, setNexusApiKey] = useState("");
   const [credentialStatus, setCredentialStatus] = useState({ igdb: false, nexus: false });
@@ -167,10 +199,16 @@ function App() {
     || user?.user_metadata?.preferred_username
     || (user?.email ? user.email.split("@")[0] : null)
     || "Guest";
+  const activeProfileId = user?.id || "guest";
+  const accountStorageOwnerKey = multipleAccountsEnabled ? `profiles:${activeProfileId}` : "shared";
+  const scopedStorageKey = (key: string) => multipleAccountsEnabled ? profileStorageKey(activeProfileId, key) : key;
   const pushNotification = (title: string, message: string) => {
     const notification = { id: crypto.randomUUID(), title, message, createdAt: Date.now() };
-    setNotifications((current) => [notification, ...current].slice(0, 20));
-    void invoke("send_system_notification", { title, body: message }).catch(() => {});
+    if (behavior.notificationsEnabled && behavior.inAppNotifications) setNotifications((current) => [notification, ...current].slice(0, 20));
+    if (behavior.notificationsEnabled && behavior.systemNotifications) void invoke("send_system_notification", { title, body: message }).catch(() => {});
+  };
+  const updateNotificationProgress = (id: string, progress: { value: number; total: number }, message: string) => {
+    setNotifications(current => current.map(item => item.id === id ? { ...item, message, progress } : item));
   };
   const saveAccountSession = (sessionUser: User, refreshToken: string) => {
     const username = sessionUser.user_metadata?.username
@@ -181,6 +219,19 @@ function App() {
     setSavedAccounts((current) => { const next = [account, ...current.filter((item) => item.id !== account.id)].slice(0, 5); window.localStorage.setItem("mochi:accounts", JSON.stringify(next)); return next; });
   };
   const addAccount = () => { setShowAccountMenu(false); setAuthMode("sign-in"); setAuthError(""); setShowAuth(true); };
+
+  const setMultipleAccountProfiles = (enabled: boolean) => {
+    if (enabled) {
+      window.localStorage.setItem(profileStorageKey(activeProfileId, "pikos"), JSON.stringify(library));
+      window.localStorage.setItem(profileStorageKey(activeProfileId, "settings"), JSON.stringify({ ...behavior, theme }));
+      window.localStorage.setItem(profileStorageKey(activeProfileId, "notifications"), JSON.stringify(notifications));
+    } else {
+      window.localStorage.setItem(storedPikosKey, JSON.stringify(library));
+      window.localStorage.setItem(storedSettingsKey, JSON.stringify({ ...behavior, multipleAccountsEnabled: false }));
+      window.localStorage.setItem("mochi:notifications", JSON.stringify(notifications));
+    }
+    setMultipleAccountsEnabled(enabled);
+  };
 
   const switchAccount = async (account: { id: string; username: string; email: string; refreshToken: string; avatarUrl?: string }) => {
     if (!supabase || account.id === user?.id) { setShowAccountMenu(false); return; }
@@ -221,8 +272,9 @@ function App() {
   };
 
   useEffect(() => {
-    window.localStorage.setItem(storedPikosKey, JSON.stringify(library));
-  }, [library]);
+    if (accountStorageOwner !== accountStorageOwnerKey) return;
+    window.localStorage.setItem(scopedStorageKey("pikos"), JSON.stringify(library));
+  }, [library, accountStorageOwner, accountStorageOwnerKey]);
 
   useEffect(() => {
     void refreshPlaytime();
@@ -230,8 +282,24 @@ function App() {
     return () => window.clearInterval(timer);
   }, []);
   useEffect(() => {
-    window.localStorage.setItem(storedSettingsKey, JSON.stringify({ ...behavior }));
-  }, [behavior]);
+    if (accountStorageOwner !== accountStorageOwnerKey) return;
+    if (multipleAccountsEnabled) window.localStorage.setItem(scopedStorageKey("settings"), JSON.stringify({ ...behavior, theme }));
+    else window.localStorage.setItem(storedSettingsKey, JSON.stringify({ ...behavior, multipleAccountsEnabled }));
+  }, [behavior, theme, multipleAccountsEnabled, accountStorageOwner, accountStorageOwnerKey]);
+
+  useEffect(() => {
+    try {
+      const globalSettings = JSON.parse(window.localStorage.getItem(storedSettingsKey) || "{}");
+      if (globalSettings.multipleAccountsEnabled !== multipleAccountsEnabled) {
+        window.localStorage.setItem(storedSettingsKey, JSON.stringify({ ...globalSettings, multipleAccountsEnabled }));
+      }
+    } catch { /* Recover from malformed local settings on the next save. */ }
+  }, [multipleAccountsEnabled]);
+
+  useEffect(() => {
+    if (accountStorageOwner !== accountStorageOwnerKey) return;
+    window.localStorage.setItem(scopedStorageKey("notifications"), JSON.stringify(notifications));
+  }, [notifications, multipleAccountsEnabled, accountStorageOwner, accountStorageOwnerKey]);
 
   useEffect(() => {
     void invoke("set_launch_on_startup", { enabled: behavior.launchOnStartup }).catch(() => { /* browser/development mode */ });
@@ -326,6 +394,33 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (accountStorageOwner === accountStorageOwnerKey) return;
+    const profileKey = (key: string) => multipleAccountsEnabled ? profileStorageKey(activeProfileId, key) : key;
+    const read = <T,>(key: string, fallback: T): T => {
+      try { const value = window.localStorage.getItem(key); return value ? JSON.parse(value) as T : fallback; } catch { return fallback; }
+    };
+    const fallbackSettings = { launchOnStartup: false, keepOpen: true, confirmLaunch: true, detailedErrors: false, experimentalFeatures: false, notificationsEnabled: true, inAppNotifications: true, systemNotifications: true };
+    const nextLibrary = read<Piko[]>(profileKey("pikos"), multipleAccountsEnabled && user ? [] : read<Piko[]>(storedPikosKey, []));
+    const nextSettings = read<Record<string, unknown>>(profileKey("settings"), multipleAccountsEnabled && user ? fallbackSettings : read<Record<string, unknown>>(storedSettingsKey, fallbackSettings));
+    const nextNotifications = read<Array<{ id: string; title: string; message: string; createdAt: number; progress?: { value: number; total: number } }>>(profileKey("notifications"), multipleAccountsEnabled && user ? [] : read("mochi:notifications", []));
+    setLibrary(nextLibrary);
+    setBehavior({
+      launchOnStartup: Boolean(nextSettings.launchOnStartup), keepOpen: nextSettings.keepOpen !== false,
+      confirmLaunch: nextSettings.confirmLaunch !== false, detailedErrors: Boolean(nextSettings.detailedErrors),
+      experimentalFeatures: Boolean(nextSettings.experimentalFeatures), notificationsEnabled: nextSettings.notificationsEnabled !== false,
+      inAppNotifications: nextSettings.inAppNotifications !== false, systemNotifications: nextSettings.systemNotifications !== false,
+    });
+    setNotifications(nextNotifications);
+    setSelectedPikoId(nextLibrary[0]?.id || "");
+    setSelectedTofuId(nextLibrary[0]?.tofus?.[0]?.id || "");
+    setGameDetailsId("");
+    setShowNotifications(false);
+    if (multipleAccountsEnabled) void setTheme(typeof nextSettings.theme === "string" && themes.some(option => option.id === nextSettings.theme) ? nextSettings.theme : "mochi");
+    setAccountStorageOwner(accountStorageOwnerKey);
+  }, [user?.id, multipleAccountsEnabled, accountStorageOwner, accountStorageOwnerKey]);
+
+  useEffect(() => {
+    if (accountStorageOwner !== accountStorageOwnerKey) return;
     if (!supabase || !user) {
       syncInitialized.current = false;
       setCloudSyncEnabled(false);
@@ -368,10 +463,10 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [user?.id, accountStorageOwner, accountStorageOwnerKey]);
 
   useEffect(() => {
-    if (!supabase || !user || !cloudSyncEnabled || !syncInitialized.current) return;
+    if (accountStorageOwner !== accountStorageOwnerKey || !supabase || !user || !cloudSyncEnabled || !syncInitialized.current) return;
     const client = supabase;
     setSyncState("syncing");
     void pushLibrary(client, user.id, library)
@@ -380,7 +475,7 @@ function App() {
         console.error("Mochi cloud sync failed", error);
         setSyncState("error");
       });
-  }, [library, user?.id, cloudSyncEnabled]);
+  }, [library, user?.id, cloudSyncEnabled, accountStorageOwner, accountStorageOwnerKey]);
 
   const finishFirstLaunchSetup = (games: ImportedGame[], sources: ImportSourceId[]) => {
     window.localStorage.setItem(setupCompleteKey, "true");
@@ -399,9 +494,9 @@ function App() {
   };
   const selectedTofu = selectedPiko.tofus.find((tofu) => tofu.id === selectedTofuId) ?? selectedPiko.tofus[0];
   const visiblePikos = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query = search.trim();
     if (!query) return library;
-    return library.filter((piko) => [piko.name, piko.description, ...(piko.categories ?? [])].some((value) => value?.toLowerCase().includes(query)));
+    return library.filter((piko) => [piko.name, piko.description, piko.platformCategory || "", piko.sourceId || "", ...(piko.categories ?? [])].some((value) => gameSearchMatches(query, value)));
   }, [library, search]);
 
   useEffect(() => {
@@ -417,7 +512,7 @@ function App() {
   const groupedPikos = useMemo(() => {
     const groups = new Map<string, Piko[]>();
     visiblePikos.forEach((piko) => {
-      const category = piko.categories?.[0] || "Other";
+      const category = piko.platformCategory || "Other";
       groups.set(category, [...(groups.get(category) ?? []), piko]);
     });
     return [...groups.entries()].sort(([x], [y]) => x.localeCompare(y));
@@ -449,8 +544,8 @@ function App() {
     }
   };
 
-  const launchGame = async () => {
-    if (selectedPiko.id === "__empty" || !selectedPiko.executablePath) {
+  const launchGame = async (piko: Piko = selectedPiko) => {
+    if (piko.id === "__empty" || !piko.executablePath) {
       setLaunchError("This game does not have an executable path. Add or edit the game to set its executable.");
       return;
     }
@@ -458,9 +553,9 @@ function App() {
     setIsLaunching(true);
     try {
       await invoke("launch_game_tracked", {
-        gameId: selectedPiko.id,
-        name: selectedPiko.name,
-        launchTarget: selectedPiko.executablePath,
+        gameId: piko.id,
+        name: piko.name,
+        launchTarget: piko.executablePath,
       });
       await refreshPlaytime();
     } catch (error) {
@@ -529,17 +624,100 @@ function App() {
     });
   }, []);
 
-  const addGameToLibrary = (name: string, executablePath: string, metadata: IgdbGame | null) => {
-    const artworkUrl = metadata?.cover?.url?.replace("t_thumb", "t_1080p") || metadata?.artworks?.[0]?.url?.replace("t_thumb", "t_1080p");
+  const resolveIgdbImage = (url?: string, size = "t_cover_big") => url ? (url.startsWith("//") ? `https:${url}` : url).replace(/t_[a-z0-9_]+(?=\/)/, size) : undefined;
+  const applyIgdbMetadata = (piko: Piko, metadata: IgdbGame | null): Piko => {
+    const artworkUrl = resolveIgdbImage(metadata?.cover?.url) || resolveIgdbImage(metadata?.artworks?.[0]?.url, "t_1080p");
+    const screenshots = (metadata?.screenshots ?? []).map(item => resolveIgdbImage(item.url, "t_screenshot_big")).filter((url): url is string => Boolean(url)).slice(0, 8);
+    return {
+      ...piko,
+      name: metadata?.name || piko.name,
+      categories: metadata?.genres?.map((genre) => genre.name).filter(Boolean) ?? [],
+      description: metadata?.summary?.trim() || piko.description,
+      artworkUrl,
+      artworkCacheKey: artworkUrl ? piko.artworkCacheKey || piko.id.replace(/[^a-zA-Z0-9_-]/g, "-") : undefined,
+      artwork: artworkUrl ? `linear-gradient(145deg, rgba(10,15,20,.12), rgba(11,15,20,.88)), url('${artworkUrl}')` : piko.artwork,
+      igdbId: metadata?.id,
+      screenshots,
+      trailerId: metadata?.videos?.find(video => video.video_id)?.video_id,
+      firstReleaseDate: metadata?.first_release_date,
+    };
+  };
+  const bestIgdbMatch = (name: string, games: IgdbGame[]) => {
+    const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const expected = normalize(name);
+    const distance = (left: string, right: string) => {
+      let row = Array.from({ length: right.length + 1 }, (_v, index) => index);
+      for (let i = 1; i <= left.length; i += 1) { const next = [i]; for (let j = 1; j <= right.length; j += 1) next[j] = Math.min(next[j-1] + 1, row[j] + 1, row[j-1] + (left[i-1] === right[j-1] ? 0 : 1)); row = next; }
+      return row[right.length];
+    };
+    const ranked = games.map(game => ({ game, score: 1 - distance(expected, normalize(game.name)) / Math.max(expected.length, normalize(game.name).length, 1) })).sort((a,b)=>b.score-a.score);
+    return ranked[0]?.score >= 0.88 ? ranked[0].game : null;
+  };
+  const cacheIgdbArtwork = async (piko: Piko) => {
+    if (!piko.artworkUrl || !piko.artworkCacheKey) return;
+    try { await invoke("cache_game_artwork", { url: piko.artworkUrl, cacheKey: piko.artworkCacheKey }); } catch { /* Keep the remote artwork URL as an offline fallback. */ }
+  };
+  const enrichImportedGames = async (games: Piko[]) => {
+    if (!supabase || !user || !credentialStatus.igdb || !games.length) return;
+    const client = supabase;
+    const userId = user.id;
+    const jobId = crypto.randomUUID();
+    const notification = { id: jobId, title: "IGDB is updating your library", message: `Finding metadata for ${games.length} imported games…`, createdAt: Date.now(), progress: { value: 0, total: games.length } };
+    if (behavior.notificationsEnabled && behavior.inAppNotifications) setNotifications(current => [notification, ...current].slice(0, 20));
+    const cache: Record<string, IgdbGame | null> = (() => { try { return JSON.parse(window.localStorage.getItem(igdbCacheKey(user.id)) || "{}"); } catch { return {}; } })();
+    const resolved = new Map<string, IgdbGame | null>();
+    let completed = 0;
+    const queue = [...games];
+    const workers = Array.from({ length: Math.min(3, queue.length) }, async () => {
+      while (queue.length) {
+        const piko = queue.shift();
+        if (!piko) return;
+        const key = piko.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        try {
+          if (Object.prototype.hasOwnProperty.call(cache, key)) resolved.set(piko.id, cache[key]);
+          else {
+            const candidates = await lookupIgdbGames(client, piko.name);
+            resolved.set(piko.id, bestIgdbMatch(piko.name, candidates));
+          }
+        } catch (error) { console.warn(`IGDB lookup failed for ${piko.name}`, error); resolved.set(piko.id, null); }
+        completed += 1;
+        updateNotificationProgress(jobId, { value: completed, total: games.length }, `Looking up games: ${completed} of ${games.length}`);
+      }
+    });
+    await Promise.all(workers);
+    completed = 0;
+    const artworkQueue = [...games];
+    const artworkWorkers = Array.from({ length: Math.min(3, artworkQueue.length) }, async () => {
+      while (artworkQueue.length) {
+        const piko = artworkQueue.shift();
+        if (!piko) return;
+        const metadata = resolved.get(piko.id) ?? null;
+        if (metadata) {
+          const enriched = applyIgdbMetadata(piko, metadata);
+          if (enriched.artworkUrl) await cacheIgdbArtwork(enriched);
+          const key = piko.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+          cache[key] = metadata;
+        }
+        completed += 1;
+        updateNotificationProgress(jobId, { value: completed, total: games.length }, `Saving cover images and game details: ${completed} of ${games.length}`);
+      }
+    });
+    await Promise.all(artworkWorkers);
+    window.localStorage.setItem(igdbCacheKey(userId), JSON.stringify(cache));
+    setLibrary(current => current.map(piko => resolved.has(piko.id) ? applyIgdbMetadata(piko, resolved.get(piko.id) ?? null) : piko));
+    const completedMessage = `IGDB update finished for ${games.length} games.`;
+    setNotifications(current => current.map(item => item.id === jobId ? { ...item, message: completedMessage, progress: { value: games.length, total: games.length } } : item));
+  };
+
+  const addGameToLibrary = (name: string, executablePath: string, metadata: IgdbGame | null, category = platformCategory.trim() || "Custom") => {
     const piko: Piko = {
-      id: `custom-${Date.now()}`, name: metadata?.name || name, executablePath, source: "custom",
-      categories: metadata?.genres?.map((genre) => genre.name) ?? ["Other"],
-      description: metadata?.summary || "Custom game added to your local library.",
-      accent: "#a99ad6", artworkUrl,
-      artwork: artworkUrl ? `linear-gradient(145deg, rgba(10,15,20,.12), rgba(11,15,20,.88)), url('${artworkUrl}')` : "linear-gradient(145deg, rgba(73,57,103,.35), rgba(20,16,29,.96))",
+      id: `custom-${crypto.randomUUID()}`, name, executablePath, source: "custom", platformCategory: category,
+      categories: [], description: "Custom game added to your local library.", accent: "#a99ad6", artwork: "linear-gradient(145deg, rgba(73,57,103,.35), rgba(20,16,29,.96))",
       tofus: [{ id: "default", name: "Default", version: "Local", runtime: "Native", mods: 0, status: "Ready" }],
     };
-    setLibrary((current) => [...current, piko]);
+    const enriched = applyIgdbMetadata(piko, metadata);
+    setLibrary((current) => [...current, enriched]);
+    void cacheIgdbArtwork(enriched);
     setSelectedPikoId(piko.id);
     setSelectedTofuId("default");
     setPendingGame(null);
@@ -550,27 +728,23 @@ function App() {
 
   const addImportedGames = (games: ImportedGame[]) => {
     const now = Date.now();
-    setLibrary((current) => {
-      const next = [...current];
-      for (const imported of games) {
-        const duplicate = next.find((piko) => piko.name.trim().toLowerCase() === imported.name.trim().toLowerCase());
-        if (duplicate) continue;
-        const piko: Piko = {
-          id: `imported-${imported.source}-${imported.id.replace(/[^a-zA-Z0-9_-]/g, "-")}-${now}`,
-          name: imported.name,
-          description: `Imported from ${imported.source}. The original launcher remains responsible for the installation and runtime.`,
-          accent: "#a99ad6",
-          artwork: "linear-gradient(145deg, rgba(73,57,103,.35), rgba(20,16,29,.96))",
-          executablePath: imported.launchTarget,
-          source: "custom",
-          sourceId: imported.source,
-          categories: ["Other"],
-          tofus: [{ id: "default", name: "Default", version: "Imported", runtime: imported.source, mods: 0, status: "Ready" }],
-        };
-        next.push(piko);
-      }
-      return next;
-    });
+    const freshGames = games.filter(imported => !library.some(piko => piko.name.trim().toLowerCase() === imported.name.trim().toLowerCase()));
+    const created = freshGames.map(imported => ({
+      id: `imported-${imported.source}-${imported.id.replace(/[^a-zA-Z0-9_-]/g, "-")}-${now}`,
+      name: imported.name,
+      description: `Imported from ${imported.source}. The original launcher remains responsible for the installation and runtime.`,
+      accent: "#a99ad6",
+      artwork: "linear-gradient(145deg, rgba(73,57,103,.35), rgba(20,16,29,.96))",
+      artworkCacheKey: `${imported.source}-${imported.id}`.replace(/[^a-zA-Z0-9_-]/g, "-"),
+      executablePath: imported.launchTarget,
+      source: "custom" as const,
+      sourceId: imported.source,
+      platformCategory: imported.source === "steam" ? "Steam" : imported.source === "heroic" ? "Heroic" : imported.source === "lutris" ? "Lutris" : imported.source === "bottles" ? "Bottles" : imported.source === "itch" ? "itch.io" : "Flatpak",
+      categories: [],
+      tofus: [{ id: "default", name: "Default", version: "Imported", runtime: imported.source, mods: 0, status: "Ready" as const }],
+    } satisfies Piko));
+    setLibrary(current => [...current, ...created.filter(piko => !current.some(item => item.id === piko.id))]);
+    if (created.length && credentialStatus.igdb) void enrichImportedGames(created);
     if (games[0]) {
       const first = games[0];
       const id = `imported-${first.source}-${first.id.replace(/[^a-zA-Z0-9_-]/g, "-")}-${now}`;
@@ -597,11 +771,11 @@ function App() {
     setIgdbBusy(true);
     try {
       const candidates = await lookupIgdbGames(supabase!, name);
-      setPendingGame({ name, executablePath, candidates });
+      setPendingGame({ name, executablePath, platformCategory: String(form.get("platformCategory") || "Custom").trim() || "Custom", candidates });
       setAddGameStep("igdb");
     } catch (error) {
       console.warn("IGDB lookup failed", error);
-      setPendingGame({ name, executablePath, candidates: [] });
+      setPendingGame({ name, executablePath, platformCategory: String(form.get("platformCategory") || "Custom").trim() || "Custom", candidates: [] });
       setAddGameStep("igdb");
     } finally {
       setIgdbBusy(false);
@@ -612,7 +786,36 @@ function App() {
 
   const approveIgdbGame = (metadata: IgdbGame | null) => {
     if (!pendingGame) return;
-    addGameToLibrary(pendingGame.name, pendingGame.executablePath, metadata);
+    addGameToLibrary(pendingGame.name, pendingGame.executablePath, metadata, pendingGame.platformCategory);
+  };
+
+  const refreshAllIgdbData = async () => {
+    if (!supabase || !user || !credentialStatus.igdb || igdbRefreshBusy) return;
+    setIgdbRefreshBusy(true);
+    try {
+      window.localStorage.removeItem(igdbCacheKey(user.id));
+      await invoke("clear_game_artwork_cache");
+      setLibrary(current => current.map(piko => ({
+        ...piko,
+        igdbId: undefined,
+        artworkUrl: undefined,
+        artworkCacheKey: undefined,
+        screenshots: undefined,
+        trailerId: undefined,
+        firstReleaseDate: undefined,
+        categories: piko.sourceId ? [] : piko.categories,
+        description: piko.sourceId ? `Imported from ${piko.platformCategory || piko.sourceId}. The original launcher remains responsible for the installation and runtime.` : piko.description,
+        artwork: piko.sourceId ? "linear-gradient(145deg, rgba(73,57,103,.35), rgba(20,16,29,.96))" : piko.artwork,
+      })));
+      const candidates = library.filter(piko => Boolean(piko.sourceId || piko.platformCategory));
+      pushNotification("IGDB refresh started", `Refreshing metadata for ${candidates.length} library games.`);
+      await enrichImportedGames(candidates);
+      pushNotification("IGDB refresh finished", `Updated metadata for ${candidates.length} library games.`);
+    } catch (error) {
+      pushNotification("IGDB refresh failed", error instanceof Error ? error.message : "Could not refresh game metadata.");
+    } finally {
+      setIgdbRefreshBusy(false);
+    }
   };
 
   useEffect(() => {
@@ -988,11 +1191,11 @@ function App() {
         <div className="brand"><div className="brand-mark"><img src="/mochi.png" alt="Mochi" /></div><div><strong>Mochi</strong><span>Your games, your way.</span></div></div>
         <div className="sidebar-account-wrap">
           <button className="sidebar-account" aria-expanded={showAccountMenu} onClick={() => setShowAccountMenu((open) => !open)}><AccountAvatar user={user} size={34} /><span><strong>{currentUsername}</strong><small>{user ? "Mochi account" : "Sign in to Mochi"}</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={14} /></button>
-          {showAccountMenu && <div className="account-menu">{savedAccounts.map((account) => <button type="button" key={account.id} className={account.id === user?.id ? "selected" : ""} onClick={() => void switchAccount(account)}><span className="account-menu-avatar">{account.avatarUrl ? <img className="account-menu-avatar-image" src={account.avatarUrl} alt="" referrerPolicy="no-referrer" /> : account.username.slice(0, 1).toUpperCase()}</span><span><strong>{account.username}</strong><small>Mochi account</small></span></button>)}{!user && <button type="button" className="account-menu-add" onClick={addAccount}><Plus size={14} /><span><strong>Sign in</strong><small>Add a Mochi account</small></span></button>}{user && savedAccounts.length < 5 && <button type="button" className="account-menu-add" onClick={addAccount}><Plus size={14} /><span><strong>Add User</strong><small>Sign in to another Mochi account</small></span></button>}{user && <button type="button" className="account-menu-add" onClick={signOut}><span className="account-menu-avatar">↪</span><span><strong>Sign out</strong><small>Keep local Mochi data</small></span></button>}</div>}
+          {showAccountMenu && <div className="account-menu">{multipleAccountsEnabled && savedAccounts.map((account) => <button type="button" key={account.id} className={account.id === user?.id ? "selected" : ""} onClick={() => void switchAccount(account)}><span className="account-menu-avatar">{account.avatarUrl ? <img className="account-menu-avatar-image" src={account.avatarUrl} alt="" referrerPolicy="no-referrer" /> : account.username.slice(0, 1).toUpperCase()}</span><span><strong>{account.username}</strong><small>Mochi account</small></span></button>)}{!user && <button type="button" className="account-menu-add" onClick={addAccount}><Plus size={14} /><span><strong>Sign in</strong><small>Add a Mochi account</small></span></button>}{user && multipleAccountsEnabled && savedAccounts.length < 5 && <button type="button" className="account-menu-add" onClick={addAccount}><Plus size={14} /><span><strong>Add User</strong><small>Sign in to another Mochi account</small></span></button>}{user && <button type="button" className="account-menu-add" onClick={signOut}><span className="account-menu-avatar">↪</span><span><strong>Sign out</strong><small>Keep local Mochi data</small></span></button>}</div>}
         </div>
 
         <nav className="primary-nav" aria-label="Main navigation">
-          {navItems.map(({ label, icon: Icon }) => (
+          {navItems.filter(({ label }) => label !== "Installed" || behavior.experimentalFeatures).map(({ label, icon: Icon }) => (
             <button
               className={`nav-item ${activeNav === label ? "active" : ""}`}
               key={label}
@@ -1025,7 +1228,17 @@ function App() {
               {search && <button className="clear-search" onClick={() => setSearch("")}><MochiIcon name="close" fallback={X} size={13} /></button>}
               {!search && <kbd>⌘ K</kbd>}
             </label>
-            <div className="notification-wrap"><button className="icon-button" aria-label="Notifications" aria-expanded={showNotifications} onClick={() => setShowNotifications((open) => !open)}><MochiIcon name="notifications" fallback={Bell} size={17} />{notifications.length > 0 && <span className="notification-dot" />}</button>{showNotifications && <div className="notification-popover"><div className="notification-heading"><strong>Notifications</strong>{notifications.length > 0 && <button type="button" onClick={() => setNotifications([])}>Clear</button>}</div>{notifications.length ? notifications.map((item) => <div className="notification-item" key={item.id}><strong>{item.title}</strong><span>{item.message}</span></div>) : <div className="notification-empty">You’re all caught up.</div>}</div>}</div>
+            {behavior.notificationsEnabled && behavior.inAppNotifications && (
+              <div className="notification-wrap">
+                <button className="icon-button" aria-label="Notifications" aria-expanded={showNotifications} onClick={() => setShowNotifications((open) => !open)}>
+                  <MochiIcon name="notifications" fallback={Bell} size={17} />{notifications.length > 0 && <span className="notification-dot" />}
+                </button>
+                {showNotifications && <div className="notification-popover">
+                  <div className="notification-heading"><strong>Notifications</strong>{notifications.length > 0 && <button type="button" onClick={() => setNotifications([])}>Clear</button>}</div>
+                  {notifications.length ? notifications.map((item) => <div className="notification-item" key={item.id}><strong>{item.title}</strong><span>{item.message}</span>{item.progress && <progress max={item.progress.total} value={item.progress.value} />}</div>) : <div className="notification-empty">You’re all caught up.</div>}
+                </div>}
+              </div>
+            )}
           </div>
         </header>
 
@@ -1035,20 +1248,23 @@ function App() {
             {activeNav === "Library" && <button className="secondary-button" onClick={() => setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> Add Piko</button>}
           </section>
 
-          {activeNav === "Library" && library.length === 0 ? (
+          {activeNav === "Library" && gameDetailsId && library.some(piko => piko.id === gameDetailsId) ? (
+            <GameDetails game={library.find(piko => piko.id === gameDetailsId)!} synced={syncState === "synced"} onBack={() => setGameDetailsId("")} onPlay={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) { selectPiko(game); void launchGame(game); } }} />
+          ) : activeNav === "Library" && library.length === 0 ? (
             <div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>Your Mochi library is empty.</h2><p>Mochi starts clean. Add a game when you are ready.</p><button className="secondary-button" onClick={() => setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> Add Piko</button></div>
           ) : activeNav === "Library" ? (
             <>
               <section className="library-grid-view">
-                {groupedPikos.map(([category, games]) => <div className="library-category" key={category}><div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div><div className="game-card-grid">{games.map((piko) => <button className={`game-card ${selectedPiko.id === piko.id ? "selected" : ""}`} key={piko.id} onClick={() => selectPiko(piko)}><div className="game-card-art" style={{ backgroundImage: piko.artwork }}><span className="game-card-play"><MochiIcon name="play" fallback={Play} size={15} fill="currentColor"/></span></div><div className="game-card-copy"><strong>{piko.name}</strong><small>{piko.categories?.join(" · ") || "Other"}</small></div></button>)}</div></div>)}
+                {groupedPikos.map(([category, games]) => <div className="library-category" key={category}><div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div><div className="game-card-grid">{games.map((piko) => <button className={`game-card ${selectedPiko.id === piko.id ? "selected" : ""}`} key={piko.id} onClick={() => { selectPiko(piko); setGameDetailsId(piko.id); }}><GameArtwork className="game-card-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} /><div className="game-card-copy"><strong>{piko.name}<span className={`game-cloud-status ${syncState === "synced" ? "is-synced" : "not-synced"}`} title={syncState === "synced" ? "Synced to Mochi Cloud" : "Not synced to Mochi Cloud"}>{syncState === "synced" ? "✓" : "!"}</span></strong><small>{piko.categories?.join(" · ") || piko.platformCategory || "Other"}</small></div><span className="game-card-play"><MochiIcon name="play" fallback={Play} size={15} fill="currentColor"/></span></button>)}</div></div>)}
               </section>
+              <LibraryModSearch query={search} nexusEnabled={behavior.experimentalFeatures && credentialStatus.nexus} supabase={supabase} />
               <section className="hero-card" style={{ backgroundImage: selectedPiko.artwork }}>
                 <div className="hero-copy">
                   <span className="hero-kicker"><span className="live-dot" /> Last played recently</span>
                   <h2>{selectedPiko.name}</h2>
                   <p>{selectedPiko.description}</p>
                   <div className="hero-actions">
-                    <button className="play-button" onClick={launchGame}><MochiIcon name="play" fallback={Play} size={16} fill="currentColor" /> {isLaunching ? "Launching..." : "Play"}</button>
+                    <button className="play-button" onClick={() => void launchGame()}><MochiIcon name="play" fallback={Play} size={16} fill="currentColor" /> {isLaunching ? "Launching..." : "Play"}</button>
                     {selectedPiko.source === "custom" && <span className="metadata-note">{selectedPiko.executablePath}</span>}
                     <button className="icon-button dark-button" aria-label="More options"><MochiIcon name="more" fallback={MoreHorizontal} size={19} /></button>{launchError && <span className="metadata-note">{launchError}</span>}
                   </div>
@@ -1127,6 +1343,10 @@ function App() {
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>General</strong><span>Launcher behavior</span></div>
                 <label className="setting-row"><span><strong>Launch Mochi on startup</strong><small>Open the launcher when you sign in to your computer.</small></span><input className="toggle" checked={behavior.launchOnStartup} onChange={(event) => setBehavior({ ...behavior, launchOnStartup: event.target.checked })} type="checkbox" /></label>
+                <label className="setting-row"><span><strong>Notifications</strong><small>Enable or disable all Mochi notifications.</small></span><input className="toggle" checked={behavior.notificationsEnabled} onChange={(event) => { const enabled = event.target.checked; setBehavior({ ...behavior, notificationsEnabled: enabled }); if (!enabled) setShowNotifications(false); }} type="checkbox" /></label>
+                <label className="setting-row"><span><strong>In-app notifications</strong><small>Show the notification button and updates inside Mochi.</small></span><input className="toggle" checked={behavior.inAppNotifications} disabled={!behavior.notificationsEnabled} onChange={(event) => { setBehavior({ ...behavior, inAppNotifications: event.target.checked }); if (!event.target.checked) setShowNotifications(false); }} type="checkbox" /></label>
+                <label className="setting-row"><span><strong>System notifications</strong><small>Allow Mochi to send desktop notifications.</small></span><input className="toggle" checked={behavior.systemNotifications} disabled={!behavior.notificationsEnabled} onChange={(event) => setBehavior({ ...behavior, systemNotifications: event.target.checked })} type="checkbox" /></label>
+                <label className="setting-row"><span><strong>Separate account profiles</strong><small>{user ? "Keep libraries, preferences, and notifications separate for each signed-in account." : "Sign in before enabling separate profiles for multiple accounts."}</small></span><input className="toggle" checked={multipleAccountsEnabled} disabled={!user} onChange={(event) => setMultipleAccountProfiles(event.target.checked)} type="checkbox" /></label>
                 <div className="setting-row"><span><strong>System tray service</strong><small>Closing the Mochi window keeps the launcher running in the tray. Use Quit Mochi from the tray menu to fully exit.</small></span><span className="metadata-note">Always active</span></div>
               </div>
               <div className="settings-group security-settings-group">
@@ -1156,6 +1376,8 @@ function App() {
               </div>
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>Data & privacy</strong><span>Local-first storage</span></div>
+                <div className="setting-row"><span><strong>Refresh IGDB game metadata</strong><small>Clear cached IGDB details and artwork, then fetch current information for your library.</small></span><button type="button" className="secondary-button" disabled={!credentialStatus.igdb || igdbRefreshBusy || !library.length} onClick={() => void refreshAllIgdbData()}>{igdbRefreshBusy ? "Refreshing…" : "Refresh all metadata"}</button></div>
+                {!credentialStatus.igdb && <small className="metadata-note" style={{ padding: "0 17px 12px" }}>Sign in and save IGDB credentials to refresh game information.</small>}
                 <div className="setting-row"><span><strong>Cloud data</strong><small>{cloudDataAccessAllowed ? "Delete your cloud Pikos and Tofus. Your local library, account, and saved provider credentials stay unchanged." : "Mochi Cloud data controls are not enabled for this account."}</small></span><button type="button" className="secondary-button danger-outline" disabled={!user || !cloudDataAccessAllowed || cloudDataBusy} onClick={() => void clearCloudData()}>{cloudDataBusy ? "Clearing…" : cloudDataAccessAllowed ? "Clear cloud data" : "Unavailable"}</button></div>
                 {cloudDataMessage && <p className="metadata-note" role="status" style={{ padding: "0 17px 14px" }}>{cloudDataMessage}</p>}
                 <div className="setting-row setting-location-row"><span><strong>Library location</strong><small>Your Mochi configuration, themes and launcher data are stored here.</small></span><span className="setting-location-value"><code>{configInfo?.configPath || "Default Mochi location"}</code><button type="button" className="secondary-button" onClick={() => void chooseMochiConfigLocation()}>Change</button></span></div>
@@ -1166,6 +1388,7 @@ function App() {
                   <label className="setting-row"><span><strong>Experimental features</strong><small>Show unfinished launcher features as they become available.</small></span><input className="toggle" checked={behavior.experimentalFeatures} onChange={(event) => setBehavior({ ...behavior, experimentalFeatures: event.target.checked })} type="checkbox" /></label>
                 </div>}
               </div>
+              <div className="settings-group"><div className="settings-group-heading"><strong>Help & feedback</strong><span>Report a problem or request a feature</span></div><a className="setting-row help-link" href="https://github.com/T1nkiePlayz/Mochi/issues" target="_blank" rel="noreferrer"><span><strong>GitHub issues</strong><small>View known issues or report a new one.</small></span><Github size={16}/></a></div>
               <button className="reset-button" onClick={resetLocalData}>Clear all Mochi app data</button>
             </section>
           ) : activeNav === "Discover" ? (
@@ -1209,6 +1432,7 @@ function App() {
             <p className="modal-description">Choose how Mochi should launch this game. File selection uses the native Tauri file dialog, which is preferable to trying to use xdg-open as a file picker on Linux/Wayland.</p>
             <div className="form-fields">
               <label>Game name<input name="name" autoFocus placeholder="e.g. Hollow Knight" required /></label>
+              <label>Platform category<input name="platformCategory" defaultValue={platformCategory} placeholder="e.g. Steam, Heroic, Custom" /></label>
               <label>Launch method
                 <select value={launchType} onChange={(event) => setLaunchType(event.target.value as LaunchMethodId)}>
                   {(platformCapabilities?.launchMethods ?? ["file", "flatpak", "custom"]).map((method) => (

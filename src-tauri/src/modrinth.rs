@@ -61,6 +61,27 @@ pub fn initialize_downloads() {
     });
 }
 
+#[tauri::command]
+pub async fn get_public_api(url: String) -> Result<serde_json::Value, String> {
+    let parsed = reqwest::Url::parse(&url).map_err(|_| "Invalid Modrinth API URL.".to_string())?;
+    if parsed.scheme() != "https" || parsed.host_str() != Some("api.modrinth.com") || !parsed.path().starts_with("/v2/") {
+        return Err("Mochi only allows requests to the public Modrinth API.".into());
+    }
+    let response = reqwest::Client::builder()
+        .user_agent("T1nkiePlayz/Mochi/0.1.0 (https://github.com/T1nkiePlayz/Mochi)")
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(std::time::Duration::from_secs(20))
+        .build().map_err(|error| format!("Unable to prepare Modrinth request: {error}"))?
+        .get(parsed).header(reqwest::header::ACCEPT, "application/json")
+        .send().await.map_err(|error| format!("Unable to reach Modrinth: {error}"))?;
+    let status = response.status();
+    if !status.is_success() {
+        return Err(format!("Modrinth request failed ({status})."));
+    }
+    let body = response.bytes().await.map_err(|error| format!("Unable to read Modrinth response: {error}"))?;
+    serde_json::from_slice(&body).map_err(|error| format!("Modrinth returned invalid data: {error}"))
+}
+
 pub fn list_downloads() -> Vec<DownloadEntry> {
     cleanup_downloads();
     let mut entries = downloads().lock().map(|state| state.values().cloned().collect::<Vec<_>>()).unwrap_or_default();

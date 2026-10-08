@@ -100,7 +100,7 @@ async function searchIgdb(userId: string, query: string, limit: number) {
       "Content-Type": "text/plain",
       Accept: "application/json",
     },
-    body: `search "${escapedQuery}"; fields name,summary,cover.url,artworks.url,genres.name,first_release_date; limit ${limit};`,
+  body: `search "${escapedQuery}"; fields name,summary,cover.url,artworks.url,screenshots.url,videos.name,videos.video_id,genres.name,themes.name,game_modes.name,player_perspectives.name,first_release_date; limit ${limit};`,
   });
   if (!upstream.ok) {
     console.error("IGDB request failed", upstream.status);

@@ -357,10 +357,12 @@ export function ModrinthDiscover({ tofu, pikos, playtime = [], experimentalFeatu
     setLoading(true);
     setMessage("");
     try {
-      const values = await Promise.all(minecraftTabs.map(async ({ id }) => [id, await getPopularModrinth(id, gameVersion, sort)] as const));
-      setProjects(Object.fromEntries(values) as Record<ModrinthProjectType, ModrinthProject[]>);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to load popular Modrinth projects.");
+      const results = await Promise.allSettled(minecraftTabs.map(async ({ id }) => [id, await getPopularModrinth(id, gameVersion, sort)] as const));
+      const values = results.flatMap(result => result.status === "fulfilled" ? [result.value] : []);
+      const available: Record<ModrinthProjectType, ModrinthProject[]> = { mod: [], modpack: [], resourcepack: [], shader: [] };
+      setProjects(Object.assign(available, Object.fromEntries(values)));
+      const failures = results.filter(result => result.status === "rejected").length;
+      if (failures) setMessage(`${failures} Modrinth project category${failures === 1 ? "" : "ies"} could not load. Available categories are still shown.`);
     } finally {
       setLoading(false);
     }

@@ -11,6 +11,13 @@ type PikoRow = {
   executable_path: string | null;
   source: "built-in" | "custom";
   categories: string[] | null;
+  source_id: Piko["sourceId"] | null;
+  platform_category: string | null;
+  igdb_id: number | null;
+  artwork_url: string | null;
+  screenshots: string[] | null;
+  trailer_id: string | null;
+  first_release_date: number | null;
 };
 
 type TofuRow = {
@@ -26,7 +33,7 @@ type TofuRow = {
 export async function pullLibrary(client: SupabaseClient, userId: string): Promise<Piko[]> {
   const { data: pikoRows, error: pikoError } = await client
     .from("pikos")
-    .select("id, local_id, name, description, accent, artwork, executable_path, source, categories")
+    .select("id, local_id, name, description, accent, artwork, artwork_url, executable_path, source, source_id, platform_category, igdb_id, categories, screenshots, trailer_id, first_release_date")
     .eq("user_id", userId)
     .order("created_at");
   if (pikoError) throw pikoError;
@@ -62,7 +69,14 @@ export async function pullLibrary(client: SupabaseClient, userId: string): Promi
     artwork: piko.artwork ?? "",
     executablePath: piko.executable_path ?? undefined,
     source: piko.source,
+    sourceId: piko.source_id ?? undefined,
+    platformCategory: piko.platform_category ?? undefined,
     categories: piko.categories ?? [],
+    igdbId: piko.igdb_id ?? undefined,
+    artworkUrl: piko.artwork_url ?? undefined,
+    screenshots: piko.screenshots ?? [],
+    trailerId: piko.trailer_id ?? undefined,
+    firstReleaseDate: piko.first_release_date ?? undefined,
     tofus: tofusByPiko.get(piko.id) ?? [],
   }));
 }
@@ -84,9 +98,16 @@ export async function pushLibrary(client: SupabaseClient, userId: string, librar
         description: piko.description,
         accent: piko.accent,
         artwork: piko.artwork,
+        artwork_url: piko.artworkUrl ?? null,
         executable_path: piko.executablePath ?? null,
         source: piko.source ?? "built-in",
+        source_id: piko.sourceId ?? null,
+        platform_category: piko.platformCategory ?? null,
+        igdb_id: piko.igdbId ?? null,
         categories: piko.categories ?? [],
+        screenshots: piko.screenshots ?? [],
+        trailer_id: piko.trailerId ?? null,
+        first_release_date: piko.firstReleaseDate ?? null,
       })),
       { onConflict: "user_id,local_id" },
     )

@@ -88,6 +88,12 @@ fn config_dir(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(default_root)
 }
 
+pub fn game_artwork_cache_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let path = config_dir(app)?.join("game-artwork");
+    fs::create_dir_all(&path).map_err(|error| format!("Unable to create game artwork cache: {error}"))?;
+    Ok(path)
+}
+
 pub fn initialize_config(app: &AppHandle) -> Result<(), String> {
     let _ = ensure_config(app)?;
     let _ = themes_dir(app)?;
