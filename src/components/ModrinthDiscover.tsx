@@ -190,18 +190,15 @@ function MinecraftLogo() {
 }
 
 
-type MinecraftTab = "instances" | ModrinthProjectType;
+type MinecraftTab = ModrinthProjectType;
 type DiscoveryTab = { kind: "minecraft"; category: MinecraftTab } | { kind: "nexus"; game: NexusGame };
 
 const minecraftTabs: Array<{ id: MinecraftTab; label: string }> = [
-  { id: "instances", label: "Instances" },
   { id: "mod", label: "Mods" },
   { id: "modpack", label: "Modpacks" },
   { id: "resourcepack", label: "Resource Packs" },
   { id: "shader", label: "Shaders" },
 ];
-
-const minecraftContentTabs = minecraftTabs.filter((item): item is { id: ModrinthProjectType; label: string } => item.id !== "instances");
 
 const defaultNexusGames: Array<{ domainName: string; search: string }> = [
   { domainName: "satisfactory", search: "Satisfactory" },
@@ -245,7 +242,6 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
     }
   });
   const [tab, setTab] = useState<DiscoveryTab>({ kind: "minecraft", category: "mod" });
-  const [activeTofuId, setActiveTofuId] = useState(tofu.id);
 
   const nexusVisible = experimentalFeatures && nexusConfigured && Boolean(supabase);
 
@@ -253,7 +249,7 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
     setLoading(true);
     setMessage("");
     try {
-      const values = await Promise.all(minecraftContentTabs.map(async ({ id }) => [id, await getPopularModrinth(id, gameVersion)] as const));
+      const values = await Promise.all(minecraftTabs.map(async ({ id }) => [id, await getPopularModrinth(id, gameVersion)] as const));
       setProjects(Object.fromEntries(values) as Record<ModrinthProjectType, ModrinthProject[]>);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to load popular Modrinth projects.");
@@ -330,7 +326,6 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
   }, [tofu.version]);
 
   useEffect(() => { void refreshMinecraft(); }, [gameVersion]);
-  useEffect(() => { setActiveTofuId(tofu.id); }, [tofu.id]);
   useEffect(() => {
     if (nexusVisible) void refreshNexusGames();
     else {
@@ -424,25 +419,13 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
           {tab.category === "mod" && <label className="discover-select-wrap"><span>Loader</span><select className="discover-select" value={loader} onChange={event => setLoader(event.target.value)}><option value="">Any loader</option><option value="fabric">Fabric</option><option value="forge">Forge</option><option value="neoforge">NeoForge</option><option value="quilt">Quilt</option></select></label>}
         </div>
         {message && <p className="metadata-note">{message}</p>}
-        {tab.category === "instances" ? (() => {
-          const instances = pikos.flatMap(piko => (piko.tofus || []).map(instance => ({ ...instance, pikoName: piko.name })));
-          const activeInstance = instances.find(instance => instance.id === activeTofuId) || instances.find(instance => instance.id === tofu.id) || instances[0] || null;
-          return <section className="discover-instances">
-            <div className="discover-section-heading"><div><h3>Minecraft Instances</h3><p>Your Tofu instances are available here as discovery targets.</p></div><span>{instances.length} instance{instances.length === 1 ? "" : "s"}</span></div>
-            {instances.length ? <div className="discover-instance-grid">{instances.map(instance => <article className={`discover-instance-card ${activeInstance?.id === instance.id ? "selected" : ""}`} key={instance.id}>
-              <div className="discover-instance-card-top"><MinecraftLogo /><div><strong>{instance.name}</strong><small>{instance.pikoName} · {instance.version} · {instance.runtime}</small></div>{activeInstance?.id === instance.id && <span>Selected</span>}</div>
-              <div className="discover-instance-stats"><span><strong>Mods</strong>{instance.mods}</span><span><strong>Status</strong>{instance.status}</span><span><strong>Location</strong>{instance.path ? "Configured" : "Not configured"}</span></div>
-              <button className="secondary-button" type="button" onClick={() => { setActiveTofuId(instance.id); setGameVersion(instance.version === "Local" ? "" : instance.version); setLoader(""); setQuery(""); setTab({ kind: "minecraft", category: "mod" }); }}>{activeInstance?.id === instance.id ? "Browse content" : "Use instance"}</button>
-            </article>)}</div> : <div className="discover-empty">No Minecraft instances are configured yet. Add a Tofu instance from your Library to start discovering content.</div>}
-          </section>;
-        })() : loading ? <div className="discover-loading"><RefreshCw size={20} className="spin" /><span>Loading popular Minecraft content from Modrinth...</span></div> : (() => {
-          const category = tab.category as ModrinthProjectType;
-          const section = sections.find(item => item.type === category)!;
-          const visible = projects[category].filter(matches);
+        {loading ? <div className="discover-loading"><RefreshCw size={20} className="spin" /><span>Loading popular Minecraft content from Modrinth...</span></div> : (() => {
+          const section = sections.find(item => item.type === tab.category)!;
+          const visible = projects[tab.category].filter(matches);
           return <div className="discover-sections"><section className="discover-section">
             <div className="discover-section-heading"><div><h3>{section.title}</h3><p>{section.description}</p></div><span>{visible.length} projects</span></div>
             <div className="discover-grid">{visible.map((project,index) => <article className="discover-card" key={project.project_id}>{project.icon_url ? <img src={project.icon_url} alt="" className="discover-card-icon" /> : <div className="discover-card-icon fallback"><PackageOpen size={20}/></div>}<div className="discover-card-copy"><div className="discover-card-title"><strong>{index+1}. {project.title}</strong><span>{projectTypeLabel(project.project_type)}</span></div><small>{project.author || "Modrinth creator"} · {project.downloads.toLocaleString()} downloads</small><p>{project.description}</p><div className="discover-card-actions"><button className="secondary-button" onClick={() => void openDetails(project)}><Eye size={13}/> View</button><button className="secondary-button" onClick={() => setTofuPicker(project)} disabled={busyId !== ""}><Download size={13}/> Choose Tofu instance</button></div></div></article>)}</div>
-            {!visible.length && <div className="discover-empty">No popular {projectTypeLabel(category)} projects match this filter.</div>}
+            {!visible.length && <div className="discover-empty">No popular {projectTypeLabel(tab.category)} projects match this filter.</div>}
           </section></div>;
         })()}
       </> : <>
