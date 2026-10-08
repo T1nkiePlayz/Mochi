@@ -1,5 +1,5 @@
 import { RemoteImage } from "./RemoteImage";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Download, FolderOpen, PackageOpen, Power, RefreshCw, Save, Search, Trash2 } from "lucide-react";
 import {
@@ -9,6 +9,11 @@ import {
 } from "../lib/modrinth";
 import { openPath } from "../lib/platform";
 import { Select } from "./ui/Select";
+import { ModsBrowser } from "./mods/ModsBrowser";
+import { createCurseforgeSource } from "../lib/mods/curseforgeSource";
+import { MINECRAFT_CLASS, minecraftSourceFor, resolveSources } from "../lib/mods/resolveSources";
+import { CF_MINECRAFT_ID } from "../lib/curseforge";
+import { useApp } from "../state/AppContext";
 
 const loaderOptions = [{ value: "", label: "Any loader" }, { value: "fabric", label: "Fabric" }, { value: "forge", label: "Forge" }, { value: "neoforge", label: "NeoForge" }, { value: "quilt", label: "Quilt" }];
 import type { ModProfile, Tofu } from "../models";
@@ -23,6 +28,10 @@ const errorText = (error: unknown, fallback: string) => (error instanceof Error 
 const baseName = (filename: string) => filename.replace(/\.disabled$/, "");
 
 export function ModrinthManager({ tofu, onUpdate }: Props) {
+  const { behavior, setActiveNav } = useApp();
+  const enabledSources = resolveSources({ minecraft: true }, behavior.modSources);
+  const modrinthOn = enabledSources.includes("modrinth");
+  const [provider, setProvider] = useState<"modrinth" | "curseforge">("modrinth");
   const [tab, setTab] = useState<Tab>("mod");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ModrinthProject[]>([]);
@@ -145,15 +154,29 @@ export function ModrinthManager({ tofu, onUpdate }: Props) {
   };
 
   const isSearchTab = tab === "mod" || tab === "resourcepack" || tab === "shader";
+  const effective = isSearchTab ? minecraftSourceFor(tab, provider, behavior.modSources) : null;
+  const curseforgeSource = useMemo(() => isSearchTab ? createCurseforgeSource({ gameId: CF_MINECRAFT_ID, gameSlug: "minecraft", classId: MINECRAFT_CLASS[tab] }) : null, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+  const visibleTabs = tabs.filter((item) => modrinthOn || item.id !== "updates");
+  useEffect(() => { if (!modrinthOn && tab === "updates") setTab("mod"); }, [modrinthOn, tab]);
   const updatable = (analysis ?? []).filter((item) => item.update);
+
+  if (!enabledSources.length) return <section className="modrinth-manager"><div className="tofu-workspace-header"><div><p className="eyebrow">Tofu workspace</p><h3>{tofu.name}</h3></div></div>
+    <p className="metadata-note" role="status">All mod sources are turned off. <button type="button" className="text-button" onClick={() => setActiveNav("Settings")}>Open Settings</button> and enable Modrinth or CurseForge under Mod sources.</p></section>;
 
   return <section className="modrinth-manager">
     <div className="tofu-workspace-header"><div><p className="eyebrow">Tofu workspace</p><h3>{tofu.name}</h3><p className="workspace-path">{tofu.path || "Choose a folder to enable content management."}</p></div>
       <div className="tofu-workspace-actions">{tofu.path && <button className="secondary-button" onClick={() => void openPath(tofu.path!).catch((error) => setMessage(errorText(error, "Unable to open the folder.")))}><FolderOpen size={14}/> Open</button>}<button className="secondary-button" onClick={chooseFolder}><FolderOpen size={14}/> {tofu.path ? "Change folder" : "Choose folder"}</button></div></div>
-    <div className="workspace-tabs">{tabs.map((item) => <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => setTab(item.id)}>{item.label}</button>)}</div>
+    <div className="workspace-tabs">{visibleTabs.map((item) => <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => setTab(item.id)}>{item.label}</button>)}</div>
     {message && <p className="metadata-note">{message}</p>}
     {pendingDownloads > 0 && <p className="metadata-note">{pendingDownloads} download{pendingDownloads === 1 ? "" : "s"} in progress — see Downloads.</p>}
-    {isSearchTab ? <>
+    {isSearchTab && enabledSources.length > 1 && <div className="mod-source-switch" role="group" aria-label="Mod source">
+      <span>Source</span>{enabledSources.map((id) => <button key={id} type="button" className={effective === id ? "active" : ""} aria-pressed={effective === id} onClick={() => setProvider(id as "modrinth" | "curseforge")}>{id === "modrinth" ? "Modrinth" : "CurseForge"}</button>)}
+    </div>}
+    {isSearchTab && effective === "curseforge" && curseforgeSource ? <>
+      <div className="modrinth-controls"><input className="compact-input" value={gameVersion} onChange={(e) => setGameVersion(e.target.value)} placeholder="Game version" aria-label="Game version" />{tab === "mod" && <Select className="compact-select" value={loader} onChange={setLoader} options={loaderOptions} label="Loader" searchable={false} />}</div>
+      <div className="content-split"><div><div className="workspace-section-title"><strong>Installed</strong><span>{installed.length}</span></div><div className="installed-content-list">{installed.map((file) => <div className="installed-content-row" key={file.path}><span><strong>{file.filename}</strong><small>{Math.round(file.size / 1024)} KB</small></span><button title={file.enabled ? "Disable" : "Enable"} aria-label={file.enabled ? "Disable" : "Enable"} onClick={() => void run(() => setModFileEnabled(file.path, !file.enabled), "Unable to change the file.")}><Power size={14}/></button><button title="Delete" aria-label="Delete" onClick={() => { if (window.confirm("Delete " + file.filename + "? This cannot be undone.")) void run(() => deleteModFile(file.path), "Unable to delete the file."); }}><Trash2 size={14}/></button></div>)}{!installed.length && <p className="muted">No content installed in this Tofu yet.</p>}</div></div>
+      <div><div className="workspace-section-title"><strong>Discover on CurseForge</strong></div><ModsBrowser key={tab} source={curseforgeSource} tofu={tofu} onUpdateTofu={onUpdate} filter={{ gameVersion: gameVersion || undefined, loader: loader || undefined }} noun={tab === "mod" ? "mods" : tab === "resourcepack" ? "resource packs" : "shaders"} /></div></div>
+    </> : isSearchTab ? <>
       <div className="modrinth-controls"><label className="search-box"><Search size={15}/><input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void search(); }} placeholder={"Search Modrinth " + (tab === "mod" ? "mods" : tab === "resourcepack" ? "resource packs" : "shaders") + "..."} /><kbd>Enter</kbd></label><input className="compact-input" value={gameVersion} onChange={(e) => setGameVersion(e.target.value)} placeholder="Game version" />{tab === "mod" && <Select className="compact-select" value={loader} onChange={setLoader} options={loaderOptions} label="Loader" searchable={false} />}<button className="secondary-button" onClick={() => void search()} disabled={busy}>{busy ? <RefreshCw size={14} className="spin"/> : <Search size={14}/>} Search</button></div>
       <div className="content-split"><div><div className="workspace-section-title"><strong>Installed</strong><span>{installed.length}</span></div><div className="installed-content-list">{installed.map((file) => <div className="installed-content-row" key={file.path}><span><strong>{file.filename}</strong><small>{Math.round(file.size / 1024)} KB</small></span><button title={file.enabled ? "Disable" : "Enable"} aria-label={file.enabled ? "Disable" : "Enable"} onClick={() => void run(() => setModFileEnabled(file.path, !file.enabled), "Unable to change the file.")}><Power size={14}/></button><button title="Delete" aria-label="Delete" onClick={() => { if (window.confirm("Delete " + file.filename + "? This cannot be undone.")) void run(() => deleteModFile(file.path), "Unable to delete the file."); }}><Trash2 size={14}/></button></div>)}{!installed.length && <p className="muted">No content installed in this Tofu yet.</p>}</div></div>
       <div><div className="workspace-section-title"><strong>Discover on Modrinth</strong><span>{results.length} results</span></div><div className="modrinth-results">{results.map((project) => <article className="modrinth-result" key={project.project_id}>{project.icon_url ? <RemoteImage src={project.icon_url} alt="" /> : <div className="modrinth-result-icon"><PackageOpen size={17}/></div>}<div><strong>{project.title}</strong><small>{project.author || "Modrinth creator"} · {project.downloads.toLocaleString()} downloads</small><p>{project.description}</p></div><button className="secondary-button" onClick={() => void install(project)} disabled={busy || !tofu.path}><Download size={13}/> Install</button></article>)}</div></div></div>

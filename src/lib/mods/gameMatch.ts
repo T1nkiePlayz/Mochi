@@ -69,5 +69,5 @@ export function autoModLinks(
 export function mergeModLinks(current: Piko["modLinks"], found: ModLinks | undefined): ModLinks | undefined {
   if (!found) return current;
   if (current?.source === "user") return current;
-  return { ...found, ...(current?.minecraft !== undefined ? { minecraft: current.minecraft } : {}), source: "auto" };
+  return { ...(current ?? {}), ...found, source: "auto" };
 }
