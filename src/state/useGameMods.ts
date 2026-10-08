@@ -49,6 +49,7 @@ export function useGameMods(piko: Piko): GameMods {
     if ((!needCf && !needNexus) || attempted.has(attemptKey)) return;
     attempted.add(attemptKey);
     let cancelled = false;
+    let finished = false;
     setResolving(true);
     setOffline(false);
     void (async () => {
@@ -64,9 +65,10 @@ export function useGameMods(piko: Piko): GameMods {
         attempted.delete(attemptKey);
         if (!cancelled) setOffline(true);
         console.warn("Mochi mod site lookup failed", error);
-      } finally { if (!cancelled) setResolving(false); }
+      } finally { finished = true; if (!cancelled) setResolving(false); }
     })();
-    return () => { cancelled = true; };
+    // An interrupted lookup (switching games, React re-running the effect) must be retried, not remembered as done.
+    return () => { cancelled = true; if (!finished) { attempted.delete(attemptKey); setResolving(false); } };
   }, [attemptKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sourceId = useMemo(() => resolveSources({ minecraft: support === "minecraft", curseforge: Boolean(links?.curseforge), nexus: Boolean(links?.nexus), nexusKey }, settings)[0] ?? null, [support, links, nexusKey, settings]);

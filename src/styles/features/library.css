@@ -8,7 +8,7 @@
   transition: border-color var(--mochi-transition), background var(--mochi-transition);
 }
 .filter-chip:hover { border-color: var(--mochi-border-strong); background: var(--mochi-surface-hover); }
-.filter-chip.active { border-color: var(--mochi-accent-strong); background: var(--mochi-accent-soft); color: var(--mochi-accent-text); }
+.filter-chip.active { border-color: var(--mochi-accent-strong); background: var(--mochi-accent-soft); color: var(--mochi-text-strong); }
 .filter-chip:focus-visible, .game-card-main:focus-visible, .game-card-heart:focus-visible, .details-heart:focus-visible { outline: 2px solid var(--mochi-focus-ring); outline-offset: 2px; }
 .filter-count { color: var(--mochi-text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .filter-chip.active .filter-count { color: inherit; opacity: .8; }
@@ -42,7 +42,7 @@
 .details-heart { display: inline-grid; place-items: center; margin-left: 10px; padding: 4px; border: 0; background: transparent; color: var(--mochi-text-muted); vertical-align: middle; cursor: pointer; border-radius: 50%; }
 .details-popover-anchor, .bulk-popover-anchor { position: relative; display: inline-block; }
 .details-collections { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-.details-collections span, .tag-chip { padding: 3px 10px; border-radius: var(--mochi-pill-radius); background: var(--mochi-accent-soft); color: var(--mochi-accent-text); font-size: 11px; }
+.details-collections span, .tag-chip { padding: 3px 10px; border-radius: var(--mochi-pill-radius); background: var(--mochi-accent-soft); color: var(--mochi-text-strong); font-size: 11px; }
 .details-tags { margin-top: 12px; max-width: 520px; }
 
 .library-popover {
