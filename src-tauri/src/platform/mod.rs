@@ -94,7 +94,7 @@ pub fn open_external_url(url: &str) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     { return macos::open_external_url(trimmed); }
     #[cfg(target_os = "windows")]
-    { return windows::open_external_url(trimmed).and(Ok(())).map(|_| ()).map_err(|error| format!("Unable to open the external URL: {error}")); }
+    { return windows::open_external_url(trimmed); }
     #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
     { Err("Opening external URLs is not supported on this platform.".into()) }
 }
