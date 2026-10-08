@@ -30,7 +30,7 @@ function GameModsPanel({ piko, tofu, onUpdate }: Props) {
   const settingsLink = <button type="button" className="text-button" onClick={() => setActiveNav("Settings")}>Open Settings</button>;
 
   let body;
-  if (mods.source) body = <ModsBrowser key={`${mods.sourceId}:${tofu.id}`} source={mods.source} tofu={tofu} onUpdateTofu={onUpdate} noun="mods" />;
+  if (mods.source) body = <ModsBrowser key={`${mods.sourceId}:${tofu.id}`} source={mods.source} target={{ kind: "tofu", tofu, onUpdateTofu: onUpdate }} noun="mods" />;
   else if (mods.resolving) body = <div className="discover-loading"><RefreshCw size={18} className="spin" /><span>Looking for {piko.name} on mod sites...</span></div>;
   else if (mods.nexusBlocked === "key") body = <p className="metadata-note" role="status">{piko.name} has mods on Nexus Mods. Add your Nexus API key in Settings to browse and download them. {settingsLink}</p>;
   else if (mods.nexusBlocked === "disabled" || (!sources.curseforge && !sources.nexus)) body = <p className="metadata-note" role="status">The mod sources for {piko.name} are turned off. {settingsLink}</p>;

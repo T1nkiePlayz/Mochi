@@ -10,7 +10,7 @@ type Props = {
   /** Games whose Tofus are listed first (the ones linked to the mod's own site or game). */
   prefer?: (piko: Piko) => boolean;
   onClose: () => void;
-  onInstall: (tofu: Tofu) => void;
+  onInstall: (tofu: Tofu, piko: Piko) => void;
 };
 
 /** Pick the Tofu that receives a download. Used for Modrinth, CurseForge and Nexus mods alike. */
@@ -22,7 +22,7 @@ export function TofuPicker({ title, description = "Choose the Tofu instance that
     {heading && <h3 className="tofu-picker-heading">{heading}</h3>}
     <div className="tofu-picker-list">{list.flatMap((piko) => piko.tofus.map((tofu) => <div className="tofu-picker-row" key={`${piko.id}:${tofu.id}`}>
       <div><strong>{tofu.name}</strong><small>{piko.name} · {tofu.version} · {tofu.runtime}{tofu.path ? "" : " · No folder yet"}</small></div>
-      <button type="button" className="secondary-button" aria-label={`Download to ${tofu.name} (${piko.name})`} onClick={() => onInstall(tofu)}><Download size={14} /> Download</button>
+      <button type="button" className="secondary-button" aria-label={`Download to ${tofu.name} (${piko.name})`} onClick={() => onInstall(tofu, piko)}><Download size={14} /> Download</button>
     </div>))}</div>
   </section>;
   return <ModalShell label={`Choose Tofu instance for ${title}`} className="tofu-picker-window" onClose={onClose}>
