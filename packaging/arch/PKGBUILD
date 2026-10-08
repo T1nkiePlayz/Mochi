@@ -8,7 +8,7 @@ pkgdesc="Local-first game launcher for Steam, Heroic, Lutris, Bottles, itch.io a
 arch=('x86_64' 'aarch64')
 url="https://github.com/T1nkiePlayz/Mochi"
 license=('custom')
-depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'openssl')
+depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'openssl' 'systemd-libs' 'xdg-utils')
 makedepends=('rust' 'cargo' 'nodejs' 'npm' 'patchelf')
 optdepends=('steam: Steam library import and launching'
             'flatpak: Flatpak game discovery'
@@ -30,5 +30,5 @@ package() {
   cd "$_name-$pkgver"
   install -Dm755 src-tauri/target/release/mochi "$pkgdir/usr/bin/mochi"
   install -Dm644 src-tauri/icons/icon.png "$pkgdir/usr/share/icons/hicolor/512x512/apps/mochi.png"
-  install -Dm644 packaging/mochi.desktop "$pkgdir/usr/share/applications/mochi.desktop"
+  install -Dm644 packaging/dev.sidequestgames.Mochilauncher.desktop "$pkgdir/usr/share/applications/dev.sidequestgames.Mochilauncher.desktop"
 }

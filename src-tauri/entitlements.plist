@@ -2,11 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <!-- Required by the system WebView under the hardened runtime. -->
-  <key>com.apple.security.cs.allow-jit</key><true/>
-  <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
+  <!--
+    Deliberately minimal. The web view runs in Apple's own WebContent process, so Mochi needs no
+    JIT or unsigned-memory entitlement, and games are separate processes that library
+    validation does not apply to. If a notarized build ever fails to start, see docs/macos.md.
+  -->
   <key>com.apple.security.network.client</key><true/>
-  <!-- Games and helper tools are started by Mochi but are not part of its bundle. -->
-  <key>com.apple.security.cs.disable-library-validation</key><true/>
 </dict>
 </plist>

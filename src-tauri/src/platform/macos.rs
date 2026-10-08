@@ -51,12 +51,18 @@ fn is_app_bundle(path: &Path) -> bool {
 }
 
 pub fn prepare_launch(target: &str, config: &LaunchConfig) -> Result<Prepared, String> {
-    for scheme in ["steam://rungameid/", "steam://open/", "lutris:rungameid/", "itch://run-game/"] {
+    for scheme in ["steam://rungameid/", "steam://open/", "lutris:rungameid/"] {
         if let Some(id) = target.strip_prefix(scheme) {
             let mut command = open_command();
             command.arg(format!("{scheme}{}", safe_launch_id(id)?));
             return Ok(Prepared { command, direct: false });
         }
+    }
+    // The itch app has no "run" URL; its game page is the closest thing to launching from there.
+    if let Some(id) = target.strip_prefix("itch://run-game/") {
+        let mut command = open_command();
+        command.arg(format!("itch://games/{}", safe_launch_id(id)?));
+        return Ok(Prepared { command, direct: false });
     }
     if OPEN_SCHEMES.iter().any(|scheme| target.starts_with(scheme)) {
         let mut command = open_command();

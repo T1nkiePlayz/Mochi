@@ -1,10 +1,25 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { AUTH_CALLBACK_URL, isDesktopApp } from "./deepLinkAuth";
+import { openExternalUrl } from "./platform";
+
+/**
+ * Starts a provider sign-in. In the desktop app the provider page opens in the system browser (Google
+ * refuses embedded web views, notably WKWebView on macOS) and returns through mochi://auth/callback.
+ */
+async function startOAuth(client: SupabaseClient, provider: "google" | "github", link: boolean) {
+  if (!isDesktopApp()) {
+    const options = { redirectTo: window.location.origin };
+    return link ? client.auth.linkIdentity({ provider, options }) : client.auth.signInWithOAuth({ provider, options });
+  }
+  const options = { redirectTo: AUTH_CALLBACK_URL, skipBrowserRedirect: true };
+  const result = link ? await client.auth.linkIdentity({ provider, options }) : await client.auth.signInWithOAuth({ provider, options });
+  const url = result.data?.url;
+  if (!result.error && url) await openExternalUrl(url);
+  return result;
+}
 
 export async function signInWithProvider(client: SupabaseClient, provider: "google" | "github") {
-  return client.auth.signInWithOAuth({
-    provider,
-    options: { redirectTo: window.location.origin },
-  });
+  return startOAuth(client, provider, false);
 }
 
 export async function sendEmailCode(client: SupabaseClient, email: string) {
@@ -63,10 +78,7 @@ export async function deletePasskey(client: SupabaseClient, passkeyId: string) {
 }
 
 export async function linkAuthIdentity(client: SupabaseClient, provider: "google" | "github") {
-  return client.auth.linkIdentity({
-    provider,
-    options: { redirectTo: window.location.origin },
-  });
+  return startOAuth(client, provider, true);
 }
 
 
