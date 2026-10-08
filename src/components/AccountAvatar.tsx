@@ -32,7 +32,8 @@ export function AccountAvatar({ user, size = 34, className = "" }: AccountAvatar
     setGravatarUrl(null);
 
     const email = user?.email?.trim();
-    if (!email) return;
+    // Only ask Gravatar (which receives a hash of the email) when there is no provider avatar.
+    if (!email || providerAvatar) return;
 
     void sha256(email).then((hash) => {
       if (!cancelled) {
@@ -45,7 +46,7 @@ export function AccountAvatar({ user, size = 34, className = "" }: AccountAvatar
     return () => {
       cancelled = true;
     };
-  }, [user?.email, size]);
+  }, [user?.email, size, providerAvatar]);
 
   const fallbackLetter = user?.email?.trim().slice(0, 1).toUpperCase() ?? "U";
   const imageUrl = user && !providerFailed ? providerAvatar : null;

@@ -59,7 +59,11 @@ pub fn initialize(path: PathBuf) -> Result<(), String> {
     let games = match fs::read_to_string(&file) {
         Ok(contents) => serde_json::from_str::<PlaytimeFile>(&contents)
             .map(|data| data.games)
-            .unwrap_or_default(),
+            .unwrap_or_else(|_| {
+                // Keep an unreadable file for recovery instead of overwriting it with an empty history.
+                let _ = fs::rename(&file, file.with_extension("json.corrupt"));
+                Vec::new()
+            }),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
         Err(error) => return Err(format!("Unable to read playtime data: {error}")),
     };
@@ -81,7 +85,10 @@ fn persist_locked(guard: &TrackerState) -> Result<(), String> {
 
     let contents = serde_json::to_string_pretty(&PlaytimeFile { games })
         .map_err(|e| format!("Unable to serialize playtime data: {e}"))?;
-    fs::write(path, contents).map_err(|e| format!("Unable to save playtime data: {e}"))
+    // Write to a temporary file first so a crash mid-write cannot corrupt the history.
+    let temp = path.with_extension("json.tmp");
+    fs::write(&temp, contents).map_err(|e| format!("Unable to save playtime data: {e}"))?;
+    fs::rename(&temp, path).map_err(|e| format!("Unable to save playtime data: {e}"))
 }
 
 pub fn list() -> Result<Vec<PlaytimeEntry>, String> {
@@ -129,7 +136,8 @@ pub fn start(app: AppHandle, game_id: String, name: String, target: String, laun
         });
         entry.name = name.clone();
         entry.last_played = now_seconds();
-        persist_locked(&guard)?;
+        // The game is already running; a failed save must not abort tracking.
+        if let Err(error) = persist_locked(&guard) { eprintln!("{error}"); }
     }
 
     spawn_session_monitor(app, game_id, name, target, before);
@@ -157,6 +165,15 @@ pub fn finish(game_id: &str) -> Result<(), String> {
     entry.seconds = entry.seconds.saturating_add(elapsed);
     entry.last_played = now_seconds();
     persist_locked(&guard)
+}
+
+/// Credits every still-running session; called when Mochi exits.
+pub fn finish_all() {
+    let ids: Vec<String> = match state().lock() {
+        Ok(guard) => guard.active.keys().cloned().collect(),
+        Err(_) => return,
+    };
+    for id in ids { let _ = finish(&id); }
 }
 
 pub fn spawn_session_monitor(app: AppHandle, game_id: String, name: String, process_target: String, before: HashSet<u32>) {
