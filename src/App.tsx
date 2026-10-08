@@ -155,7 +155,8 @@ function App() {
   const [syncState, setSyncState] = useState<"offline" | "syncing" | "synced" | "error">(
     isCloudConfigured ? "offline" : "offline",
   );
-  const [cloudSyncEnabled, setCloudSyncEnabled] = useState(false);\n  const syncInitialized = useRef(false);
+  const [cloudSyncEnabled, setCloudSyncEnabled] = useState(false);
+  const syncInitialized = useRef(false);
   const { themes, theme, setTheme, reloadThemes, configInfo } = useThemeEngine();
   const currentUsername = user?.user_metadata?.username
     || user?.user_metadata?.user_name
