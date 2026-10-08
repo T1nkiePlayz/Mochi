@@ -57,45 +57,156 @@ function formatBytes(bytes: number) {
   return (bytes / 1024 / 1024 / 1024).toFixed(2) + " GiB";
 }
 
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+}
+
+function normalizeMarkdown(source: string): string {
+  return decodeHtmlEntities(
+    source
+      .replace(/\r/g, "")
+      .replace(/<img\b([^>]*?)\bsrc=["']([^"']+)["']([^>]*)>/gi, (_match, before, src, after) => {
+        const attributes = before + after;
+        const alt = attributes.match(/\balt=["']([^"']*)["']/i)?.[1] || "";
+        return "\n![" + alt + "](" + src + ")\n";
+      })
+      .replace(/<br\s*\/?\s*>/gi, "\n")
+      .replace(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi, (_match, level, body) => "\n" + "#".repeat(Number(level)) + " " + body + "\n")
+      .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, "\n- $1\n")
+      .replace(/<\/?(?:ul|ol|p|div|section|article|center|figure|figcaption)[^>]*>/gi, "\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim(),
+  );
+}
+
 function renderInline(text: string): ReactNode[] {
-  const parts = text.split(/(\!\[[^\]]*\]\([^\)]+\)|\[[^\]]+\]\([^\)]+\)|\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*]+\*|_[^_]+_)/g);
+  const parts = text.split(/(\!\[[^\]]*\]\([^\)]+\)|\[[^\]]+\]\([^\)]+\)|\*\*[^*]+\*\*|__[^_]+__|~~[^~]+~~|\x60[^\x60]+\x60|\*[^*]+\*|_[^_]+_)/g);
   return parts.filter(Boolean).map((part, index) => {
     const image = part.match(/^!\[([^\]]*)\]\(([^\)]+)\)$/);
-    if (image) return <img key={index} className="project-markdown-image" src={image[2]} alt={image[1]} />;
+    if (image) return <img key={index} className="project-markdown-image" src={image[2]} alt={image[1]} loading="lazy" />;
     const link = part.match(/^\[([^\]]+)\]\(([^\)]+)\)$/);
     if (link) return <a key={index} href={link[2]} target="_blank" rel="noreferrer">{link[1]}</a>;
     if ((part.startsWith("**") && part.endsWith("**")) || (part.startsWith("__") && part.endsWith("__"))) return <strong key={index}>{part.slice(2, -2)}</strong>;
-    if (part.startsWith("`") && part.endsWith("`")) return <code key={index}>{part.slice(1, -1)}</code>;
+    if (part.startsWith(String.fromCharCode(96)) && part.endsWith(String.fromCharCode(96))) return <code key={index}>{part.slice(1, -1)}</code>;
+    if (part.startsWith("~~") && part.endsWith("~~")) return <del key={index}>{part.slice(2, -2)}</del>;
     if ((part.startsWith("*") && part.endsWith("*")) || (part.startsWith("_") && part.endsWith("_"))) return <em key={index}>{part.slice(1, -1)}</em>;
     return <span key={index}>{part}</span>;
   });
 }
 
 function Markdown({ source }: { source: string }) {
-  const normalized = source.replace(/<center>\s*/gi, "").replace(/<\/center>/gi, "").replace(/<p>\s*<\/p>/gi, "").replace(/<h1[^>]*>(.*?)<\/h1>/gis, "\n# $1\n").replace(/<[^>]+>/g, "");
-  const lines = normalized.split(/\r?\n/);
+  const lines = normalizeMarkdown(source).split(/\n/);
   const nodes: ReactNode[] = [];
   let listItems: string[] = [];
-  const flushList = () => {
-    if (!listItems.length) return;
-    nodes.push(<ul key={nodes.length}>{listItems.map((item, index) => <li key={index}>{renderInline(item)}</li>)}</ul>);
-    listItems = [];
+  let orderedItems: string[] = [];
+  let paragraphLines: string[] = [];
+  let codeLines: string[] = [];
+  let inCodeBlock = false;
+
+  const flushParagraph = () => {
+    if (!paragraphLines.length) return;
+    nodes.push(<p key={"paragraph-" + nodes.length}>{renderInline(paragraphLines.join(" "))}</p>);
+    paragraphLines = [];
   };
+
+  const flushList = () => {
+    if (listItems.length) {
+      nodes.push(<ul key={"unordered-" + nodes.length}>{listItems.map((item, index) => <li key={index}>{renderInline(item)}</li>)}</ul>);
+      listItems = [];
+    }
+    if (orderedItems.length) {
+      nodes.push(<ol key={"ordered-" + nodes.length}>{orderedItems.map((item, index) => <li key={index}>{renderInline(item)}</li>)}</ol>);
+      orderedItems = [];
+    }
+  };
+
+  const flushCode = () => {
+    if (!codeLines.length) return;
+    nodes.push(<pre key={"code-" + nodes.length}><code>{codeLines.join("\n")}</code></pre>);
+    codeLines = [];
+  };
+
   lines.forEach((line, index) => {
     const trimmed = line.trim();
-    if (!trimmed) { flushList(); return; }
-    const list = trimmed.match(/^[-*+]\s+(.+)/);
-    if (list) { listItems.push(list[1]); return; }
+    if (trimmed.startsWith(String.fromCharCode(96).repeat(3))) {
+      flushParagraph();
+      flushList();
+      if (inCodeBlock) flushCode();
+      inCodeBlock = !inCodeBlock;
+      return;
+    }
+    if (inCodeBlock) {
+      codeLines.push(line);
+      return;
+    }
+    if (!trimmed) {
+      flushParagraph();
+      flushList();
+      return;
+    }
+
+    const unordered = trimmed.match(/^[-*+]\s+(.+)/);
+    const ordered = trimmed.match(/^\d+[.)]\s+(.+)/);
+    if (unordered) {
+      flushParagraph();
+      orderedItems = [];
+      listItems.push(unordered[1]);
+      return;
+    }
+    if (ordered) {
+      flushParagraph();
+      listItems = [];
+      orderedItems.push(ordered[1]);
+      return;
+    }
+
     flushList();
     const heading = trimmed.match(/^(#{1,6})\s+(.+)/);
-    if (heading) { const Heading = ("h" + Math.min(heading[1].length + 2, 6)) as keyof JSX.IntrinsicElements; nodes.push(<Heading key={index}>{renderInline(heading[2])}</Heading>); return; }
-    if (/^>\s?/.test(trimmed)) { nodes.push(<blockquote key={index}>{renderInline(trimmed.replace(/^>\s?/, ""))}</blockquote>); return; }
-    if (/^---+$/.test(trimmed)) { nodes.push(<hr key={index} />); return; }
-    if (/^```/.test(trimmed)) return;
-    nodes.push(<p key={index}>{renderInline(trimmed)}</p>);
+    if (heading) {
+      const Heading = ("h" + Math.min(heading[1].length + 1, 6)) as keyof JSX.IntrinsicElements;
+      nodes.push(<Heading key={"heading-" + index}>{renderInline(heading[2])}</Heading>);
+      return;
+    }
+    if (/^>\s?/.test(trimmed)) {
+      nodes.push(<blockquote key={"quote-" + index}>{renderInline(trimmed.replace(/^>\s?/, ""))}</blockquote>);
+      return;
+    }
+    if (/^---+$/.test(trimmed)) {
+      nodes.push(<hr key={"rule-" + index} />);
+      return;
+    }
+    paragraphLines.push(trimmed);
   });
+
+  flushParagraph();
   flushList();
+  if (inCodeBlock) flushCode();
   return <div className="project-markdown">{nodes}</div>;
+}
+
+function getPrimaryCreator(project: ModrinthProjectDetails) {
+  const member = project.members?.find(item => item.accepted !== false) ?? project.members?.[0];
+  return {
+    name: project.author || member?.user.name || member?.user.username || "",
+    avatar: member?.user.avatar_url || "",
+  };
+}
+
+function MinecraftLogo() {
+  return <img
+    className="minecraft-discovery-logo"
+    src="https://raw.githubusercontent.com/Mojang/web-theme-bootstrap/main/assets/svg/logos/minecraft-core-brand.svg"
+    alt="Minecraft"
+    draggable={false}
+  />;
 }
 
 export function ModrinthDiscover({ tofu, pikos }: Props) {
@@ -152,7 +263,7 @@ export function ModrinthDiscover({ tofu, pikos }: Props) {
     <section className="modrinth-discover">
       <div className="discover-header"><div><p className="eyebrow">Discovery</p><h2>Discover Minecraft</h2><p>Browse Minecraft instances and popular community content in one place. More games can be added here later.</p></div><button className="secondary-button" onClick={() => void refresh()} disabled={loading || tab === "instances"}>{loading ? <RefreshCw size={14} className="spin" /> : <RefreshCw size={14} />} Refresh</button></div>
       <div className="discover-platform-tabs" role="tablist" aria-label="Game discovery">
-        <button className="discover-platform-tab active" type="button" role="tab" aria-selected="true"><MinecraftMark size={22} /><span>Minecraft</span></button>
+        <button className="discover-platform-tab active" type="button" role="tab" aria-selected="true"><MinecraftLogo /></button>
       </div>
       <div className="discover-tabs" role="tablist" aria-label="Minecraft discovery categories">
         {discoveryTabs.map(item => <button key={item.id} className={tab === item.id ? "active" : ""} type="button" role="tab" aria-selected={tab === item.id} onClick={() => setTab(item.id)}>{item.label}</button>)}
@@ -208,7 +319,7 @@ function ProjectDetails({ project, gameVersion, onClose }: { project: ModrinthPr
         <div className="project-details-header">
           <div>
             {project.icon_url ? <img src={project.icon_url} alt="" /> : <div className="discover-card-icon fallback"><PackageOpen size={26}/></div>}
-            <div><p className="eyebrow">{projectTypeLabel(project.project_type)}</p><h2>{project.title}</h2><p>{project.description}</p><small>Created by <strong>{project.author || "Unknown creator"}</strong> · {project.downloads.toLocaleString()} downloads</small></div>
+            <div><p className="eyebrow">{projectTypeLabel(project.project_type)}</p><h2>{project.title}</h2><p>{project.description}</p><small>Created by <strong>{getPrimaryCreator(project).name || "Unknown creator"}</strong> · {project.downloads.toLocaleString()} downloads</small></div>
           </div>
           <button className="icon-button" onClick={onClose}><X size={17}/></button>
         </div>
@@ -220,11 +331,11 @@ function ProjectDetails({ project, gameVersion, onClose }: { project: ModrinthPr
           <div className="project-overview">
             <section className="project-creator-primary">
               <div className="project-creator-primary-avatar">
-                {project.members?.find(member => member.user.username === project.author)?.user.avatar_url || project.members?.[0]?.user.avatar_url
-                  ? <img src={project.members?.find(member => member.user.username === project.author)?.user.avatar_url || project.members?.[0]?.user.avatar_url} alt="" />
-                  : <div className="project-creator-primary-fallback">{(project.author || "?").slice(0, 1).toUpperCase()}</div>}
+                {getPrimaryCreator(project).avatar
+                  ? <img src={getPrimaryCreator(project).avatar} alt="" />
+                  : <div className="project-creator-primary-fallback">{(getPrimaryCreator(project).name || "?").slice(0, 1).toUpperCase()}</div>}
               </div>
-              <div><span>Created by</span><strong>{project.author || "Unknown creator"}</strong></div>
+              <div><span>Created by</span><strong>{getPrimaryCreator(project).name || "Unknown creator"}</strong></div>
             </section>
             <div className="project-info-grid">
               <span><strong>Downloads</strong>{project.downloads.toLocaleString()}</span>
