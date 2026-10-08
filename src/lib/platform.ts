@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 
-export type PlatformId = "linux" | "macos" | "other";
-export type LaunchMethodId = "file" | "flatpak" | "custom";
+export type PlatformId = "linux" | "macos" | "windows" | "other";
+export type LaunchMethodId = "file" | "app" | "flatpak" | "custom";
 
 export type FlatpakApp = {
   id: string;
@@ -40,6 +40,15 @@ export async function chooseGameTarget(): Promise<string | null> {
     multiple: false,
     directory: false,
     title: "Choose game executable or launcher",
+  });
+  return typeof selected === "string" ? selected : null;
+}
+
+export async function chooseGameAppBundle(): Promise<string | null> {
+  const selected = await open({
+    multiple: false,
+    directory: true,
+    title: "Choose macOS application",
   });
   return typeof selected === "string" ? selected : null;
 }

@@ -47,6 +47,7 @@ import { getCloudSyncEnabled, pullLibrary, pushLibrary } from "./lib/cloud";
 import type { Piko, Tofu } from "./models";
 import { lookupIgdbGame, lookupIgdbGames, type IgdbGame, type IgdbSettings } from "./lib/igdb";
 import {
+  chooseGameAppBundle,
   chooseGameTarget,
   getPlatformCapabilities,
   listInstalledFlatpaks,
@@ -509,7 +510,7 @@ function App() {
 
   const chooseGameFile = async () => {
     try {
-      const selected = await chooseGameTarget();
+      const selected = launchType === "app" ? await chooseGameAppBundle() : await chooseGameTarget();
       if (selected) setLaunchTarget(selected);
     } catch (error) {
       setLaunchError(error instanceof Error ? error.message : String(error));
@@ -1182,11 +1183,11 @@ function App() {
               <label>Launch method
                 <select value={launchType} onChange={(event) => setLaunchType(event.target.value as LaunchMethodId)}>
                   {(platformCapabilities?.launchMethods ?? ["file", "flatpak", "custom"]).map((method) => (
-                    <option value={method} key={method}>{method === "file" ? "Choose file" : method === "flatpak" ? "Flatpak" : "Custom"}</option>
+                    <option value={method} key={method}>{method === "file" ? "Choose file" : method === "app" ? "macOS application" : method === "flatpak" ? "Flatpak" : "Custom"}</option>
                   ))}
                 </select>
               </label>
-              {launchType === "file" && <div className="launch-target-picker"><button type="button" className="secondary-button file-picker-button" onClick={chooseGameFile}>Choose executable / launcher file</button></div>}
+              {(launchType === "file" || launchType === "app") && <div className="launch-target-picker"><button type="button" className="secondary-button file-picker-button" onClick={chooseGameFile}>{launchType === "app" ? "Choose macOS application" : "Choose executable / launcher file"}</button></div>}
               {launchType === "flatpak" && <div className="flatpak-input-row"><button type="button" className="secondary-button" onClick={loadFlatpaks} disabled={flatpakBusy}>{flatpakBusy ? <><MochiIcon name="refresh" fallback={RefreshCw} size={15} className="spin" /> Loading...</> : <><MochiIcon name="installed" fallback={Grid2X2} size={15} /> Choose installed Flatpak</>}</button><input value={launchTarget} onChange={(event) => setLaunchTarget(event.target.value)} placeholder="org.company.game" autoComplete="off" required /></div>}
               {launchType === "custom" && <input value={launchTarget} onChange={(event) => setLaunchTarget(event.target.value)} placeholder="Custom path, Flatpak ID, or supported launch target" autoComplete="off" required />}
             </div>
