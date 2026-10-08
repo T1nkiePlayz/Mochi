@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { keepIfEqual } from "../lib/equal";
 import { getPlaytime, type PlaytimeEntry } from "../lib/platform";
 
 /** Playtime totals from the native tracker; refreshes every 15s while a game is running. */
@@ -8,7 +9,7 @@ export function usePlaytime(runningCount: number) {
   const refresh = useCallback(async () => {
     const mine = ++seq.current;
     // A slower, older response must not overwrite a newer one.
-    try { const next = await getPlaytime(); if (mine === seq.current) setPlaytime(next); } catch { /* browser/development mode or an older backend */ }
+    try { const next = await getPlaytime(); if (mine === seq.current) setPlaytime(keepIfEqual(next)); } catch { /* browser/development mode or an older backend */ }
   }, []);
   useEffect(() => {
     void refresh();

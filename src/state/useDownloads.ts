@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { keepIfEqual } from "../lib/equal";
 import { getDownloads, type DownloadEntry } from "../lib/modrinth";
 
 /** The native side owns download state; poll it while the Downloads page is open or anything is in flight. */
@@ -25,13 +26,16 @@ export function useDownloads(active: boolean, notify: (title: string, message: s
           }
           statuses.current.set(download.id, download.status);
         }
-        setDownloads(next);
+        setDownloads(keepIfEqual(next));
       } catch { /* browser/development mode */ }
     };
     void poll();
     // The in-memory list is cheap to read; poll faster while the user is watching it.
-    const timer = window.setInterval(() => void poll(), active || hasActive ? 1500 : 4000);
-    return () => { cancelled = true; window.clearInterval(timer); };
+    // Nobody is looking while the window is hidden (minimised, tray), so skip those ticks and catch up on return.
+    const tick = () => { if (!document.hidden) void poll(); };
+    const timer = window.setInterval(tick, active || hasActive ? 1500 : 4000);
+    document.addEventListener("visibilitychange", tick);
+    return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener("visibilitychange", tick); };
   }, [active, hasActive]);
 
   return downloads;

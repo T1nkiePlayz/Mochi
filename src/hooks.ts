@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { keepIfEqual } from "./lib/equal";
 import { getActiveSessions, type ActiveSession } from "./lib/platform";
 
 /** Tracks which games are currently running, updating as the native side reports changes. */
@@ -8,7 +9,7 @@ export function useGameSessions() {
   const seq = useRef(0);
   const refresh = useCallback(async () => {
     const mine = ++seq.current;
-    try { const next = await getActiveSessions(); if (mine === seq.current) setSessions(next); } catch { /* browser/development mode */ }
+    try { const next = await getActiveSessions(); if (mine === seq.current) setSessions(keepIfEqual(next)); } catch { /* browser/development mode */ }
   }, []);
   const isRunning = useCallback((gameId: string) => sessions.some((session) => session.gameId === gameId), [sessions]);
 

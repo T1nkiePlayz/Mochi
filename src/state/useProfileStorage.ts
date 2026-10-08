@@ -1,7 +1,7 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { Piko } from "../models";
-import { profileStorageKey, readJson, removeKey, storageKeys, writeJson } from "../lib/storage";
+import { profileStorageKey, readJson, removeKey, storageKeys, writeJson, writeJsonDebounced } from "../lib/storage";
 import { sanitizeLibrary } from "../lib/library";
 import { defaultBehavior, normalizeBehavior, type Behavior } from "./settings";
 import type { AppNotification } from "./useNotifications";
@@ -33,12 +33,12 @@ export function useProfileStorage(params: Params) {
   const scoped = (key: string) => (multipleAccountsEnabled ? profileStorageKey(activeProfileId, key) : `mochi:${key}`);
   const ready = owner === ownerKey;
 
-  useEffect(() => { if (ready) writeJson(scoped("pikos"), library); }, [library, ready, ownerKey]);
-  useEffect(() => { if (ready) writeJson(scoped("notifications"), notifications); }, [notifications, ready, ownerKey]);
+  useEffect(() => { if (ready) writeJsonDebounced(scoped("pikos"), library); }, [library, ready, ownerKey]);
+  useEffect(() => { if (ready) writeJsonDebounced(scoped("notifications"), notifications); }, [notifications, ready, ownerKey]);
   useEffect(() => {
     if (!ready) return;
-    if (multipleAccountsEnabled) writeJson(scoped("settings"), { ...behavior, theme });
-    else writeJson(storageKeys.settings, { ...behavior, multipleAccountsEnabled });
+    if (multipleAccountsEnabled) writeJsonDebounced(scoped("settings"), { ...behavior, theme });
+    else writeJsonDebounced(storageKeys.settings, { ...behavior, multipleAccountsEnabled });
   }, [behavior, theme, multipleAccountsEnabled, ready, ownerKey]);
 
   // The multi-profile switch itself always lives in the shared settings so it survives a profile change.
