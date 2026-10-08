@@ -52,17 +52,17 @@ function normalizeMarkdown(source: string): string {
   return decodeHtmlEntities(
     source
       .replace(/\r/g, "")
-      .replace(/<img\\b([^>]*?)\\bsrc=["']([^"']+)["']([^>]*)>/gi, (_match, before, src, after) => {
+      .replace(/<img\b([^>]*?)\bsrc=["']([^"']+)["']([^>]*)>/gi, (_match, before, src, after) => {
         const attributes = before + after;
-        const alt = attributes.match(/\\balt=["']([^"']*)["']/i)?.[1] || "";
+        const alt = attributes.match(/\balt=["']([^"']*)["']/i)?.[1] || "";
         return "\n![" + alt + "](" + src + ")\n";
       })
-      .replace(/<br\\s*\\/?\\s*>/gi, "\n")
-      .replace(/<h([1-6])[^>]*>([\\s\\S]*?)<\\/h\\1>/gi, (_match, level, body) => "\n" + "#".repeat(Number(level)) + " " + body + "\n")
-      .replace(/<li[^>]*>([\\s\\S]*?)<\\/li>/gi, "\n- $1\n")
-      .replace(/<\\/?(?:ul|ol|p|div|section|article|center|figure|figcaption)[^>]*>/gi, "\n")
+      .replace(/<br\s*\/?\s*>/gi, "\n")
+      .replace(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi, (_match, level, body) => "\n" + "#".repeat(Number(level)) + " " + body + "\n")
+      .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, "\n- $1\n")
+      .replace(/<\/?(?:ul|ol|p|div|section|article|center|figure|figcaption)[^>]*>/gi, "\n")
       .replace(/<[^>]+>/g, "")
-      .replace(/\\n{3,}/g, "\n\n")
+      .replace(/\n{3,}/g, "\n\n")
       .trim(),
   );
 }
