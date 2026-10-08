@@ -44,6 +44,15 @@ export async function chooseGameTarget(): Promise<string | null> {
   return typeof selected === "string" ? selected : null;
 }
 
+export async function chooseGameAppBundle(): Promise<string | null> {
+  const selected = await open({
+    multiple: false,
+    directory: true,
+    title: "Choose macOS application",
+  });
+  return typeof selected === "string" ? selected : null;
+}
+
 export function normalizeLaunchTarget(target: string, method: LaunchMethodId): string {
   const trimmed = target.trim();
   if (method !== "flatpak") return trimmed;
