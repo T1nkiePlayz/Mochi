@@ -28,6 +28,9 @@ The manifest contains:
 - colors
 - ui
 - assets
+- fonts (Google Fonts stylesheet URLs)
+- scheme (`light` or `dark`)
+- shell (`left`, `right`, `top`, `bottom` or `rail`)
 
 Every color and UI property becomes a CSS custom property.
 
@@ -35,7 +38,7 @@ For example, colors.background becomes --mochi-background and ui.radiusMd become
 
 ## Custom CSS
 
-A folder theme may include theme.css. Mochi loads it after the standard token bridge, so a theme can change layouts, borders, typography, backgrounds, cards, navigation, dialogs and other visual details rather than only changing colours.
+A folder theme may include theme.css. Mochi loads it after its own stylesheets, so a theme can change layouts, borders, typography, backgrounds, cards, navigation, dialogs and other visual details rather than only changing colours.
 
 Theme CSS can use asset variables declared by the manifest. For example:
 
@@ -76,3 +79,5 @@ Settings provides separate import actions for:
 - Theme folder — imports a complete theme package with its CSS and assets.
 
 After import, Mochi reloads the available theme list so the new theme can be selected without restarting. The native backend validates the manifest and rejects unsafe theme IDs and asset paths that attempt to escape the theme directory.
+
+See `docs/theme-architecture.md` for the token vocabulary and shell presets, and `docs/theme-hooks.md` for every class name a theme can style.

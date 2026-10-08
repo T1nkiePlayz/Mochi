@@ -1,0 +1,63 @@
+/* RuneScape — Gielinor stone. Every panel is carved: light edge top-left, dark edge bottom-right.
+ * Text carries the game's hard black drop shadow; titles are orange, highlights yellow. */
+
+.app-shell::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .35; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .6  0 0 0 0 .5  0 0 0 0 .35  0 0 0 .5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+.sidebar, .main-content { position: relative; z-index: 1; }
+
+/* Side-stone column on the right */
+.sidebar { border-left: 3px solid #1c1812; box-shadow: inset 2px 0 0 #6b5f4a, -6px 0 24px rgba(0, 0, 0, .5); padding-top: 18px; }
+.brand { flex-direction: column; text-align: center; padding: 6px 0 18px; gap: 6px; }
+.brand-mark { width: 54px; height: 54px; border-radius: 3px; background: linear-gradient(180deg, #5a4d3b, #3a3023); border: 2px solid #1c1812; box-shadow: inset 1px 1px 0 #7d6f56, inset -1px -1px 0 #2a2218; }
+.brand-mark img { width: 40px; height: 40px; }
+.brand strong { font-size: 24px; color: #ff981f; text-shadow: 2px 2px 0 #000; letter-spacing: .04em; }
+.brand span { color: #ffff00; text-shadow: 1px 1px 0 #000; }
+.nav-item { min-height: 48px; padding: 0 16px; background: linear-gradient(180deg, #5a4d3b, #43392b); border: 2px solid #1c1812; border-radius: 3px;
+  box-shadow: inset 1px 1px 0 #7d6f56, inset -1px -1px 0 #2a2218; color: #ff981f; font-size: 15px; font-weight: 700; text-shadow: 1px 1px 0 #000; margin-bottom: 2px; }
+.nav-item:hover { color: #ffff00; background: linear-gradient(180deg, #6d5d46, #54483a); }
+.nav-item.active { color: #ffff00; box-shadow: inset 1px 1px 0 #14100b, inset -1px -1px 0 #5a4d3b, 0 0 0 1px #ff981f; background: linear-gradient(180deg, #2c241a, #3a3023); }
+.nav-item svg, .nav-item .mochi-icon-wrap { filter: drop-shadow(1px 1px 0 #000); }
+.sidebar-account { background: #28211a; border: 2px solid #1c1812; border-radius: 3px; box-shadow: inset 1px 1px 0 #14100b, inset -1px -1px 0 #5a4d3b; }
+.sidebar-account strong { color: #ffff00; }
+.account-avatar { border-radius: 2px; border: 2px solid #1c1812; background: #5a4d3b; box-shadow: inset 1px 1px 0 #7d6f56; }
+
+.topbar { background: linear-gradient(180deg, #463c2d, #352d21); box-shadow: inset 0 -2px 0 #1c1812, inset 0 -3px 0 #6b5f4a; }
+.breadcrumb, .breadcrumb strong { color: #ff981f; text-shadow: 1px 1px 0 #000; }
+.page-heading h1 { font-size: 40px; color: #ff981f; }
+.eyebrow { color: #ffff00; text-shadow: 1px 1px 0 #000; }
+.section-heading h3, .settings-group-heading strong { color: #ff981f; font-size: 22px; }
+.settings-group-heading strong { font-size: 18px; }
+.section-heading { border-bottom: 2px solid #1c1812; box-shadow: 0 1px 0 #6b5f4a; padding-bottom: 8px; }
+
+/* Carved panels */
+.game-card, .tofu-card, .new-tofu-card, .continue-card, .settings-group, .modrinth-manager, .game-details-hero, .game-details-section, .theme-card { border-width: 2px; }
+.game-card { padding: 4px; }
+.game-card .game-card-art { border: 2px solid #1c1812; box-shadow: 0 0 0 1px #6b5f4a; }
+.game-card:hover { transform: none; box-shadow: inset 1px 1px 0 #6b5f4a, inset -1px -1px 0 #261f16, 0 0 0 2px #ff981f; }
+.game-card:hover .game-card-art { transform: none; }
+.game-card-copy { background: transparent; padding: 8px 4px 4px; }
+.game-card-copy strong { color: #ffff00; text-shadow: 1px 1px 0 #000; font-size: 15px; }
+.game-card-play { border-radius: 2px; background: #ff981f; color: #1b1610; border: 2px solid #1c1812; }
+.continue-art, .game-details-cover { border: 2px solid #1c1812; box-shadow: 0 0 0 1px #6b5f4a; border-radius: 2px; }
+.continue-copy strong { color: #ffff00; }
+.continue-play { border-radius: 2px; border: 2px solid #1c1812; box-shadow: inset 1px 1px 0 #ffd88f, inset -1px -1px 0 #8a4a00; }
+.category-count, .game-details-badges span { border-radius: 2px; background: #28211a; border: 2px solid #1c1812; color: #ffff00; text-shadow: 1px 1px 0 #000; }
+.library-toolbar { border-bottom: 2px solid #1c1812; box-shadow: 0 1px 0 #6b5f4a; }
+.game-stats { border-top: 2px solid #1c1812; box-shadow: 0 -1px 0 #6b5f4a; }
+.game-stats dd, .setting-row strong, .tofu-card strong { color: #fff; text-shadow: 1px 1px 0 #000; }
+.workspace-tabs { border-bottom: 2px solid #1c1812; }
+.workspace-tabs button { border: 2px solid #1c1812; background: linear-gradient(180deg, #5a4d3b, #43392b); color: #ff981f; border-radius: 2px; box-shadow: inset 1px 1px 0 #7d6f56; }
+.workspace-tabs button.active { background: #28211a; color: #ffff00; box-shadow: inset 1px 1px 0 #14100b; }
+.toggle { appearance: none; position: relative; width: 44px; height: 22px; border: 2px solid #1c1812; background: #28211a; border-radius: 2px; box-shadow: inset 1px 1px 0 #14100b; }
+.toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: linear-gradient(180deg, #7d6f56, #5a4d3b); border: 1px solid #1c1812; transition: transform 90ms linear; }
+.toggle:checked::after { transform: translateX(22px); background: linear-gradient(180deg, #ffd88f, #ff981f); }
+.setup-shell { background: var(--mochi-app-background); }
+.setup-orbit { display: none; }
+.setup-panel { background: #3e3529; border: 3px solid #1c1812; border-radius: 3px; box-shadow: inset 2px 2px 0 #6b5f4a, inset -2px -2px 0 #261f16, 0 20px 60px #000; }
+.setup-footer { background: #352d21; border-top: 2px solid #1c1812; }
+.setup-progress span { border-radius: 0; background: #28211a; }
+.setup-progress span.active { background: #ff981f; }
+.notification-popover, .account-menu { border-radius: 3px; border-width: 2px; }
+.download-progress { border-radius: 2px; background: #28211a; border: 2px solid #1c1812; }
+.download-progress > span { background: #43d943; }
+.danger-outline, .stop-button { color: #ff4a3a; border-color: #1c1812; background: linear-gradient(180deg, #5a3a33, #43271f); }

@@ -1,0 +1,278 @@
+/*
+ * Component skin. One definition per primitive (buttons, inputs, cards, panels,
+ * dialogs, tabs ...) expressed purely in tokens, so the whole launcher stays
+ * uniform and a theme can restyle a primitive everywhere by changing one token.
+ */
+
+/* ---- Document -------------------------------------------------------------- */
+html { background: var(--mochi-background); }
+body {
+  margin: 0;
+  color: var(--mochi-text);
+  background: var(--mochi-background);
+  font-family: var(--mochi-font-body);
+  line-height: var(--mochi-body-line-height);
+  text-shadow: var(--mochi-text-shadow);
+  -webkit-font-smoothing: var(--mochi-font-smoothing);
+  image-rendering: var(--mochi-image-rendering);
+}
+::selection { background: var(--mochi-accent-strong); color: var(--mochi-accent-text); }
+* { scrollbar-width: thin; scrollbar-color: var(--mochi-scrollbar-thumb) var(--mochi-scrollbar-track); }
+::-webkit-scrollbar { width: var(--mochi-scrollbar-width); height: var(--mochi-scrollbar-width); }
+::-webkit-scrollbar-track { background: var(--mochi-scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--mochi-scrollbar-thumb); border-radius: var(--mochi-pill-radius); border: 2px solid transparent; background-clip: content-box; }
+:focus-visible { outline: 2px solid var(--mochi-accent-strong); outline-offset: 2px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; }
+button:disabled { cursor: not-allowed; }
+
+/* ---- Shell ----------------------------------------------------------------- */
+.app-shell { background: var(--mochi-app-background); color: var(--mochi-text); }
+.sidebar {
+  width: var(--mochi-sidebar-width); flex-basis: var(--mochi-sidebar-width);
+  background: var(--mochi-sidebar-background);
+  border-right: var(--mochi-border-width) solid var(--mochi-sidebar-border);
+}
+.topbar { height: var(--mochi-topbar-height); background: var(--mochi-topbar-background); border-bottom: var(--mochi-border-width) solid var(--mochi-topbar-border); }
+.content { max-width: var(--mochi-content-max-width); padding: var(--mochi-content-padding); }
+
+/* ---- Typography ------------------------------------------------------------ */
+.brand strong, .page-heading h1, .hero-card h2, .section-heading h3, .settings-intro h2, .modal h2,
+.game-details-title h2, .setup-page h1, .setup-welcome-line, .discover-header h2, .tofu-workspace-header h3,
+.downloads-intro h2, .empty-state h2, .mfa-title, .download-empty h3 {
+  font-family: var(--mochi-font-display);
+  font-weight: var(--mochi-heading-weight);
+  letter-spacing: var(--mochi-heading-tracking);
+  text-transform: var(--mochi-heading-transform);
+  text-shadow: var(--mochi-heading-shadow);
+  color: var(--mochi-text-strong);
+}
+.eyebrow, .section-label, .detail-label, .form-fields label, .setup-fields label, .workspace-section-title,
+.credential-status, .setting-row small.eyebrow {
+  font-weight: var(--mochi-label-weight);
+  letter-spacing: var(--mochi-label-tracking);
+  text-transform: var(--mochi-label-transform);
+}
+code, .mfa-setup-card code, .theme-config-path code, .setting-location-value code { font-family: var(--mochi-mono); }
+
+/* ---- Buttons --------------------------------------------------------------- */
+.secondary-button, .play-button, .setup-nav, .text-button.bordered {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: var(--mochi-button-height); padding: var(--mochi-button-padding);
+  border: var(--mochi-border-width) solid var(--mochi-button-border);
+  border-radius: var(--mochi-button-radius);
+  background: var(--mochi-button-background); color: var(--mochi-button-color);
+  box-shadow: var(--mochi-button-shadow);
+  font-family: var(--mochi-font-body); font-size: 12px; font-weight: var(--mochi-button-weight);
+  letter-spacing: var(--mochi-button-tracking); text-transform: var(--mochi-button-transform);
+  text-shadow: var(--mochi-text-shadow);
+  transition: background var(--mochi-transition), border-color var(--mochi-transition), box-shadow var(--mochi-transition), transform var(--mochi-transition), filter var(--mochi-transition);
+}
+.secondary-button:hover:not(:disabled), .setup-nav:hover:not(:disabled) { background: var(--mochi-button-hover-background); border-color: var(--mochi-button-hover-border); }
+.play-button, .setup-next {
+  background: var(--mochi-primary-background); color: var(--mochi-primary-color);
+  border-color: var(--mochi-primary-border); box-shadow: var(--mochi-primary-shadow);
+  font-weight: 700;
+}
+.play-button:hover:not(:disabled), .setup-next:hover:not(:disabled) { background: var(--mochi-primary-hover-background); }
+.secondary-button:active:not(:disabled), .play-button:active:not(:disabled), .setup-nav:active:not(:disabled) { transform: var(--mochi-button-active-transform); }
+.secondary-button:disabled, .play-button:disabled, .setup-nav:disabled { opacity: .5; }
+.danger-outline, .stop-button {
+  color: var(--mochi-danger-color); border-color: color-mix(in srgb, var(--mochi-danger) 45%, var(--mochi-border));
+  background: transparent;
+}
+.stop-button { background: var(--mochi-danger-background); box-shadow: none; }
+.danger-outline:hover:not(:disabled), .stop-button:hover:not(:disabled) { background: var(--mochi-danger-background); border-color: var(--mochi-danger); }
+.icon-button { border-radius: var(--mochi-button-radius); color: var(--mochi-text-muted); transition: background var(--mochi-transition), color var(--mochi-transition); }
+.icon-button:hover { background: var(--mochi-nav-hover-background); color: var(--mochi-text-strong); }
+.text-button { color: var(--mochi-text-muted); transition: color var(--mochi-transition); }
+.text-button:hover { color: var(--mochi-text-strong); }
+.reset-button { color: var(--mochi-danger); }
+
+/* ---- Navigation ------------------------------------------------------------ */
+.nav-item, .piko-nav-item {
+  min-height: 38px; border: var(--mochi-border-width) solid transparent; border-radius: var(--mochi-button-radius);
+  color: var(--mochi-text-muted); font-weight: 500;
+  transition: background var(--mochi-transition), color var(--mochi-transition), border-color var(--mochi-transition);
+}
+.nav-item:hover, .piko-nav-item:hover { background: var(--mochi-nav-hover-background); color: var(--mochi-text-strong); }
+.nav-item.active, .piko-nav-item.selected { background: var(--mochi-nav-active-background); box-shadow: var(--mochi-nav-active-shadow); color: var(--mochi-text-strong); }
+.sidebar-account { border-radius: var(--mochi-card-radius); }
+.sidebar-account:hover { background: var(--mochi-nav-hover-background); border-color: var(--mochi-card-border); }
+.workspace-tabs button, .discover-tabs button, .discover-game-tab, .discover-platform-tab, .project-tabs button {
+  border-radius: var(--mochi-button-radius); color: var(--mochi-text-muted);
+  transition: background var(--mochi-transition), color var(--mochi-transition);
+}
+.workspace-tabs button:hover, .discover-tabs button:hover, .discover-game-tab:hover, .discover-platform-tab:hover, .project-tabs button:hover { color: var(--mochi-text-strong); background: var(--mochi-nav-hover-background); }
+.workspace-tabs button.active, .discover-tabs button.active, .discover-game-tab.active, .discover-platform-tab.active, .project-tabs button.active { background: var(--mochi-accent-soft); color: var(--mochi-text-strong); box-shadow: inset 0 -2px var(--mochi-accent-strong); }
+
+/* ---- Inputs ---------------------------------------------------------------- */
+.form-fields input, .form-fields select, .form-fields textarea, .igdb-form input, .setup-fields input, .provider-credential-card input,
+.compact-input, .mfa-input, .setup-provider-card input, .tofu-manager-form textarea, .setup-fields select {
+  min-height: var(--mochi-input-height, 38px);
+  border: var(--mochi-border-width) solid var(--mochi-input-border); border-radius: var(--mochi-input-radius);
+  background: var(--mochi-input-background); color: var(--mochi-text); box-shadow: var(--mochi-input-shadow);
+  font-family: var(--mochi-font-body); transition: border-color var(--mochi-transition), box-shadow var(--mochi-transition);
+}
+.form-fields input:focus, .form-fields select:focus, .form-fields textarea:focus, .igdb-form input:focus, .setup-fields input:focus,
+.provider-credential-card input:focus, .compact-input:focus, .mfa-input:focus, .setup-provider-card input:focus, .tofu-manager-form textarea:focus {
+  border-color: var(--mochi-input-focus-border); box-shadow: var(--mochi-focus-ring);
+}
+.search-box {
+  border: var(--mochi-border-width) solid var(--mochi-input-border); border-radius: var(--mochi-input-radius);
+  background: var(--mochi-input-background); color: var(--mochi-text-muted); box-shadow: var(--mochi-input-shadow);
+  transition: border-color var(--mochi-transition), box-shadow var(--mochi-transition);
+}
+.search-box:focus-within { border-color: var(--mochi-input-focus-border); box-shadow: var(--mochi-focus-ring); }
+.search-box input { color: var(--mochi-text); }
+.search-box kbd { border-radius: 4px; font-family: var(--mochi-mono); }
+::placeholder { color: var(--mochi-text-faint); }
+.toggle:checked { background: var(--mochi-accent-strong); }
+
+/* ---- Cards ----------------------------------------------------------------- */
+.game-card, .tofu-card, .new-tofu-card, .theme-card, .provider-credential-card, .security-card, .security-provider, .passkey-row,
+.profile-row, .installed-content-row, .modrinth-result, .import-source-row, .import-game-row, .setup-source, .setup-choice,
+.setup-theme-card, .flatpak-item, .igdb-candidate, .add-options button, .discover-card, .suggested-game-card, .download-row,
+.tofu-manager-item, .nexus-game-picker-row, .tofu-picker-row, .setup-found-game, .mfa-setup-card, .notification-item {
+  background: var(--mochi-card-background); border: var(--mochi-border-width) solid var(--mochi-card-border);
+  border-radius: var(--mochi-card-radius); color: var(--mochi-text);
+  transition: background var(--mochi-transition), border-color var(--mochi-transition), transform var(--mochi-transition), box-shadow var(--mochi-transition);
+}
+.game-card, .tofu-card, .new-tofu-card, .theme-card, .discover-card, .suggested-game-card { box-shadow: var(--mochi-card-shadow); }
+.game-card:hover, .tofu-card:hover, .new-tofu-card:hover, .theme-card:hover, .import-source-row:hover, .import-game-row:hover,
+.setup-source:hover, .setup-theme-card:hover, .flatpak-item:hover, .igdb-candidate:hover, .add-options button:hover, .discover-card:hover,
+.suggested-game-card:hover, .tofu-manager-item:hover, .nexus-game-picker-row:hover, .tofu-picker-row:hover {
+  background: var(--mochi-card-hover-background); border-color: var(--mochi-card-hover-border);
+}
+.game-card.selected, .tofu-card.active, .theme-card.selected, .import-game-row.selected, .setup-source.selected, .setup-theme-card.selected,
+.tofu-manager-item.active, .profile-row.active {
+  border-color: var(--mochi-card-hover-border); background: var(--mochi-card-hover-background);
+  box-shadow: inset 0 0 0 1px var(--mochi-card-hover-border), var(--mochi-card-shadow);
+}
+.game-card:hover { transform: translateY(-2px); }
+.game-card-art, .game-details-cover, .game-trailer-poster { background-color: var(--mochi-surface-raised); }
+.game-card { overflow: hidden; }
+
+/* ---- Panels ---------------------------------------------------------------- */
+.settings-group, .modrinth-manager, .download-group, .download-empty, .empty-state, .security-signed-out {
+  background: var(--mochi-panel-background); border: var(--mochi-border-width) solid var(--mochi-panel-border);
+  border-radius: var(--mochi-card-radius); box-shadow: var(--mochi-panel-shadow); color: var(--mochi-text);
+}
+.settings-group-heading { border-bottom: var(--mochi-border-width) solid var(--mochi-panel-border); }
+.setting-row { border-bottom: var(--mochi-border-width) solid var(--mochi-panel-border); color: var(--mochi-text); }
+.setting-row:hover { background: var(--mochi-nav-hover-background); }
+.setting-row small, .game-card-copy small, .tofu-details, .tofu-mods { color: var(--mochi-text-muted); }
+.hero-card { border: var(--mochi-border-width) solid var(--mochi-card-border); border-radius: var(--mochi-hero-radius); box-shadow: var(--mochi-shadow-card); overflow: hidden; }
+.hero-card::before { content: ""; position: absolute; inset: 0; background: var(--mochi-hero-overlay); pointer-events: none; }
+.hero-card { position: relative; isolation: isolate; }
+.hero-copy, .hero-meta { position: relative; z-index: 1; }
+.hero-card h2 { color: #fff; text-shadow: 0 2px 18px rgba(0, 0, 0, .55); }
+.hero-card p, .hero-kicker, .hero-meta { color: rgba(255, 255, 255, .78); }
+.hero-meta strong { color: #fff; }
+.details-strip { border-top: var(--mochi-border-width) solid var(--mochi-border); border-bottom: var(--mochi-border-width) solid var(--mochi-border); }
+.game-details-hero { background: var(--mochi-panel-background); border: var(--mochi-border-width) solid var(--mochi-panel-border); border-radius: var(--mochi-hero-radius); box-shadow: var(--mochi-shadow-card); }
+.game-details-section { background: var(--mochi-panel-background); border: var(--mochi-border-width) solid var(--mochi-panel-border); border-radius: var(--mochi-card-radius); }
+
+/* ---- Dialogs and popovers --------------------------------------------------- */
+.modal-backdrop, .discover-modal-backdrop { background: var(--mochi-overlay-background); backdrop-filter: blur(calc(var(--mochi-blur) / 3)); }
+.modal, .project-details-window, .nexus-game-picker {
+  background: var(--mochi-modal-background); border: var(--mochi-border-width) solid var(--mochi-modal-border);
+  border-radius: var(--mochi-modal-radius); box-shadow: var(--mochi-modal-shadow); color: var(--mochi-text);
+}
+.notification-popover, .account-menu {
+  background: var(--mochi-modal-background); border: var(--mochi-border-width) solid var(--mochi-modal-border);
+  border-radius: var(--mochi-card-radius); box-shadow: var(--mochi-modal-shadow);
+}
+.notification-item { border-radius: 0; border-width: 0 0 var(--mochi-border-width); background: transparent; }
+.notification-heading { background: transparent; border-bottom: var(--mochi-border-width) solid var(--mochi-border); }
+.account-menu button { border-radius: var(--mochi-button-radius); }
+.account-menu button:hover, .account-menu button.selected { background: var(--mochi-nav-hover-background); }
+
+/* ---- Status ---------------------------------------------------------------- */
+.ready-status { color: var(--mochi-success); }
+.ready-status.attention { color: var(--mochi-warning); }
+.auth-error { color: var(--mochi-danger); }
+.auth-notice, .credential-status.saved { color: var(--mochi-success); }
+.running-badge { color: var(--mochi-success); }
+.category-count, .game-details-badges span {
+  border-radius: var(--mochi-pill-radius); border: var(--mochi-border-width) solid var(--mochi-border); color: var(--mochi-text-muted);
+}
+progress { accent-color: var(--mochi-accent-strong); }
+.download-progress { background: var(--mochi-surface-raised); border-radius: var(--mochi-pill-radius); overflow: hidden; }
+.download-progress > span { background: var(--mochi-accent-strong); }
+.notification-dot { background: var(--mochi-danger); }
+
+/* ---- Library --------------------------------------------------------------- */
+.library-category { display: grid; gap: 14px; }
+.library-category .section-heading { align-items: center; }
+.game-card-grid { grid-template-columns: repeat(auto-fill, minmax(var(--mochi-cover-min, 168px), 1fr)) !important; gap: var(--mochi-card-gap); }
+.game-card { position: relative; padding: 0; text-align: left; cursor: pointer; }
+.game-card-art { aspect-ratio: var(--mochi-cover-aspect, 3 / 4); transition: transform .35s ease; }
+.game-card:hover .game-card-art { transform: scale(1.04); }
+.game-card .game-card-art { border-radius: 0; }
+.game-card-copy { padding: 11px 12px 13px; gap: 3px; background: var(--mochi-card-background); position: relative; }
+.game-card-copy strong { color: var(--mochi-text-strong); font-size: 13px; font-weight: 600; }
+.game-card-copy small { font-size: 11px; }
+.game-card-play { background: var(--mochi-primary-background); color: var(--mochi-primary-color); box-shadow: 0 6px 18px rgba(0, 0, 0, .35); }
+.game-cloud-status { font-size: 10px; }
+.game-cloud-status.is-synced { color: var(--mochi-success); }
+.game-cloud-status.not-synced { color: var(--mochi-warning); }
+.section-heading h3 { font-size: 18px; }
+.page-heading { align-items: center; margin-bottom: 4px; }
+.page-heading h1 { margin: 0; font-size: 30px; }
+.category-count { padding: 2px 9px; font-size: 11px; }
+
+/* ---- Shell presets ----------------------------------------------------------
+ * A theme picks where navigation lives with `"shell"` in theme.json; the
+ * launcher sets data-mochi-shell on <html>. Themes then only dress the result. */
+[data-mochi-shell="right"] .app-shell { flex-direction: row-reverse; }
+[data-mochi-shell="right"] .sidebar { border-right: 0; border-left: var(--mochi-border-width) solid var(--mochi-sidebar-border); }
+
+[data-mochi-shell="top"] .app-shell, [data-mochi-shell="bottom"] .app-shell { flex-direction: column; }
+[data-mochi-shell="bottom"] .app-shell { flex-direction: column-reverse; }
+[data-mochi-shell="top"] .sidebar, [data-mochi-shell="bottom"] .sidebar {
+  width: 100%; height: auto; flex: 0 0 auto; position: relative; flex-direction: row; align-items: center; gap: 18px;
+  padding: 0 24px; min-height: 64px; overflow: visible; border-right: 0; z-index: 5;
+}
+[data-mochi-shell="top"] .sidebar { border-bottom: var(--mochi-border-width) solid var(--mochi-sidebar-border); }
+[data-mochi-shell="bottom"] .sidebar { border-top: var(--mochi-border-width) solid var(--mochi-sidebar-border); justify-content: center; }
+[data-mochi-shell="top"] .brand, [data-mochi-shell="bottom"] .brand { padding: 0; }
+[data-mochi-shell="top"] .primary-nav, [data-mochi-shell="bottom"] .primary-nav { display: flex; flex-direction: row; gap: 6px; }
+[data-mochi-shell="top"] .nav-item, [data-mochi-shell="bottom"] .nav-item { width: auto; }
+[data-mochi-shell="top"] .sidebar-account-wrap { order: 3; width: 230px; margin: 0 0 0 auto; }
+[data-mochi-shell="top"] .sidebar-bottom { order: 2; margin: 0; }
+[data-mochi-shell="bottom"] .sidebar-account-wrap { order: 3; width: 210px; margin: 0; }
+[data-mochi-shell="bottom"] .sidebar-bottom { order: 2; margin: 0; }
+[data-mochi-shell="bottom"] .brand { display: none; }
+[data-mochi-shell="top"] .main-content, [data-mochi-shell="bottom"] .main-content { height: auto; flex: 1; min-height: 0; }
+[data-mochi-shell="bottom"] .account-menu { top: auto; bottom: calc(100% + 8px); }
+[data-mochi-shell="top"] .account-menu { left: auto; right: 0; }
+
+[data-mochi-shell="rail"] .sidebar { width: 78px; flex-basis: 78px; padding: 20px 10px; align-items: center; overflow: visible; z-index: 5; }
+[data-mochi-shell="rail"] .brand { padding: 0 0 24px; }
+[data-mochi-shell="rail"] .brand > div:not(.brand-mark), [data-mochi-shell="rail"] .nav-item > span,
+[data-mochi-shell="rail"] .sidebar-account > span, [data-mochi-shell="rail"] .sidebar-account > svg { display: none; }
+[data-mochi-shell="rail"] .sidebar-account-wrap { margin-bottom: 18px; }
+[data-mochi-shell="rail"] .sidebar-account { justify-content: center; padding: 8px; }
+[data-mochi-shell="rail"] .nav-item { justify-content: center; padding: 12px; }
+[data-mochi-shell="rail"] .primary-nav, [data-mochi-shell="rail"] .sidebar-bottom { width: 100%; }
+[data-mochi-shell="rail"] .account-menu { left: 100%; top: 0; width: 240px; margin-left: 10px; }
+
+@media (max-width: 800px) {
+  [data-mochi-shell="top"] .sidebar, [data-mochi-shell="bottom"] .sidebar { flex-wrap: wrap; padding: 10px 14px; gap: 8px; }
+  [data-mochi-shell="top"] .sidebar-account-wrap, [data-mochi-shell="bottom"] .sidebar-account-wrap { display: none; }
+}
+
+/* ---- Settings and theme picker ---------------------------------------------- */
+.settings-page { max-width: 880px; width: 100%; margin: 0; padding-top: 6px; }
+.settings-intro { padding-bottom: 22px; }
+.settings-intro h2 { font-size: 30px; margin: 0 0 8px; }
+.theme-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.theme-card { align-content: start; }
+.theme-swatches { grid-column: 1 / -1; display: flex; height: 16px; margin: 0 0 8px; overflow: hidden; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: calc(var(--mochi-radius-sm) / 2); }
+.theme-swatches i { flex: 1; }
+.provider-grid { max-width: 100%; }
+.setting-row { padding: 14px 18px; }
+
+.game-card-art, .continue-art, .game-details-cover, .game-trailer-poster { background-image: var(--mochi-cover-placeholder); background-size: cover; background-position: center; }
+.settings-note { display: block; padding: 0 18px 14px; }
+.download-progress.failed > span, .download-progress.failed > span { background: var(--mochi-danger); box-shadow: none; }

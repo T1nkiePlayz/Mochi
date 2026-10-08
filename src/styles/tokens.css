@@ -1,0 +1,128 @@
+/*
+ * Mochi design tokens.
+ *
+ * Every value the launcher paints with is a token declared here. A theme changes
+ * the launcher by overriding tokens (theme.json) and, for structural changes,
+ * the stable class names documented in docs/theme-architecture.md (theme.css).
+ * These defaults are Mochi's own look, so a theme only has to state differences.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Palette */
+  --mochi-background: #0b0f0e;
+  --mochi-background-elevated: #101714;
+  --mochi-surface: #141d19;
+  --mochi-surface-raised: #1b2822;
+  --mochi-surface-hover: #24332b;
+  --mochi-border: #2a3a32;
+  --mochi-border-strong: #3b5146;
+  --mochi-text: #e4eee8;
+  --mochi-text-strong: #ffffff;
+  --mochi-text-muted: #91a69a;
+  --mochi-text-faint: #607369;
+  --mochi-accent: #b9dbc8;
+  --mochi-accent-strong: #84b69f;
+  --mochi-accent-text: #102019;
+  --mochi-accent-soft: rgba(185, 219, 200, .12);
+  --mochi-success: #7fc6a0;
+  --mochi-warning: #e2b36b;
+  --mochi-danger: #dc8278;
+  --mochi-shadow: rgba(0, 0, 0, .42);
+
+  /* Typography */
+  --mochi-font-body: "DM Sans", system-ui, sans-serif;
+  --mochi-font-display: "Manrope", "DM Sans", system-ui, sans-serif;
+  --mochi-mono: "JetBrains Mono", ui-monospace, monospace;
+  --mochi-body-line-height: 1.55;
+  --mochi-heading-weight: 800;
+  --mochi-heading-tracking: -.035em;
+  --mochi-heading-transform: none;
+  --mochi-label-weight: 700;
+  --mochi-label-tracking: .12em;
+  --mochi-label-transform: uppercase;
+  --mochi-text-shadow: none;
+  --mochi-heading-shadow: none;
+  --mochi-font-smoothing: antialiased;
+  --mochi-image-rendering: auto;
+
+  /* Shape */
+  --mochi-radius-sm: 8px;
+  --mochi-radius-md: 12px;
+  --mochi-radius-lg: 18px;
+  --mochi-hero-radius: 24px;
+  --mochi-card-radius: var(--mochi-radius-md);
+  --mochi-button-radius: var(--mochi-radius-sm);
+  --mochi-input-radius: var(--mochi-radius-sm);
+  --mochi-modal-radius: var(--mochi-radius-lg);
+  --mochi-pill-radius: 999px;
+  --mochi-border-width: 1px;
+
+  /* Layout */
+  --mochi-sidebar-width: 246px;
+  --mochi-content-max-width: 1160px;
+  --mochi-content-padding: 42px 52px 25px;
+  --mochi-topbar-height: 68px;
+  --mochi-card-gap: 14px;
+  --mochi-section-gap: 30px;
+
+  /* Surfaces */
+  --mochi-app-background: radial-gradient(circle at 80% -15%, rgba(185, 219, 200, .10), transparent 32%), var(--mochi-background);
+  --mochi-sidebar-background: var(--mochi-background-elevated);
+  --mochi-sidebar-border: var(--mochi-border);
+  --mochi-topbar-background: transparent;
+  --mochi-topbar-border: var(--mochi-border);
+  --mochi-card-background: var(--mochi-surface);
+  --mochi-card-hover-background: var(--mochi-surface-raised);
+  --mochi-card-border: var(--mochi-border);
+  --mochi-card-hover-border: var(--mochi-accent-strong);
+  --mochi-card-shadow: var(--mochi-shadow-soft);
+  --mochi-panel-background: var(--mochi-surface);
+  --mochi-panel-border: var(--mochi-border);
+  --mochi-panel-shadow: none;
+  --mochi-modal-background: var(--mochi-background-elevated);
+  --mochi-modal-border: var(--mochi-border-strong);
+  --mochi-modal-shadow: 0 24px 80px var(--mochi-shadow);
+  --mochi-overlay-background: color-mix(in srgb, var(--mochi-background) 72%, transparent);
+  --mochi-hero-overlay: linear-gradient(180deg, transparent 20%, rgba(0, 0, 0, .72));
+  --mochi-input-background: var(--mochi-background);
+  --mochi-input-border: var(--mochi-border);
+  --mochi-input-focus-border: var(--mochi-accent-strong);
+  --mochi-input-shadow: none;
+  --mochi-nav-active-background: linear-gradient(90deg, var(--mochi-accent-soft), transparent);
+  --mochi-nav-active-shadow: inset 2px 0 var(--mochi-accent);
+  --mochi-nav-hover-background: var(--mochi-surface-hover);
+  --mochi-cover-placeholder: linear-gradient(145deg, color-mix(in srgb, var(--mochi-accent-strong) 28%, var(--mochi-surface-raised)), var(--mochi-surface));
+  --mochi-selection-background: var(--mochi-accent-soft);
+
+  /* Buttons */
+  --mochi-button-height: 38px;
+  --mochi-button-padding: 0 15px;
+  --mochi-button-background: var(--mochi-surface-raised);
+  --mochi-button-color: var(--mochi-text-strong);
+  --mochi-button-border: var(--mochi-border-strong);
+  --mochi-button-shadow: none;
+  --mochi-button-hover-background: var(--mochi-surface-hover);
+  --mochi-button-hover-border: var(--mochi-accent-strong);
+  --mochi-button-active-transform: translateY(1px);
+  --mochi-button-weight: 600;
+  --mochi-button-transform: none;
+  --mochi-button-tracking: 0;
+  --mochi-primary-background: var(--mochi-accent);
+  --mochi-primary-color: var(--mochi-accent-text);
+  --mochi-primary-border: transparent;
+  --mochi-primary-shadow: 0 8px 24px color-mix(in srgb, var(--mochi-accent-strong) 22%, transparent);
+  --mochi-primary-hover-background: var(--mochi-accent-strong);
+  --mochi-danger-background: color-mix(in srgb, var(--mochi-danger) 14%, transparent);
+  --mochi-danger-color: var(--mochi-danger);
+
+  /* Effects */
+  --mochi-shadow-soft: 0 10px 35px rgba(0, 0, 0, .18);
+  --mochi-shadow-card: 0 18px 55px rgba(0, 0, 0, .22);
+  --mochi-blur: 18px;
+  --mochi-transition: 180ms cubic-bezier(.2, .7, .2, 1);
+  --mochi-focus-ring: 0 0 0 3px color-mix(in srgb, var(--mochi-accent-strong) 38%, transparent);
+  --mochi-scrollbar-thumb: var(--mochi-border-strong);
+  --mochi-scrollbar-track: transparent;
+  --mochi-scrollbar-width: 10px;
+}

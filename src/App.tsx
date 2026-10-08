@@ -541,7 +541,7 @@ function App() {
     name: "No Pikos yet",
     description: "Add a game to start building your library.",
     accent: "#a99ad6",
-    artwork: "linear-gradient(145deg, rgba(73,57,103,.35), rgba(20,16,29,.96))",
+    artwork: "",
     tofus: [{ id: "default", name: "Default", version: "Local", runtime: "Native", mods: 0, status: "Ready" as const }],
   };
   const selectedTofu = selectedPiko.tofus.find((tofu) => tofu.id === selectedTofuId) ?? selectedPiko.tofus[0];
@@ -561,14 +561,36 @@ function App() {
     window.addEventListener("keydown", handleSearchShortcut);
     return () => window.removeEventListener("keydown", handleSearchShortcut);
   }, []);
+  const [librarySort, setLibrarySort] = useState<"category" | "name" | "recent" | "playtime">(() => {
+    try { const stored = window.localStorage.getItem("mochi:library-sort"); return stored === "name" || stored === "recent" || stored === "playtime" ? stored : "category"; } catch { return "category"; }
+  });
+  useEffect(() => { try { window.localStorage.setItem("mochi:library-sort", librarySort); } catch { /* storage unavailable */ } }, [librarySort]);
+
   const groupedPikos = useMemo(() => {
+    const byId = new Map(playtime.map((entry) => [entry.gameId, entry]));
+    if (librarySort !== "category") {
+      const sorted = [...visiblePikos].sort((a, b) =>
+        librarySort === "name" ? a.name.localeCompare(b.name)
+          : librarySort === "recent" ? (byId.get(b.id)?.lastPlayed ?? 0) - (byId.get(a.id)?.lastPlayed ?? 0)
+          : (byId.get(b.id)?.seconds ?? 0) - (byId.get(a.id)?.seconds ?? 0));
+      return [[librarySort === "name" ? "All games" : librarySort === "recent" ? "Recently played" : "Most played", sorted] as [string, Piko[]]];
+    }
     const groups = new Map<string, Piko[]>();
     visiblePikos.forEach((piko) => {
       const category = piko.platformCategory || "Other";
       groups.set(category, [...(groups.get(category) ?? []), piko]);
     });
     return [...groups.entries()].sort(([x], [y]) => x.localeCompare(y));
-  }, [visiblePikos]);
+  }, [visiblePikos, librarySort, playtime]);
+
+  const continuePlaying = useMemo(() => {
+    const byId = new Map(library.map((piko) => [piko.id, piko]));
+    return playtime
+      .filter((entry) => entry.lastPlayed > 0 && byId.has(entry.gameId))
+      .sort((a, b) => b.lastPlayed - a.lastPlayed)
+      .slice(0, 3)
+      .map((entry) => ({ piko: byId.get(entry.gameId)!, entry }));
+  }, [library, playtime]);
 
   const selectPiko = (piko: Piko) => {
     setSelectedPikoId(piko.id);
@@ -671,7 +693,6 @@ function App() {
     if (folder) void openPath(folder).catch((error) => setLaunchError(shortError(error)));
   };
 
-  const selectedPlaytime = playtime.find((entry) => entry.gameId === selectedPiko.id);
 
   const loadFlatpaks = async () => {
     setFlatpakBusy(true);
@@ -793,7 +814,7 @@ function App() {
   const addGameToLibrary = (name: string, executablePath: string, metadata: IgdbGame | null, category = platformCategory.trim() || "Custom") => {
     const piko: Piko = {
       id: `custom-${crypto.randomUUID()}`, name, executablePath, source: "custom", platformCategory: category,
-      categories: [], description: "Custom game added to your local library.", accent: "#a99ad6", artwork: "linear-gradient(145deg, rgba(73,57,103,.35), rgba(20,16,29,.96))",
+      categories: [], description: "Custom game added to your local library.", accent: "#a99ad6", artwork: "",
       tofus: [{ id: "default", name: "Default", version: "Local", runtime: "Native", mods: 0, status: "Ready" }],
     };
     const enriched = applyIgdbMetadata(piko, metadata);
@@ -815,7 +836,7 @@ function App() {
       name: imported.name,
       description: `Imported from ${imported.source}. The original launcher remains responsible for the installation and runtime.`,
       accent: "#a99ad6",
-      artwork: "linear-gradient(145deg, rgba(73,57,103,.35), rgba(20,16,29,.96))",
+      artwork: "",
       artworkCacheKey: `${imported.source}-${imported.id}`.replace(/[^a-zA-Z0-9_-]/g, "-"),
       executablePath: imported.launchTarget,
       installPath: imported.installPath ?? undefined,
@@ -886,7 +907,7 @@ function App() {
         firstReleaseDate: undefined,
         categories: piko.sourceId ? [] : piko.categories,
         description: piko.sourceId ? `Imported from ${piko.platformCategory || piko.sourceId}. The original launcher remains responsible for the installation and runtime.` : piko.description,
-        artwork: piko.sourceId ? "linear-gradient(145deg, rgba(73,57,103,.35), rgba(20,16,29,.96))" : piko.artwork,
+        artwork: piko.sourceId ? "" : piko.artwork,
       })));
       const candidates = library.filter(piko => Boolean(piko.sourceId || piko.platformCategory));
       pushNotification("IGDB refresh started", `Refreshing metadata for ${candidates.length} library games.`);
@@ -1311,36 +1332,13 @@ function App() {
         </header>
 
         <div className="content">
-          <section className="page-heading">
+          {activeNav === "Library" && !(gameDetailsId && library.some((piko) => piko.id === gameDetailsId)) && <section className="page-heading">
             <div><p className="eyebrow">Your collection</p><h1>{activeNav === "Library" ? `${greeting}${user ? ", " + currentUsername : ""}.` : activeNav}</h1></div>
             {activeNav === "Library" && <button className="secondary-button" onClick={() => setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> Add Piko</button>}
-          </section>
+          </section>}
 
           {activeNav === "Library" && gameDetailsId && library.some(piko => piko.id === gameDetailsId) ? (
-            <GameDetails game={library.find(piko => piko.id === gameDetailsId)!} synced={syncState === "synced"} running={isRunning(gameDetailsId)} canStop={Boolean(sessions.find((session) => session.gameId === gameDetailsId)?.canStop)} capabilities={platformCapabilities} onBack={() => setGameDetailsId("")} onPlay={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) { selectPiko(game); void launchGame(game); } }} onStop={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) void stopRunningGame(game); }} onEdit={() => setEditingGameId(gameDetailsId)} onRemove={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) removeGame(game); }} onOpenFolder={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) openGameFolder(game); }} onShortcut={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) void addShortcut(game); }} />
-          ) : activeNav === "Library" && library.length === 0 ? (
-            <div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>Your Mochi library is empty.</h2><p>Mochi starts clean. Add a game when you are ready.</p><button className="secondary-button" onClick={() => setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> Add Piko</button></div>
-          ) : activeNav === "Library" ? (
-            <>
-              <section className="library-grid-view">
-                {groupedPikos.map(([category, games]) => <div className="library-category" key={category}><div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div><div className="game-card-grid">{games.map((piko) => <button className={`game-card ${selectedPiko.id === piko.id ? "selected" : ""}`} key={piko.id} onClick={() => { selectPiko(piko); setGameDetailsId(piko.id); }}><GameArtwork className="game-card-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} /><div className="game-card-copy"><strong>{piko.name}<span className={`game-cloud-status ${syncState === "synced" ? "is-synced" : "not-synced"}`} title={syncState === "synced" ? "Synced to Mochi Cloud" : "Not synced to Mochi Cloud"}>{syncState === "synced" ? "✓" : "!"}</span></strong><small>{isRunning(piko.id) ? "Running now" : piko.categories?.join(" · ") || piko.platformCategory || "Other"}</small></div><span className="game-card-play"><MochiIcon name="play" fallback={Play} size={15} fill="currentColor"/></span></button>)}</div></div>)}
-              </section>
-              <LibraryModSearch query={search} nexusEnabled={behavior.experimentalFeatures && credentialStatus.nexus} supabase={supabase} />
-              <section className="hero-card" style={{ backgroundImage: selectedPiko.artwork }}>
-                <div className="hero-copy">
-                  <span className="hero-kicker"><span className="live-dot" /> {isRunning(selectedPiko.id) ? "Running now" : selectedPlaytime?.lastPlayed ? `Last played ${formatRelativeTime(selectedPlaytime.lastPlayed)}` : "Not played yet"}</span>
-                  <h2>{selectedPiko.name}</h2>
-                  <p>{selectedPiko.description}</p>
-                  <div className="hero-actions">
-                    {isRunning(selectedPiko.id) ? <button className="play-button stop-button" onClick={() => void stopRunningGame(selectedPiko)} disabled={!sessions.find((session) => session.gameId === selectedPiko.id)?.canStop}>Stop</button> : <button className="play-button" onClick={() => void launchGame()} disabled={isLaunching}><MochiIcon name="play" fallback={Play} size={16} fill="currentColor" /> {isLaunching ? "Launching..." : "Play"}</button>}
-                    {selectedPiko.source === "custom" && <span className="metadata-note">{selectedPiko.executablePath}</span>}
-                    {launchError && <span className="metadata-note">{launchError}</span>}
-                  </div>
-                </div>
-                <div className="hero-meta"><span>Playtime</span><strong>{selectedPlaytime ? formatPlaytime(selectedPlaytime.seconds) : "Not played yet"}</strong></div>
-              </section>
-
-              <section className="tofu-section">
+            <GameDetails game={library.find(piko => piko.id === gameDetailsId)!} playtime={playtime.find((entry) => entry.gameId === gameDetailsId)} launchError={launchError} launching={isLaunching} workspace={<><section className="tofu-section">
                 <div className="section-heading"><div><p className="eyebrow">Environments</p><h3>Your Tofus</h3></div><button className="text-button" onClick={() => setShowTofuManager(true)}><MochiIcon name="manage" fallback={SlidersHorizontal} size={15} /> Manage</button></div>
                 <div className="tofu-grid">
                   {selectedPiko.tofus.map((tofu) => (
@@ -1358,11 +1356,36 @@ function App() {
               <section className="details-strip">
                 <div><span className="detail-label">Selected Tofu</span><strong>🧊 {selectedTofu.name}</strong></div>
                 <div><span className="detail-label">Runtime</span><strong>{selectedTofu.runtime} <span className="muted">· {selectedTofu.version}</span></strong></div>
-                <div><span className="detail-label">Install location</span><strong className="path-text">{selectedTofu.path || "~/Games/" + selectedPiko.name.replace(/\s+/g, "")}</strong></div>
+                <div><span className="detail-label">Install location</span><strong className="path-text">{selectedTofu.path || "No folder chosen yet"}</strong></div>
                 <button className="icon-button" aria-label="Tofu settings" onClick={() => setShowTofuManager(true)}><MochiIcon name="settings" fallback={Settings} size={16} /></button>
               </section>
 
-              <ModrinthManager key={selectedTofu.id} tofu={selectedTofu} onUpdate={updateSelectedTofu} />
+              <ModrinthManager key={selectedTofu.id} tofu={selectedTofu} onUpdate={updateSelectedTofu} /></>} synced={syncState === "synced"} running={isRunning(gameDetailsId)} canStop={Boolean(sessions.find((session) => session.gameId === gameDetailsId)?.canStop)} capabilities={platformCapabilities} onBack={() => setGameDetailsId("")} onPlay={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) { selectPiko(game); void launchGame(game); } }} onStop={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) void stopRunningGame(game); }} onEdit={() => setEditingGameId(gameDetailsId)} onRemove={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) removeGame(game); }} onOpenFolder={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) openGameFolder(game); }} onShortcut={() => { const game = library.find(piko => piko.id === gameDetailsId); if (game) void addShortcut(game); }} />
+          ) : activeNav === "Library" && library.length === 0 ? (
+            <div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>Your Mochi library is empty.</h2><p>Mochi starts clean. Add a game when you are ready.</p><button className="secondary-button" onClick={() => setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> Add Piko</button></div>
+          ) : activeNav === "Library" ? (
+            <>
+              {continuePlaying.length > 0 && !search.trim() && <section className="continue-playing">
+                <div className="section-heading"><div><p className="eyebrow">Jump back in</p><h3>Continue playing</h3></div></div>
+                <div className="continue-grid">{continuePlaying.map(({ piko, entry }) => <article className="continue-card" key={piko.id}>
+                  <button type="button" className="continue-main" onClick={() => { selectPiko(piko); setGameDetailsId(piko.id); }}>
+                    <GameArtwork className="continue-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} />
+                    <span className="continue-copy"><strong>{piko.name}</strong><small>{isRunning(piko.id) ? "Running now" : `Last played ${formatRelativeTime(entry.lastPlayed)}`} · {formatPlaytime(entry.seconds)} played</small></span>
+                  </button>
+                  {isRunning(piko.id)
+                    ? <button type="button" className="icon-button continue-play stop-button" aria-label={`Stop ${piko.name}`} onClick={() => void stopRunningGame(piko)}><X size={15} /></button>
+                    : <button type="button" className="icon-button continue-play" aria-label={`Play ${piko.name}`} onClick={() => { selectPiko(piko); void launchGame(piko); }}><MochiIcon name="play" fallback={Play} size={15} fill="currentColor" /></button>}
+                </article>)}</div>
+                {launchError && <p className="metadata-note">{launchError}</p>}
+              </section>}
+              <section className="library-toolbar">
+                <span className="library-count">{visiblePikos.length} game{visiblePikos.length === 1 ? "" : "s"}{search.trim() ? ` matching “${search.trim()}”` : ""}</span>
+                <label className="library-sort"><span>Sort by</span><select value={librarySort} onChange={(event) => setLibrarySort(event.target.value as typeof librarySort)}><option value="category">Category</option><option value="name">Name</option><option value="recent">Recently played</option><option value="playtime">Most played</option></select></label>
+              </section>
+              <section className="library-grid-view">
+                {groupedPikos.map(([category, games]) => <div className="library-category" key={category}><div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div><div className="game-card-grid">{games.map((piko) => <button className={`game-card ${selectedPiko.id === piko.id ? "selected" : ""}`} key={piko.id} onClick={() => { selectPiko(piko); setGameDetailsId(piko.id); }}><GameArtwork className="game-card-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} /><div className="game-card-copy"><strong>{piko.name}<span className={`game-cloud-status ${syncState === "synced" ? "is-synced" : "not-synced"}`} title={syncState === "synced" ? "Synced to Mochi Cloud" : "Not synced to Mochi Cloud"}>{syncState === "synced" ? "✓" : "!"}</span></strong><small>{isRunning(piko.id) ? "Running now" : piko.categories?.join(" · ") || piko.platformCategory || "Other"}</small></div><span className="game-card-play"><MochiIcon name="play" fallback={Play} size={15} fill="currentColor"/></span></button>)}</div></div>)}
+              </section>
+              <LibraryModSearch query={search} nexusEnabled={behavior.experimentalFeatures && credentialStatus.nexus} supabase={supabase} />
             </>
           ) : activeNav === "Settings" ? (
             <section className="settings-page">
@@ -1373,6 +1396,7 @@ function App() {
                   {themes.map((option) => (
                     <button key={option.id} className={"theme-card " + (theme === option.id ? "selected" : "")} onClick={() => void setTheme(option.id)}>
                       <MochiIcon name="palette" fallback={Palette} size={16} />
+                      {option.colors && <span className="theme-swatches" aria-hidden="true">{[option.colors.background, option.colors.surface, option.colors.accent, option.colors.text].map((color, index) => <i key={index} style={{ background: color }} />)}</span>}
                       <strong>{option.name}</strong>
                       <small>{option.description || "Mochi theme"}</small>
                       <small className="theme-card-meta">{option.source === "builtin" ? "Built-in" : "v" + option.version + " · " + (option.author || "User theme")}</small>
@@ -1445,9 +1469,9 @@ function App() {
               <div className="settings-group">
                 <div className="settings-group-heading"><strong>Data & privacy</strong><span>Local-first storage</span></div>
                 <div className="setting-row"><span><strong>Refresh IGDB game metadata</strong><small>Clear cached IGDB details and artwork, then fetch current information for your library.</small></span><button type="button" className="secondary-button" disabled={!credentialStatus.igdb || igdbRefreshBusy || !library.length} onClick={() => void refreshAllIgdbData()}>{igdbRefreshBusy ? "Refreshing…" : "Refresh all metadata"}</button></div>
-                {!credentialStatus.igdb && <small className="metadata-note" style={{ padding: "0 17px 12px" }}>Sign in and save IGDB credentials to refresh game information.</small>}
+                {!credentialStatus.igdb && <small className="metadata-note settings-note">Sign in and save IGDB credentials to refresh game information.</small>}
                 <div className="setting-row"><span><strong>Cloud data</strong><small>{cloudDataAccessAllowed ? "Delete your cloud Pikos and Tofus. Your local library, account, and saved provider credentials stay unchanged." : "Mochi Cloud data controls are not enabled for this account."}</small></span><button type="button" className="secondary-button danger-outline" disabled={!user || !cloudDataAccessAllowed || cloudDataBusy} onClick={() => void clearCloudData()}>{cloudDataBusy ? "Clearing…" : cloudDataAccessAllowed ? "Clear cloud data" : "Unavailable"}</button></div>
-                {cloudDataMessage && <p className="metadata-note" role="status" style={{ padding: "0 17px 14px" }}>{cloudDataMessage}</p>}
+                {cloudDataMessage && <p className="metadata-note settings-note" role="status">{cloudDataMessage}</p>}
                 <div className="setting-row setting-location-row"><span><strong>Library location</strong><small>Your Mochi configuration, themes and launcher data are stored here.</small></span><span className="setting-location-value"><code>{configInfo?.configPath || "Default Mochi location"}</code><button type="button" className="secondary-button" onClick={() => void chooseMochiConfigLocation()}>Change</button></span></div>
                 <button className="setting-row setting-button" onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}><span><strong>Advanced settings</strong><small>Diagnostics and experimental launcher controls.</small></span><MochiIcon name="chevron" fallback={ChevronDown} className={showAdvancedSettings ? "rotate" : ""} size={16} /></button>
                 {showAdvancedSettings && <div className="advanced-settings">
@@ -1475,7 +1499,7 @@ function App() {
                         return <article className="download-row" key={download.id}>
                           <div className="download-row-copy"><strong>{download.itemName}</strong><small>{download.filename}</small></div>
                           <div className="download-progress-wrap">
-                            <div className={download.status === "downloading" && !download.total ? "download-progress indeterminate" : "download-progress"}><span style={{ width: download.status === "downloading" && download.total ? progress + "%" : download.status === "completed" ? "100%" : undefined }} /></div>
+                            <div className={"download-progress " + (download.status === "downloading" && !download.total ? "indeterminate" : download.status === "failed" ? "failed" : "")}><span style={{ width: download.status === "downloading" && download.total ? progress + "%" : download.status === "completed" ? "100%" : undefined }} /></div>
                             <small>{download.status === "failed" ? download.error || "Failed" : download.total ? (download.status === "completed" ? "Completed · " : Math.round(progress) + "% · ") + formatBytes(download.total) + " total" + (download.status === "downloading" ? " · " + formatBytes(download.downloaded) + " downloaded" : "") : download.status === "completed" ? "Completed · size unavailable" : formatBytes(download.downloaded) + " downloaded · size unavailable"}</small>
                           </div>
                         </article>;

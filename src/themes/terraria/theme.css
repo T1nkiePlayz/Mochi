@@ -1,0 +1,55 @@
+/* Terraria — the inventory screen. Translucent royal-blue slots with navy outlines, gold titles
+ * with a hard black outline, and chunky item-slot cards. */
+
+.app-shell::before { content: ""; position: fixed; inset: 0; pointer-events: none;
+  background: radial-gradient(circle at 18% 12%, rgba(255, 255, 255, .5) 0 1.5px, transparent 2px) 0 0 / 150px 120px, radial-gradient(circle at 70% 40%, rgba(255, 255, 255, .35) 0 1px, transparent 1.5px) 0 0 / 90px 100px, linear-gradient(0deg, rgba(76, 175, 80, .35) 0, transparent 90px); opacity: .7; }
+.sidebar, .main-content { position: relative; z-index: 1; }
+
+.sidebar { box-shadow: inset -1px 0 0 rgba(255, 255, 255, .25), 4px 0 0 rgba(0, 0, 0, .3); }
+.brand-mark { border-radius: 6px; background: linear-gradient(180deg, #5a6ce0, #3a46b0); border: 2px solid #0e1236; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4); }
+.brand strong { color: #ffd54a; font-size: 24px; }
+.brand span { color: #b6bdf5; }
+.nav-item { border: 2px solid #0e1236; border-radius: 6px; background: linear-gradient(180deg, rgba(90, 108, 224, .8), rgba(58, 70, 176, .8)); color: #fff; font-weight: 700; font-size: 14px; margin-bottom: 4px; text-shadow: 1px 1px 0 rgba(0, 0, 0, .6); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3); }
+.nav-item:hover { border-color: #ffd54a; background: linear-gradient(180deg, #7282f0, #4656c8); }
+.nav-item.active { color: #33260a; text-shadow: none; border-color: #0e1236; }
+.sidebar-account { border: 2px solid #0e1236; border-radius: 6px; background: rgba(14, 18, 54, .45); }
+.account-avatar { border-radius: 6px; border: 2px solid #0e1236; background: #4caf50; color: #fff; }
+
+.topbar { background: linear-gradient(180deg, rgba(14, 18, 54, .65), transparent); }
+.breadcrumb, .breadcrumb strong { color: #ffd54a; text-shadow: -1px 0 #000, 1px 0 #000, 0 -1px #000, 0 1px #000; font-weight: 700; }
+.page-heading h1 { font-size: 42px; color: #ffd54a; }
+.section-heading h3 { color: #ffd54a; font-size: 24px; }
+.settings-group-heading strong { color: #ffd54a; text-shadow: -1px 0 #000, 1px 0 #000, 0 -1px #000, 0 1px #000; font-size: 17px; }
+.eyebrow { color: #8ff08a; text-shadow: 1px 1px 0 #000; }
+
+/* Item-slot cards */
+.game-card { padding: 6px; }
+.game-card .game-card-art { border: 2px solid #0e1236; border-radius: 4px; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .2); }
+.game-card:hover { transform: none; filter: brightness(1.12); }
+.game-card:hover .game-card-art { transform: none; }
+.game-card-copy { background: transparent; padding: 8px 4px 3px; }
+.game-card-copy strong { color: #fff; text-shadow: -1px 0 #000, 1px 0 #000, 0 -1px #000, 0 1px #000; font-size: 15px; }
+.game-card-copy small { color: #d4d9ff; }
+.game-card-play { border-radius: 4px; background: #ffd54a; color: #33260a; border: 2px solid #0e1236; }
+.continue-art, .game-details-cover { border: 2px solid #0e1236; border-radius: 4px; }
+.continue-play { border-radius: 4px; border: 2px solid #0e1236; }
+.category-count, .game-details-badges span { border-radius: 4px; background: rgba(14, 18, 54, .5); border: 2px solid #0e1236; color: #ffd54a; }
+.library-toolbar { border-bottom: 2px solid #0e1236; box-shadow: 0 1px 0 rgba(255, 255, 255, .2); }
+.game-stats { border-top: 2px solid #0e1236; box-shadow: 0 -1px 0 rgba(255, 255, 255, .2); }
+.workspace-tabs { border-bottom: 2px solid #0e1236; }
+.workspace-tabs button { border: 2px solid #0e1236; background: linear-gradient(180deg, #5a6ce0, #3a46b0); color: #fff; border-radius: 6px 6px 0 0; }
+.workspace-tabs button.active { background: linear-gradient(180deg, #ffe27a, #f2b21a); color: #33260a; box-shadow: none; }
+.toggle { appearance: none; position: relative; width: 46px; height: 22px; border: 2px solid #0e1236; border-radius: 4px; background: #161c52; box-shadow: inset 0 2px 4px rgba(0, 0, 0, .5); }
+.toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 2px; background: #8790d8; border: 1px solid #0e1236; transition: transform 100ms ease; }
+.toggle:checked { background: #2d6a2a; }
+.toggle:checked::after { transform: translateX(24px); background: #7be36b; }
+.setup-shell { background: var(--mochi-app-background); }
+.setup-orbit { display: none; }
+.setup-panel { background: linear-gradient(180deg, #4656c8, #2a3490); border: 2px solid #0e1236; border-radius: 10px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 0 0 3px #8a96ff, 0 24px 60px rgba(0, 0, 0, .6); }
+.setup-footer { background: rgba(14, 18, 54, .4); border-top: 2px solid #0e1236; }
+.setup-progress span { border-radius: 2px; background: #161c52; }
+.setup-progress span.active { background: #ffd54a; }
+.download-progress { border-radius: 4px; background: #161c52; border: 2px solid #0e1236; }
+.download-progress > span { background: linear-gradient(180deg, #8ff08a, #3fa63a); }
+.danger-outline, .stop-button { background: linear-gradient(180deg, #ff8a8a, #d94545); color: #fff; border-color: #0e1236; text-shadow: 1px 1px 0 #000; }
+::selection { background: #ffd54a; color: #33260a; }

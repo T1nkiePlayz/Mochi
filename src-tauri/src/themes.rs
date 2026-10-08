@@ -40,6 +40,12 @@ pub struct ThemeManifest {
     pub icons: BTreeMap<String, String>,
     #[serde(default)]
     pub assets: BTreeMap<String, String>,
+    #[serde(default)]
+    pub fonts: Vec<String>,
+    #[serde(default)]
+    pub scheme: Option<String>,
+    #[serde(default)]
+    pub shell: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -168,6 +174,15 @@ fn validate_manifest(manifest: &ThemeManifest) -> Result<(), String> {
     }
     if manifest.name.trim().is_empty() {
         return Err("A theme must have a name.".into());
+    }
+    if manifest.fonts.iter().any(|font| !font.starts_with("https://fonts.googleapis.com/")) {
+        return Err("Theme fonts must be Google Fonts stylesheets (https://fonts.googleapis.com/...).".into());
+    }
+    if manifest.shell.as_deref().is_some_and(|shell| !["left", "right", "top", "bottom", "rail"].contains(&shell)) {
+        return Err("A theme's shell must be left, right, top, bottom or rail.".into());
+    }
+    if manifest.scheme.as_deref().is_some_and(|scheme| scheme != "light" && scheme != "dark") {
+        return Err("A theme's scheme must be \"light\" or \"dark\".".into());
     }
     Ok(())
 }

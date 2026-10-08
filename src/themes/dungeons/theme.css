@@ -1,19 +1,65 @@
-/* Ore UI structure with a Minecraft Dungeons palette. */
-.app-shell{background:linear-gradient(rgba(10,14,22,.96),rgba(10,14,22,.98)),radial-gradient(circle at 72% -12%,rgba(95,168,255,.15),transparent 32%),var(--mochi-background)}
-.sidebar{background:linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),var(--mochi-background-elevated);background-size:8px 8px}
-.nav-item,.piko-nav-item,.setting-row,.game-card,.tofu-card,.new-tofu-card,.modal,.settings-group,.theme-card,.provider-credential-card,.download-empty{border-radius:2px!important}
-.nav-item{min-height:34px;border:2px solid #465873;background:#17202d;box-shadow:inset 0 -3px 0 rgba(0,0,0,.35),0 2px 0 rgba(0,0,0,.22)}
-.nav-item.active{border-color:#5fa8ff;background:linear-gradient(#33425a,#263246);box-shadow:inset 0 0 0 1px rgba(140,196,255,.2),inset 0 -3px 0 rgba(0,0,0,.35),0 2px 0 rgba(0,0,0,.22)}
-.nav-item:hover{background:#33425a}.play-button,.secondary-button{min-height:34px;border-radius:2px!important;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25)}
-.play-button{background:var(--mochi-accent);color:var(--mochi-accent-text)}.secondary-button{background:var(--mochi-surface-raised)}
-.hero-card{border-radius:3px!important;box-shadow:0 3px 0 rgba(0,0,0,.3),0 20px 45px var(--mochi-shadow)}
-.game-card-art{image-rendering:pixelated}.game-card:hover,.tofu-card:hover{transform:translateY(-1px)}.search-box{border-radius:2px!important;background:#121923}.search-box:focus-within{border-color:var(--mochi-accent)}
-.form-fields input,.form-fields select,.igdb-form input,.provider-credential-card input{border-radius:2px!important}.toggle{border-radius:2px!important}
+/* Minecraft Dungeons — a gilded dungeon tablet. Carved gold frames, ember light from below,
+ * parchment text, and Cinzel capitals. The sidebar is a tall stone tablet; panels get corner studs. */
 
-/* Dungeons-styled account and notification overlays. */
-[data-mochi-theme="dungeons"] .notification-popover,[data-mochi-theme="dungeons"] .account-menu{border:2px solid #465873;border-radius:2px!important;background:linear-gradient(145deg,#1d2a3a,#121923);box-shadow:inset 0 -3px 0 rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.35);}
-[data-mochi-theme="dungeons"] .notification-heading{background:#263246;border-bottom:2px solid #465873;color:#fff;}
-[data-mochi-theme="dungeons"] .notification-heading button,[data-mochi-theme="dungeons"] .account-menu-add>svg{color:#8cc4ff;}
-[data-mochi-theme="dungeons"] .account-menu button:hover,[data-mochi-theme="dungeons"] .account-menu button.selected{background:#33425a;}
-[data-mochi-theme="dungeons"] .discover-game-tab{border-radius:2px!important;border-width:2px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25);}
-[data-mochi-theme="dungeons"] .discover-game-tab.active{border-color:#5fa8ff;background:#263246;}
+.app-shell::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .5; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .8  0 0 0 0 .7  0 0 0 0 .5  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+.app-shell::after { content: ""; position: fixed; inset: 0; pointer-events: none; box-shadow: inset 0 0 160px 40px rgba(0, 0, 0, .65); }
+.sidebar, .main-content { position: relative; z-index: 1; }
+
+.sidebar { border-right: 2px solid #a67c2e; box-shadow: inset -1px 0 0 #000, 4px 0 30px rgba(0, 0, 0, .6); }
+.brand { padding-bottom: 22px; }
+.brand strong { font-size: 22px; letter-spacing: .14em; text-transform: uppercase; color: #ffc857; }
+.brand span { font-family: var(--mochi-font-display); letter-spacing: .12em; }
+.brand-mark { border-radius: 4px; background: #241a30; border: 2px solid #a67c2e; box-shadow: inset 0 0 0 1px #000, 0 0 16px rgba(240, 168, 48, .3); }
+.nav-item { font-family: var(--mochi-font-display); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; border-radius: 2px; min-height: 42px; }
+.nav-item.active { border-color: rgba(166, 124, 46, .55); color: #ffc857; }
+.nav-item::before { content: "◆"; font-size: 8px; color: #6b4a1e; order: -1; }
+.nav-item.active::before { color: #ffc857; text-shadow: 0 0 8px #ffc857; }
+.nav-item .mochi-icon-wrap, .nav-item > svg { display: none; }
+.sidebar-account { border: 1px solid #4a3418; background: rgba(0, 0, 0, .25); border-radius: 3px; }
+
+.topbar { background: linear-gradient(180deg, rgba(0, 0, 0, .45), transparent); border-bottom: 1px solid #4a3418; box-shadow: 0 1px 0 rgba(255, 200, 87, .08); }
+.breadcrumb strong { font-family: var(--mochi-font-display); letter-spacing: .08em; color: #ffc857; }
+.page-heading h1 { font-size: 34px; text-transform: uppercase; letter-spacing: .08em; }
+.eyebrow { color: #a67c2e; }
+.section-heading h3, .settings-group-heading strong { font-family: var(--mochi-font-display); letter-spacing: .1em; text-transform: uppercase; font-size: 15px; color: #ffc857; }
+.section-heading { border-bottom: 1px solid #4a3418; padding-bottom: 10px; position: relative; }
+.section-heading::after { content: "◆"; position: absolute; left: 50%; bottom: -7px; font-size: 10px; color: #a67c2e; background: #0c0911; padding: 0 8px; transform: translateX(-50%); }
+
+/* Carved corner studs on framed surfaces */
+.settings-group, .modal, .game-details-hero, .modrinth-manager, .game-card, .tofu-card, .hero-card, .game-details-section, .continue-card { position: relative; }
+.settings-group::after, .modal::after, .game-details-hero::after, .modrinth-manager::after, .game-details-section::after {
+  content: ""; position: absolute; inset: 7px; pointer-events: none; z-index: 2;
+  background:
+    linear-gradient(#ffc857, #ffc857) top left / 16px 2px no-repeat, linear-gradient(#ffc857, #ffc857) top left / 2px 16px no-repeat,
+    linear-gradient(#ffc857, #ffc857) top right / 16px 2px no-repeat, linear-gradient(#ffc857, #ffc857) top right / 2px 16px no-repeat,
+    linear-gradient(#ffc857, #ffc857) bottom left / 16px 2px no-repeat, linear-gradient(#ffc857, #ffc857) bottom left / 2px 16px no-repeat,
+    linear-gradient(#ffc857, #ffc857) bottom right / 16px 2px no-repeat, linear-gradient(#ffc857, #ffc857) bottom right / 2px 16px no-repeat;
+  opacity: .75; }
+
+.game-card { overflow: visible; }
+.game-card .game-card-art { border: 2px solid #000; box-shadow: 0 0 0 1px #6b4a1e; }
+.game-card:hover { transform: translateY(-3px); box-shadow: 0 0 0 1px #ffc857, 0 12px 28px rgba(0, 0, 0, .6), 0 0 24px rgba(240, 168, 48, .22); }
+.game-card-copy { background: transparent; }
+.game-card-copy strong { font-family: var(--mochi-font-display); letter-spacing: .04em; }
+.game-card-play { border-radius: 2px; }
+.continue-art { border: 2px solid #000; box-shadow: 0 0 0 1px #6b4a1e; border-radius: 2px; }
+.continue-play { border-radius: 3px; border: 1px solid #ffe0a0; }
+.hero-card h2, .game-details-title h2 { text-transform: uppercase; letter-spacing: .08em; }
+.category-count, .game-details-badges span { border-radius: 2px; background: rgba(0, 0, 0, .35); border-color: #6b4a1e; color: #e6dabd; }
+.library-toolbar { border-bottom-color: #4a3418; }
+
+.workspace-tabs button { font-family: var(--mochi-font-display); text-transform: uppercase; letter-spacing: .1em; font-size: 11px; border: 1px solid transparent; border-radius: 2px; }
+.workspace-tabs button.active { border-color: #a67c2e; box-shadow: none; color: #ffc857; background: rgba(240, 168, 48, .12); }
+.setting-row strong { font-size: 15px; }
+.toggle { appearance: none; position: relative; width: 44px; height: 22px; border: 2px solid #6b4a1e; background: #0c0911; border-radius: 2px; box-shadow: inset 0 2px 6px #000; }
+.toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: linear-gradient(180deg, #a99d84, #6b6050); border: 1px solid #000; border-radius: 1px; transition: transform 140ms ease; }
+.toggle:checked { border-color: #ffc857; background: rgba(240, 168, 48, .3); }
+.toggle:checked::after { transform: translateX(22px); background: linear-gradient(180deg, #ffc857, #e8590c); box-shadow: 0 0 10px rgba(240, 168, 48, .8); }
+.setup-shell { background: var(--mochi-app-background); }
+.setup-orbit { border-color: rgba(240, 168, 48, .12); }
+.setup-panel { border: 2px solid #a67c2e; border-radius: 4px; box-shadow: inset 0 0 0 4px #130d1a, inset 0 0 0 5px rgba(166, 124, 46, .6), 0 30px 80px #000; background: linear-gradient(180deg, #1f1729, #130d1a); }
+.setup-progress span.active { background: linear-gradient(90deg, #ffc857, #e8590c); }
+.account-avatar { border-radius: 3px; border: 2px solid #a67c2e; }
+.notification-popover, .account-menu { border-radius: 3px; border-color: #a67c2e; }
+.download-progress > span { background: linear-gradient(90deg, #ffc857, #e8590c); }
