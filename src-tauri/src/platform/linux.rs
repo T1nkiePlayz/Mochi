@@ -122,6 +122,21 @@ pub fn ensure_platform_integration() -> Result<(), String> {
     let desktop = applications.join(DESKTOP_FILE);
     let content = format!("[Desktop Entry]\nType=Application\nName=Mochi\nComment=Your games, your way.\nExec={exec} %U\nTryExec={exec}\nIcon=mochi\nTerminal=false\nStartupNotify=true\nStartupWMClass={APP_ID}\nCategories=Game;Utility;\nMimeType=x-scheme-handler/{DESKTOP_SCHEME};\n");
     std::fs::write(&desktop, content).map_err(|e| format!("Unable to write Mochi desktop entry: {e}"))?;
+
+    // tauri-plugin-deep-link creates this separate entry and points it at the
+    // source AppImage. Rewrite it to the managed copy so URL launches keep
+    // working after the downloaded image is moved or replaced.
+    let handler_name = std::env::current_exe()
+        .ok()
+        .and_then(|path| path.file_name().map(|name| name.to_string_lossy().into_owned()))
+        .unwrap_or_else(|| "mochi".into());
+    let handler = applications.join(format!("{handler_name}-handler.desktop"));
+    let handler_content = format!(
+        "[Desktop Entry]\nType=Application\nName=Mochi\nExec={exec} %u\nTryExec={exec}\nTerminal=false\nNoDisplay=true\nMimeType=x-scheme-handler/{DESKTOP_SCHEME};\n"
+    );
+    std::fs::write(&handler, handler_content)
+        .map_err(|e| format!("Unable to update Mochi URL handler: {e}"))?;
+
     if command_exists("update-desktop-database") { let _ = std::process::Command::new("update-desktop-database").arg(&applications).status(); }
     Ok(())
 }
