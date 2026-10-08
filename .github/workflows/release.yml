@@ -1,166 +1,292 @@
 name: Release Mochi
 
+# Push a tag such as v0.2.0 to build and publish a release. Run it by hand
+# (Actions > Release Mochi > Run workflow) to rebuild an existing tag.
 on:
-  create
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build, e.g. v0.2.0"
+        required: true
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
 jobs:
   prepare:
-    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     name: Prepare release
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
         with:
+          ref: ${{ env.TAG }}
           fetch-depth: 0
 
       - name: Sync app version from tag
-        shell: bash
+        run: node scripts/sync-version.mjs "$TAG"
+
+      - name: Commit the synced version to main (best effort)
         run: |
-          node scripts/sync-version.mjs "$GITHUB_REF_NAME"
-
           git fetch origin main
-          if [[ "$(git rev-parse origin/main)" != "$GITHUB_SHA" ]]; then
-            echo "::error::Release tags must point to the current main commit so version metadata can be synchronized safely."
-            exit 1
-          fi
-
           if git diff --quiet -- package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml; then
             echo "Version metadata is already synced."
+          elif [[ "$(git rev-parse origin/main)" != "$(git rev-parse HEAD)" ]]; then
+            echo "::warning::Tag is not the tip of main; builds still use the tag's version, but main was not updated."
           else
-            git switch --create release-version origin/main
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml
-            git commit -m "chore: sync app version to ${GITHUB_REF_NAME#v}"
-            git push origin HEAD:main
+            git commit -m "chore: sync app version to ${TAG#v}"
+            git push origin HEAD:main || echo "::warning::Could not push the version commit (protected branch?). Builds are unaffected."
           fi
 
-      - name: Create the release
+      - name: Create the draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
         run: |
-          notes="$(git show -s --format='%b' "$GITHUB_SHA")"
-          if [[ -z "$(printf '%s' "$notes" | tr -d '[:space:]')" ]]; then
-            notes="## Mochi $GITHUB_REF_NAME
-
-          Your games, your way.
-
-          ### Downloads
-          - **AppImage / DEB / RPM** — Linux
-          - **DMG** — macOS (Apple silicon and Intel)"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists."
+            exit 0
           fi
-          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release create "$GITHUB_REF_NAME" --title "Mochi $GITHUB_REF_NAME" --notes "$notes"
-          fi
+          {
+            echo "## Mochi $TAG"
+            echo
+            echo "Your games, your way."
+            echo
+            echo "### Downloads"
+            echo "- **macOS**: \`.dmg\` (universal: Apple silicon and Intel)"
+            echo "- **Linux**: \`.AppImage\`, \`.deb\`, \`.rpm\`"
+            echo "- \`SHA256SUMS.txt\` lists a checksum for every file."
+            if [[ -z "$APPLE_CERTIFICATE" || -z "$APPLE_ID" ]]; then
+              echo
+              echo "### macOS note: this build is not notarized"
+              echo "This macOS build is ad-hoc signed, not signed with an Apple Developer ID, so Gatekeeper will warn about it the first time:"
+              echo "1. Drag **Mochi** to *Applications*."
+              echo "2. **Right-click Mochi, choose Open**, then click **Open** in the dialog (a double click only shows a warning)."
+              echo "3. If macOS says the app is damaged, run \`xattr -dr com.apple.quarantine /Applications/Mochi.app\` in Terminal and open it again."
+              echo
+              echo "Automatic updates inside Mochi keep working; only the first launch needs these steps."
+            fi
+          } > notes.md
+          flags=(--draft --title "Mochi $TAG" --notes-file notes.md --verify-tag)
+          if [[ "$TAG" == *-* ]]; then flags+=(--prerelease); fi
+          gh release create "$TAG" "${flags[@]}"
 
   linux:
     name: Linux packages
     needs: prepare
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
 
       - name: Sync app version from tag
-        run: node scripts/sync-version.mjs "$GITHUB_REF_NAME"
+        run: node scripts/sync-version.mjs "$TAG"
 
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libudev-dev
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: lts/*
           cache: npm
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache Rust
-        uses: swatinem/rust-cache@v2
+      - uses: swatinem/rust-cache@v2
         with:
           workspaces: "./src-tauri -> target"
 
-      - name: Install frontend dependencies
-        run: npm ci
+      - run: npm ci
+
+      - name: Decide whether to build updater artifacts
+        id: updater
+        run: |
+          if [[ -n "$TAURI_SIGNING_PRIVATE_KEY" ]]; then
+            echo "args=" >> "$GITHUB_OUTPUT"; echo "json=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::TAURI_SIGNING_PRIVATE_KEY is not set: building without updater artifacts."
+            echo '{"bundle":{"createUpdaterArtifacts":false}}' > "$RUNNER_TEMP/no-updater.json"
+            echo "args=--config $RUNNER_TEMP/no-updater.json" >> "$GITHUB_OUTPUT"; echo "json=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build and upload packages
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Mochi ${{ github.ref_name }}"
-          releaseDraft: false
-          prerelease: false
-          includeUpdaterJson: true
+          tagName: ${{ env.TAG }}
+          releaseDraft: true
+          includeUpdaterJson: ${{ steps.updater.outputs.json == 'true' }}
+          args: ${{ steps.updater.outputs.args }}
 
   macos:
-    # Signing and notarization run only when the Apple secrets are configured;
-    # without them the DMGs are still built, but unsigned.
-    name: macOS packages (${{ matrix.target }})
-    needs: prepare
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-14
-            target: aarch64-apple-darwin
-          - os: macos-15-intel
-            target: x86_64-apple-darwin
+    # One universal build (arm64 + x86_64) so a single DMG and a single updater entry cover both.
+    # Runs after the Linux job so the two never overwrite each other's latest.json.
+    # Without the Apple secrets it still succeeds: the app is ad-hoc signed ("-") and unnotarized.
+    name: macOS universal DMG
+    needs: [prepare, linux]
+    runs-on: macos-14
+    permissions:
+      contents: write
+    env:
+      APPLE_CERTIFICATE_SECRET: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD_SECRET: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_SIGNING_IDENTITY_SECRET: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      APPLE_ID_SECRET: ${{ secrets.APPLE_ID }}
+      APPLE_PASSWORD_SECRET: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_TEAM_ID_SECRET: ${{ secrets.APPLE_TEAM_ID }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
 
       - name: Sync app version from tag
-        run: node scripts/sync-version.mjs "$GITHUB_REF_NAME"
+        run: node scripts/sync-version.mjs "$TAG"
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: lts/*
           cache: npm
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
 
-      - name: Cache Rust
-        uses: swatinem/rust-cache@v2
+      - uses: swatinem/rust-cache@v2
         with:
           workspaces: "./src-tauri -> target"
-          shared-key: release-${{ matrix.target }}
+          shared-key: release-universal
 
-      - name: Install frontend dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Build, sign, notarize and upload
+      - name: Configure signing
+        id: signing
+        run: |
+          # Empty secrets must not reach the bundler as empty variables, so export only what is set.
+          if [[ -n "$APPLE_CERTIFICATE_SECRET" && -n "$APPLE_SIGNING_IDENTITY_SECRET" && -n "$APPLE_CERTIFICATE_PASSWORD_SECRET" ]]; then
+            {
+              echo "APPLE_CERTIFICATE=$APPLE_CERTIFICATE_SECRET"
+              echo "APPLE_CERTIFICATE_PASSWORD=$APPLE_CERTIFICATE_PASSWORD_SECRET"
+              echo "APPLE_SIGNING_IDENTITY=$APPLE_SIGNING_IDENTITY_SECRET"
+            } >> "$GITHUB_ENV"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+            if [[ -n "$APPLE_ID_SECRET" && -n "$APPLE_PASSWORD_SECRET" && -n "$APPLE_TEAM_ID_SECRET" ]]; then
+              {
+                echo "APPLE_ID=$APPLE_ID_SECRET"
+                echo "APPLE_PASSWORD=$APPLE_PASSWORD_SECRET"
+                echo "APPLE_TEAM_ID=$APPLE_TEAM_ID_SECRET"
+              } >> "$GITHUB_ENV"
+              echo "notarized=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "::warning::Signing with Developer ID but APPLE_ID / APPLE_PASSWORD / APPLE_TEAM_ID are missing: the app will not be notarized."
+              echo "notarized=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "::warning::Apple signing secrets are not configured: building an ad-hoc signed, unnotarized DMG."
+            echo "APPLE_SIGNING_IDENTITY=-" >> "$GITHUB_ENV"
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "notarized=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Decide whether to build updater artifacts
+        id: updater
+        run: |
+          if [[ -n "$TAURI_SIGNING_PRIVATE_KEY" ]]; then
+            echo "args=--target universal-apple-darwin" >> "$GITHUB_OUTPUT"; echo "json=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::TAURI_SIGNING_PRIVATE_KEY is not set: building without updater artifacts."
+            echo '{"bundle":{"createUpdaterArtifacts":false}}' > "$RUNNER_TEMP/no-updater.json"
+            echo "args=--target universal-apple-darwin --config $RUNNER_TEMP/no-updater.json" >> "$GITHUB_OUTPUT"; echo "json=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build, sign and upload
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Mochi ${{ github.ref_name }}"
-          releaseDraft: false
-          prerelease: false
-          includeUpdaterJson: true
-          args: --target ${{ matrix.target }}
+          tagName: ${{ env.TAG }}
+          releaseDraft: true
+          includeUpdaterJson: ${{ steps.updater.outputs.json == 'true' }}
+          args: ${{ steps.updater.outputs.args }}
+
+      - name: Verify the built app bundle
+        env:
+          SIGNED: ${{ steps.signing.outputs.signed }}
+          NOTARIZED: ${{ steps.signing.outputs.notarized }}
+        run: |
+          set -euo pipefail
+          bundle_dir="src-tauri/target/universal-apple-darwin/release/bundle"
+          app="$bundle_dir/macos/Mochi.app"
+          plist="$app/Contents/Info.plist"
+          test -d "$app"
+          expect() { # key expected
+            actual="$(/usr/libexec/PlistBuddy -c "Print :$1" "$plist")"
+            [[ "$actual" == "$2" ]] || { echo "::error::Info.plist $1 is '$actual', expected '$2'"; exit 1; }
+          }
+          expect CFBundleIdentifier dev.sidequestgames.Mochilauncher
+          expect CFBundleShortVersionString "${TAG#v}"
+          expect LSApplicationCategoryType public.app-category.games
+          expect CFBundleURLTypes:0:CFBundleURLSchemes:0 mochi
+          min="$(/usr/libexec/PlistBuddy -c "Print :LSMinimumSystemVersion" "$plist")"
+          echo "LSMinimumSystemVersion=$min"
+          [[ -n "$min" ]]
+          archs="$(lipo -archs "$app/Contents/MacOS/mochi")"
+          echo "Architectures: $archs"
+          [[ "$archs" == *arm64* && "$archs" == *x86_64* ]]
+          codesign --verify --deep --strict --verbose=2 "$app"
+          codesign -dv --verbose=2 "$app" 2>&1 | grep -E "Identifier|Signature|TeamIdentifier|flags" || true
+          if [[ "$SIGNED" == "true" ]]; then
+            codesign -dv "$app" 2>&1 | grep -q "Authority=Developer ID Application"
+          fi
+          if [[ "$NOTARIZED" == "true" ]]; then
+            xcrun stapler validate "$app"
+            spctl --assess --type execute --verbose=2 "$app"
+          fi
+          for dmg in "$bundle_dir"/dmg/*.dmg; do hdiutil verify "$dmg"; done
+
+  publish:
+    name: Checksums and publish
+    needs: [prepare, linux, macos]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Create SHA256SUMS.txt
+        run: |
+          mkdir assets && cd assets
+          gh release download "$TAG" --pattern '*.dmg' --pattern '*.AppImage' --pattern '*.deb' --pattern '*.rpm'
+          ls -l
+          sha256sum -- * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          gh release upload "$TAG" SHA256SUMS.txt --clobber
+
+      - name: Publish the release
+        run: gh release edit "$TAG" --draft=false --latest=$([[ "$TAG" == *-* ]] && echo false || echo true)

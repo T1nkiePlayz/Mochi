@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { supabase } from "../lib/supabase";
 import { verifyEmailToken } from "../lib/auth";
+import { parseAuthCallback } from "../lib/deepLinkAuth";
 import type { AccountState } from "./useAccount";
 import { enterBigPicture } from "../bigpicture/mode";
 
@@ -33,21 +34,20 @@ export function useDeepLinks(account: AccountState, launchFromLink: (gameId: str
       const find = (path: string) => urls.find((url) => { const parsed = parse(url); return parsed?.protocol === "mochi:" && parsed.hostname === "auth" && parsed.pathname === path; });
 
       const callbackUrl = find("/callback");
-      if (callbackUrl) {
-        const parsed = new URL(callbackUrl);
-        const accessToken = parsed.searchParams.get("access_token");
-        const refreshToken = parsed.searchParams.get("refresh_token");
-        if (accessToken && refreshToken) {
-          // Any web page or app can open mochi:// links, so never switch accounts silently:
-          // a crafted link could otherwise sign this device into an attacker's account.
-          if (!window.confirm("Finish signing in to Mochi with the account from this browser link?")) return;
-          setShowAuth(true); setAuthBusy(true); setAuthError(""); setAuthNotice("Completing browser sign-in…");
-          void client.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-            .then(({ error }) => { if (error) throw error; setAuthNotice("Signed in successfully."); setShowAuth(false); })
-            .catch((error) => setAuthError(error instanceof Error ? error.message : "Unable to complete browser sign-in."))
-            .finally(() => setAuthBusy(false));
-          return;
-        }
+      const callback = callbackUrl ? parseAuthCallback(callbackUrl) : null;
+      if (callback) {
+        // Any web page or app can open mochi:// links, so never switch accounts silently:
+        // a crafted link could otherwise sign this device into an attacker's account.
+        if (!window.confirm("Finish signing in to Mochi with the account from this browser link?")) return;
+        setShowAuth(true); setAuthBusy(true); setAuthError(""); setAuthNotice("Completing browser sign-in…");
+        const finish = "code" in callback
+          ? client.auth.exchangeCodeForSession(callback.code)
+          : client.auth.setSession({ access_token: callback.accessToken, refresh_token: callback.refreshToken });
+        void finish
+          .then(({ error }) => { if (error) throw error; setAuthNotice("Signed in successfully."); setShowAuth(false); })
+          .catch((error) => setAuthError(error instanceof Error ? error.message : "Unable to complete browser sign-in."))
+          .finally(() => setAuthBusy(false));
+        return;
       }
 
       const verificationUrl = find("/verify");

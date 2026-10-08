@@ -9,9 +9,13 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+mod launchagent;
 #[cfg(target_os = "linux")]
 mod linux;
-#[cfg(target_os = "macos")]
+// Compiled on Linux for tests only, so the macOS adapter is type-checked and unit-tested everywhere.
+#[cfg(any(target_os = "macos", test))]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 mod macos;
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
 compile_error!("Mochi supports Linux and macOS only.");
@@ -88,7 +92,70 @@ pub struct Prepared {
 // ---------------------------------------------------------------------------
 
 pub fn home_dir() -> Option<PathBuf> {
-    std::env::var_os("HOME").map(PathBuf::from).filter(|path| path.is_absolute())
+    std::env::var_os("HOME").map(PathBuf::from).filter(|path| path.is_absolute()).or_else(passwd_home)
+}
+
+/// The account's home directory from the user database, for the rare session where `HOME` is unset.
+fn passwd_home() -> Option<PathBuf> {
+    use std::os::unix::ffi::OsStrExt;
+    // SAFETY: getpwuid_r writes only into the buffers we own and returns a pointer into `buffer`.
+    unsafe {
+        let mut passwd: libc::passwd = std::mem::zeroed();
+        let mut buffer = vec![0u8; 8192];
+        let mut result: *mut libc::passwd = std::ptr::null_mut();
+        if libc::getpwuid_r(libc::getuid(), &mut passwd, buffer.as_mut_ptr().cast(), buffer.len(), &mut result) != 0 || result.is_null() || passwd.pw_dir.is_null() {
+            return None;
+        }
+        let dir = std::ffi::CStr::from_ptr(passwd.pw_dir);
+        Some(PathBuf::from(std::ffi::OsStr::from_bytes(dir.to_bytes()))).filter(|path| path.is_absolute())
+    }
+}
+
+/// Where per-user files live. macOS uses `~/Library/...`; Linux follows the XDG base directory
+/// specification (an unset or relative `XDG_*` variable falls back to the default, as the spec says).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[allow(dead_code)]
+pub enum UserDir {
+    Config,
+    Data,
+    Cache,
+    Logs,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[cfg_attr(not(test), allow(dead_code))]
+pub enum Os {
+    Linux,
+    MacOs,
+}
+
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub const CURRENT_OS: Os = if cfg!(target_os = "macos") { Os::MacOs } else { Os::Linux };
+
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub fn resolve_user_dir(os: Os, kind: UserDir, home: &Path, env: &dyn Fn(&str) -> Option<std::ffi::OsString>) -> PathBuf {
+    match os {
+        Os::MacOs => match kind {
+            UserDir::Config | UserDir::Data => home.join("Library/Application Support"),
+            UserDir::Cache => home.join("Library/Caches"),
+            UserDir::Logs => home.join("Library/Logs"),
+        },
+        Os::Linux => {
+            let (variable, fallback) = match kind {
+                UserDir::Config => ("XDG_CONFIG_HOME", ".config"),
+                UserDir::Data => ("XDG_DATA_HOME", ".local/share"),
+                UserDir::Cache => ("XDG_CACHE_HOME", ".cache"),
+                UserDir::Logs => ("XDG_STATE_HOME", ".local/state"),
+            };
+            env(variable).map(PathBuf::from).filter(|path| path.is_absolute()).unwrap_or_else(|| home.join(fallback))
+        }
+    }
+}
+
+/// The base directory for `kind` on this OS (the same places Tauri's path resolver uses).
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub fn user_dir(kind: UserDir) -> Option<PathBuf> {
+    Some(resolve_user_dir(CURRENT_OS, kind, &home_dir()?, &|name| std::env::var_os(name)))
 }
 
 /// Locates an executable on PATH (plus the usual GUI-session gaps on macOS).
@@ -181,6 +248,17 @@ pub fn open_path(path: &str) -> Result<(), String> {
     os::open_path(path)
 }
 
+/// WebKitGTK renders a blank window with some NVIDIA drivers unless DMA-BUF rendering is off.
+/// Respect an explicit setting from the user.
+#[cfg(target_os = "linux")]
+pub fn prepare_linux_webview_environment() {
+    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() && Path::new("/proc/driver/nvidia").exists() {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+}
+
+/// Whether the OS shows tray / menu-bar icons Mochi can hide its window behind.
+pub fn tray_available() -> bool { os::tray_available() }
 pub fn ensure_platform_integration() -> Result<(), String> { os::ensure_platform_integration() }
 pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> { os::set_launch_on_startup(enabled) }
 pub fn list_flatpaks() -> Result<Vec<FlatpakApp>, String> { os::list_flatpaks() }
@@ -230,5 +308,41 @@ mod launch_target_tests {
         assert!(!launch_target_exists(""));
         assert!(!launch_target_exists("/definitely/not/a/real/mochi/path"));
         assert!(launch_target_exists("/"));
+    }
+}
+
+#[cfg(test)]
+mod directory_tests {
+    use super::*;
+    use std::ffi::OsString;
+
+    fn env<'a>(pairs: &'a [(&'a str, &'a str)]) -> impl Fn(&str) -> Option<OsString> + 'a {
+        move |name| pairs.iter().find(|(key, _)| *key == name).map(|(_, value)| OsString::from(*value))
+    }
+
+    #[test]
+    fn macos_uses_library_folders_and_ignores_xdg() {
+        let home = Path::new("/Users/me");
+        let xdg = env(&[("XDG_CONFIG_HOME", "/elsewhere")]);
+        assert_eq!(resolve_user_dir(Os::MacOs, UserDir::Config, home, &xdg), Path::new("/Users/me/Library/Application Support"));
+        assert_eq!(resolve_user_dir(Os::MacOs, UserDir::Data, home, &xdg), Path::new("/Users/me/Library/Application Support"));
+        assert_eq!(resolve_user_dir(Os::MacOs, UserDir::Cache, home, &xdg), Path::new("/Users/me/Library/Caches"));
+        assert_eq!(resolve_user_dir(Os::MacOs, UserDir::Logs, home, &xdg), Path::new("/Users/me/Library/Logs"));
+    }
+
+    #[test]
+    fn linux_follows_xdg_with_spec_fallbacks() {
+        let home = Path::new("/home/me");
+        assert_eq!(resolve_user_dir(Os::Linux, UserDir::Config, home, &env(&[])), Path::new("/home/me/.config"));
+        assert_eq!(resolve_user_dir(Os::Linux, UserDir::Data, home, &env(&[])), Path::new("/home/me/.local/share"));
+        assert_eq!(resolve_user_dir(Os::Linux, UserDir::Cache, home, &env(&[])), Path::new("/home/me/.cache"));
+        assert_eq!(resolve_user_dir(Os::Linux, UserDir::Config, home, &env(&[("XDG_CONFIG_HOME", "/cfg")])), Path::new("/cfg"));
+        // Relative values must be ignored.
+        assert_eq!(resolve_user_dir(Os::Linux, UserDir::Data, home, &env(&[("XDG_DATA_HOME", "relative/dir")])), Path::new("/home/me/.local/share"));
+    }
+
+    #[test]
+    fn home_directory_falls_back_to_the_user_database() {
+        assert!(passwd_home().is_some_and(|path| path.is_absolute()));
     }
 }
