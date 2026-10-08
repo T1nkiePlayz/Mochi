@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState, type ReactNode } from "react";
 import minecraftLogo from "../assets/minecraft-core-brand.svg";
 import { Download, Eye, ExternalLink, PackageOpen, Plus, RefreshCw, Search, X } from "lucide-react";
@@ -121,7 +122,7 @@ function parseInlineElement(source: string, start: number): { node: ReactNode; e
     const label = source.slice(start + 1, labelEnd);
     const url = source.slice(labelEnd + 2, urlEnd).trim();
     return {
-      node: <a href={url} target="_blank" rel="noreferrer noopener">{renderInline(label)}</a>,
+      node: <a href={url} target="_blank" rel="noreferrer noopener" onClick={(event) => { event.preventDefault(); void invoke("open_external_url", { url }); }}>{renderInline(label)}</a>,
       end: urlEnd + 1,
     };
   }
