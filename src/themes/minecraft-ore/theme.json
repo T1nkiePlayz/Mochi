@@ -89,7 +89,7 @@
     "modalBorder": "#0E0E0F",
     "modalShadow": "inset 0 0 0 2px #39393B, 0 24px 60px rgba(0,0,0,.6)",
     "inputBackground": "#131314",
-    "inputBorder": "#0E0E0F",
+    "inputBorder": "#656565",
     "inputFocusBorder": "#2E6BE6",
     "inputShadow": "inset 0 4px 0 0 #0A0A0B",
     "navActiveBackground": "#1855D1",

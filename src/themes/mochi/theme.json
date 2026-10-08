@@ -54,6 +54,7 @@
     "transition": "180ms cubic-bezier(.2,.7,.2,1)"
   },
   "components": {
+    "inputBorder": "#59655f",
     "buttonHeight": "38px",
     "inputHeight": "38px",
     "cardRadius": "18px",
