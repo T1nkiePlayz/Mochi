@@ -4,6 +4,7 @@ const APP_ID: &str = "dev.sidequestgames.Mochilauncher";
 const DESKTOP_FILE: &str = "mochi.desktop";
 const DESKTOP_SCHEME: &str = "mochi";
 const AUTOSTART_DIRECTORY: &str = "autostart";
+const ICON_PNG: &[u8] = include_bytes!("../../icons/icon.png");
 
 pub fn capabilities() -> PlatformCapabilities {
     PlatformCapabilities {
@@ -114,6 +115,10 @@ pub fn ensure_platform_integration() -> Result<(), String> {
     std::fs::create_dir_all(&applications).map_err(|e| format!("Unable to create the applications directory: {e}"))?;
     let executable = std::env::current_exe().map_err(|e| format!("Unable to determine the Mochi executable: {e}"))?;
     let exec = executable.to_string_lossy().replace('\\', "\\").replace('"', "\"").replace('%', "%%");
+    let icons = std::path::PathBuf::from(&home).join(".local/share/icons/hicolor/512x512/apps");
+    std::fs::create_dir_all(&icons).map_err(|e| format!("Unable to create the icon directory: {e}"))?;
+    std::fs::write(icons.join("mochi.png"), ICON_PNG).map_err(|e| format!("Unable to install the Mochi application icon: {e}"))?;
+
     let desktop = applications.join(DESKTOP_FILE);
     let content = format!("[Desktop Entry]\nType=Application\nName=Mochi\nComment=Your games, your way.\nExec=\"{exec}\" %U\nTryExec=\"{exec}\"\nIcon=mochi\nTerminal=false\nStartupNotify=true\nStartupWMClass={APP_ID}\nCategories=Game;Utility;\nMimeType=x-scheme-handler/{DESKTOP_SCHEME};\n");
     std::fs::write(&desktop, content).map_err(|e| format!("Unable to write Mochi desktop entry: {e}"))?;
