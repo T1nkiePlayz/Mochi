@@ -88,12 +88,12 @@ const minecraftTabs: Array<{ id: MinecraftTab; label: string }> = [
   { id: "shader", label: "Shaders" },
 ];
 
-const defaultNexusDomains = [
-  "subnautica",
-  "fnafsecuritybreach",
-  "subnautica2",
-  "subnauticabelowzero",
-  "stardewvalley",
+const defaultNexusGames: Array<{ domainName: string; search: string }> = [
+  { domainName: "satisfactory", search: "Satisfactory" },
+  { domainName: "subnautica", search: "Subnautica" },
+  { domainName: "subnautica2", search: "Subnautica 2" },
+  { domainName: "subnauticabelowzero", search: "Subnautica: Below Zero" },
+  { domainName: "stardewvalley", search: "Stardew Valley" },
 ];
 
 type Props = {
@@ -119,6 +119,7 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
   const [nexusMods, setNexusMods] = useState<NexusMod[]>([]);
   const [nexusLoading, setNexusLoading] = useState(false);
   const [nexusGameSearch, setNexusGameSearch] = useState("");
+  const [nexusGameResults, setNexusGameResults] = useState<NexusGame[]>([]);
   const [showNexusGamePicker, setShowNexusGamePicker] = useState(false);
   const [addedNexusDomains, setAddedNexusDomains] = useState<string[]>(() => {
     try {
@@ -147,20 +148,44 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
   const refreshNexusGames = async () => {
     if (!nexusVisible || !supabase) return;
     setNexusLoading(true);
+    setMessage("");
     try {
-      const games = await getNexusGames(supabase);
-      const byDomain = new Map(games.map(game => [game.domainName, game]));
-      const seeded = defaultNexusDomains
-        .map(domain => byDomain.get(domain))
+      const requested = [
+        ...defaultNexusGames,
+        ...addedNexusDomains.map(domainName => ({ domainName, search: domainName })),
+      ];
+      const results = await Promise.all(
+        requested.map(async ({ domainName, search }) => {
+          const games = await getNexusGames(supabase, search);
+          return games.find(game => game.domainName === domainName) ?? games[0];
+        }),
+      );
+      const byDomain = new Map<string, NexusGame>();
+      results.filter((game): game is NexusGame => Boolean(game)).forEach(game => byDomain.set(game.domainName, game));
+      const seeded = defaultNexusGames
+        .map(({ domainName }) => byDomain.get(domainName))
         .filter((game): game is NexusGame => Boolean(game));
       const custom = addedNexusDomains
         .map(domain => byDomain.get(domain))
         .filter((game): game is NexusGame => Boolean(game));
-      const merged = [...seeded, ...custom.filter(game => !defaultNexusDomains.includes(game.domainName))];
-      setNexusGames(merged);
+      setNexusGames([...seeded, ...custom.filter(game => !defaultNexusGames.some(item => item.domainName === game.domainName))]);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to load Nexus Mods games.");
       setNexusGames([]);
+    } finally {
+      setNexusLoading(false);
+    }
+  };
+
+  const searchNexusGames = async (value: string) => {
+    if (!nexusVisible || !supabase) return;
+    setNexusLoading(true);
+    try {
+      const games = await getNexusGames(supabase, value);
+      setNexusGameResults(games);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to search Nexus Mods games.");
+      setNexusGameResults([]);
     } finally {
       setNexusLoading(false);
     }
@@ -192,10 +217,17 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
     if (nexusVisible) void refreshNexusGames();
     else {
       setNexusGames([]);
+      setNexusGameResults([]);
       setNexusMods([]);
       if (tab.kind === "nexus") setTab({ kind: "minecraft", category: "mod" });
     }
   }, [nexusVisible, addedNexusDomains.join("|")]);
+
+  useEffect(() => {
+    if (!showNexusGamePicker || !nexusVisible) return;
+    const timer = window.setTimeout(() => void searchNexusGames(nexusGameSearch.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [showNexusGamePicker, nexusVisible, nexusGameSearch]);
 
   useEffect(() => {
     if (tab.kind === "nexus" && nexusVisible) void refreshNexusMods(tab.game);
@@ -231,10 +263,13 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
   };
 
   const addNexusGame = (game: NexusGame) => {
-    if (!nexusGames.some(item => item.domainName === game.domainName)) setNexusGames(current => [...current, game]);
-    if (!defaultNexusDomains.includes(game.domainName)) setAddedNexusDomains(current => current.includes(game.domainName) ? current : [...current, game.domainName]);
+    setNexusGames(current => current.some(item => item.domainName === game.domainName) ? current : [...current, game]);
+    if (!defaultNexusGames.some(item => item.domainName === game.domainName)) {
+      setAddedNexusDomains(current => current.includes(game.domainName) ? current : [...current, game.domainName]);
+    }
     setShowNexusGamePicker(false);
     setNexusGameSearch("");
+    setNexusGameResults([]);
     setQuery("");
     setTab({ kind: "nexus", game });
   };
@@ -258,7 +293,7 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
           {game.iconUrl ? <img className="discover-game-icon" src={game.iconUrl} alt="" /> : <span className="discover-game-icon fallback">{game.name.slice(0, 1)}</span>}
           <span>{game.name}</span>
         </button>)}
-        {nexusVisible && <button className="discover-game-add" type="button" title="Add a Nexus Mods game" aria-label="Add a Nexus Mods game" onClick={() => setShowNexusGamePicker(true)}><Plus size={17} /></button>}
+        {nexusVisible && <button className="discover-game-add" type="button" title="Search and add a Nexus Mods game" aria-label="Search and add a Nexus Mods game" onClick={() => { setNexusGameSearch(""); setNexusGameResults([]); setShowNexusGamePicker(true); }}><Plus size={17} /></button>}
       </div>
 
       {tab.kind === "minecraft" ? <>
@@ -300,7 +335,7 @@ export function ModrinthDiscover({ tofu, pikos, experimentalFeatures, nexusConfi
     </section>
     {details && <ProjectDetails project={details} gameVersion={gameVersion} onClose={() => setDetails(null)} />}
     {tofuPicker && <TofuPicker project={tofuPicker} pikos={pikos} onClose={() => setTofuPicker(null)} onInstall={(target) => { setTofuPicker(null); void install(tofuPicker, target); }} />}
-    {showNexusGamePicker && <NexusGamePicker games={nexusGames} search={nexusGameSearch} setSearch={setNexusGameSearch} onClose={() => { setShowNexusGamePicker(false); setNexusGameSearch(""); }} onChoose={addNexusGame} loading={nexusLoading} />}
+    {showNexusGamePicker && <NexusGamePicker games={nexusGameResults} search={nexusGameSearch} setSearch={setNexusGameSearch} onClose={() => { setShowNexusGamePicker(false); setNexusGameSearch(""); }} onChoose={addNexusGame} loading={nexusLoading} />}
   </>;
 
   async function openDetails(project: ModrinthProject) {
