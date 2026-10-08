@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApp } from "./AppContext";
 import { buildFacts, countCollections, evaluate, newlyMet, achievements, type AchievementFlags } from "../lib/achievements";
-import { getPlaytimeHistory } from "../lib/stats";
+import { getPlaytimeHistory, type SessionRecord } from "../lib/stats";
 import { readJson, storageKeys, writeJson } from "../lib/storage";
 
 const KEY = "mochi:achievements";
@@ -50,7 +50,7 @@ export function useAchievementWatcher() {
       if (themeEngine.theme && !flags.themes.includes(themeEngine.theme)) flags.themes.push(themeEngine.theme);
       if (activeNav === "Discover") flags.usedDiscover = true;
       if (lib.library.some((piko) => piko.tofus.some((tofu) => tofu.mods > 0))) flags.installedMod = true;
-      let records;
+      let records: SessionRecord[];
       try { records = await getPlaytimeHistory(); } catch { records = []; }
       if (cancelled) return;
       const collections = readJson<unknown>(storageKeys.collections, []);
