@@ -550,7 +550,7 @@ mod tests {
         assert_eq!(find_steam_id(std::slice::from_ref(&root)).as_deref(), Some((22_002 + ID64_BASE).to_string().as_str()));
         fs::create_dir_all(root.join("config")).unwrap();
         fs::write(root.join("config/loginusers.vdf"), LOGIN).unwrap();
-        assert_eq!(find_steam_id(&[root.clone()]).as_deref(), Some("76561198000000001"));
+        assert_eq!(find_steam_id(std::slice::from_ref(&root)).as_deref(), Some("76561198000000001"));
         let _ = fs::remove_dir_all(root);
     }
 

@@ -48,7 +48,20 @@ function mockHistory(): unknown[] {
   }
   return out;
 }
+/** Fake Steam achievements. App 440 simulates a private profile and 570 a game without achievements. */
+function mockSteamAchievements(appid: number) {
+  if (appid === 440) return { status: "private", stale: false, source: "community", steamId: "76561197960287930", message: "This Steam profile's game details are private, so achievements cannot be read." };
+  if (appid === 570) return { status: "no-achievements", stale: false, source: "community", steamId: "76561197960287930", message: "This game has no Steam achievements." };
+  const names = ["Welcome to City 17", "Lambda Locator", "Trusty Hardware", "Vorticough", "Secret Stash", "Shipmate", "Zombie Chopper", "Hidden Finale"];
+  const achievements = names.map((name, index) => ({
+    apiName: `MOCK_${index}`, name, description: index === 7 ? "" : `Mock description for ${name}.`, icon: null, iconGray: null,
+    unlocked: index < 4, unlockedAt: index < 4 ? now - (index + 1) * 86_400 * 9 : null, hidden: index === 7,
+  }));
+  return { status: "ok", stale: false, source: "community", steamId: "76561197960287930", fetchedAt: now, data: { appid, gameName: `Steam app ${appid}`, achievements, unlocked: 4, total: names.length } };
+}
 const handlers: Record<string, Handler> = {
+  get_steam_achievements: ({ appid }) => mockSteamAchievements(Number(appid)),
+  get_steam_achievement_totals: () => [{ appid: 220, steamId: "76561197960287930", unlocked: 18, total: 33, fetchedAt: now }],
   get_steam_store_details: ({ appid }) => ({
     status: "ok", stale: false, fetchedAt: now, message: null,
     details: {
