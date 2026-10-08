@@ -6,6 +6,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { FirstLaunchSetup } from "./components/FirstLaunchSetup";
 import { GameEditor } from "./components/GameEditor";
 import { MochiIcon } from "./components/MochiIcon";
+import { UpdateBanner } from "./components/UpdateBanner";
 import { TofuManager } from "./components/TofuManager";
 import { Sidebar } from "./components/layout/Sidebar";
 import { Topbar } from "./components/layout/Topbar";
@@ -68,6 +69,7 @@ function Shell() {
     <Sidebar />
     <main className="main-content">
       <Topbar />
+      <UpdateBanner />
       <div className="content">
         <ErrorBoundary resetKey={app.activeNav}>
           <Suspense fallback={<ViewFallback />}><CurrentView /></Suspense>

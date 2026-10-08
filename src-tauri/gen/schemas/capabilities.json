@@ -1,1 +1,1 @@
-{}
+{"default":{"identifier":"default","description":"Default permissions for the Mochi desktop application.","local":true,"windows":["main"],"permissions":["core:default","dialog:default","deep-link:default","core:event:default"]},"updater":{"identifier":"updater","description":"Check for, download and install Mochi updates, then relaunch.","local":true,"windows":["main"],"permissions":["updater:default","process:allow-restart"]}}
