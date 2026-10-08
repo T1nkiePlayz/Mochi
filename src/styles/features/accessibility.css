@@ -171,3 +171,6 @@ html:not([data-color-blind="none"]) :is([class*="status-"].error, [class*="statu
 
 /* Legacy rules that removed the outline on styled inputs. */
 .mfa-code-label .mfa-input:focus-visible { outline: var(--mochi-a11y-focus-width) solid var(--mochi-a11y-focus-color); outline-offset: var(--mochi-a11y-focus-offset); }
+/* Legacy component rules (`.x input { outline: none }`) are more specific than the base ring: make sure fields always show focus. */
+:is(input, select, textarea):focus-visible:not(.search-box input, .mochi-select-search input, .toggle) { outline: var(--mochi-a11y-focus-width) solid var(--mochi-a11y-focus-color) !important; outline-offset: var(--mochi-a11y-focus-offset) !important; }
+.toggle:focus-visible { outline: var(--mochi-a11y-focus-width) solid var(--mochi-a11y-focus-color) !important; outline-offset: var(--mochi-a11y-focus-offset) !important; }
