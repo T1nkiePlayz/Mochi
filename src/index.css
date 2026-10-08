@@ -643,7 +643,7 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 .suggested-game-card small{font-size:9px;color:var(--mochi-text-muted);}
 .nexus-mod-details{max-width:720px;}
 .nexus-mod-summary{white-space:pre-wrap;color:var(--mochi-text);line-height:1.6;}
-.nexus-discover-controls{grid-template-columns:minmax(260px,1fr);}
+.nexus-discover-controls{grid-template-columns:minmax(260px,1fr) repeat(2,minmax(120px,150px));}
 .nexus-game-picker-window{width:min(100%,560px);max-height:min(80vh,680px);}
 .nexus-game-search{width:100%;margin:15px 0 10px;}
 .nexus-game-picker-list{display:grid;gap:6px;max-height:50vh;overflow:auto;}

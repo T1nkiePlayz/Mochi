@@ -13,7 +13,7 @@ import {
 } from "../lib/modrinth";
 import type { Piko, Tofu } from "../models";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getNexusGames, getNexusMods, type NexusGame, type NexusMod } from "../lib/nexus";
+import { getNexusGames, getNexusMods, type NexusGame, type NexusMod, type NexusModSort } from "../lib/nexus";
 
 const sections: Array<{ type: ModrinthProjectType; title: string; description: string }> = [
   { type: "mod", title: "Most Popular Mods", description: "The most downloaded mods on Modrinth right now." },
@@ -336,6 +336,9 @@ export function ModrinthDiscover({ tofu, pikos, playtime = [], experimentalFeatu
   const [moreLoading, setMoreLoading] = useState(false);
   const [nexusGames, setNexusGames] = useState<NexusGame[]>([]);
   const [nexusModsByGame, setNexusModsByGame] = useState<Record<string, NexusMod[]>>({});
+  const [nexusTotalByGame, setNexusTotalByGame] = useState<Record<string, number>>({});
+  const [nexusSort, setNexusSort] = useState<NexusModSort>("catalog");
+  const [nexusPageSize, setNexusPageSize] = useState(25);
   const [nexusLoading, setNexusLoading] = useState(false);
   const [nexusGameSearch, setNexusGameSearch] = useState("");
   const [nexusGameResults, setNexusGameResults] = useState<NexusGame[]>([]);
@@ -408,37 +411,39 @@ export function ModrinthDiscover({ tofu, pikos, playtime = [], experimentalFeatu
     }
   };
 
-  const refreshNexusMods = async (game: NexusGame) => {
+  const refreshNexusMods = async (game: NexusGame, sort = nexusSort, limit = nexusPageSize) => {
     if (!supabase) return;
     const domain = game.domainName;
     setNexusLoading(true);
     setMessage("");
     try {
-      const request = getNexusMods(supabase, domain);
-      nexusRequests.current.set(domain, request);
-      const mods = await request;
-      setNexusModsByGame(current => ({ ...current, [domain]: mods }));
+      const page = await getNexusMods(supabase, domain, { sort, limit });
+      setNexusModsByGame(current => ({ ...current, [domain]: page.mods }));
+      setNexusTotalByGame(current => ({ ...current, [domain]: page.total }));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to load Nexus Mods.");
       setNexusModsByGame(current => ({ ...current, [domain]: [] }));
     } finally {
-      nexusRequests.current.delete(domain);
       setNexusLoading(false);
     }
   };
 
-  const loadNexusMods = async (game: NexusGame) => {
+  const loadNexusMods = async (game: NexusGame, limit = nexusPageSize) => {
     const cached = nexusModsByGame[game.domainName];
-    if (cached) return cached;
+    if (cached && (cached.length >= limit || cached.length >= (nexusTotalByGame[game.domainName] ?? Infinity))) return cached;
     const pending = nexusRequests.current.get(game.domainName);
     if (pending) return pending;
     if (!supabase) return [];
-    const request = getNexusMods(supabase, game.domainName);
+    const offset = cached?.length ?? 0;
+    const request = getNexusMods(supabase, game.domainName, { sort: nexusSort, offset, limit: Math.max(8, limit - offset) }).then(page => {
+      setNexusTotalByGame(current => ({ ...current, [game.domainName]: page.total }));
+      setNexusModsByGame(current => ({ ...current, [game.domainName]: [...(current[game.domainName] || []), ...page.mods] }));
+      return page.mods;
+    });
     nexusRequests.current.set(game.domainName, request);
     try {
       const mods = await request;
-      setNexusModsByGame(current => ({ ...current, [game.domainName]: mods }));
-      return mods;
+      return [...(cached || []), ...mods];
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to load Nexus Mods.");
       setNexusModsByGame(current => ({ ...current, [game.domainName]: [] }));
@@ -472,8 +477,36 @@ export function ModrinthDiscover({ tofu, pikos, playtime = [], experimentalFeatu
   }, [showNexusGamePicker, nexusVisible, nexusGameSearch]);
 
   useEffect(() => {
-    if (nexusVisible) void Promise.all(nexusGames.map(game => loadNexusMods(game)));
-  }, [nexusVisible, nexusGames.map(game => game.domainName).join("|")]);
+    if (!nexusVisible || tab.kind !== "nexus") return;
+    setNexusModsByGame(current => {
+      const next = { ...current };
+      delete next[tab.game.domainName];
+      return next;
+    });
+    void refreshNexusMods(tab.game, nexusSort, nexusPageSize);
+  }, [nexusVisible, tab.kind === "nexus" ? tab.game.domainName : "", nexusSort, nexusPageSize]);
+
+  useEffect(() => {
+    if (nexusVisible && tab.kind === "all") {
+      for (const game of nexusGames) void loadNexusMods(game, 8);
+    }
+  }, [nexusVisible, nexusGames.map(game => game.domainName).join("|"), tab.kind]);
+
+  const loadMoreNexusMods = async (game: NexusGame) => {
+    const current = nexusModsByGame[game.domainName] || [];
+    if (!supabase || nexusSort === "trending" || current.length >= 200 || current.length >= (nexusTotalByGame[game.domainName] ?? Infinity) || moreLoading) return;
+    setMoreLoading(true);
+    setMessage("");
+    try {
+      const page = await getNexusMods(supabase, game.domainName, { sort: "catalog", offset: current.length, limit: Math.min(nexusPageSize, 200 - current.length) });
+      setNexusModsByGame(previous => ({ ...previous, [game.domainName]: [...(previous[game.domainName] || []), ...page.mods] }));
+      setNexusTotalByGame(previous => ({ ...previous, [game.domainName]: page.total }));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to load more Nexus Mods.");
+    } finally {
+      setMoreLoading(false);
+    }
+  };
 
   useEffect(() => { void refreshMinecraft(); }, [gameVersion, projectSort]);
 
@@ -562,7 +595,7 @@ export function ModrinthDiscover({ tofu, pikos, playtime = [], experimentalFeatu
         <button className={tab.kind === "minecraft" ? "discover-game-tab active" : "discover-game-tab"} type="button" role="tab" aria-label="Minecraft" title="Minecraft" aria-selected={tab.kind === "minecraft"} onClick={() => { setQuery(""); setTab({ kind: "minecraft", category: "mod" }); }}>
           <MinecraftIcon /><span className="discover-game-name">Minecraft</span>
         </button>
-        {gameTabs.map(game => <button key={game.domainName} className={tab.kind === "nexus" && tab.game.domainName === game.domainName ? "discover-game-tab active" : "discover-game-tab"} type="button" role="tab" aria-selected={tab.kind === "nexus" && tab.game.domainName === game.domainName} onClick={() => { setQuery(""); setTab({ kind: "nexus", game }); void loadNexusMods(game); }}>
+        {gameTabs.map(game => <button key={game.domainName} className={tab.kind === "nexus" && tab.game.domainName === game.domainName ? "discover-game-tab active" : "discover-game-tab"} type="button" role="tab" aria-selected={tab.kind === "nexus" && tab.game.domainName === game.domainName} onClick={() => { setQuery(""); setTab({ kind: "nexus", game }); }}>
           {game.iconUrl ? <DiscoveryImage src={game.iconUrl} className="discover-game-icon" alt="" label={game.name} /> : <span className="discover-game-icon fallback">{game.name.slice(0, 1)}</span>}
           <span className="discover-game-name">{game.name}</span>
         </button>)}
@@ -576,11 +609,11 @@ export function ModrinthDiscover({ tofu, pikos, playtime = [], experimentalFeatu
         </section>
         {nexusVisible && gameTabs.map(game => {
           const mods = nexusModsByGame[game.domainName] || [];
-          return <section className="discover-section all-game-section" key={game.domainName}><div className="discover-section-heading"><div><h3>{game.name}</h3><p>Trending Nexus Mods · up to 5 public results{game.genre ? ` · ${game.genre}` : ""}</p></div><button className="text-button" type="button" onClick={() => setTab({ kind: "nexus", game })}>Browse</button></div>
-            {!Object.prototype.hasOwnProperty.call(nexusModsByGame, game.domainName) ? <div className="discover-loading"><RefreshCw size={16} className="spin"/><span>Loading {game.name}...</span></div> : mods.length ? <div className="discover-grid">{mods.slice(0, 5).map((mod, index) => renderNexusMod(game, mod, index))}</div> : <div className="discover-empty">Nexus Mods did not return trending mods for {game.name}.</div>}
+          return <section className="discover-section all-game-section" key={game.domainName}><div className="discover-section-heading"><div><h3>{game.name}</h3><p>Game catalog · showing {Math.min(mods.length, 8)} of {(nexusTotalByGame[game.domainName] || mods.length).toLocaleString()} mods{game.genre ? ` · ${game.genre}` : ""}</p></div><button className="text-button" type="button" onClick={() => setTab({ kind: "nexus", game })}>Browse</button></div>
+            {!Object.prototype.hasOwnProperty.call(nexusModsByGame, game.domainName) ? <div className="discover-loading"><RefreshCw size={16} className="spin"/><span>Loading {game.name}...</span></div> : mods.length ? <div className="discover-grid">{mods.slice(0, 8).map((mod, index) => renderNexusMod(game, mod, index))}</div> : <div className="discover-empty">Nexus Mods did not return mods for {game.name}.</div>}
           </section>;
         })}
-        {nexusVisible && <section className="discover-section suggested-games"><div className="discover-section-heading"><div><h3>Suggested games</h3><p>{playedPikos.length ? `Based on ${playedPikos[0].name} and your ${playedCategories[0] || "recent play"} interests.` : "Popular games to explore on Nexus Mods."}</p></div></div><div className="suggested-game-list">{suggestedGames.map(game => <button type="button" className="suggested-game-card" key={game.domainName} onClick={() => { setQuery(""); setTab({ kind: "nexus", game }); void loadNexusMods(game); }}>{game.iconUrl ? <DiscoveryImage src={game.iconUrl} className="discover-game-icon" alt="" label={game.name}/> : <span className="discover-game-icon fallback">{game.name.slice(0, 1)}</span>}<span><strong>{game.name}</strong><small>{game.genre || `${(game.modCount || 0).toLocaleString()} mods on Nexus`}</small></span><span className="text-button">Browse</span></button>)}</div></section>}
+        {nexusVisible && <section className="discover-section suggested-games"><div className="discover-section-heading"><div><h3>Suggested games</h3><p>{playedPikos.length ? `Based on ${playedPikos[0].name} and your ${playedCategories[0] || "recent play"} interests.` : "Popular games to explore on Nexus Mods."}</p></div></div><div className="suggested-game-list">{suggestedGames.map(game => <button type="button" className="suggested-game-card" key={game.domainName} onClick={() => { setQuery(""); setTab({ kind: "nexus", game }); }}>{game.iconUrl ? <DiscoveryImage src={game.iconUrl} className="discover-game-icon" alt="" label={game.name}/> : <span className="discover-game-icon fallback">{game.name.slice(0, 1)}</span>}<span><strong>{game.name}</strong><small>{game.genre || `${(game.modCount || 0).toLocaleString()} mods on Nexus`}</small></span><span className="text-button">Browse</span></button>)}</div></section>}
       </> : tab.kind === "minecraft" ? <>
         <div className="discover-tabs" role="tablist" aria-label="Minecraft content categories">
           {minecraftTabs.map(item => <button key={item.id} className={tab.category === item.id ? "active" : ""} type="button" role="tab" aria-selected={tab.category === item.id} onClick={() => setTab({ kind: "minecraft", category: item.id })}>{item.label}</button>)}
@@ -605,14 +638,18 @@ export function ModrinthDiscover({ tofu, pikos, playtime = [], experimentalFeatu
       </> : <>
         <div className="discover-controls nexus-discover-controls">
           <label className="search-box"><Search size={15} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder={"Search " + tab.game.name + " mods..."} /></label>
+          <label className="discover-select-wrap"><span>Sort</span><select className="discover-select" value={nexusSort} onChange={event => { setNexusModsByGame({}); setNexusTotalByGame({}); setNexusSort(event.target.value as NexusModSort); }}><option value="catalog">All mods</option><option value="trending">Trending popularity</option></select></label>
+          {nexusSort === "catalog" && <label className="discover-select-wrap"><span>Show</span><select className="discover-select" value={nexusPageSize} onChange={event => { setNexusModsByGame({}); setNexusTotalByGame({}); setNexusPageSize(Number(event.target.value)); }}><option value={8}>8 per page</option><option value={25}>25 per page</option><option value={50}>50 per page</option><option value={100}>100 per page</option></select></label>}
         </div>
         {message && <p className="metadata-note">{message}</p>}
-        {nexusLoading || !Object.prototype.hasOwnProperty.call(nexusModsByGame, tab.game.domainName) ? <div className="discover-loading"><RefreshCw size={20} className="spin" /><span>Loading trending mods from Nexus Mods...</span></div> : (() => {
+        {nexusLoading || !Object.prototype.hasOwnProperty.call(nexusModsByGame, tab.game.domainName) ? <div className="discover-loading"><RefreshCw size={20} className="spin" /><span>{nexusSort === "trending" ? "Loading trending mods from Nexus Mods..." : "Loading the Nexus Mods game catalog..."}</span></div> : (() => {
           const visible = (nexusModsByGame[tab.game.domainName] || []).filter(nexusMatches);
+          const total = nexusTotalByGame[tab.game.domainName] ?? visible.length;
           return <div className="discover-sections"><section className="discover-section">
-            <div className="discover-section-heading"><div><h3>{tab.game.name} Mods</h3><p>Trending mods from Nexus Mods · up to 5 public results.</p></div><span>{visible.length} mods</span></div>
+            <div className="discover-section-heading"><div><h3>{tab.game.name} Mods</h3><p>{nexusSort === "trending" ? "Nexus trending feed, ranked by endorsements (top 5)." : `Game catalog · showing up to 200 of ${total.toLocaleString()} mods.`}</p></div><span>{visible.length} shown</span></div>
             <div className="discover-grid">{visible.map((mod,index) => renderNexusMod(tab.game, mod, index))}</div>
-            {!visible.length && <div className="discover-empty">No trending mods match this filter.</div>}
+            {nexusSort === "catalog" && (nexusModsByGame[tab.game.domainName]?.length || 0) < Math.min(200, total) && <div className="discover-load-more"><button className="secondary-button" type="button" onClick={() => void loadMoreNexusMods(tab.game)} disabled={moreLoading}>{moreLoading ? <RefreshCw size={14} className="spin"/> : <Plus size={14}/>} {moreLoading ? "Loading more..." : `Load ${Math.min(nexusPageSize, 200 - (nexusModsByGame[tab.game.domainName]?.length || 0))} more`}</button></div>}
+            {!visible.length && <div className="discover-empty">No mods match this filter.</div>}
           </section></div>;
         })()}
       </>}

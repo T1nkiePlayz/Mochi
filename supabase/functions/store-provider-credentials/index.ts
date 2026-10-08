@@ -14,7 +14,7 @@ type Body =
   | { action: "status"; provider?: Provider }
   | { action: "delete"; provider: Provider }
   | { action: "nexus-games"; query?: string }
-  | { action: "nexus-mods"; gameDomain: string }
+  | { action: "nexus-mods"; gameDomain: string; sort?: "catalog" | "trending"; offset?: number; limit?: number }
   | { action: "igdb-search"; query: string; limit?: number };
 
 type IgdbCredential = { clientId: string; clientSecret: string };
@@ -177,20 +177,45 @@ Deno.serve(async (req) => {
     if (typeof body.gameDomain !== "string") return response({ error: "Invalid Nexus game." }, 400);
     const domain = body.gameDomain.trim().replace(/[^a-z0-9_-]/gi, "");
     if (!domain) return response({ error: "Invalid Nexus game." }, 400);
+    const sort = body.sort === "trending" ? "trending" : "catalog";
+    const offset = Math.max(0, Math.min(100_000, Math.floor(Number(body.offset) || 0)));
+    const limit = Math.max(8, Math.min(100, Math.floor(Number(body.limit) || 100)));
     try {
       const headers = await nexusHeaders(user.id);
-      const upstream = await fetch(`https://api.nexusmods.com/v3/games/${encodeURIComponent(domain)}/trending-mods`, { headers });
-      if (!upstream.ok) return response({ error: `Nexus Mods returned HTTP ${upstream.status} while loading mods.` }, upstream.status);
-      const payload = await upstream.json() as { data?: { mods?: Array<Record<string, unknown>> } };
-      const mods = (payload.data?.mods ?? []).map((mod) => ({
-        id: String(mod.mod_id ?? mod.id ?? mod.mod_page_url ?? ""),
-        name: String(mod.name ?? "Untitled mod"),
-        author: typeof mod.author === "string" ? mod.author : undefined,
-        summary: typeof mod.summary === "string" ? mod.summary : undefined,
-        pictureUrl: typeof mod.picture_url === "string" ? mod.picture_url : undefined,
-        modPageUrl: String(mod.mod_page_url ?? `https://www.nexusmods.com/${domain}/mods/${String(mod.mod_id ?? "")}`),
-      }));
-      return response({ mods });
+      if (sort === "trending") {
+        const upstream = await fetch(`https://api.nexusmods.com/v3/games/${encodeURIComponent(domain)}/trending-mods`, { headers });
+        if (!upstream.ok) return response({ error: `Nexus Mods returned HTTP ${upstream.status} while loading trending mods.` }, upstream.status);
+        const payload = await upstream.json() as { data?: { mods?: Array<Record<string, unknown>> } };
+        const mods = (payload.data?.mods ?? []).map((mod) => ({
+          id: String(mod.mod_id ?? mod.id ?? mod.mod_page_url ?? ""),
+          name: String(mod.name ?? "Untitled mod"),
+          author: typeof mod.author === "string" ? mod.author : undefined,
+          summary: typeof mod.summary === "string" ? mod.summary : undefined,
+          pictureUrl: typeof mod.picture_url === "string" ? mod.picture_url : undefined,
+          modPageUrl: String(mod.mod_page_url ?? `https://www.nexusmods.com/${domain}/mods/${String(mod.mod_id ?? "")}`),
+        }));
+        return response({ mods, total: mods.length, offset: 0 });
+      }
+
+      // Nexus V3 currently has no paginated all-mods or downloads-ranked endpoint.
+      // Use the same paginated V2 GraphQL query used by Nexus's own Vortex client.
+      const upstream = await fetch("https://api.nexusmods.com/v2/graphql", {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json", APIKEY: headers.apikey },
+        body: JSON.stringify({
+          query: "query($domain: String!, $count: Int!, $offset: Int!) { mods(filter: { filter: [{ gameDomainName: { value: $domain, op: EQUALS } }] }, count: $count, offset: $offset) { totalCount nodes { modId name } } }",
+          variables: { domain, count: limit, offset },
+        }),
+      });
+      if (!upstream.ok) return response({ error: `Nexus Mods returned HTTP ${upstream.status} while loading the game catalog.` }, upstream.status);
+      const payload = await upstream.json() as { data?: { mods?: { totalCount?: number; nodes?: Array<{ modId?: number | string; name?: string }> } }; errors?: Array<{ message?: string }> };
+      if (payload.errors?.length) return response({ error: payload.errors.map((item) => item.message).filter(Boolean).join("; ") || "Nexus Mods could not load this game catalog." }, 502);
+      const result = payload.data?.mods;
+      const mods = (result?.nodes ?? []).map((mod) => {
+        const id = String(mod.modId ?? "");
+        return { id, name: String(mod.name ?? "Untitled mod"), modPageUrl: `https://www.nexusmods.com/${encodeURIComponent(domain)}/mods/${encodeURIComponent(id)}` };
+      }).filter((mod) => mod.id);
+      return response({ mods, total: Number(result?.totalCount ?? mods.length), offset });
     } catch (error) {
       console.error("Nexus mod search failed", error);
       return response({ error: error instanceof Error ? error.message : "Unable to load Nexus Mods." }, 502);

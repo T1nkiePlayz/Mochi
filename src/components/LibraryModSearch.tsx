@@ -21,8 +21,8 @@ export function LibraryModSearch({ query, nexusEnabled, supabase }: { query: str
         nexusEnabled && supabase ? (async () => {
           const games = await getNexusGames(supabase, needle);
           const exactish = games.slice(0, 3);
-          const mods = await Promise.all(exactish.map(async game => ({ game, mods: await getNexusMods(supabase, game.domainName) })));
-          return mods.flatMap(({ game, mods }) => mods.slice(0, 5).map(mod => ({ game, mod })));
+          const mods = await Promise.all(exactish.map(async game => ({ game, mods: await getNexusMods(supabase, game.domainName, { sort: "trending" }) })));
+          return mods.flatMap(({ game, mods }) => mods.mods.map(mod => ({ game, mod })));
         })() : Promise.resolve([] as Array<{ game: NexusGame; mod: NexusMod }>),
       ]);
       if (!cancelled) {
@@ -52,6 +52,6 @@ export function LibraryModSearch({ query, nexusEnabled, supabase }: { query: str
         <button className="icon-button" aria-label={`Open ${mod.name} on Nexus Mods`} onClick={() => void invoke("open_external_url", { url: mod.modPageUrl })}><ExternalLink size={14}/></button>
       </article>)}
     </div>
-    {nexusEnabled && nexus.length > 0 && <small className="metadata-note">Nexus displays up to five trending mods per matching game from its public feed.</small>}
+    {nexusEnabled && nexus.length > 0 && <small className="metadata-note">Nexus search shows its top five trending mods for each matching game.</small>}
   </section>;
 }
