@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 
 export type PlatformId = "linux" | "macos" | "other";
-export type LaunchMethodId = "file" | "flatpak" | "custom";
+export type LaunchMethodId = "file" | "app" | "flatpak" | "custom";
 
 export type FlatpakApp = {
   id: string;
