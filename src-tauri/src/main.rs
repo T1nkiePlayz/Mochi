@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use tauri::{Manager, WindowEvent};
 
+mod fonts;
 mod game_artwork;
 mod modrinth;
 mod platform;
@@ -148,6 +149,7 @@ fn main() {
             list_flatpaks, list_runtimes, get_platform_capabilities, create_game_shortcut, remove_game_shortcut,
             detect_import_sources, scan_import_games,
             get_mochi_config_info, move_mochi_config, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
+            fonts::cache_theme_fonts,
             game_artwork::cache_game_artwork, game_artwork::get_cached_game_artwork, game_artwork::clear_game_artwork_cache,
             modrinth::get_public_api, modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::apply_mod_profile,
             modrinth::delete_mod_file, modrinth::start_modrinth_download, modrinth::update_mod_file, modrinth::analyze_mod_files,

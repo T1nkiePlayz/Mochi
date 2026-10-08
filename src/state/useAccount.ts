@@ -66,7 +66,7 @@ export function useAccount(notify: (title: string, message: string) => void) {
     void supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
       if (data.session?.user && data.session.refresh_token) saveAccountSession(data.session.user, data.session.refresh_token);
-    });
+    }).catch(() => { /* Offline: stay signed out until the next auth event. */ });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user && session.refresh_token) saveAccountSession(session.user, session.refresh_token);
@@ -76,9 +76,11 @@ export function useAccount(notify: (title: string, message: string) => void) {
 
   const loadSecurity = useCallback(async () => {
     if (!supabase) return;
-    const [mfaResult, passkeyResult] = await Promise.all([supabase.auth.mfa.listFactors(), listPasskeys(supabase)]);
-    if (!mfaResult.error) setSecurityFactors(mfaResult.data.totp ?? []);
-    if (!passkeyResult.error) setPasskeys(passkeyResult.data ?? []);
+    try {
+      const [mfaResult, passkeyResult] = await Promise.all([supabase.auth.mfa.listFactors(), listPasskeys(supabase)]);
+      if (!mfaResult.error) setSecurityFactors(mfaResult.data.totp ?? []);
+      if (!passkeyResult.error) setPasskeys(passkeyResult.data ?? []);
+    } catch { /* Offline: security factors load again on the next sign-in. */ }
   }, []);
 
   useEffect(() => {

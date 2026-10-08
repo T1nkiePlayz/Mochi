@@ -169,7 +169,7 @@ Manifest sections map to CSS variables by camelCase-to-kebab-case (`components.p
 
 ## Fonts and colour scheme
 
-`"fonts"` lists Google Fonts stylesheet URLs. Only `https://fonts.googleapis.com/` URLs are loaded, and the native backend rejects other hosts when importing a theme. `"scheme"` (`light` or `dark`) tells the webview how to draw native controls such as scrollbars and date inputs.
+`"fonts"` lists Google Fonts stylesheet URLs (`https://fonts.googleapis.com/css...` only; the native backend rejects other hosts on import). Built-in themes ignore it: their fonts are bundled by `scripts/fetch-fonts.mjs`. For user themes Mochi downloads the fonts once into `<config>/fonts/<theme-id>/` and then works offline (see `docs/offline.md`). `"scheme"` (`light` or `dark`) tells the webview how to draw native controls such as scrollbars and date inputs.
 
 ## Built-in themes
 

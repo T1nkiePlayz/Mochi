@@ -82,7 +82,7 @@ fn default_config_dir(app: &AppHandle) -> Result<PathBuf, String> {
         .map_err(|error| format!("Unable to resolve Mochi config directory: {error}"))
 }
 
-fn config_dir(app: &AppHandle) -> Result<PathBuf, String> {
+pub(crate) fn config_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let default_root = default_config_dir(app)?;
     let location_file = default_root.join(LOCATION_FILE);
     if let Ok(location) = fs::read_to_string(&location_file) {
@@ -175,8 +175,8 @@ fn validate_manifest(manifest: &ThemeManifest) -> Result<(), String> {
     if manifest.name.trim().is_empty() {
         return Err("A theme must have a name.".into());
     }
-    if manifest.fonts.iter().any(|font| !font.starts_with("https://fonts.googleapis.com/")) {
-        return Err("Theme fonts must be Google Fonts stylesheets (https://fonts.googleapis.com/...).".into());
+    if manifest.fonts.len() > 6 || manifest.fonts.iter().any(|font| crate::fonts::allowed_css_url(font).is_none()) {
+        return Err("Theme fonts must be at most 6 Google Fonts stylesheets (https://fonts.googleapis.com/css...).".into());
     }
     if manifest.shell.as_deref().is_some_and(|shell| !["left", "right", "top", "bottom", "rail"].contains(&shell)) {
         return Err("A theme's shell must be left, right, top, bottom or rail.".into());
