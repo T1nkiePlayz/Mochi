@@ -1,0 +1,104 @@
+/* Library: filter bar, game cards, context menu, collections, bulk actions, popovers. */
+.library-filters { display: grid; gap: 8px; margin-top: 22px; }
+.filter-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.filter-chip {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 30px; padding: 0 12px;
+  border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-pill-radius);
+  background: var(--mochi-surface); color: var(--mochi-text); font-size: 12px; cursor: pointer;
+  transition: border-color var(--mochi-transition), background var(--mochi-transition);
+}
+.filter-chip:hover { border-color: var(--mochi-border-strong); background: var(--mochi-surface-hover); }
+.filter-chip.active { border-color: var(--mochi-accent-strong); background: var(--mochi-accent-soft); color: var(--mochi-accent-text); }
+.filter-chip:focus-visible, .game-card-main:focus-visible, .game-card-heart:focus-visible, .details-heart:focus-visible { outline: 2px solid var(--mochi-focus-ring); outline-offset: 2px; }
+.filter-count { color: var(--mochi-text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.filter-chip.active .filter-count { color: inherit; opacity: .8; }
+.filter-actions { gap: 4px; }
+.text-button.has-active { color: var(--mochi-accent-strong); }
+
+.library-toolbar-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.library-toolbar-actions .secondary-button.active { border-color: var(--mochi-accent-strong); background: var(--mochi-accent-soft); }
+.library-no-match { margin-top: 24px; }
+
+/* Cards: the card is a container, so the favourite button is not nested in another button. */
+.game-card-main { display: block; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; border-radius: inherit; }
+.game-card-main:focus-visible { outline-offset: -3px; }
+.game-card-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.game-card-tags { display: flex; gap: 6px; overflow: hidden; color: var(--mochi-text-muted); font-size: 10px; white-space: nowrap; }
+.game-card-heart {
+  position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 30px; height: 30px; padding: 0;
+  border: 0; border-radius: 50%; background: color-mix(in srgb, var(--mochi-background) 70%, transparent); color: var(--mochi-text);
+  opacity: 0; transition: opacity var(--mochi-transition), color var(--mochi-transition);
+}
+.game-card:hover .game-card-heart, .game-card:focus-within .game-card-heart, .game-card-heart.on { opacity: 1; }
+.game-card-heart.on, .details-heart.on { color: var(--mochi-danger, var(--mochi-accent-strong)); }
+.game-card-check {
+  position: absolute; top: 8px; left: 8px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: var(--mochi-radius-sm);
+  border: 2px solid var(--mochi-text); background: color-mix(in srgb, var(--mochi-background) 70%, transparent); color: var(--mochi-primary-color);
+}
+.game-card-check.on { background: var(--mochi-primary-background); border-color: var(--mochi-primary-background); }
+.game-card.multi-selected { border-color: var(--mochi-accent-strong); box-shadow: 0 0 0 2px var(--mochi-accent-strong); }
+.game-card.is-running .game-card-copy small { color: var(--mochi-success); }
+
+.details-heart { display: inline-grid; place-items: center; margin-left: 10px; padding: 4px; border: 0; background: transparent; color: var(--mochi-text-muted); vertical-align: middle; cursor: pointer; border-radius: 50%; }
+.details-popover-anchor, .bulk-popover-anchor { position: relative; display: inline-block; }
+.details-collections { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.details-collections span, .tag-chip { padding: 3px 10px; border-radius: var(--mochi-pill-radius); background: var(--mochi-accent-soft); color: var(--mochi-accent-text); font-size: 11px; }
+.details-tags { margin-top: 12px; max-width: 520px; }
+
+.library-popover {
+  position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; min-width: 240px; max-height: 320px; overflow: auto; padding: 8px;
+  border: var(--mochi-border-width) solid var(--mochi-modal-border); border-radius: var(--mochi-radius-md);
+  background: var(--mochi-modal-background); box-shadow: var(--mochi-modal-shadow);
+}
+.collection-picker ul { display: grid; gap: 2px; margin: 0 0 8px; padding: 0; list-style: none; }
+.collection-picker li button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border: 0; border-radius: var(--mochi-radius-sm); background: transparent; color: var(--mochi-text); font-size: 12px; text-align: left; cursor: pointer; }
+.collection-picker li button:hover, .collection-picker li button:focus-visible { background: var(--mochi-surface-hover); outline: none; }
+.collection-check { display: grid; place-items: center; width: 16px; height: 16px; border: 1px solid var(--mochi-border-strong); border-radius: 4px; flex: none; }
+.collection-picker li button.on .collection-check { background: var(--mochi-primary-background); border-color: var(--mochi-primary-background); color: var(--mochi-primary-color); }
+.collection-picker-new { display: flex; gap: 6px; }
+.collection-picker-new input, .collection-create input, .collection-row input:not(.emoji-popover input) { flex: 1; min-width: 0; min-height: 32px; padding: 0 10px; border: var(--mochi-border-width) solid var(--mochi-input-border); border-radius: var(--mochi-input-radius); background: var(--mochi-input-background); color: var(--mochi-text); }
+.collection-picker-new input:focus, .collection-create input:focus, .collection-row input:focus { border-color: var(--mochi-input-focus-border); outline: none; }
+
+.game-context-menu {
+  position: fixed; z-index: 60; display: grid; min-width: 220px; padding: 6px;
+  border: var(--mochi-border-width) solid var(--mochi-modal-border); border-radius: var(--mochi-radius-md);
+  background: var(--mochi-modal-background); box-shadow: var(--mochi-modal-shadow);
+}
+.game-context-menu > button { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 0; border-radius: var(--mochi-radius-sm); background: transparent; color: var(--mochi-text); font-size: 12px; text-align: left; cursor: pointer; }
+.game-context-menu > button:hover, .game-context-menu > button:focus-visible { background: var(--mochi-surface-hover); outline: none; }
+.game-context-menu > button.danger { color: var(--mochi-danger-color, var(--mochi-danger)); }
+
+.collection-manager { width: min(520px, calc(100vw - 32px)); }
+.collection-create { display: flex; gap: 8px; align-items: center; margin: 16px 0; }
+.collection-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; max-height: 50vh; overflow: auto; }
+.collection-row { display: flex; align-items: center; gap: 6px; }
+.collection-row small { color: var(--mochi-text-muted); font-size: 11px; white-space: nowrap; }
+.emoji-field { position: relative; }
+.emoji-trigger { width: 34px; height: 34px; border: var(--mochi-border-width) solid var(--mochi-input-border); border-radius: var(--mochi-input-radius); background: var(--mochi-input-background); color: var(--mochi-text); font-size: 16px; cursor: pointer; }
+.emoji-popover { position: absolute; z-index: 5; top: 38px; left: 0; display: flex; flex-wrap: wrap; gap: 4px; width: 220px; padding: 8px; border: var(--mochi-border-width) solid var(--mochi-modal-border); border-radius: var(--mochi-radius-md); background: var(--mochi-modal-background); box-shadow: var(--mochi-modal-shadow); }
+.emoji-popover button { width: 30px; height: 30px; border: 0; border-radius: var(--mochi-radius-sm); background: transparent; font-size: 16px; cursor: pointer; }
+.emoji-popover button:hover { background: var(--mochi-surface-hover); }
+.emoji-popover input { width: 60px; min-height: 28px; border: var(--mochi-border-width) solid var(--mochi-input-border); border-radius: var(--mochi-input-radius); background: var(--mochi-input-background); color: var(--mochi-text); }
+.emoji-popover .text-button { width: auto; padding: 0 6px; font-size: 11px; }
+
+.confirm-backdrop { z-index: 70; }
+.confirm-dialog { width: min(400px, calc(100vw - 32px)); }
+.confirm-dialog h2 { font-size: 18px; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
+.bulk-bar { position: sticky; top: 8px; z-index: 20; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 12px 0; padding: 10px 14px; border: var(--mochi-border-width) solid var(--mochi-accent-strong); border-radius: var(--mochi-card-radius); background: var(--mochi-panel-background); box-shadow: var(--mochi-panel-shadow); }
+.bulk-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+
+/* Tag editor (chip input) */
+.tag-editor { position: relative; }
+.tag-editor-box { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 38px; padding: 5px 8px; border: var(--mochi-border-width) solid var(--mochi-input-border); border-radius: var(--mochi-input-radius); background: var(--mochi-input-background); cursor: text; }
+.tag-editor-box:focus-within { border-color: var(--mochi-input-focus-border); }
+.tag-chip { display: inline-flex; align-items: center; gap: 4px; }
+.tag-chip button { display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.tag-editor-box input { flex: 1; min-width: 90px; border: 0; background: transparent; color: var(--mochi-text); outline: none; box-shadow: none; }
+.tag-suggestions { position: absolute; z-index: 25; left: 0; right: 0; top: calc(100% + 4px); display: grid; margin: 0; padding: 4px; list-style: none; border: var(--mochi-border-width) solid var(--mochi-modal-border); border-radius: var(--mochi-radius-md); background: var(--mochi-modal-background); box-shadow: var(--mochi-modal-shadow); }
+.tag-suggestions li { padding: 6px 8px; border-radius: var(--mochi-radius-sm); font-size: 12px; cursor: pointer; }
+.tag-suggestions li:hover, .tag-suggestions li.active { background: var(--mochi-surface-hover); }
+
+@media (prefers-reduced-motion: reduce) { .game-card-heart { transition: none; } }
+@media (max-width: 700px) { .bulk-actions { margin-left: 0; } .game-card-heart { opacity: 1; } }

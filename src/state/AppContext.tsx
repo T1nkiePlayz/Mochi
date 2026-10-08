@@ -13,6 +13,7 @@ import { useAccount } from "./useAccount";
 import { useCredentials } from "./useCredentials";
 import { useLibrary } from "./useLibrary";
 import { usePlaytime } from "./usePlaytime";
+import { useCollections } from "./useCollections";
 import { useProfileStorage } from "./useProfileStorage";
 import { useCloudSync } from "./useCloudSync";
 import { useDownloads } from "./useDownloads";
@@ -40,7 +41,7 @@ function useAppController() {
   const credentials = useCredentials(user, account.openSignIn);
   const sessions = useGameSessions();
   const { playtime, refreshPlaytime } = usePlaytime(sessions.sessions.length);
-  const lib = useLibrary(playtime);
+  const lib = useLibrary(playtime, sessions.isRunning);
   const themeEngine = useThemeEngine();
   const actions = useGameActions({ lib, behavior, refreshPlaytime, refreshSessions: sessions.refresh, notify });
   const metadata = useMetadata({
@@ -49,7 +50,7 @@ function useAppController() {
     startProgress: notifications.startProgress, updateProgress: notifications.updateProgress,
   });
   const hasIgdb = Boolean(supabase && user && credentials.status.igdb);
-  const add = useAddGame(lib, metadata, hasIgdb, credentials.status.igdb, actions.setLaunchError);
+  const add = useAddGame(lib, metadata, hasIgdb, credentials.status.igdb, actions.setLaunchError, () => setActiveNav("Library"));
   const storage = useProfileStorage({
     user, library: lib.library, setLibrary: lib.setLibrary, behavior, setBehavior,
     notifications: notifications.notifications, setNotifications: notifications.setNotifications,
@@ -61,6 +62,7 @@ function useAppController() {
       notifications.setShowNotifications(false);
     },
   });
+  const collections = useCollections(storage.ownerKey, storage.ready, lib.setLibrary);
   const cloud = useCloudSync(user, lib.library, lib.setLibrary, storage.ready, storage.ownerKey);
   const downloads = useDownloads(activeNav === "Downloads", notify);
 
@@ -121,7 +123,7 @@ function useAppController() {
   return {
     behavior, setBehavior, activeNav, setActiveNav, showFirstLaunchSetup, finishFirstLaunchSetup,
     platformCapabilities, runtimes, showTofuManager, setShowTofuManager, editingGameId, setEditingGameId,
-    notifications, account, credentials, sessions, playtime, refreshPlaytime, lib, themeEngine, actions, metadata, add, storage, cloud, downloads,
+    notifications, account, credentials, sessions, playtime, refreshPlaytime, lib, collections, themeEngine, actions, metadata, add, storage, cloud, downloads,
     hasIgdb, chooseConfigLocation, resetLocalData,
   };
 }

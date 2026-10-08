@@ -185,3 +185,44 @@ pub fn list_runtimes() -> Vec<RuntimeInfo> { os::list_runtimes() }
 pub fn send_system_notification(title: &str, body: &str) -> Result<(), String> { os::send_system_notification(title.trim(), body.trim()) }
 pub fn create_game_shortcut(game_id: &str, name: &str) -> Result<String, String> { os::create_game_shortcut(game_id, name) }
 pub fn remove_game_shortcut(game_id: &str) -> Result<(), String> { os::remove_game_shortcut(game_id) }
+
+/// Whether a launch target still exists. URI-style targets (`steam://`, `flatpak://`, ...) are assumed present
+/// because their launcher owns them; paths and `.app` bundles are checked on disk.
+fn launch_target_exists(target: &str) -> bool {
+    let target = target.trim();
+    if target.is_empty() { return false; }
+    if target.contains("://") { return true; }
+    let path = Path::new(target);
+    if path.is_absolute() || target.starts_with("~/") || target.starts_with("./") {
+        let expanded = match target.strip_prefix("~/") {
+            Some(rest) => home_dir().map(|home| home.join(rest)),
+            None => Some(path.to_path_buf()),
+        };
+        return expanded.is_some_and(|path| path.exists());
+    }
+    // A bare command name is looked up on PATH; anything with arguments cannot be checked cheaply.
+    target.contains(char::is_whitespace) || command_exists(target)
+}
+
+#[tauri::command]
+pub fn check_launch_targets(targets: Vec<String>) -> Vec<bool> {
+    targets.iter().take(5000).map(|target| launch_target_exists(target)).collect()
+}
+
+#[cfg(test)]
+mod launch_target_tests {
+    use super::launch_target_exists;
+
+    #[test]
+    fn uri_targets_are_assumed_present() {
+        assert!(launch_target_exists("steam://rungameid/220"));
+        assert!(launch_target_exists("flatpak://org.example.Game"));
+    }
+
+    #[test]
+    fn missing_and_empty_paths_are_absent() {
+        assert!(!launch_target_exists(""));
+        assert!(!launch_target_exists("/definitely/not/a/real/mochi/path"));
+        assert!(launch_target_exists("/"));
+    }
+}
