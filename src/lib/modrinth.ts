@@ -179,7 +179,7 @@ export async function applyModProfile(path: string, enabledFiles: string[]): Pro
   await invoke("apply_mod_profile", { path, enabledFiles });
 }
 
-export type ModUpdate = { versionId: string; versionNumber: string; filename: string; url: string; size: number };
+export type ModUpdate = { versionId: string; versionNumber: string; filename: string; url: string; size: number; sha1?: string };
 export type ModAnalysis = {
   filename: string; path: string; enabled: boolean; projectId: string; title: string;
   iconUrl?: string; currentVersion: string; update?: ModUpdate;
@@ -188,5 +188,5 @@ export async function analyzeModFiles(path: string, gameVersion?: string, loader
   return invoke<ModAnalysis[]>("analyze_mod_files", { path, gameVersion: gameVersion || null, loader: loader || null });
 }
 export async function updateModFile(path: string, update: ModUpdate): Promise<void> {
-  await invoke("update_mod_file", { path, url: update.url, filename: update.filename });
+  await invoke("update_mod_file", { path, url: update.url, filename: update.filename, sha1: update.sha1 ?? null });
 }

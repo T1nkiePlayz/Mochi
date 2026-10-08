@@ -7,7 +7,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 export default tseslint.config(
   { ignores: ["dist/**", "src-tauri/**", "node_modules/**", "scripts/**", "supabase/**", "public/**"] },
   js.configs.recommended,
-  ...tseslint.configs.base,
+  tseslint.configs.base,
   {
     files: ["src/**/*.{ts,tsx}"],
     languageOptions: { parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname } },
