@@ -238,7 +238,7 @@ function ProjectDetails({ project, gameVersion, onClose }: { project: ModrinthPr
     {version.changelog ? <details className="project-version-changelog"><summary>View changelog</summary><div className="project-version-changelog-body"><Markdown source={version.changelog} /></div></details> : null}
   </div>
   <details className="project-version-files"><summary>Files <span>{version.files.length}</span></summary><div className="project-file-list">{version.files.map(file => <div key={file.filename}><span>{file.filename}</span><small>{formatBytes(file.size)}{file.primary ? " · Primary" : ""}</small></div>)}</div></details>
-</article>) : <div className="discover-empty">No versions found for this Minecraft version.</div>}</div>  </div></div>;
+</article>) : <div className="discover-empty">No versions found for this Minecraft version.</div>}</div></div>;
 }
 
 function TofuPicker({ project, pikos, onClose, onInstall }: { project: ModrinthProject; pikos: Piko[]; onClose: () => void; onInstall: (tofu: Tofu) => void }) {
