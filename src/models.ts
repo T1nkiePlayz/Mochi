@@ -63,6 +63,8 @@ export type Piko = {
   artworkSource?: "igdb" | "steamgriddb" | "steam" | "custom";
   /** Metadata the user edited by hand; automatic refreshes leave these alone. */
   lockedFields?: Array<"name" | "description" | "artwork" | "categories">;
+  /** Imported launchers (Steam, Heroic, ...) are kept apart from games. */
+  kind?: "game" | "launcher";
   tofus: Tofu[];
 };
 

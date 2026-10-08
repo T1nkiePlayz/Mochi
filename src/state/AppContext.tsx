@@ -44,7 +44,8 @@ function useAppController() {
   const themeEngine = useThemeEngine();
   const actions = useGameActions({ lib, behavior, refreshPlaytime, refreshSessions: sessions.refresh, notify });
   const metadata = useMetadata({
-    user, igdbConfigured: credentials.status.igdb, setLibrary: lib.setLibrary, notify,
+    user, igdbConfigured: credentials.status.igdb, steamGridDbConfigured: credentials.status.steamgriddb,
+    provider: behavior.metadataProvider, setLibrary: lib.setLibrary, notify,
     startProgress: notifications.startProgress, updateProgress: notifications.updateProgress,
   });
   const hasIgdb = Boolean(supabase && user && credentials.status.igdb);

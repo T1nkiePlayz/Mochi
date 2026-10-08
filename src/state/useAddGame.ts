@@ -15,7 +15,7 @@ const platformLabels: Record<string, string> = { steam: "Steam", heroic: "Heroic
 export const platformLabel = (source: string) => platformLabels[source] ?? "Other";
 
 /** The "Add a Piko" flows: custom games, importing from other launchers and picking a Flatpak. */
-export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: boolean, igdbConfigured: boolean, setLaunchError: (message: string) => void) {
+export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: boolean, _igdbConfigured: boolean, setLaunchError: (message: string) => void) {
   const [showAddPiko, setShowAddPiko] = useState(false);
   const [showCustomGame, setShowCustomGame] = useState(false);
   const [showImportPicker, setShowImportPicker] = useState(false);
@@ -85,7 +85,7 @@ export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: 
       tofus: [{ id: "default", name: "Default", version: "Imported", runtime: game.source, mods: 0, status: "Ready" }],
     }));
     lib.setLibrary((current) => [...current, ...created.filter((piko) => !current.some((item) => item.id === piko.id))]);
-    if (created.length && igdbConfigured) void metadata.enrich(created);
+    if (created.length) void metadata.enrich(created);
     if (created[0]) { lib.setSelectedPikoId(created[0].id); lib.setSelectedTofuId("default"); }
     setShowAddPiko(false);
     setShowImportPicker(false);

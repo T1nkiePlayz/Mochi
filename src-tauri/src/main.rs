@@ -8,6 +8,7 @@ mod platform;
 mod playtime;
 mod process;
 mod sources;
+mod steam_store;
 mod themes;
 mod tray;
 
@@ -152,6 +153,7 @@ fn main() {
             fonts::cache_theme_fonts,
             game_artwork::cache_game_artwork, game_artwork::get_cached_game_artwork, game_artwork::clear_game_artwork_cache,
             modrinth::get_public_api, modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::apply_mod_profile,
+            steam_store::get_steam_store_details,
             modrinth::delete_mod_file, modrinth::start_modrinth_download, modrinth::update_mod_file, modrinth::analyze_mod_files,
         ])
         .build(tauri::generate_context!())
