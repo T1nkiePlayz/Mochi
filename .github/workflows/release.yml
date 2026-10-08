@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   release:
+    if: startsWith(github.ref, 'refs/tags/v')
     name: Build and release Linux packages
     runs-on: ubuntu-24.04
 
@@ -61,6 +62,14 @@ jobs:
           fs.writeFileSync(cargoPath, updatedCargo);
           NODE
 
+          git fetch origin main
+
+          if [[ "$(git rev-parse origin/main)" != "$GITHUB_SHA" ]]; then
+            echo "::error::Release tags must point to the current main commit so version metadata can be synchronized safely."
+            exit 1
+          fi
+
+          git switch --create release-version origin/main
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
@@ -69,7 +78,7 @@ jobs:
           else
             git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml
             git commit -m "chore: sync app version to $version"
-            git push origin "HEAD:main"
+            git push origin HEAD:main
           fi
 
       - name: Read release notes from tagged commit
@@ -97,7 +106,7 @@ Your games, your way.
 
       - name: Install Linux dependencies
         run: |
-          sudo sed -i             -e 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g'             -e 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g'             /etc/apt/sources.list.d/ubuntu.sources
+          sudo sed -i             -e 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g'             /etc/apt/sources.list.d/ubuntu.sources
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends             libwebkit2gtk-4.1-dev             libayatana-appindicator3-dev             librsvg2-dev             patchelf
 
