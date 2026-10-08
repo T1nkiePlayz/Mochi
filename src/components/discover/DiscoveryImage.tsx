@@ -9,5 +9,5 @@ export function DiscoveryImage({ src, className, alt, label }: { src: string; cl
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [src]);
   if (failed) return <span className={`${className} fallback`} aria-label={label}>{label.trim().slice(0, 1).toUpperCase() || <PackageOpen size={18}/>}</span>;
-  return <img src={src} className={className} alt={alt} loading="lazy" onError={() => setFailed(true)} />;
+  return <img src={src} className={className} alt={alt} loading="lazy" decoding="async" onError={() => setFailed(true)} />;
 }

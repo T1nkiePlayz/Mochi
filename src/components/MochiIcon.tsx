@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentType, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ComponentType, type CSSProperties } from "react";
 import type { LucideProps } from "lucide-react";
 import { cssUrl } from "../lib/metadata/merge";
 
@@ -61,24 +61,43 @@ type Props = LucideProps & {
   fallback: ComponentType<LucideProps>;
 };
 
+// One shared theme listener and one style read per theme change, instead of one of each per icon on screen.
+let themeRevision = 0;
+const themeListeners = new Set<() => void>();
+const themeValues = new Map<string, { url: string; forced: Mode | "" }>();
+
+function onThemeChanged() {
+  themeRevision += 1;
+  themeValues.clear();
+  themeListeners.forEach((listener) => listener());
+}
+
+function subscribeTheme(listener: () => void) {
+  if (!themeListeners.size) window.addEventListener("mochi-theme-changed", onThemeChanged);
+  themeListeners.add(listener);
+  return () => {
+    themeListeners.delete(listener);
+    if (!themeListeners.size) window.removeEventListener("mochi-theme-changed", onThemeChanged);
+  };
+}
+
+function readThemeIcon(variable: string): { url: string; forced: Mode | "" } {
+  let value = themeValues.get(variable);
+  if (!value) {
+    const style = getComputedStyle(document.documentElement);
+    // A theme can force one mode for its whole set (--mochi-icon-mode: image | mask) so mixed artwork stays consistent.
+    const override = style.getPropertyValue("--mochi-icon-mode").trim();
+    value = { url: assetUrl(style.getPropertyValue(variable)), forced: override === "image" || override === "mask" ? override : "" };
+    themeValues.set(variable, value);
+  }
+  return value;
+}
+
 export function MochiIcon({ name, fallback: Fallback, size = 16, ...props }: Props) {
   const variable = "--mochi-icon-" + iconVariable(name);
-  const [customUrl, setCustomUrl] = useState("");
+  const revision = useSyncExternalStore(subscribeTheme, () => themeRevision, () => 0);
+  const { url: customUrl, forced } = useMemo(() => readThemeIcon(variable), [variable, revision]); // eslint-disable-line react-hooks/exhaustive-deps
   const [mode, setMode] = useState<Mode>("image");
-  const [forced, setForced] = useState<Mode | "">("");
-
-  useEffect(() => {
-    const update = () => {
-      const style = getComputedStyle(document.documentElement);
-      setCustomUrl(assetUrl(style.getPropertyValue(variable)));
-      // A theme can force one mode for its whole set (--mochi-icon-mode: image | mask) so mixed artwork stays consistent.
-      const override = style.getPropertyValue("--mochi-icon-mode").trim();
-      setForced(override === "image" || override === "mask" ? override : "");
-    };
-    update();
-    window.addEventListener("mochi-theme-changed", update);
-    return () => window.removeEventListener("mochi-theme-changed", update);
-  }, [variable]);
 
   useEffect(() => {
     let live = true;
