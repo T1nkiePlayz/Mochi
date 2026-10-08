@@ -6,6 +6,16 @@ type Handler = (args: Record<string, unknown>) => unknown;
 
 const now = Math.floor(Date.now() / 1000);
 const handlers: Record<string, Handler> = {
+  get_steam_store_details: ({ appid }) => ({
+    status: "ok", stale: false, fetchedAt: now, message: null,
+    details: {
+      appid, name: `Steam app ${appid}`, description: "Sample description from the Steam Store (development mock).", genres: ["Action", "Adventure"],
+      screenshots: [], movies: [], developers: ["Mock Studio"], publishers: ["Mock Publisher"], releaseDate: 1_100_563_200, releaseDateText: "16 Nov, 2004",
+      coverUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/library_600x900.jpg`,
+      headerUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`,
+      heroUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/library_hero.jpg`,
+    },
+  }),
   get_platform_capabilities: () => ({
     platform: "linux", displayName: "Linux", launchMethods: ["file", "flatpak", "custom"], supportsFlatpak: true,
     supportsAppBundles: false, supportsStartup: true, supportsSystemNotifications: true, supportsShortcuts: true,

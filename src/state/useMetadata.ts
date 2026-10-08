@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { removeKey, igdbCacheKey } from "../lib/storage";
-import { sanitizeKey } from "../lib/metadata/index";
+import { sanitizeKey } from "../lib/metadata";
 import { ProviderCache, clearProviderCaches } from "../lib/metadata/cache";
 import {
   applyMetadata, classifyError, mergeText, planProviders, providers, steamAppIdOf,

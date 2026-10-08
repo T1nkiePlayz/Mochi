@@ -8,7 +8,8 @@
     "build": "node scripts/check-themes.mjs && tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "check:themes": "node scripts/check-themes.mjs"
+    "check:themes": "node scripts/check-themes.mjs",
+    "test:metadata": "node --test scripts/metadata.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
