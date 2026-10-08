@@ -47,6 +47,7 @@ import { getCloudSyncEnabled, pullLibrary, pushLibrary } from "./lib/cloud";
 import type { Piko, Tofu } from "./models";
 import { lookupIgdbGame, lookupIgdbGames, type IgdbGame, type IgdbSettings } from "./lib/igdb";
 import {
+  chooseGameAppBundle,
   chooseGameTarget,
   getPlatformCapabilities,
   listInstalledFlatpaks,
