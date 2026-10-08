@@ -42,6 +42,8 @@ export type Piko = {
   artwork: string;
   artworkUrl?: string;
   artworkCacheKey?: string;
+  /** A game, or a launcher (Steam, Lutris, ...) kept in the library as a shortcut. */
+  kind?: "game" | "launcher";
   igdbId?: number;
   screenshots?: string[];
   trailerId?: string;
@@ -53,5 +55,17 @@ export type Piko = {
   source?: "built-in" | "custom";
   sourceId?: ImportSourceId;
   categories?: string[];
+  /** User-assigned labels, searchable and usable as filters. */
+  tags?: string[];
+  /** Pinned to the top of the library and the Favourites filter. */
+  favorite?: boolean;
+  /** Ids of the user's collections this game belongs to. */
+  collectionIds?: string[];
+  /** Where the artwork came from, so a refresh does not overwrite a user's own image. */
+  artworkSource?: "igdb" | "steamgriddb" | "steam" | "custom";
+  /** Metadata the user edited by hand; automatic refreshes leave these alone. */
+  lockedFields?: Array<"name" | "description" | "artwork" | "categories">;
   tofus: Tofu[];
 };
+
+export type Collection = { id: string; name: string; icon?: string };

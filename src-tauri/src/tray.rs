@@ -2,7 +2,7 @@ use crate::playtime;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
-    Manager,
+    Emitter, Manager,
 };
 
 fn format_playtime(seconds: u64) -> String {
@@ -19,10 +19,11 @@ fn format_playtime(seconds: u64) -> String {
 
 pub fn build_menu(app: &tauri::AppHandle) -> Result<Menu<tauri::Wry>, tauri::Error> {
     let open = MenuItem::with_id(app, "tray-open", "Open Mochi", true, None::<&str>)?;
+    let big_picture = MenuItem::with_id(app, "tray-bigpicture", "Open Big Picture", true, None::<&str>)?;
     let title = MenuItem::with_id(app, "tray-title", "Most played", false, None::<&str>)?;
 
     let mut builder = tauri::menu::MenuBuilder::new(app);
-    builder = builder.item(&open).item(&title);
+    builder = builder.item(&open).item(&big_picture).item(&title);
     let games = playtime::list().unwrap_or_default();
 
     if games.is_empty() {
@@ -54,6 +55,7 @@ pub fn initialize(app: &mut tauri::App) -> Result<(), tauri::Error> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id().as_ref() {
             "tray-open" => show_mochi(app),
+            "tray-bigpicture" => { show_mochi(app); let _ = app.emit("mochi-bigpicture", true); }
             "tray-quit" => app.exit(0),
             _ => {}
         })

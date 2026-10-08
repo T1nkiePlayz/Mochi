@@ -45,9 +45,21 @@ export type ModrinthVersion = {
 export type InstalledModrinthFile = { filename: string; path: string; enabled: boolean; size: number; };
 
 const API = "https://api.modrinth.com/v2";
-async function get<T>(url: string): Promise<T> {
-  return invoke<T>("get_public_api", { url });
+
+/** What `get_public_api` returns: the payload plus where it came from. */
+export type ApiResult<T> = { data: T; cached: boolean; stale: boolean; fetchedAt: number };
+
+async function getResult<T>(url: string): Promise<ApiResult<T>> {
+  try {
+    return await invoke<ApiResult<T>>("get_public_api", { url });
+  } catch (error) {
+    throw new Error(typeof error === "string" ? error : error instanceof Error ? error.message : "Unable to reach Modrinth.");
+  }
 }
+async function get<T>(url: string): Promise<T> {
+  return (await getResult<T>(url)).data;
+}
+
 export async function searchModrinth(query: string, projectType: ModrinthProjectType = "mod"): Promise<ModrinthProject[]> {
   const params = new URLSearchParams({ query: query.trim(), limit: "24", index: "relevance", facets: JSON.stringify([["project_type:" + projectType]]) });
   const result = await get<{ hits: ModrinthProject[] }>(API + "/search?" + params);
@@ -65,24 +77,41 @@ export async function getModrinthProject(projectId: string): Promise<ModrinthPro
   return project;
 }
 
-export async function getPopularModrinth(
-  projectType: ModrinthProjectType,
-  gameVersion?: string,
-  sort: "downloads" | "follows" = "downloads",
-  offset = 0,
-): Promise<ModrinthProject[]> {
+export type DiscoverSort = "relevance" | "downloads" | "follows" | "newest" | "updated";
+export type DiscoverQuery = {
+  projectType: ModrinthProjectType;
+  gameVersion?: string;
+  loader?: string;
+  query?: string;
+  sort?: DiscoverSort;
+  offset?: number;
+  limit?: number;
+};
+export type DiscoverPage = { hits: ModrinthProject[]; total: number; offset: number; cached: boolean; stale: boolean; fetchedAt: number };
+
+/** Facets are AND-ed across the outer array; every value is `field:value`. */
+export function buildDiscoverFacets({ projectType, gameVersion, loader }: Pick<DiscoverQuery, "projectType" | "gameVersion" | "loader">): string[][] {
   const facets: string[][] = [["project_type:" + projectType]];
   if (gameVersion?.trim()) facets.push(["versions:" + gameVersion.trim()]);
-  const params = new URLSearchParams({
-    query: "",
-    limit: "100",
-    offset: String(Math.max(0, offset)),
-    index: sort,
-    facets: JSON.stringify(facets),
-  });
-  const result = await get<{ hits: ModrinthProject[] }>(API + "/search?" + params);
-  return result.hits;
+  if (loader?.trim() && projectType === "mod") facets.push(["categories:" + loader.trim()]);
+  return facets;
 }
+
+/** One page of Modrinth search results. Pages are small (default 30) and fetched on demand. */
+export async function searchDiscover(query: DiscoverQuery): Promise<DiscoverPage> {
+  const limit = Math.min(50, Math.max(1, query.limit ?? 30));
+  const params = new URLSearchParams({
+    query: (query.query ?? "").trim(),
+    limit: String(limit),
+    offset: String(Math.max(0, query.offset ?? 0)),
+    index: query.sort ?? "downloads",
+    facets: JSON.stringify(buildDiscoverFacets(query)),
+  });
+  const result = await getResult<{ hits?: ModrinthProject[]; total_hits?: number; offset?: number }>(API + "/search?" + params);
+  const hits = Array.isArray(result.data.hits) ? result.data.hits : [];
+  return { hits, total: result.data.total_hits ?? hits.length, offset: result.data.offset ?? query.offset ?? 0, cached: result.cached, stale: result.stale, fetchedAt: result.fetchedAt };
+}
+
 export async function getModrinthVersions(projectId: string, gameVersion?: string, loader?: string): Promise<ModrinthVersion[]> {
   const all: ModrinthVersion[] = [];
   let offset = 0;
@@ -99,9 +128,12 @@ export async function getModrinthVersions(projectId: string, gameVersion?: strin
   return all;
 }
 
+export type ModrinthGameVersion = { version: string; version_type: "release" | "snapshot" | "alpha" | "beta" | string; date: string; major: boolean };
+export async function getModrinthGameVersionTags(): Promise<ApiResult<ModrinthGameVersion[]>> {
+  return getResult<ModrinthGameVersion[]>(API + "/tag/game_version");
+}
 export async function getModrinthGameVersions(): Promise<string[]> {
-  const versions = await get<Array<{ version: string; version_type: string }>>(API + "/tag/game_version");
-  return versions.map(item => item.version);
+  return (await getModrinthGameVersionTags()).data.map(item => item.version);
 }
 export async function listInstalledMods(path: string): Promise<InstalledModrinthFile[]> {
   return invoke<InstalledModrinthFile[]>("list_mod_files", { path });
@@ -117,7 +149,7 @@ export async function startModrinthDownload(
   return invoke<string>("start_modrinth_download", { url, path, tofuId, tofuName, itemName, filename });
 }
 
-export async function getDownloads(): Promise<Array<{
+export type DownloadEntry = {
   id: string;
   tofuId: string;
   tofuName: string;
@@ -129,7 +161,9 @@ export async function getDownloads(): Promise<Array<{
   error?: string;
   createdAt: number;
   finishedAt?: number;
-}>> {
+};
+
+export async function getDownloads(): Promise<DownloadEntry[]> {
   return invoke("get_downloads");
 }
 

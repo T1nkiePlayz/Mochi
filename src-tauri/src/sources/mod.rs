@@ -25,6 +25,7 @@ use linux as os;
 #[cfg(target_os = "macos")]
 use macos as os;
 
+pub mod classify;
 mod vdf;
 
 #[derive(Clone, Serialize)]
@@ -33,8 +34,19 @@ pub struct DetectedImportSource {
     pub id: String,
     pub name: String,
     pub description: String,
+    /// True when the source has at least one importable item.
     pub detected: bool,
+    /// The launcher itself is installed (it may still have nothing to import).
+    pub installed: bool,
     pub game_count: Option<u32>,
+    pub launcher_count: Option<u32>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ImportKind {
+    Game,
+    Launcher,
 }
 
 #[derive(Clone, Serialize)]
@@ -45,6 +57,9 @@ pub struct ImportedGame {
     pub source: String,
     pub launch_target: String,
     pub install_path: Option<String>,
+    pub kind: ImportKind,
+    /// Which known launcher this is (see `classify::LAUNCHERS`), for launcher entries.
+    pub launcher_id: Option<String>,
 }
 
 pub struct SourceDef {
@@ -57,11 +72,24 @@ pub struct SourceDef {
 const SCAN_TIMEOUT: Duration = Duration::from_secs(20);
 
 fn make(id: String, name: String, source: &str, target: String, path: Option<String>) -> ImportedGame {
-    ImportedGame { id, name, source: source.into(), launch_target: target, install_path: path }
+    ImportedGame { id, name, source: source.into(), launch_target: target, install_path: path, kind: ImportKind::Game, launcher_id: None }
+}
+
+fn make_launcher(id: String, name: String, source: &str, target: String, launcher: &str) -> ImportedGame {
+    ImportedGame { id, name, source: source.into(), launch_target: target, install_path: None, kind: ImportKind::Launcher, launcher_id: Some(launcher.into()) }
+}
+
+/// Re-labels an item as a launcher when its ids or name match a known launcher.
+fn classify_item(mut game: ImportedGame, ids: &[&str]) -> ImportedGame {
+    if let Some(def) = classify::classify_launcher(ids, &game.name, None) {
+        game.kind = ImportKind::Launcher;
+        game.launcher_id = Some(def.id.into());
+    }
+    game
 }
 
 fn sort_games(mut games: Vec<ImportedGame>) -> Vec<ImportedGame> {
-    games.sort_by_key(|game| game.name.to_lowercase());
+    games.sort_by_key(|game| (game.kind == ImportKind::Launcher, game.name.to_lowercase()));
     games
 }
 
@@ -148,11 +176,17 @@ fn scan_steam_shortcuts(steam_roots: &[PathBuf]) -> Vec<ImportedGame> {
     out
 }
 
-fn scan_steam(steam_roots: &[PathBuf]) -> Vec<ImportedGame> {
+/// The Steam client itself; opening it is `steam://open/main` on every platform.
+fn steam_launcher() -> ImportedGame {
+    make_launcher("launcher:steam".into(), "Steam".into(), "steam", "steam://open/main".into(), "steam")
+}
+
+fn scan_steam(steam_roots: &[PathBuf], client_installed: bool) -> Vec<ImportedGame> {
     let mut out = Vec::new();
     let mut seen = HashSet::new();
     for library in steam_libraries(steam_roots) { scan_steam_library(&library, &mut seen, &mut out); }
     out.extend(scan_steam_shortcuts(steam_roots));
+    if client_installed || !out.is_empty() { out.push(steam_launcher()); }
     sort_games(out)
 }
 
@@ -295,27 +329,35 @@ fn scan_bottles() -> Vec<ImportedGame> {
 
 fn scan(source: &str, home: &Path) -> Vec<ImportedGame> {
     match source {
-        "steam" => scan_steam(&os::steam_roots(home)),
+        "steam" => scan_steam(&os::steam_roots(home), os::is_installed("steam", home)),
         "heroic" => scan_heroic(&os::heroic_roots(home)),
         "itch" => scan_itch(&os::itch_roots(home)),
         other => os::scan_extra(other, home),
     }
 }
 
+/// (games, launchers) in a scan result.
+fn count_kinds(items: &[ImportedGame]) -> (usize, usize) {
+    let launchers = items.iter().filter(|item| item.kind == ImportKind::Launcher).count();
+    (items.len() - launchers, launchers)
+}
+
 pub fn detect_import_sources() -> Vec<DetectedImportSource> {
     let Some(home) = home_dir() else { return Vec::new() };
     let defs = os::source_defs();
     // Launcher CLIs can be slow, so scan every source at once.
-    let counts: Vec<usize> = std::thread::scope(|scope| {
-        let handles: Vec<_> = defs.iter().map(|def| { let home = &home; scope.spawn(move || scan(def.id, home).len()) }).collect();
-        handles.into_iter().map(|handle| handle.join().unwrap_or(0)).collect()
+    let counts: Vec<(usize, usize)> = std::thread::scope(|scope| {
+        let handles: Vec<_> = defs.iter().map(|def| { let home = &home; scope.spawn(move || count_kinds(&scan(def.id, home))) }).collect();
+        handles.into_iter().map(|handle| handle.join().unwrap_or((0, 0))).collect()
     });
-    defs.iter().zip(counts).map(|(def, count)| DetectedImportSource {
+    defs.iter().zip(counts).map(|(def, (games, launchers))| DetectedImportSource {
         id: def.id.into(),
         name: def.name.into(),
         description: def.description.into(),
-        detected: count > 0 || os::is_installed(def.id, &home),
-        game_count: Some(count as u32),
+        detected: games + launchers > 0,
+        installed: games + launchers > 0 || os::is_installed(def.id, &home),
+        game_count: Some(games as u32),
+        launcher_count: Some(launchers as u32),
     }).collect()
 }
 
@@ -327,5 +369,39 @@ pub fn scan_import_games(source: &str, library_path: Option<String>) -> Vec<Impo
         ("heroic", Some(path)) => scan_heroic(&[path]),
         ("itch", Some(path)) => scan_itch(&[path]),
         _ => scan(source, &home),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn steam_launcher_targets_the_client() {
+        let launcher = steam_launcher();
+        assert_eq!(launcher.launch_target, "steam://open/main");
+        assert!(launcher.kind == ImportKind::Launcher);
+        assert_eq!(launcher.launcher_id.as_deref(), Some("steam"));
+    }
+
+    #[test]
+    fn classify_item_flags_launchers_and_leaves_games() {
+        let game = make("flatpak:org.supertuxproject.SuperTux".into(), "SuperTux".into(), "flatpak", "flatpak://org.supertuxproject.SuperTux".into(), None);
+        assert!(classify_item(game, &["org.supertuxproject.SuperTux"]).kind == ImportKind::Game);
+        let heroic = make("flatpak:com.heroicgameslauncher.hgl".into(), "Heroic Games Launcher".into(), "flatpak", "flatpak://com.heroicgameslauncher.hgl".into(), None);
+        let heroic = classify_item(heroic, &["com.heroicgameslauncher.hgl"]);
+        assert!(heroic.kind == ImportKind::Launcher);
+        assert_eq!(heroic.launcher_id.as_deref(), Some("heroic"));
+    }
+
+    #[test]
+    fn launchers_sort_after_games_and_are_counted() {
+        let items = sort_games(vec![
+            steam_launcher(),
+            make("a".into(), "Zelda".into(), "steam", "x".into(), None),
+            make("b".into(), "Abe".into(), "steam", "y".into(), None),
+        ]);
+        assert_eq!(items.iter().map(|i| i.name.as_str()).collect::<Vec<_>>(), ["Abe", "Zelda", "Steam"]);
+        assert_eq!(count_kinds(&items), (2, 1));
     }
 }

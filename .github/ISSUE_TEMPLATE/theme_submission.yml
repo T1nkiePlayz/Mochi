@@ -1,0 +1,11 @@
+name: Theme submission / theme bug
+description: Share a theme idea or report UI that a theme cannot style
+labels: [theme]
+body:
+  - type: input
+    id: theme
+    attributes: { label: Theme id }
+  - type: textarea
+    id: details
+    attributes: { label: Details, description: "Which element/class could not be styled? Attach screenshots." }
+    validations: { required: true }

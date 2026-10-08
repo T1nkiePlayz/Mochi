@@ -4,12 +4,97 @@
  */
 type Handler = (args: Record<string, unknown>) => unknown;
 
+
+/** Fake Modrinth API: paged search over generated projects, the game version tag list and project pages. */
+const fakeProjects = (type: string) => Array.from({ length: 420 }, (_, index) => ({
+  project_id: `${type}-${index}`, slug: `${type}-${index}`, title: `${type === "mod" ? "Mod" : type} project ${index + 1}`,
+  description: "A generated project used to exercise paging and infinite scroll in the dev server.", project_type: type,
+  downloads: 5_000_000 - index * 9_000, author: `author${index % 17}`, categories: ["fabric", "forge"], icon_url: undefined, loaders: ["fabric"],
+}));
+const fakeVersions = [
+  ...["26.4-snapshot-3", "26.4-snapshot-2", "26.3-rc-1"].map((version, i) => ({ version, version_type: "snapshot", date: `2026-09-${28 - i}T00:00:00Z`, major: false })),
+  { version: "26.3", version_type: "release", date: "2026-09-15T00:00:00Z", major: false },
+  { version: "26.2", version_type: "release", date: "2026-06-15T00:00:00Z", major: false },
+  { version: "26.1", version_type: "release", date: "2026-03-15T00:00:00Z", major: true },
+  ...["1.21.11", "1.21.8", "1.21.4", "1.21.1", "1.21", "1.20.6", "1.20.4", "1.20.1", "1.19.4", "1.18.2", "1.16.5", "1.12.2", "1.8.9"].map((version, i) => ({ version, version_type: "release", date: new Date(Date.UTC(2025, 9, 1) - i * 86_400_000 * 60).toISOString(), major: false })),
+  { version: "24w14potato", version_type: "snapshot", date: "2024-04-01T00:00:00Z", major: false },
+  { version: "b1.7.3", version_type: "beta", date: "2011-07-08T00:00:00Z", major: false },
+];
+const apiResult = (data: unknown) => ({ data, cached: false, stale: false, fetchedAt: Date.now() });
+
 const now = Math.floor(Date.now() / 1000);
+
+/** Deterministic pseudo-random history (about 14 months) so Stats and achievements have something to show. */
+function mockHistory(): unknown[] {
+  const games = [["a", "Minecraft", 0.9], ["b", "Stardew Valley", 0.55], ["c", "Subnautica", 0.3], ["d", "Terraria", 0.25], ["e", "Hades", 0.2], ["f", "Celeste", 0.12]] as const;
+  let seed = 7;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+  const out: unknown[] = [{ gameId: "a", name: "Minecraft", start: now - 500 * 86_400, seconds: 40 * 3600, kind: "historic", count: 0 }];
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  for (let day = 430; day >= 0; day -= 1) {
+    const base = new Date(today); base.setDate(base.getDate() - day);
+    const weekend = base.getDay() === 0 || base.getDay() === 6;
+    if (rnd() > (weekend ? 0.8 : 0.5)) continue;
+    const sessions = 1 + Math.floor(rnd() * (weekend ? 3 : 2));
+    for (let i = 0; i < sessions; i += 1) {
+      const pick = games.find(([, , weight]) => rnd() < weight) ?? games[0];
+      const hour = rnd() < 0.08 ? Math.floor(rnd() * 5) : 17 + Math.floor(rnd() * 7);
+      const start = Math.floor(new Date(base.getFullYear(), base.getMonth(), base.getDate(), hour, Math.floor(rnd() * 60)).getTime() / 1000);
+      const seconds = Math.floor((900 + rnd() * rnd() * 5 * 3600));
+      if (start + seconds > now) continue;
+      out.push({ gameId: pick[0], name: pick[1], start, seconds, kind: day > 400 ? "daily" : "session", count: day > 400 ? 1 : 1 });
+    }
+  }
+  return out;
+}
 const handlers: Record<string, Handler> = {
+  get_steam_store_details: ({ appid }) => ({
+    status: "ok", stale: false, fetchedAt: now, message: null,
+    details: {
+      appid, name: `Steam app ${appid}`, description: "Sample description from the Steam Store (development mock).", genres: ["Action", "Adventure"],
+      screenshots: [], movies: [], developers: ["Mock Studio"], publishers: ["Mock Publisher"], releaseDate: 1_100_563_200, releaseDateText: "16 Nov, 2004",
+      coverUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/library_600x900.jpg`,
+      headerUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`,
+      heroUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/library_hero.jpg`,
+    },
+  }),
+  get_playtime_history: (args) => { const since = Number(args.sinceEpoch ?? 0); return mockHistory().filter((r) => { const x = r as { start: number; seconds: number; kind: string }; return x.kind === "historic" || x.start + x.seconds >= since; }); },
+  get_dir_size: () => ({ bytes: 412_000_000, files: 1_284, truncated: false }),
+  analyze_mod_files: () => [
+    { filename: "sodium-0.6.jar", path: "/mods/sodium-0.6.jar", enabled: true, projectId: "AANobbMI", title: "Sodium", currentVersion: "0.6.0", update: { versionId: "v2", versionNumber: "0.6.3", filename: "sodium-0.6.3.jar", url: "https://cdn.modrinth.com/x", size: 930_000 } },
+    { filename: "lithium.jar.disabled", path: "/mods/lithium.jar.disabled", enabled: false, projectId: "gvQqBUqZ", title: "Lithium", currentVersion: "0.12.0" },
+  ],
+  update_mod_file: () => null,
+  open_path_in_file_manager: () => null,
+  get_public_api: (args) => {
+    const url = new URL(String(args.url));
+    if (url.pathname === "/v2/tag/game_version") return apiResult(fakeVersions);
+    if (url.pathname === "/v2/search") {
+      const facets = JSON.parse(url.searchParams.get("facets") || "[]") as string[][];
+      const type = facets.flat().find((facet) => facet.startsWith("project_type:"))?.split(":")[1] ?? "mod";
+      const text = (url.searchParams.get("query") || "").toLowerCase();
+      const all = fakeProjects(type).filter((project) => !text || project.title.toLowerCase().includes(text));
+      const offset = Number(url.searchParams.get("offset") || 0);
+      const limit = Number(url.searchParams.get("limit") || 10);
+      return apiResult({ hits: all.slice(offset, offset + limit), offset, limit, total_hits: all.length });
+    }
+    if (/\/members$/.test(url.pathname)) return apiResult([]);
+    if (/\/version$/.test(url.pathname)) return apiResult([]);
+    const id = decodeURIComponent(url.pathname.split("/").pop() || "");
+    return apiResult({ ...fakeProjects("mod")[0], project_id: id, title: id, body: "Generated project description.", followers: 1200 });
+  },
   get_platform_capabilities: () => ({
     platform: "linux", displayName: "Linux", launchMethods: ["file", "flatpak", "custom"], supportsFlatpak: true,
     supportsAppBundles: false, supportsStartup: true, supportsSystemNotifications: true, supportsShortcuts: true,
+    isSteamDeck: new URLSearchParams(location.search).has("deck"), isGamescope: new URLSearchParams(location.search).has("gamescope"),
   }),
+  get_system_status: () => ({ hasBattery: true, batteryPercent: 76, charging: false }),
+  get_gamepads: () => [],
+  gamepad_rumble: () => null,
+  suspend_system: () => null,
+  quit_mochi: () => null,
+  "plugin:window|set_fullscreen": () => null,
+  "plugin:window|is_fullscreen": () => false,
   get_playtime: () => [
     { gameId: "a", name: "Minecraft", seconds: 93_600, lastPlayed: now - 3_600 },
     { gameId: "b", name: "Stardew Valley", seconds: 41_000, lastPlayed: now - 86_400 },
@@ -30,23 +115,80 @@ const handlers: Record<string, Handler> = {
     { filename: "sodium-0.6.jar", path: "/mods/sodium-0.6.jar", enabled: true, size: 912_000 },
     { filename: "lithium.jar.disabled", path: "/mods/lithium.jar.disabled", enabled: false, size: 402_000 },
   ],
+  check_launch_targets: (args) => ((args.targets as string[]) ?? []).map(() => true),
+  prepare_artwork_preview: async (args) => {
+    const image = await loadMockImage(String(args.source));
+    const scale = Math.min(1, 1600 / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = drawMock(image, 0, 0, image.naturalWidth, image.naturalHeight, Math.round(image.naturalWidth * scale), Math.round(image.naturalHeight * scale));
+    return { dataUrl: canvas.toDataURL("image/jpeg", 0.9), width: image.naturalWidth, height: image.naturalHeight };
+  },
+  save_custom_artwork: async (args) => {
+    const image = await loadMockImage(String(args.source));
+    const crop = args.crop as { x: number; y: number; width: number; height: number };
+    const url = drawMock(image, crop.x * image.naturalWidth, crop.y * image.naturalHeight, crop.width * image.naturalWidth, crop.height * image.naturalHeight, 600, 800).toDataURL("image/jpeg", 0.9);
+    const store = mockArtwork(); store[String(args.cacheKey)] = url; localStorage.setItem("mochi:dev-artwork", JSON.stringify(store));
+    return url;
+  },
+  delete_game_artwork: (args) => { const store = mockArtwork(); delete store[String(args.cacheKey)]; localStorage.setItem("mochi:dev-artwork", JSON.stringify(store)); return null; },
+  get_cached_game_artwork: (args) => mockArtwork()[String(args.cacheKey)] ?? null,
+  cache_game_artwork: () => null,
+  "plugin:dialog|open": (args) => {
+    const options = (args.options ?? {}) as { filters?: Array<{ name: string }>; directory?: boolean };
+    if (options.directory) return "/home/dev/Games";
+    if (!options.filters?.some((filter) => filter.name === "Images")) return "/usr/bin/mock-game";
+    return new Promise<string | null>((resolve) => {
+      const input = document.createElement("input");
+      input.type = "file"; input.accept = "image/*";
+      input.onchange = () => { const file = input.files?.[0]; if (!file) return resolve(null); const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.readAsDataURL(file); };
+      input.click();
+    });
+  },
   list_user_themes: () => [],
+  cache_theme_fonts: () => "",
   get_mochi_config_info: () => ({ configPath: "~/.config/Mochi/config.json", themesPath: "~/.config/Mochi/themes", selectedTheme: localStorage.getItem("mochi:theme") ?? "mochi" }),
   set_mochi_theme: (args) => { localStorage.setItem("mochi:theme", String(args.themeId)); return null; },
   detect_import_sources: () => [
-    { id: "steam", name: "Steam", description: "Games installed through Steam and its libraries.", detected: true, gameCount: 24 },
-    { id: "heroic", name: "Heroic Games Launcher", description: "Epic, GOG and Amazon games managed by Heroic.", detected: true, gameCount: 6 },
-    { id: "apps", name: "Desktop applications", description: "Games registered in your application menu.", detected: true, gameCount: 3 },
+    { id: "steam", name: "Steam", description: "Games installed through Steam and its libraries.", detected: true, installed: true, gameCount: 240, launcherCount: 1 },
+    { id: "heroic", name: "Heroic Games Launcher", description: "Epic, GOG and Amazon games managed by Heroic.", detected: true, installed: true, gameCount: 6, launcherCount: 0 },
+    { id: "lutris", name: "Lutris", description: "Existing Lutris games and launch configurations.", detected: false, installed: true, gameCount: 0, launcherCount: 0 },
+    { id: "apps", name: "Desktop applications", description: "Games registered in your application menu.", detected: true, installed: true, gameCount: 2, launcherCount: 3 },
   ],
-  scan_import_games: () => [
-    { id: "steam:220", name: "Half-Life 2", source: "steam", launchTarget: "steam://rungameid/220", installPath: "/games/hl2" },
-    { id: "steam:105600", name: "Terraria", source: "steam", launchTarget: "steam://rungameid/105600", installPath: "/games/terraria" },
-  ],
+  scan_import_games: (args) => {
+    if (args.source === "steam") return [
+      ...Array.from({ length: 240 }, (_, i) => ({ id: `steam:${1000 + i}`, name: `Steam Game ${String(i + 1).padStart(3, "0")}`, source: "steam", launchTarget: `steam://rungameid/${1000 + i}`, installPath: `/games/steam/game-${i}`, kind: "game", launcherId: null })),
+      { id: "launcher:steam", name: "Steam", source: "steam", launchTarget: "steam://open/main", installPath: null, kind: "launcher", launcherId: "steam" },
+    ];
+    if (args.source === "heroic") return ["Hades", "Celeste", "Control", "Dishonored 2", "Fez", "Inside"].map((name) => ({ id: `heroic:${name}`, name, source: "heroic", launchTarget: `heroic://launch?appName=${name}`, installPath: `/games/heroic/${name}`, kind: "game", launcherId: null }));
+    if (args.source === "apps") return [
+      { id: "apps:supertux", name: "SuperTux", source: "apps", launchTarget: "supertux2", installPath: null, kind: "game", launcherId: null },
+      { id: "apps:xonotic", name: "Xonotic", source: "apps", launchTarget: "xonotic", installPath: null, kind: "game", launcherId: null },
+      { id: "apps:prism", name: "Prism Launcher", source: "apps", launchTarget: "prismlauncher", installPath: null, kind: "launcher", launcherId: "prism" },
+      { id: "apps:jagex", name: "Jagex Launcher", source: "apps", launchTarget: "jagex-launcher", installPath: null, kind: "launcher", launcherId: "jagex" },
+      { id: "apps:mcpe", name: "Minecraft Bedrock Launcher", source: "apps", launchTarget: "mcpelauncher-ui-qt", installPath: null, kind: "launcher", launcherId: "minecraft-bedrock" },
+    ];
+    return [];
+  },
+};
+
+const mockArtwork = (): Record<string, string> => { try { return JSON.parse(localStorage.getItem("mochi:dev-artwork") ?? "{}"); } catch { return {}; } };
+const loadMockImage = (source: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+  image.onload = () => resolve(image);
+  image.onerror = () => reject(new Error("That image could not be loaded."));
+  image.src = source;
+});
+const drawMock = (image: HTMLImageElement, sx: number, sy: number, sw: number, sh: number, width: number, height: number) => {
+  const canvas = document.createElement("canvas");
+  canvas.width = width; canvas.height = height;
+  canvas.getContext("2d")?.drawImage(image, sx, sy, sw, sh, 0, 0, width, height);
+  return canvas;
 };
 
 export function installDevMock() {
   const w = window as unknown as Record<string, unknown>;
   if ("__TAURI_INTERNALS__" in w) return;
+  w.__MOCHI_DEV_MOCK__ = true; // lets src/lib/updater.ts fake an available update
   w.__TAURI_INTERNALS__ = {
     invoke: async (command: string, args: Record<string, unknown> = {}) => {
       const handler = handlers[command];

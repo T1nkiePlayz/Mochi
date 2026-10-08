@@ -1,12 +1,17 @@
 use serde::Deserialize;
-use tauri::{Manager, WindowEvent};
+use tauri::{Emitter, Manager, WindowEvent};
 
+mod fonts;
+mod bigpicture;
+mod dirsize;
 mod game_artwork;
+mod gamepad;
 mod modrinth;
 mod platform;
 mod playtime;
 mod process;
 mod sources;
+mod steam_store;
 mod themes;
 mod tray;
 
@@ -62,6 +67,12 @@ fn get_active_sessions() -> Result<Vec<playtime::ActiveSessionInfo>, String> { p
 fn get_playtime() -> Result<Vec<playtime::PlaytimeEntry>, String> { playtime::list() }
 
 #[tauri::command]
+fn get_playtime_history(since_epoch: Option<u64>) -> Result<Vec<playtime::Session>, String> { playtime::history(since_epoch) }
+
+#[tauri::command(async)]
+fn get_dir_size(path: String) -> Result<dirsize::DirSize, String> { dirsize::dir_size(&path) }
+
+#[tauri::command]
 fn get_downloads() -> Vec<modrinth::DownloadEntry> { modrinth::list_downloads() }
 
 #[tauri::command(async)]
@@ -108,13 +119,19 @@ fn import_theme(app: tauri::AppHandle, source_path: String) -> Result<themes::Us
 
 fn main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+        // Tells the frontend how it was started before the first paint.
+        .plugin(tauri::plugin::Builder::<tauri::Wry, ()>::new("mochi-boot").js_init_script(bigpicture::boot_script(bigpicture::parse_flags(std::env::args()))).build())
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             // The window is hidden to the tray on close, so a second launch or a
             // mochi:// link must bring it back or it appears to do nothing.
             tray::show_mochi(app);
+            // `mochi --big-picture` from a Steam shortcut switches the running instance over.
+            if bigpicture::parse_flags(&argv).big_picture { let _ = app.emit("mochi-bigpicture", true); }
         }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             #[cfg(target_os = "linux")]
             {
@@ -130,6 +147,7 @@ fn main() {
             let data_dir = app.path().app_data_dir()?;
             playtime::initialize(data_dir).map_err(std::io::Error::other)?;
             tray::initialize(app)?;
+            gamepad::start(app.handle().clone());
             if let Some(window) = app.get_webview_window("main") {
                 window.clone().on_window_event(move |event| {
                     if let WindowEvent::CloseRequested { api, .. } = event {
@@ -142,12 +160,16 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             send_system_notification, open_external_url, open_path_in_file_manager, set_launch_on_startup,
-            launch_game_tracked, stop_game, get_active_sessions, get_playtime, get_downloads,
+            launch_game_tracked, stop_game, get_active_sessions, get_playtime, get_playtime_history, get_dir_size, get_downloads,
             list_flatpaks, list_runtimes, get_platform_capabilities, create_game_shortcut, remove_game_shortcut,
             detect_import_sources, scan_import_games,
+            bigpicture::get_system_status, bigpicture::suspend_system, bigpicture::quit_mochi, gamepad::get_gamepads, gamepad::gamepad_rumble,
             get_mochi_config_info, move_mochi_config, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
+            fonts::cache_theme_fonts,
             game_artwork::cache_game_artwork, game_artwork::get_cached_game_artwork, game_artwork::clear_game_artwork_cache,
+            game_artwork::prepare_artwork_preview, game_artwork::save_custom_artwork, game_artwork::delete_game_artwork, platform::check_launch_targets,
             modrinth::get_public_api, modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::apply_mod_profile,
+            steam_store::get_steam_store_details,
             modrinth::delete_mod_file, modrinth::start_modrinth_download, modrinth::update_mod_file, modrinth::analyze_mod_files,
         ])
         .build(tauri::generate_context!())

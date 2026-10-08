@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Piko, Tofu } from "../models";
 
-const PIKO_COLUMNS = "local_id, name, description, accent, artwork, artwork_url, executable_path, source, source_id, platform_category, igdb_id, categories, screenshots, trailer_id, first_release_date";
+const PIKO_COLUMNS = "local_id, name, description, accent, artwork, artwork_url, executable_path, source, source_id, platform_category, igdb_id, categories, screenshots, trailer_id, first_release_date, favorite, tags, artwork_source, kind";
 
 type PikoRow = {
   local_id: string;
@@ -19,6 +19,10 @@ type PikoRow = {
   screenshots: string[] | null;
   trailer_id: string | null;
   first_release_date: number | null;
+  favorite: boolean | null;
+  tags: string[] | null;
+  artwork_source: NonNullable<Piko["artworkSource"]> | null;
+  kind: "game" | "launcher" | null;
   tofus: Array<{ local_id: string; name: string; version: string; runtime: string; mods_count: number; status: Tofu["status"] }> | null;
 };
 
@@ -50,6 +54,10 @@ export async function pullLibrary(client: SupabaseClient, userId: string): Promi
     screenshots: piko.screenshots ?? [],
     trailerId: piko.trailer_id ?? undefined,
     firstReleaseDate: piko.first_release_date ?? undefined,
+    favorite: piko.favorite ?? false,
+    tags: piko.tags ?? [],
+    artworkSource: piko.artwork_source ?? undefined,
+    kind: piko.kind ?? undefined,
     // The UI assumes every Piko has at least one Tofu, so never hand it an empty list.
     tofus: piko.tofus?.length
       ? piko.tofus.map((tofu) => ({ id: tofu.local_id, name: tofu.name, version: tofu.version, runtime: tofu.runtime, mods: tofu.mods_count, status: tofu.status }))
@@ -77,6 +85,10 @@ export async function pushLibrary(client: SupabaseClient, library: Piko[]) {
     screenshots: (piko.screenshots ?? []).slice(0, 30),
     trailer_id: piko.trailerId ?? null,
     first_release_date: piko.firstReleaseDate ?? null,
+    favorite: piko.favorite ?? false,
+    tags: (piko.tags ?? []).slice(0, 60).map((tag) => tag.slice(0, 60)),
+    artwork_source: piko.artworkSource ?? null,
+    kind: piko.kind ?? null,
     tofus: piko.tofus.map((tofu) => ({
       local_id: tofu.id, name: clamp(tofu.name, 200), version: clamp(tofu.version, 100), runtime: clamp(tofu.runtime, 100),
       mods_count: Math.max(0, tofu.mods), status: tofu.status,

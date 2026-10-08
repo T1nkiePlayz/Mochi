@@ -1,0 +1,4 @@
+.view-loading { display: flex; align-items: center; gap: 10px; padding: 48px 8px; color: var(--mochi-text-muted); font-size: 13px; }
+.view-loading-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--mochi-accent); animation: mochi-view-pulse 1s ease-in-out infinite; }
+@keyframes mochi-view-pulse { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .view-loading-dot { animation: none; } }

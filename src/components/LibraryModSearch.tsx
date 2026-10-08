@@ -1,3 +1,4 @@
+import { RemoteImage } from "./RemoteImage";
 import { useEffect, useState } from "react";
 import { ExternalLink, Package } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
@@ -42,12 +43,12 @@ export function LibraryModSearch({ query, nexusEnabled, supabase }: { query: str
     {!loading && !modrinth.length && !nexus.length && !message && <p className="metadata-note">No matching mods found.</p>}
     <div className="library-mod-results">
       {modrinth.map(project => <article className="library-mod-result" key={`modrinth-${project.project_id}`}>
-        {project.icon_url ? <img src={project.icon_url} alt="" loading="lazy"/> : <span className="library-mod-fallback"><Package size={17}/></span>}
+        <RemoteImage src={project.icon_url} alt="" loading="lazy" fallback={<span className="library-mod-fallback"><Package size={17}/></span>}/>
         <span><strong>{project.title}</strong><small>Modrinth · {project.downloads.toLocaleString()} downloads</small><small>{project.description}</small></span>
         <button className="icon-button" aria-label={`Open ${project.title} on Modrinth`} onClick={() => void invoke("open_external_url", { url: `https://modrinth.com/mod/${encodeURIComponent(project.slug)}` })}><ExternalLink size={14}/></button>
       </article>)}
       {nexus.map(({ game, mod }) => <article className="library-mod-result" key={`nexus-${game.domainName}-${mod.id}`}>
-        {mod.pictureUrl ? <img src={mod.pictureUrl} alt="" loading="lazy"/> : <span className="library-mod-fallback"><Package size={17}/></span>}
+        <RemoteImage src={mod.pictureUrl} alt="" loading="lazy" fallback={<span className="library-mod-fallback"><Package size={17}/></span>}/>
         <span><strong>{mod.name}</strong><small>Nexus Mods · {game.name}{mod.author ? ` · ${mod.author}` : ""}</small><small>{mod.summary || "Popular mod from the Nexus Mods feed."}</small></span>
         <button className="icon-button" aria-label={`Open ${mod.name} on Nexus Mods`} onClick={() => void invoke("open_external_url", { url: mod.modPageUrl })}><ExternalLink size={14}/></button>
       </article>)}

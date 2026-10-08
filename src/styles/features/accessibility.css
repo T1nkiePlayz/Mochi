@@ -1,0 +1,176 @@
+/*
+ * Accessibility. Driven by data attributes on <html> set from src/state/accessibility.ts
+ * (data-reduce-motion, data-high-contrast, data-large-targets, ...). Everything here uses tokens so it works on any theme.
+ * Loaded after the themes' base styles; user choices use !important so they win over theme styling.
+ */
+
+@font-face { font-family: "Atkinson Hyperlegible"; font-style: normal; font-weight: 400; font-display: swap; src: url("../../assets/fonts/atkinson-hyperlegible/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible"; font-style: normal; font-weight: 700; font-display: swap; src: url("../../assets/fonts/atkinson-hyperlegible/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2"); }
+
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---- Skip link ------------------------------------------------------------- */
+.skip-link { position: fixed; top: 8px; left: 8px; z-index: 10000; padding: 10px 16px; border-radius: var(--mochi-button-radius); color: var(--mochi-primary-color); background: var(--mochi-primary-background); font-weight: 700; text-decoration: none; transform: translateY(-200%); }
+.skip-link:focus { transform: none; }
+
+/* ---- Focus rings ----------------------------------------------------------- */
+:root {
+  --mochi-a11y-focus-width: 2px;
+  --mochi-a11y-focus-offset: 2px;
+  --mochi-a11y-focus-color: var(--mochi-accent-strong);
+}
+html[data-focus-size="thick"] { --mochi-a11y-focus-width: 3px; }
+html[data-focus-size="extra"] { --mochi-a11y-focus-width: 5px; }
+html[data-focus-color="yellow"] { --mochi-a11y-focus-color: #ffd400; }
+html[data-focus-color="cyan"] { --mochi-a11y-focus-color: #00d5ff; }
+html[data-focus-color="magenta"] { --mochi-a11y-focus-color: #ff3df0; }
+html[data-focus-color="orange"] { --mochi-a11y-focus-color: #ff8a1f; }
+html[data-focus-color="text"] { --mochi-a11y-focus-color: var(--mochi-text-strong); }
+
+:focus-visible,
+:is(input, select, textarea):focus-visible,
+html[data-focus-always="true"] :is(a, button, input, select, textarea, summary, [tabindex], [role="button"], [role="tab"], [role="switch"], [role="menuitem"], [role="option"]):focus {
+  outline: var(--mochi-a11y-focus-width) solid var(--mochi-a11y-focus-color);
+  outline-offset: var(--mochi-a11y-focus-offset);
+}
+/* Inputs hide the outline inside a styled wrapper: show it on the wrapper too. */
+.search-box:focus-within, .mochi-select-search:focus-within { outline: var(--mochi-a11y-focus-width) solid var(--mochi-a11y-focus-color); outline-offset: var(--mochi-a11y-focus-offset); }
+.search-box input:focus-visible, .mochi-select-search input:focus-visible { outline: none; }
+html[data-focus-double="true"] :focus-visible,
+html[data-focus-double="true"][data-focus-always="true"] :focus {
+  box-shadow: 0 0 0 calc(var(--mochi-a11y-focus-offset) + 1px) var(--mochi-background), 0 0 0 calc(var(--mochi-a11y-focus-offset) + 1px + var(--mochi-a11y-focus-width)) var(--mochi-text-strong) !important;
+}
+/* Scrollable regions that are keyboard-focusable. */
+[tabindex="-1"]:focus { outline: none; }
+main:focus, #main-content:focus { outline: none; }
+
+/* ---- Text size (zoom keeps px-based layouts proportional) ------------------- */
+html { zoom: var(--mochi-ui-scale, 1); }
+.app-shell, .sidebar, .main-content { height: calc(100vh / var(--mochi-ui-scale, 1)); min-height: calc(100vh / var(--mochi-ui-scale, 1)); }
+.modal, .project-details-window, .tofu-picker-window, .nexus-game-picker-window { max-height: calc((100vh - 32px) / var(--mochi-ui-scale, 1)); max-width: calc(100vw / var(--mochi-ui-scale, 1) - 24px); }
+.modal-backdrop, .discover-modal-backdrop { overflow: auto; }
+
+/* ---- Reading --------------------------------------------------------------- */
+html[data-line-spacing="relaxed"] { --mochi-body-line-height: 1.75; }
+html[data-line-spacing="loose"] { --mochi-body-line-height: 2; }
+html[data-line-spacing="relaxed"] :where(p, li, small, label, dd, dt, td, th, .modal-description, .setting-row span) { line-height: 1.75 !important; }
+html[data-line-spacing="loose"] :where(p, li, small, label, dd, dt, td, th, .modal-description, .setting-row span) { line-height: 2 !important; }
+html[data-letter-spacing="wide"] body { letter-spacing: .04em; }
+html[data-letter-spacing="wider"] body { letter-spacing: .09em; }
+html[data-word-spacing="wide"] body { word-spacing: .12em; }
+html[data-word-spacing="wider"] body { word-spacing: .3em; }
+html[data-underline-links="true"] :is(a[href], .link-button, .text-button, .help-link strong) { text-decoration: underline !important; text-underline-offset: .18em; }
+html[data-dyslexia-font="true"] { --mochi-font-body: "Atkinson Hyperlegible", system-ui, sans-serif; --mochi-font-display: "Atkinson Hyperlegible", system-ui, sans-serif; }
+html[data-dyslexia-font="true"] body :not(code, pre, kbd, samp, svg, svg *, [class*="mono"], .material-symbols-outlined) { font-family: "Atkinson Hyperlegible", system-ui, sans-serif !important; font-style: normal; }
+
+/* ---- Interaction ----------------------------------------------------------- */
+html[data-large-targets="true"] :is(button, .secondary-button, .play-button, .text-button, .icon-button, .nav-item, .piko-nav-item, select, input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), .search-box, [role="button"], [role="tab"], a[href].setting-row, .mochi-select-trigger) { min-height: 44px; min-width: 44px; }
+html[data-large-targets="true"] :is(.icon-button, .icon-button.tiny) { width: 44px; height: 44px; }
+html[data-large-targets="true"] .setting-row { min-height: 56px; }
+html[data-large-targets="true"] :is(input[type="checkbox"], input[type="radio"]):not(.toggle) { width: 24px; height: 24px; }
+html[data-large-targets="true"] .toggle { transform: scale(1.2); transform-origin: right center; }
+html[data-large-targets="true"] :is(.nav-item, .piko-nav-item) { padding-block: 12px; }
+
+html[data-large-cursor="true"], html[data-large-cursor="true"] * { cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24'><path d='M3 2l7.5 19 2.7-7.8L21 10.5z' fill='black' stroke='white' stroke-width='1.6' stroke-linejoin='round'/></svg>") 4 3, auto !important; }
+html[data-large-cursor="true"] :is(button, a[href], [role="button"], [role="tab"], select, label, summary, .toggle) { cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24'><path d='M9 11V4.5a1.5 1.5 0 013 0V10l5.5 1.2a2 2 0 011.5 2V17a5 5 0 01-5 5h-2.5a4 4 0 01-3.3-1.7L5 15.5a1.6 1.6 0 012.5-2L9 15z' fill='white' stroke='black' stroke-width='1.4' stroke-linejoin='round'/></svg>") 14 3, pointer !important; }
+
+/* Text labels next to icon-only buttons. */
+html[data-text-labels="true"] .icon-button[aria-label]:not(:has(.a11y-label)) { width: auto; min-width: 32px; gap: 6px; padding: 0 10px; display: inline-flex; align-items: center; }
+html[data-text-labels="true"] .icon-button[aria-label]::after { content: attr(aria-label); font-size: 11px; font-weight: 600; white-space: nowrap; }
+
+/* Controls that normally appear on hover stay visible. */
+html[data-keep-controls="true"] .game-card .game-card-play, .game-card:focus-within .game-card-play { opacity: 1 !important; transform: none !important; }
+html[data-keep-controls="true"] .discover-game-name { max-width: 180px !important; opacity: 1 !important; }
+html[data-keep-controls="true"] :is([class*="hover-actions"], [class*="-reveal"], [class*="card-actions"]) { opacity: 1 !important; visibility: visible !important; transform: none !important; }
+
+/* ---- Reduced motion -------------------------------------------------------- */
+html[data-reduce-motion="true"] { --mochi-transition: 0ms linear; scroll-behavior: auto; }
+html[data-reduce-motion="true"] *, html[data-reduce-motion="true"] *::before, html[data-reduce-motion="true"] *::after {
+  animation-duration: .001ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important;
+  transition-duration: .001ms !important; transition-delay: 0ms !important; scroll-behavior: auto !important;
+}
+html[data-reduce-motion="true"] [class*="parallax"], html[data-reduce-motion="true"] [class*="floating"], html[data-reduce-motion="true"] [class*="drift"] { transform: none !important; }
+html[data-reduce-motion="true"] .game-card:hover, html[data-reduce-motion="true"] .game-card:hover * { transform: none; }
+
+/* ---- Reduced transparency & simplified backgrounds -------------------------- */
+html[data-reduce-transparency="true"] { --mochi-blur: 0px; --mochi-overlay-background: var(--mochi-background); --mochi-card-background: var(--mochi-surface); --mochi-panel-background: var(--mochi-surface); --mochi-sidebar-background: var(--mochi-background-elevated); --mochi-modal-background: var(--mochi-background-elevated); }
+html[data-reduce-transparency="true"] * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html[data-reduce-transparency="true"] .modal-backdrop, html[data-reduce-transparency="true"] .discover-modal-backdrop { background: color-mix(in srgb, var(--mochi-background) 94%, transparent) !important; }
+html[data-reduce-transparency="true"] :is(.modal, .sidebar, .topbar, .settings-group, .hero-card) { opacity: 1; }
+html[data-simple-background="true"] { --mochi-app-background: var(--mochi-background); --mochi-sidebar-background: var(--mochi-background-elevated); --mochi-hero-overlay: linear-gradient(180deg, transparent 20%, rgba(0, 0, 0, .72)); }
+html[data-simple-background="true"] :is(.app-shell, body, .setup-shell) { background: var(--mochi-background) !important; background-image: none !important; }
+html[data-simple-background="true"] :is(.app-shell, .main-content)::before, html[data-simple-background="true"] :is(.app-shell, .main-content)::after, html[data-simple-background="true"] :is(canvas, [class*="ambient"], [class*="particles"], [class*="stars"], [class*="aurora"]) { display: none !important; }
+
+/* ---- High contrast ---------------------------------------------------------- */
+html[data-high-contrast="true"] {
+  --mochi-background: #000; --mochi-background-elevated: #000; --mochi-surface: #0a0a0a; --mochi-surface-raised: #141414; --mochi-surface-hover: #262626;
+  --mochi-border: #fff; --mochi-border-strong: #fff; --mochi-text: #fff; --mochi-text-strong: #fff; --mochi-text-muted: #e8e8e8; --mochi-text-faint: #cfcfcf;
+  --mochi-accent: #ffe600; --mochi-accent-strong: #ffe600; --mochi-accent-text: #000; --mochi-accent-soft: rgba(255, 230, 0, .22);
+  --mochi-success: #5dff9a; --mochi-warning: #ffe600; --mochi-danger: #ff8080;
+  --mochi-app-background: #000; --mochi-sidebar-background: #000; --mochi-card-background: #0a0a0a; --mochi-panel-background: #0a0a0a; --mochi-modal-background: #000; --mochi-overlay-background: rgba(0, 0, 0, .9);
+  --mochi-input-background: #000; --mochi-input-border: #fff; --mochi-card-border: #fff; --mochi-panel-border: #fff; --mochi-button-border: #fff; --mochi-button-background: #000; --mochi-button-color: #fff; --mochi-button-hover-background: #262626;
+  --mochi-primary-background: #ffe600; --mochi-primary-color: #000; --mochi-primary-hover-background: #fff; --mochi-primary-border: #fff;
+  --mochi-nav-active-background: #262626; --mochi-nav-active-shadow: inset 4px 0 #ffe600; --mochi-card-hover-border: #ffe600; --mochi-input-focus-border: #ffe600;
+  --mochi-border-width: 2px; --mochi-text-shadow: none; --mochi-heading-shadow: none;
+}
+html[data-high-contrast="true"][data-scheme="light"] {
+  --mochi-background: #fff; --mochi-background-elevated: #fff; --mochi-surface: #fff; --mochi-surface-raised: #f2f2f2; --mochi-surface-hover: #e0e0e0;
+  --mochi-border: #000; --mochi-border-strong: #000; --mochi-text: #000; --mochi-text-strong: #000; --mochi-text-muted: #1a1a1a; --mochi-text-faint: #333;
+  --mochi-accent: #0033cc; --mochi-accent-strong: #0033cc; --mochi-accent-text: #fff; --mochi-accent-soft: rgba(0, 51, 204, .14);
+  --mochi-success: #006b2e; --mochi-warning: #7a4a00; --mochi-danger: #b00020;
+  --mochi-app-background: #fff; --mochi-sidebar-background: #fff; --mochi-card-background: #fff; --mochi-panel-background: #fff; --mochi-modal-background: #fff; --mochi-overlay-background: rgba(255, 255, 255, .92);
+  --mochi-input-background: #fff; --mochi-input-border: #000; --mochi-card-border: #000; --mochi-panel-border: #000; --mochi-button-border: #000; --mochi-button-background: #fff; --mochi-button-color: #000; --mochi-button-hover-background: #e0e0e0;
+  --mochi-primary-background: #0033cc; --mochi-primary-color: #fff; --mochi-primary-hover-background: #000; --mochi-primary-border: #000;
+  --mochi-nav-active-background: #e0e0e0; --mochi-nav-active-shadow: inset 4px 0 #0033cc; --mochi-card-hover-border: #0033cc; --mochi-input-focus-border: #0033cc;
+}
+html[data-high-contrast="true"] :is(.secondary-button, .play-button, .icon-button, .modal, .settings-group, .game-card, input, select, textarea, .search-box, .setting-row, .tofu-card, .theme-card) { border: 2px solid var(--mochi-border) !important; }
+html[data-high-contrast="true"] .play-button, html[data-high-contrast="true"] .nav-item.active { color: var(--mochi-primary-color) !important; background: var(--mochi-primary-background) !important; text-shadow: none !important; }
+html[data-high-contrast="true"] :is(.modal, .settings-group, .game-card) { background-image: none !important; box-shadow: none !important; }
+html[data-high-contrast="true"] :is(.modal-description, .setting-row small, small) { color: var(--mochi-text) !important; }
+html[data-high-contrast="true"] * { text-shadow: none !important; }
+
+/* ---- Colour-blind friendly status colours (Okabe-Ito based) + non-colour cues -- */
+html[data-color-blind="deuteranopia"], html[data-color-blind="protanopia"] { --mochi-success: #56b4e9; --mochi-warning: #f0e442; --mochi-danger: #ff8c42; }
+html[data-color-blind="tritanopia"] { --mochi-success: #2fd0b5; --mochi-warning: #ffb0c8; --mochi-danger: #ff5a4f; }
+html[data-color-blind="deuteranopia"][data-scheme="light"], html[data-color-blind="protanopia"][data-scheme="light"] { --mochi-success: #0072b2; --mochi-warning: #8a6d00; --mochi-danger: #b34a00; }
+html[data-color-blind="tritanopia"][data-scheme="light"] { --mochi-success: #00796b; --mochi-warning: #a8325e; --mochi-danger: #b3261e; }
+html:not([data-color-blind="none"]) .ready-status::before { content: "\2713\00a0"; font-weight: 800; }
+html:not([data-color-blind="none"]) .ready-status.attention::before { content: "\26A0\00a0"; }
+html:not([data-color-blind="none"]) .auth-error::before { content: "\2715\00a0"; font-weight: 800; }
+html:not([data-color-blind="none"]) :is([class*="status-"].error, [class*="status"].failed, .danger-text)::before { content: "\2715\00a0"; font-weight: 800; }
+
+/* ---- Keyboard shortcuts dialog --------------------------------------------- */
+.shortcuts-modal { width: min(560px, calc(100vw - 32px)); max-height: min(720px, calc(100vh - 32px)); overflow: auto; }
+.shortcuts-list { display: grid; gap: 4px; margin: 16px 0 0; padding: 0; }
+.shortcuts-group { margin: 14px 0 4px; color: var(--mochi-text-muted); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.shortcut-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 7px 0; border-bottom: var(--mochi-border-width) solid var(--mochi-border); font-size: 13px; }
+.shortcut-row dt { margin: 0; color: var(--mochi-text); }
+.shortcut-row dd { display: flex; gap: 4px; margin: 0; }
+.shortcut-key { display: inline-block; min-width: 24px; padding: 2px 7px; border: var(--mochi-border-width) solid var(--mochi-border-strong); border-radius: 6px; background: var(--mochi-surface-raised); color: var(--mochi-text-strong); font: 600 12px var(--mochi-mono); text-align: center; }
+
+/* ---- Settings section & preview -------------------------------------------- */
+.a11y-control { display: grid; gap: 8px; padding: 14px 16px; border-bottom: var(--mochi-border-width) solid var(--mochi-border); }
+.a11y-control:last-child { border-bottom: 0; }
+.a11y-control-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.a11y-control-head strong { display: block; color: var(--mochi-text-strong); font-size: 13px; }
+.a11y-control-head small { display: block; margin-top: 3px; color: var(--mochi-text-muted); font-size: 11px; line-height: 1.5; }
+.a11y-value { color: var(--mochi-text-strong); font: 600 12px var(--mochi-mono); }
+.a11y-range { width: 100%; accent-color: var(--mochi-accent-strong); }
+.a11y-segmented { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 3px; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-button-radius); background: var(--mochi-background); }
+.a11y-segmented button { padding: 6px 12px; border-radius: calc(var(--mochi-button-radius) - 2px); background: transparent; color: var(--mochi-text-muted); font-size: 12px; font-weight: 600; }
+.a11y-segmented button:hover { color: var(--mochi-text-strong); background: var(--mochi-surface-hover); }
+.a11y-segmented button[aria-pressed="true"] { color: var(--mochi-primary-color); background: var(--mochi-primary-background); }
+.a11y-preview { display: grid; gap: 10px; margin: 14px 16px 16px; padding: 16px; border: var(--mochi-border-width) solid var(--mochi-border-strong); border-radius: var(--mochi-card-radius); background: var(--mochi-background); }
+.a11y-preview h4 { margin: 0; color: var(--mochi-text-strong); font: 700 16px var(--mochi-font-display); }
+.a11y-preview p { margin: 0; color: var(--mochi-text); font-size: 13px; }
+.a11y-preview-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.a11y-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--mochi-pill-radius); border: var(--mochi-border-width) solid currentColor; font-size: 12px; font-weight: 600; }
+.a11y-chip.ok { color: var(--mochi-success); } .a11y-chip.warn { color: var(--mochi-warning); } .a11y-chip.bad { color: var(--mochi-danger); }
+.a11y-quick { display: grid; gap: 4px; }
+.a11y-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px; }
+
+/* Legacy rules that removed the outline on styled inputs. */
+.mfa-code-label .mfa-input:focus-visible { outline: var(--mochi-a11y-focus-width) solid var(--mochi-a11y-focus-color); outline-offset: var(--mochi-a11y-focus-offset); }
+/* Legacy component rules (`.x input { outline: none }`) are more specific than the base ring: make sure fields always show focus. */
+:is(input, select, textarea):focus-visible:not(.search-box input, .mochi-select-search input, .toggle) { outline: var(--mochi-a11y-focus-width) solid var(--mochi-a11y-focus-color) !important; outline-offset: var(--mochi-a11y-focus-offset) !important; }
+.toggle:focus-visible { outline: var(--mochi-a11y-focus-width) solid var(--mochi-a11y-focus-color) !important; outline-offset: var(--mochi-a11y-focus-offset) !important; }

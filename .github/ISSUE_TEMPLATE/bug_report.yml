@@ -1,0 +1,35 @@
+name: Bug report
+description: Something in Mochi is broken or behaves unexpectedly
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please read the [Code of Conduct](../blob/main/CODE_OF_CONDUCT.md). **Never paste API keys or tokens**, and no piracy-related requests.
+  - type: textarea
+    id: what
+    attributes: { label: What happened?, description: What did you expect instead? }
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes: { label: Steps to reproduce, placeholder: "1. Open ...\n2. Click ...\n3. See error" }
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes: { label: Mochi version, placeholder: "0.1.0 (Settings > About)" }
+    validations: { required: true }
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Arch / Manjaro, Ubuntu / Debian, Fedora, SteamOS / Steam Deck, Other Linux, "macOS (Apple silicon)", "macOS (Intel)"]
+    validations: { required: true }
+  - type: dropdown
+    id: install
+    attributes: { label: Install type, options: [AppImage, deb, rpm, Arch package, dmg, Built from source] }
+  - type: input
+    id: theme
+    attributes: { label: Theme / mode, placeholder: "e.g. Minecraft Ore, Big Picture mode" }
+  - type: textarea
+    id: logs
+    attributes: { label: Logs / screenshots, description: "Run Mochi from a terminal and paste relevant output.", render: shell }

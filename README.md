@@ -183,6 +183,14 @@ Games are shown first to make the list easier to use.
 
 When IGDB is configured, Mochi can search for possible matches after a game is added. The user can review the candidates before accepting metadata.
 
+Metadata can come from several providers, chosen in **Settings > Metadata source** (see [docs/metadata.md](docs/metadata.md)):
+
+- **IGDB** (text, genres, screenshots, trailers): needs a free Twitch Client ID and Secret.
+- **SteamGridDB** (artwork only): needs a free personal API key from your SteamGridDB preferences page.
+- **Steam Store**: no key; used automatically for games that launch through Steam.
+
+Keys are saved to your Mochi account (Supabase Vault) and never leave the server. Hand-edited fields and custom artwork are never overwritten, and everything keeps working offline from cached data.
+
 ### Local themes and settings
 
 Mochi includes eleven visual themes (with colour previews in Settings) and stores launcher preferences locally. Settings include appearance, launcher behavior, and optional IGDB configuration.

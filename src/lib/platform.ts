@@ -21,6 +21,10 @@ export type PlatformCapabilities = {
   supportsStartup: boolean;
   supportsSystemNotifications: boolean;
   supportsShortcuts: boolean;
+  /** Running on a Steam Deck. */
+  isSteamDeck: boolean;
+  /** Running inside a gamescope (Steam Gaming Mode) session. */
+  isGamescope: boolean;
 };
 
 export type RuntimeInfo = {

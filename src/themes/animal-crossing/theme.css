@@ -8,19 +8,19 @@
 .brand-mark { border-radius: 50%; background: #d9f0c4; border: 3px solid #a9d17f; box-shadow: none; animation: ac-bob 3s ease-in-out infinite; }
 .brand strong { font-size: 20px; color: #2fae8a; }
 .brand span { display: none; }
-.nav-item { min-height: 42px; padding: 0 18px; border-radius: 999px; font-weight: 600; font-size: 14px; color: #8f7c66; border: 0; }
+.nav-item { min-height: 42px; padding: 0 18px; border-radius: 999px; font-weight: 600; font-size: 14px; color: #746553; border: 0; }
 .nav-item:hover { background: #f1fbe2; color: #4a3b2b; transform: translateY(-2px); }
-.nav-item.active { background: #5cc9a7; color: #fff; box-shadow: 0 4px 0 #2fae8a; }
+.nav-item.active { background: #5cc9a7; color: #10382c; box-shadow: 0 4px 0 #2fae8a; }
 .sidebar-account { border-radius: 999px; background: #f1fbe2; border: 3px solid #fff; padding: 4px 12px 4px 4px; }
 .sidebar-account strong { color: #4a3b2b; }
-.sidebar-account small { color: #8f7c66; }
+.sidebar-account small { color: #746553; }
 .account-avatar { border: 3px solid #fff; background: #ffd9a8; color: #6a5744; box-shadow: 0 2px 0 #cfe6b2; }
 .account-menu { border-radius: 24px; background: #fffdf2; border: 3px solid #fff; box-shadow: 0 6px 0 #cfe6b2, 0 16px 30px rgba(106, 87, 68, .25); }
 .account-menu button { color: #6a5744; border-radius: 18px; }
 
 .topbar { background: transparent; padding-top: 8px; }
 .breadcrumb, .breadcrumb strong { color: #6a5744; font-weight: 600; }
-.search-box { border-radius: 999px; border: 3px solid #fff; background: #fffdf2; color: #8f7c66; box-shadow: 0 3px 0 #cfe6b2; }
+.search-box { border-radius: 999px; border: 3px solid #fff; background: #fffdf2; color: #746553; box-shadow: 0 3px 0 #cfe6b2; }
 .page-heading h1 { font-size: 40px; color: #4a3b2b; text-shadow: 0 3px 0 rgba(255, 255, 255, .8); }
 .eyebrow { color: #2fae8a; background: #fff; display: inline-block; padding: 2px 12px; border-radius: 999px; letter-spacing: .04em; box-shadow: 0 2px 0 #cfe6b2; }
 .section-heading h3 { font-size: 24px; color: #4a3b2b; text-shadow: 0 2px 0 rgba(255, 255, 255, .8); }
@@ -34,7 +34,7 @@
 .game-card:hover .game-card-art { transform: none; }
 .game-card-copy { background: transparent; padding: 10px 6px 6px; }
 .game-card-copy strong { color: #4a3b2b; font-size: 15px; }
-.game-card-copy small { color: #8f7c66; }
+.game-card-copy small { color: #746553; }
 .game-card-play { background: #5cc9a7; color: #fff; box-shadow: 0 3px 0 #2fae8a; }
 .continue-art { border-radius: 16px; }
 .continue-copy strong { color: #4a3b2b; }
@@ -45,7 +45,7 @@
 .game-stats dd { color: #4a3b2b; }
 .game-details-cover { border-radius: 24px; border: 4px solid #fff; box-shadow: 0 5px 0 #cfe6b2; }
 .workspace-tabs { border-bottom: 3px dotted #cfe6b2; }
-.workspace-tabs button { border-radius: 999px; font-weight: 600; color: #8f7c66; }
+.workspace-tabs button { border-radius: 999px; font-weight: 600; color: #746553; }
 .workspace-tabs button.active { background: #5cc9a7; color: #fff; box-shadow: 0 3px 0 #2fae8a; }
 .setting-row { color: #6a5744; }
 .setting-row strong, .settings-group-heading strong { color: #4a3b2b; }

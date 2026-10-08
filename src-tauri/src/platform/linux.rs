@@ -28,6 +28,8 @@ pub fn capabilities() -> PlatformCapabilities {
         supports_startup: true,
         supports_system_notifications: true,
         supports_shortcuts: true,
+        is_steam_deck: false,
+        is_gamescope: false,
     }
 }
 
@@ -148,8 +150,9 @@ fn flatpak_run(id: &str, extra: &[String]) -> Command {
 }
 
 pub fn prepare_launch(target: &str, config: &LaunchConfig) -> Result<Prepared, String> {
-    if let Some(id) = target.strip_prefix("steam://rungameid/") {
-        let uri = format!("steam://rungameid/{}", safe_launch_id(id)?);
+    // `steam://open/main` starts the Steam client itself (a launcher entry).
+    if let Some((scheme, id)) = ["steam://rungameid/", "steam://open/"].iter().find_map(|scheme| target.strip_prefix(scheme).map(|id| (*scheme, id))) {
+        let uri = format!("{scheme}{}", safe_launch_id(id)?);
         return handoff(if command_exists("steam") {
             let mut command = Command::new("steam");
             command.arg(uri);
@@ -322,7 +325,7 @@ pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> {
     if enabled {
         fs::create_dir_all(&autostart).map_err(|e| format!("Unable to create autostart directory: {e}"))?;
         let exe = installed_executable()?;
-        let content = format!("[Desktop Entry]\nType=Application\nName=Mochi\nComment=Launch Mochi when you sign in\nExec={}\nTerminal=false\nStartupNotify=false\nX-GNOME-Autostart-enabled=true\n", desktop_exec_argument(&exe));
+        let content = format!("[Desktop Entry]\nType=Application\nName=Mochi\nComment=Launch Mochi when you sign in\nExec={} --autostart\nTerminal=false\nStartupNotify=false\nX-GNOME-Autostart-enabled=true\n", desktop_exec_argument(&exe));
         fs::write(&desktop, content).map_err(|e| format!("Unable to install Mochi startup entry: {e}"))?;
     } else if desktop.exists() {
         fs::remove_file(&desktop).map_err(|e| format!("Unable to remove Mochi startup entry: {e}"))?;

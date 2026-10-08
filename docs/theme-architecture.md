@@ -169,7 +169,7 @@ Manifest sections map to CSS variables by camelCase-to-kebab-case (`components.p
 
 ## Fonts and colour scheme
 
-`"fonts"` lists Google Fonts stylesheet URLs. Only `https://fonts.googleapis.com/` URLs are loaded, and the native backend rejects other hosts when importing a theme. `"scheme"` (`light` or `dark`) tells the webview how to draw native controls such as scrollbars and date inputs.
+`"fonts"` lists Google Fonts stylesheet URLs (`https://fonts.googleapis.com/css...` only; the native backend rejects other hosts on import). Built-in themes ignore it: their fonts are bundled by `scripts/fetch-fonts.mjs`. For user themes Mochi downloads the fonts once into `<config>/fonts/<theme-id>/` and then works offline (see `docs/offline.md`). `"scheme"` (`light` or `dark`) tells the webview how to draw native controls such as scrollbars and date inputs.
 
 ## Built-in themes
 
@@ -190,6 +190,18 @@ Built-in themes are real theme folders under `src/themes/`; every folder is disc
 | Terraria | left | Inventory-blue slots, outlined gold titles |
 
 Built-in themes are bundled at build time through Vite's asset graph. User themes never need to be bundled.
+
+## Accessibility checks
+
+`npm run build` (and `npm run check:themes`, add `--verbose` for every row) runs a WCAG 2.2 contrast check on every built-in theme using the resolved token values: manifest tokens over the defaults in `tokens.css`, plus literal `:root` overrides and the `.nav-item.active`, `.secondary-button` and `.play-button` colours in `theme.css`. It requires 4.5:1 for text, body and muted text on every surface, accent text, button, primary button, input and active-nav text, 3:1 for faint text, status colours and the focus ring (`accentStrong`) against the page and surfaces, and warns when input borders are below 3:1. It also fails a theme whose `theme.css` removes a focus outline without drawing another indicator.
+
+A theme that must break a rule says so in the manifest, with a reason:
+
+```json
+"a11y": { "exempt": ["text-faint"], "reason": "Decorative captions only; never carries information." }
+```
+
+Exempt ids are the check ids in the report (`text-muted`, `text-faint`, `accent-text`, `button`, `primary`, `nav-active`, `status`, `focus-ring`, `focus-outline`) or `foreground:background` token pairs. See `docs/accessibility.md`.
 
 ## Authoring a theme
 
