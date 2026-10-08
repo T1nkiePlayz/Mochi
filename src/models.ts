@@ -42,6 +42,8 @@ export type Piko = {
   artwork: string;
   artworkUrl?: string;
   artworkCacheKey?: string;
+  /** A game, or a launcher (Steam, Lutris, ...) kept in the library as a shortcut. */
+  kind?: "game" | "launcher";
   igdbId?: number;
   screenshots?: string[];
   trailerId?: string;

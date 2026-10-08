@@ -148,8 +148,9 @@ fn flatpak_run(id: &str, extra: &[String]) -> Command {
 }
 
 pub fn prepare_launch(target: &str, config: &LaunchConfig) -> Result<Prepared, String> {
-    if let Some(id) = target.strip_prefix("steam://rungameid/") {
-        let uri = format!("steam://rungameid/{}", safe_launch_id(id)?);
+    // `steam://open/main` starts the Steam client itself (a launcher entry).
+    if let Some((scheme, id)) = ["steam://rungameid/", "steam://open/"].iter().find_map(|scheme| target.strip_prefix(scheme).map(|id| (*scheme, id))) {
+        let uri = format!("{scheme}{}", safe_launch_id(id)?);
         return handoff(if command_exists("steam") {
             let mut command = Command::new("steam");
             command.arg(uri);

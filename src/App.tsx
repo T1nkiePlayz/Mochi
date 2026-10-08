@@ -58,6 +58,7 @@ function Shell() {
         credentialStatus={credentials.status} credentialStatusLoaded={credentials.loaded}
         themes={themeEngine.themes} theme={themeEngine.theme} setTheme={themeEngine.setTheme}
         nexusApiKey={credentials.nexusApiKey} setNexusApiKey={credentials.setNexusApiKey}
+        steamGridDbKey={credentials.steamGridDbKey} setSteamGridDbKey={credentials.setSteamGridDbKey}
         saveCredential={credentials.save} credentialBusy={credentials.busy}
         onFinish={app.finishFirstLaunchSetup}
       />

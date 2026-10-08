@@ -7,11 +7,24 @@ export type DetectedImportSource = {
   id: ImportSourceId;
   name: string;
   description: string;
+  /** At least one importable item was found. */
   detected: boolean;
+  /** The launcher is installed even if it has nothing to import. */
+  installed?: boolean;
   gameCount: number | null;
+  launcherCount?: number | null;
 };
 
-export type ImportedGame = { id: string; name: string; source: ImportSourceId; launchTarget: string; installPath?: string | null };
+export type ImportedGame = {
+  id: string;
+  name: string;
+  source: ImportSourceId;
+  launchTarget: string;
+  installPath?: string | null;
+  kind?: "game" | "launcher";
+  /** Which known launcher a launcher entry is, for its artwork. */
+  launcherId?: string | null;
+};
 
 export const detectImportSources = () => invoke<DetectedImportSource[]>("detect_import_sources");
 

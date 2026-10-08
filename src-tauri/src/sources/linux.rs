@@ -1,4 +1,4 @@
-use super::{make, scan_bottles, scan_lutris, sort_games, ImportedGame, SourceDef};
+use super::{classify, classify_item, make, make_launcher, scan_bottles, scan_lutris, sort_games, ImportedGame, SourceDef};
 use crate::platform::{command_exists, list_flatpaks};
 use std::{
     fs,
@@ -80,27 +80,51 @@ fn desktop_entry(text: &str) -> std::collections::HashMap<&str, &str> {
     entry
 }
 
+/// Turns one `.desktop` file into an importable item, or `None` when it is Mochi,
+/// hidden, a system tool, covered by another source, or neither a game nor a known launcher.
+fn parse_desktop_app(file: &Path, text: &str, own_exe: Option<&Path>) -> Option<ImportedGame> {
+    let file_name = file.file_name()?.to_str()?.to_owned();
+    let stem = file_name.trim_end_matches(".desktop");
+    let entry = desktop_entry(text);
+    let name = entry.get("Name").filter(|n| !n.is_empty())?;
+    let exec = entry.get("Exec").copied().unwrap_or_default();
+    let program = classify::exec_program(exec);
+    let mut ids = vec![stem];
+    ids.extend(program.as_deref());
+    let exec_path = exec.split_whitespace().next().map(|t| t.trim_matches('"'));
+    let hidden = ["NoDisplay", "Hidden"].iter().any(|key| entry.get(key) == Some(&"true"));
+    if entry.get("Type") != Some(&"Application") || hidden || classify::is_mochi(&ids, name, None, own_exe, exec_path) { return None; }
+
+    let launcher = classify::classify_launcher(&ids, name, None);
+    if let Some(def) = launcher {
+        // Steam is imported by its own source (with a proper client launch target).
+        if classify::SOURCE_OWNED_LAUNCHERS.contains(&def.id) { return None; }
+        let mut item = make_launcher(format!("apps:{file_name}"), (*name).to_owned(), "apps", file.to_string_lossy().into_owned(), def.id);
+        item.install_path = entry.get("Path").map(|p| (*p).to_owned());
+        return Some(item);
+    }
+    let is_game = entry.get("Categories").is_some_and(|c| c.split(';').any(|c| c.eq_ignore_ascii_case("Game")));
+    // Flatpak and Steam entries are covered by their own sources.
+    let covered = entry.contains_key("X-Flatpak") || exec.contains("steam://") || exec.starts_with("flatpak run");
+    if !is_game || covered || classify::is_non_game(&ids, name) { return None; }
+    Some(make(format!("apps:{file_name}"), (*name).to_owned(), "apps", file.to_string_lossy().into_owned(), entry.get("Path").map(|p| (*p).to_owned())))
+}
+
 fn scan_desktop_apps(home: &Path) -> Vec<ImportedGame> {
     let mut dirs = vec![home.join(".local/share/applications"), PathBuf::from("/usr/share/applications"), PathBuf::from("/usr/local/share/applications")];
     if let Some(extra) = std::env::var_os("XDG_DATA_DIRS") {
         dirs.extend(std::env::split_paths(&extra).map(|dir| dir.join("applications")));
     }
+    let own_exe = std::env::current_exe().ok();
     let mut seen = std::collections::HashSet::new();
     let mut out = Vec::new();
     for dir in dirs {
         let Ok(entries) = fs::read_dir(&dir) else { continue };
         for file in entries.flatten().map(|e| e.path()).filter(|p| p.extension().and_then(|e| e.to_str()) == Some("desktop")) {
             let file_name = file.file_name().and_then(|n| n.to_str()).unwrap_or_default().to_owned();
-            if file_name.starts_with("mochi") || !seen.insert(file_name.clone()) { continue; }
+            if !seen.insert(file_name) { continue; }
             let Ok(text) = fs::read_to_string(&file) else { continue };
-            let entry = desktop_entry(&text);
-            let is_game = entry.get("Categories").is_some_and(|c| c.split(';').any(|c| c.eq_ignore_ascii_case("Game")));
-            let hidden = ["NoDisplay", "Hidden"].iter().any(|key| entry.get(key) == Some(&"true"));
-            // Flatpak and Steam entries are covered by their own sources.
-            let covered = entry.contains_key("X-Flatpak") || entry.get("Exec").is_some_and(|e| e.contains("steam://") || e.starts_with("flatpak run"));
-            if entry.get("Type") != Some(&"Application") || !is_game || hidden || covered { continue; }
-            let Some(name) = entry.get("Name").filter(|n| !n.is_empty()) else { continue };
-            out.push(make(format!("apps:{file_name}"), (*name).to_owned(), "apps", file.to_string_lossy().into_owned(), entry.get("Path").map(|p| (*p).to_owned())));
+            if let Some(item) = parse_desktop_app(&file, &text, own_exe.as_deref()) { out.push(item); }
         }
     }
     sort_games(out)
@@ -109,10 +133,57 @@ fn scan_desktop_apps(home: &Path) -> Vec<ImportedGame> {
 pub fn scan_extra(source: &str, home: &Path) -> Vec<ImportedGame> {
     match source {
         "flatpak" => list_flatpaks().unwrap_or_default().into_iter().filter(|app| app.category == "Games")
-            .map(|app| make(format!("flatpak:{}", app.id), app.name, "flatpak", format!("flatpak://{}", app.id), None)).collect(),
+            .filter(|app| !classify::is_mochi(&[&app.id], &app.name, None, None, None) && !classify::is_non_game(&[&app.id], &app.name))
+            .map(|app| { let id = app.id.clone(); classify_item(make(format!("flatpak:{}", app.id), app.name, "flatpak", format!("flatpak://{}", app.id), None), &[&id]) }).collect(),
         "lutris" => scan_lutris(),
         "bottles" => scan_bottles(),
         "apps" => scan_desktop_apps(home),
         _ => Vec::new(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(file: &str, text: &str) -> Option<ImportedGame> { parse_desktop_app(Path::new(file), text, None) }
+
+    #[test]
+    fn mochi_desktop_entries_are_excluded() {
+        let entry = "[Desktop Entry]\nType=Application\nName=Mochi\nExec=mochi %U\nCategories=Game;\n";
+        assert!(parse("/usr/share/applications/mochi.desktop", entry).is_none());
+        assert!(parse("/usr/share/applications/dev.sidequestgames.Mochilauncher.desktop", entry).is_none());
+        // Renamed entry that still runs the Mochi binary.
+        let renamed = "[Desktop Entry]\nType=Application\nName=Games\nExec=/opt/mochi/mochi\nCategories=Game;\n";
+        let own = Path::new("/opt/mochi/mochi");
+        assert!(parse_desktop_app(Path::new("/x/games.desktop"), renamed, Some(own)).is_none());
+    }
+
+    #[test]
+    fn games_and_launchers_are_classified() {
+        let game = "[Desktop Entry]\nType=Application\nName=SuperTux\nExec=supertux2\nCategories=Game;ArcadeGame;\n";
+        let item = parse("/usr/share/applications/supertux.desktop", game).expect("game");
+        assert!(item.kind == super::super::ImportKind::Game);
+
+        let prism = "[Desktop Entry]\nType=Application\nName=Prism Launcher\nExec=prismlauncher\nCategories=Game;\n";
+        let item = parse("/usr/share/applications/org.prismlauncher.PrismLauncher.desktop", prism).expect("launcher");
+        assert!(item.kind == super::super::ImportKind::Launcher);
+        assert_eq!(item.launcher_id.as_deref(), Some("prism"));
+
+        // Launchers need no Game category.
+        let bottles = "[Desktop Entry]\nType=Application\nName=Bottles\nExec=bottles\nCategories=Utility;\n";
+        assert_eq!(parse("/x/com.usebottles.bottles.desktop", bottles).and_then(|i| i.launcher_id).as_deref(), Some("bottles"));
+    }
+
+    #[test]
+    fn steam_hidden_tools_and_non_games_are_dropped() {
+        let steam = "[Desktop Entry]\nType=Application\nName=Steam\nExec=/usr/bin/steam %U\nCategories=Game;\n";
+        assert!(parse("/usr/share/applications/steam.desktop", steam).is_none());
+        let hidden = "[Desktop Entry]\nType=Application\nName=Hidden Game\nExec=g\nCategories=Game;\nNoDisplay=true\n";
+        assert!(parse("/x/hidden.desktop", hidden).is_none());
+        let tool = "[Desktop Entry]\nType=Application\nName=Protontricks\nExec=protontricks --gui\nCategories=Game;Utility;\n";
+        assert!(parse("/x/protontricks.desktop", tool).is_none());
+        let utility = "[Desktop Entry]\nType=Application\nName=Calculator\nExec=calc\nCategories=Utility;\n";
+        assert!(parse("/x/calc.desktop", utility).is_none());
     }
 }
