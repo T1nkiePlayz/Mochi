@@ -273,11 +273,6 @@ fn process_snapshot_ids() -> HashSet<u32> {
     process_snapshot().keys().copied().collect()
 }
 
-#[cfg(not(target_os = "linux"))]
-fn process_snapshot_ids() -> HashSet<u32> {
-    HashSet::new()
-}
-
 #[cfg(target_os = "linux")]
 fn wait_for_game_process(target: &str, before: &HashSet<u32>) -> Option<u32> {
     let started = SystemTime::now();
