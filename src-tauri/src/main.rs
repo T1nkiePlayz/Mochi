@@ -14,6 +14,7 @@ mod process;
 mod sources;
 mod steam_store;
 mod themes;
+mod tracking;
 mod tray;
 
 #[derive(Deserialize)]

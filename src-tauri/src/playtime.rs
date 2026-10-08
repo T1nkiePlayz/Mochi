@@ -2,7 +2,8 @@
 
 use crate::{
     platform::Launched,
-    process::{self, ProcessInfo},
+    process,
+    tracking::Matcher,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -10,14 +11,23 @@ use std::{
     fs,
     io::Write,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex, OnceLock},
+    sync::{atomic::{AtomicU64, Ordering}, Arc, Mutex, OnceLock},
     thread,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tauri::{AppHandle, Emitter};
 
 pub const SESSIONS_CHANGED_EVENT: &str = "game-sessions-changed";
-const FIND_TIMEOUT_SECONDS: u64 = 120;
+/// How long to wait for a game to appear after handing it to a launcher (Steam may update it first).
+const FIND_TIMEOUT_STEAM_SECONDS: u64 = 600;
+const FIND_TIMEOUT_SECONDS: u64 = 180;
+/// After the process we started exits, how long to look for the real game it may have started elsewhere.
+const HANDOFF_GRACE_SECONDS: u64 = 10;
+/// A game must be gone this long before the session ends, so launchers that restart it or
+/// swap one process for another do not split a session in two.
+const LINGER_SECONDS: u64 = 12;
+const POLL: Duration = Duration::from_secs(3);
+const ENVIRONMENT_CHECKS: u8 = 3;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -85,18 +95,52 @@ pub struct ActiveSessionInfo {
 }
 
 /// How a running game is recognised once it has been launched.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 enum Tracker {
     /// The game leads the process group Mochi created for it.
     Group(u32),
-    /// A single process found after a launcher hand-off.
-    Pid(u32),
-    /// Any process whose command line contains this normalised text.
-    Path(String),
+    /// The game was handed to another launcher; find it again by what identifies it.
+    Watch(Arc<Watcher>),
 }
 
-#[derive(Debug, Clone)]
+/// Finds the processes of a game that Mochi did not start itself (Steam, Heroic, `open`, ...).
+struct Watcher {
+    matcher: Matcher,
+    /// Processes that already existed at launch; only newer ones have their environment read.
+    before: HashSet<u32>,
+    /// (pid, start time) -> (matched, times checked). A process is re-checked a few times because
+    /// its environment is only final once it has exec'd.
+    environment: Mutex<HashMap<(u32, u64), (bool, u8)>>,
+}
+
+impl Watcher {
+    fn new(matcher: Matcher, before: HashSet<u32>) -> Self {
+        Watcher { matcher, before, environment: Mutex::new(HashMap::new()) }
+    }
+
+    /// Pids currently belonging to the game. One process-table snapshot; environments are read
+    /// only for new processes that the command line did not already settle.
+    fn pids(&self) -> Vec<u32> {
+        let table = process::snapshot();
+        let Ok(mut cache) = self.environment.lock() else { return Vec::new() };
+        cache.retain(|(pid, start), _| table.get(pid).is_some_and(|info| info.start_time == *start));
+        let matcher = &self.matcher;
+        let found = matcher.select(&table, std::process::id(), &|info| !self.before.contains(&info.pid), &mut |info| {
+            let entry = cache.entry((info.pid, info.start_time)).or_insert((false, 0));
+            if !entry.0 && entry.1 < ENVIRONMENT_CHECKS {
+                entry.1 += 1;
+                entry.0 = process::environment(info.pid).is_some_and(|text| matcher.environment_matches(&text));
+            }
+            entry.0
+        });
+        found.into_iter().collect()
+    }
+}
+
+#[derive(Clone)]
 struct ActiveSession {
+    /// Tells a session apart from a later one of the same game, so a stale monitor never ends the new one.
+    token: u64,
     name: String,
     started_at: SystemTime,
     tracker: Option<Tracker>,
@@ -120,6 +164,7 @@ pub struct StartRequest {
     pub install_path: Option<String>,
 }
 
+static NEXT_TOKEN: AtomicU64 = AtomicU64::new(1);
 static STATE: OnceLock<Arc<Mutex<TrackerState>>> = OnceLock::new();
 
 fn state() -> Arc<Mutex<TrackerState>> {
@@ -365,7 +410,8 @@ pub fn active() -> Result<Vec<ActiveSessionInfo>, String> {
         guard.active.iter().map(|(game_id, session)| ActiveSessionInfo {
             game_id: game_id.clone(),
             started_at: session.started_at.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs(),
-            can_stop: session.tracker.is_some(),
+            // A game that has not been detected yet can still be cancelled.
+            can_stop: true,
         }).collect()
     })
 }
@@ -382,9 +428,11 @@ pub fn start(app: AppHandle, request: StartRequest, launch: impl FnOnce() -> Res
     }
     let before: HashSet<u32> = process::snapshot().keys().copied().collect();
     let launched = launch()?;
+    let token = NEXT_TOKEN.fetch_add(1, Ordering::Relaxed);
 
     lock(&shared, |guard| {
         guard.active.insert(request.game_id.clone(), ActiveSession {
+            token,
             name: request.name.clone(),
             started_at: SystemTime::now(),
             tracker: launched.direct_pid.map(Tracker::Group),
@@ -401,94 +449,89 @@ pub fn start(app: AppHandle, request: StartRequest, launch: impl FnOnce() -> Res
     })?;
 
     notify(&app);
-    thread::spawn(move || monitor(app, request, before, launched));
+    thread::spawn(move || monitor(app, request, token, before, launched));
     Ok(())
 }
 
-fn normalise(text: &str) -> String {
-    text.to_lowercase().replace('\\', "/")
+/// True while this very session (not a later one of the same game) is still running.
+fn is_active(game_id: &str, token: u64) -> bool {
+    lock(&state(), |guard| guard.active.get(game_id).is_some_and(|session| session.token == token)).unwrap_or(false)
 }
 
-fn is_launcher_process(info: &ProcessInfo) -> bool {
-    let command = info.cmdline.to_lowercase();
-    ["steamwebhelper", "bwrap", "pressure-vessel", "xdg-open", "gio launch", "sh -c", "bash -c", "python3 -c", "node -e", "/usr/bin/open"]
-        .iter()
-        .any(|value| command.contains(value))
-}
-
-/// Picks how to follow a game that was handed to another launcher.
-fn handoff_tracker(request: &StartRequest) -> Option<String> {
-    let target = request.target.trim_end_matches('/');
-    if target.ends_with(".app") { return Some(normalise(target)); }
-    if let Some(id) = target.strip_prefix("flatpak://") { return Some(normalise(id)); }
-    request.install_path.as_deref().map(str::trim).filter(|path| path.len() > 3).map(|path| normalise(path.trim_end_matches('/')))
-}
-
-fn path_processes(needle: &str) -> Vec<u32> {
-    let own = std::process::id();
-    process::snapshot().values().filter(|p| p.pid != own && normalise(&p.cmdline).contains(needle)).map(|p| p.pid).collect()
-}
-
-fn tracker_alive(tracker: &Tracker) -> bool {
-    match tracker {
-        Tracker::Group(pgid) => process::group_alive(*pgid),
-        Tracker::Pid(pid) => process::tree_alive(*pid),
-        Tracker::Path(needle) => !path_processes(needle).is_empty(),
-    }
-}
-
-fn set_tracker(game_id: &str, tracker: Tracker) {
+fn set_tracker(game_id: &str, token: u64, tracker: Tracker) {
     let _ = lock(&state(), |guard| {
-        if let Some(session) = guard.active.get_mut(game_id) { session.tracker = Some(tracker); }
+        if let Some(session) = guard.active.get_mut(game_id).filter(|session| session.token == token) { session.tracker = Some(tracker); }
     });
 }
 
-fn find_tracker(request: &StartRequest, before: &HashSet<u32>) -> Option<Tracker> {
-    let needle = handoff_tracker(request);
-    let started = std::time::Instant::now();
-    while started.elapsed() < Duration::from_secs(FIND_TIMEOUT_SECONDS) {
-        thread::sleep(Duration::from_secs(1));
-        if !lock(&state(), |guard| guard.active.contains_key(&request.game_id)).unwrap_or(false) { return None; }
-        if let Some(needle) = &needle {
-            if !path_processes(needle).is_empty() { return Some(Tracker::Path(needle.clone())); }
-        } else {
-            // No install path to match: fall back to the newest non-launcher process.
-            let snapshot = process::snapshot();
-            let candidate = snapshot.values().filter(|p| !before.contains(&p.pid) && !is_launcher_process(p)).min_by_key(|p| p.start_time);
-            if let Some(process) = candidate { return Some(Tracker::Pid(process.pid)); }
-        }
+/// Polls until the game shows up (true), the timeout passes, or the session is cancelled.
+fn wait_for_game(game_id: &str, token: u64, watcher: &Watcher, timeout: Duration) -> bool {
+    let started = Instant::now();
+    loop {
+        if !is_active(game_id, token) { return false; }
+        if !watcher.pids().is_empty() { return true; }
+        if started.elapsed() >= timeout { return false; }
+        // Look quickly at first, then back off while a launcher updates or installs.
+        thread::sleep(if started.elapsed() < Duration::from_secs(30) { Duration::from_secs(1) } else { POLL });
     }
-    None
 }
 
-fn monitor(app: AppHandle, request: StartRequest, before: HashSet<u32>, launched: Launched) {
-    let tracker = match launched.direct_pid {
-        Some(pid) => Some(Tracker::Group(pid)),
-        None => find_tracker(&request, &before),
-    };
-    let credited = match tracker {
-        Some(tracker) => {
-            set_tracker(&request.game_id, tracker.clone());
-            notify(&app);
-            // Hold on briefly so a launcher that restarts the game is not cut short.
-            while tracker_alive(&tracker) && lock(&state(), |guard| guard.active.contains_key(&request.game_id)).unwrap_or(false) {
-                thread::sleep(Duration::from_secs(3));
+fn monitor(app: AppHandle, request: StartRequest, token: u64, before: HashSet<u32>, launched: Launched) {
+    let id = request.game_id.as_str();
+    let watcher = Matcher::new(&request.target, request.install_path.as_deref()).map(|matcher| (matcher.has_steam_id(), Arc::new(Watcher::new(matcher, before))));
+    // Seconds at the end of the session during which nothing was running.
+    let mut idle_tail = 0;
+    let mut credit = false;
+    let mut watching: Option<Arc<Watcher>> = None;
+
+    match (launched.direct_pid, watcher) {
+        (Some(pgid), watcher) => {
+            credit = true;
+            while process::group_alive(pgid) && is_active(id, token) {
+                thread::sleep(POLL);
                 heartbeat();
             }
-            true
+            // A launcher script may exit after starting the real game outside its process group.
+            if let Some((_, watcher)) = watcher.filter(|_| is_active(id, token)) {
+                let waited = Instant::now();
+                if wait_for_game(id, token, &watcher, Duration::from_secs(HANDOFF_GRACE_SECONDS)) { watching = Some(watcher); } else { idle_tail = waited.elapsed().as_secs(); }
+            }
         }
-        // The game never showed up (cancelled in the launcher, crashed, ...): don't invent playtime.
-        None => false,
-    };
-    let _ = finish(&request.game_id, credited);
+        (None, Some((steam, watcher))) => {
+            let timeout = Duration::from_secs(if steam { FIND_TIMEOUT_STEAM_SECONDS } else { FIND_TIMEOUT_SECONDS });
+            if wait_for_game(id, token, &watcher, timeout) { watching = Some(watcher); credit = true; }
+        }
+        // Nothing identifies the game, so Mochi cannot know when it ends; do not invent playtime.
+        (None, None) => {}
+    }
+
+    if let Some(watcher) = watching {
+        credit = true;
+        set_tracker(id, token, Tracker::Watch(watcher.clone()));
+        notify(&app);
+        let mut gone_since: Option<Instant> = None;
+        while is_active(id, token) {
+            if watcher.pids().is_empty() {
+                let since = *gone_since.get_or_insert_with(Instant::now);
+                if since.elapsed() >= Duration::from_secs(LINGER_SECONDS) { idle_tail = since.elapsed().as_secs(); break; }
+            } else {
+                gone_since = None;
+            }
+            thread::sleep(POLL);
+            heartbeat();
+        }
+    }
+    let _ = finish(id, Some(token), credit, idle_tail);
     notify(&app);
 }
 
-fn finish(game_id: &str, credit: bool) -> Result<(), String> {
+/// Ends a session. `idle_tail` seconds at the end (spent confirming the game had gone) are not credited.
+fn finish(game_id: &str, token: Option<u64>, credit: bool, idle_tail: u64) -> Result<(), String> {
     lock(&state(), |guard| {
+        if token.is_some_and(|token| guard.active.get(game_id).is_none_or(|session| session.token != token)) { return Ok(()); }
         let Some(session) = guard.active.remove(game_id) else { return Ok(()) };
         if credit {
-            let elapsed = seconds_since(session.started_at);
+            let elapsed = seconds_since(session.started_at).saturating_sub(idle_tail);
             let entry = guard.games.entry(game_id.to_string()).or_insert_with(|| PlaytimeEntry {
                 game_id: game_id.to_string(), name: session.name.clone(), seconds: 0, last_played: 0,
             });
@@ -496,7 +539,7 @@ fn finish(game_id: &str, credit: bool) -> Result<(), String> {
             entry.seconds = entry.seconds.saturating_add(elapsed);
             entry.last_played = now_seconds();
             if elapsed >= MIN_RECORDED_SECONDS {
-                let start = now_seconds().saturating_sub(elapsed);
+                let start = session.started_at.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
                 let record = Session { game_id: game_id.to_string(), name: entry.name.clone(), start, seconds: elapsed, kind: SessionKind::Session, count: 1 };
                 if let Some(path) = &guard.history_path {
                     if let Err(error) = append_history(path, &record) { eprintln!("{error}"); }
@@ -509,15 +552,15 @@ fn finish(game_id: &str, credit: bool) -> Result<(), String> {
     })?
 }
 
-/// Asks a running game to quit (then force-kills it if it will not).
+/// Asks a running game to quit (then force-kills it if it will not). A game Mochi has not
+/// detected yet is simply cancelled, without crediting any time.
 pub fn stop(game_id: &str) -> Result<(), String> {
     let tracker = lock(&state(), |guard| guard.active.get(game_id).map(|session| session.tracker.clone()))?
-        .ok_or("This game is not running.")?
-        .ok_or("Mochi cannot stop this game yet because it has not been detected. Close it from its own launcher.")?;
+        .ok_or("This game is not running.")?;
     match tracker {
-        Tracker::Group(pgid) => process::terminate(pgid, true),
-        Tracker::Pid(pid) => process::terminate(pid, false),
-        Tracker::Path(needle) => path_processes(&needle).into_iter().for_each(|pid| process::terminate(pid, false)),
+        Some(Tracker::Group(pgid)) => process::terminate(pgid, true),
+        Some(Tracker::Watch(watcher)) => watcher.pids().into_iter().for_each(|pid| process::terminate(pid, false)),
+        None => finish(game_id, None, false, 0)?,
     }
     Ok(())
 }
@@ -525,7 +568,7 @@ pub fn stop(game_id: &str) -> Result<(), String> {
 /// Credits every still-running session; called when Mochi exits.
 pub fn finish_all() {
     let ids: Vec<String> = lock(&state(), |guard| guard.active.keys().cloned().collect()).unwrap_or_default();
-    for id in ids { let _ = finish(&id, true); }
+    for id in ids { let _ = finish(&id, None, true, 0); }
 }
 
 #[cfg(test)]
@@ -637,5 +680,21 @@ mod tests {
         let sessions = [session("a", 100, 50), session("a", 1000, 50)];
         let kept: Vec<_> = sessions.iter().filter(|s| s.start + s.seconds >= 160).collect();
         assert_eq!(kept.len(), 1);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn watcher_finds_a_real_process_by_environment_and_by_path() {
+        let mut child = std::process::Command::new("sleep").arg("30").env("SteamAppId", "424242").spawn().expect("sleep");
+        let watcher = Watcher::new(Matcher::new("steam://rungameid/424242", None).unwrap(), HashSet::new());
+        assert!(watcher.pids().contains(&child.id()));
+        // A process that existed before the launch is not inspected through its environment.
+        let before = Watcher::new(Matcher::new("steam://rungameid/424242", None).unwrap(), HashSet::from([child.id()]));
+        assert!(!before.pids().contains(&child.id()));
+        let other = Watcher::new(Matcher::new("steam://rungameid/424243", None).unwrap(), HashSet::new());
+        assert!(!other.pids().contains(&child.id()));
+        let _ = child.kill();
+        let _ = child.wait();
+        assert!(!watcher.pids().contains(&child.id()));
     }
 }
