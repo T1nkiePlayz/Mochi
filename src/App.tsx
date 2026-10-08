@@ -12,6 +12,8 @@ import { Sidebar } from "./components/layout/Sidebar";
 import { Topbar } from "./components/layout/Topbar";
 import { LibraryView } from "./views/LibraryView";
 import { AppProvider, useApp } from "./state/AppContext";
+import { BigPictureGate } from "./bigpicture/BigPictureGate";
+import { ControllerRuntime } from "./controller/ControllerRuntime";
 import { Cloud } from "lucide-react";
 import { OfflineBanner } from "./components/OfflineBanner";
 
@@ -88,5 +90,5 @@ function Shell() {
 }
 
 export default function App() {
-  return <AppProvider><Shell /></AppProvider>;
+  return <AppProvider><ControllerRuntime /><BigPictureGate><Shell /></BigPictureGate></AppProvider>;
 }

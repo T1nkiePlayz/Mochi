@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { supabase } from "../lib/supabase";
 import { lookupIgdbGames, type IgdbGame } from "../lib/igdb";
 import { importedGameToPiko } from "../lib/importMapping";
-import { applyIgdbMetadata } from "../lib/metadata";
+import { applyIgdbMetadata, sanitizeKey } from "../lib/metadata";
 import { cacheArtwork } from "./useMetadata";
 import { saveCustomArtwork } from "../lib/artwork";
 import type { ArtworkSelection } from "../components/artwork/ArtworkPicker";

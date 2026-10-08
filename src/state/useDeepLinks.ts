@@ -3,6 +3,7 @@ import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { supabase } from "../lib/supabase";
 import { verifyEmailToken } from "../lib/auth";
 import type { AccountState } from "./useAccount";
+import { enterBigPicture } from "../bigpicture/mode";
 
 /** Handles mochi://launch/<id> and the mochi://auth/* sign-in links. */
 export function useDeepLinks(account: AccountState, launchFromLink: (gameId: string) => void) {
@@ -20,6 +21,7 @@ export function useDeepLinks(account: AccountState, launchFromLink: (gameId: str
     const handle = (urls: string[]) => {
       for (const url of urls) {
         const parsed = parse(url);
+        if (parsed?.protocol === "mochi:" && parsed.hostname === "bigpicture") { enterBigPicture(); return; }
         if (parsed?.protocol === "mochi:" && parsed.hostname === "launch") {
           const gameId = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
           if (gameId) launchRef.current(gameId);
