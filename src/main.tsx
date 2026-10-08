@@ -5,6 +5,8 @@ import "./styles/tokens.css";
 import "./index.css";
 import "./styles/bridge.css";
 import "./styles/components.css";
+// Feature stylesheets load last, in file-name order.
+import.meta.glob("./styles/features/*.css", { eager: true });
 
 async function start() {
   if (import.meta.env.DEV) (await import("./devMock")).installDevMock();
