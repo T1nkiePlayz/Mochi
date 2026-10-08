@@ -1,67 +1,40 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Piko, Tofu } from "../models";
 
+const PIKO_COLUMNS = "local_id, name, description, accent, artwork, artwork_url, executable_path, source, source_id, platform_category, igdb_id, categories, screenshots, trailer_id, first_release_date";
+
 type PikoRow = {
-  id: string;
   local_id: string;
   name: string;
   description: string;
   accent: string;
   artwork: string | null;
+  artwork_url: string | null;
   executable_path: string | null;
   source: "built-in" | "custom";
-  categories: string[] | null;
   source_id: Piko["sourceId"] | null;
   platform_category: string | null;
   igdb_id: number | null;
-  artwork_url: string | null;
+  categories: string[] | null;
   screenshots: string[] | null;
   trailer_id: string | null;
   first_release_date: number | null;
+  tofus: Array<{ local_id: string; name: string; version: string; runtime: string; mods_count: number; status: Tofu["status"] }> | null;
 };
 
-type TofuRow = {
-  piko_id: string;
-  local_id: string;
-  name: string;
-  version: string;
-  runtime: string;
-  mods_count: number;
-  status: Tofu["status"];
-};
+const defaultTofu = (): Tofu => ({ id: "default", name: "Default", version: "Local", runtime: "Native", mods: 0, status: "Ready" });
 
+/** Reads the whole cloud library, Tofus included, in a single request. */
 export async function pullLibrary(client: SupabaseClient, userId: string): Promise<Piko[]> {
-  const { data: pikoRows, error: pikoError } = await client
+  const { data, error } = await client
     .from("pikos")
-    .select("id, local_id, name, description, accent, artwork, artwork_url, executable_path, source, source_id, platform_category, igdb_id, categories, screenshots, trailer_id, first_release_date")
+    .select(`${PIKO_COLUMNS}, tofus(local_id, name, version, runtime, mods_count, status)`)
     .eq("user_id", userId)
-    .order("created_at");
-  if (pikoError) throw pikoError;
-  if (!pikoRows?.length) return [];
+    .order("created_at")
+    .order("created_at", { referencedTable: "tofus" });
+  if (error) throw error;
 
-  const pikoIds = pikoRows.map((piko) => piko.id);
-  const { data: tofuRows, error: tofuError } = await client
-    .from("tofus")
-    .select("piko_id, local_id, name, version, runtime, mods_count, status")
-    .in("piko_id", pikoIds)
-    .order("created_at");
-  if (tofuError) throw tofuError;
-
-  const tofusByPiko = new Map<string, Tofu[]>();
-  for (const tofu of (tofuRows ?? []) as TofuRow[]) {
-    const current = tofusByPiko.get(tofu.piko_id) ?? [];
-    current.push({
-      id: tofu.local_id,
-      name: tofu.name,
-      version: tofu.version,
-      runtime: tofu.runtime,
-      mods: tofu.mods_count,
-      status: tofu.status,
-    });
-    tofusByPiko.set(tofu.piko_id, current);
-  }
-
-  return (pikoRows as PikoRow[]).map((piko) => ({
+  return ((data ?? []) as unknown as PikoRow[]).map((piko) => ({
     id: piko.local_id,
     name: piko.name,
     description: piko.description,
@@ -78,81 +51,39 @@ export async function pullLibrary(client: SupabaseClient, userId: string): Promi
     trailerId: piko.trailer_id ?? undefined,
     firstReleaseDate: piko.first_release_date ?? undefined,
     // The UI assumes every Piko has at least one Tofu, so never hand it an empty list.
-    tofus: tofusByPiko.get(piko.id) ?? [{ id: "default", name: "Default", version: "Local", runtime: "Native", mods: 0, status: "Ready" as const }],
+    tofus: piko.tofus?.length
+      ? piko.tofus.map((tofu) => ({ id: tofu.local_id, name: tofu.name, version: tofu.version, runtime: tofu.runtime, mods: tofu.mods_count, status: tofu.status }))
+      : [defaultTofu()],
   }));
 }
 
-export async function pushLibrary(client: SupabaseClient, userId: string, library: Piko[]) {
-  if (!library.length) {
-    const { error } = await client.from("pikos").delete().eq("user_id", userId);
-    if (error) throw error;
-    return;
-  }
+const clamp = (value: string | undefined, max: number) => (value && value.length > max ? value.slice(0, max) : value);
 
-  const { data: pikoRows, error: pikoError } = await client
-    .from("pikos")
-    .upsert(
-      library.map((piko) => ({
-        user_id: userId,
-        local_id: piko.id,
-        name: piko.name,
-        description: piko.description,
-        accent: piko.accent,
-        artwork: piko.artwork,
-        artwork_url: piko.artworkUrl ?? null,
-        executable_path: piko.executablePath ?? null,
-        source: piko.source ?? "built-in",
-        source_id: piko.sourceId ?? null,
-        platform_category: piko.platformCategory ?? null,
-        igdb_id: piko.igdbId ?? null,
-        categories: piko.categories ?? [],
-        screenshots: piko.screenshots ?? [],
-        trailer_id: piko.trailerId ?? null,
-        first_release_date: piko.firstReleaseDate ?? null,
-      })),
-      { onConflict: "user_id,local_id" },
-    )
-    .select("id, local_id");
-  if (pikoError) throw pikoError;
-
-  const cloudIds = new Map((pikoRows ?? []).map((piko) => [piko.local_id, piko.id]));
-  const tofuRows = library.flatMap((piko) =>
-    piko.tofus.map((tofu) => ({
-      piko_id: cloudIds.get(piko.id),
-      local_id: tofu.id,
-      name: tofu.name,
-      version: tofu.version,
-      runtime: tofu.runtime,
-      mods_count: tofu.mods,
-      status: tofu.status,
+/** Replaces the cloud library with `library` in one transaction on the server. */
+export async function pushLibrary(client: SupabaseClient, library: Piko[]) {
+  const payload = library.map((piko) => ({
+    local_id: piko.id,
+    name: clamp(piko.name, 300),
+    description: clamp(piko.description, 20000),
+    accent: piko.accent,
+    artwork: piko.artwork && piko.artwork.length <= 8192 ? piko.artwork : null,
+    artwork_url: piko.artworkUrl ?? null,
+    executable_path: clamp(piko.executablePath, 4096) ?? null,
+    source: piko.source ?? "built-in",
+    source_id: piko.sourceId ?? null,
+    platform_category: piko.platformCategory ?? null,
+    igdb_id: piko.igdbId ?? null,
+    categories: (piko.categories ?? []).slice(0, 60),
+    screenshots: (piko.screenshots ?? []).slice(0, 30),
+    trailer_id: piko.trailerId ?? null,
+    first_release_date: piko.firstReleaseDate ?? null,
+    tofus: piko.tofus.map((tofu) => ({
+      local_id: tofu.id, name: clamp(tofu.name, 200), version: clamp(tofu.version, 100), runtime: clamp(tofu.runtime, 100),
+      mods_count: Math.max(0, tofu.mods), status: tofu.status,
     })),
-  );
-  const { error: deletePikosError } = await client
-    .from("pikos")
-    .delete()
-    .eq("user_id", userId)
-    .not("local_id", "in", `(${library.map((piko) => `"${piko.id.replace(/"/g, '""')}"`).join(",") || '""'})`);
-  if (deletePikosError) throw deletePikosError;
-
-  // Stale Tofus are removed even when no Tofus remain locally, otherwise deleting
-  // the last one would leave it behind in the cloud forever.
-  for (const piko of library) {
-    const cloudPikoId = cloudIds.get(piko.id);
-    if (!cloudPikoId) continue;
-    const localIds = piko.tofus.map((tofu) => tofu.id);
-    const { error: staleTofusError } = await client
-      .from("tofus")
-      .delete()
-      .eq("piko_id", cloudPikoId)
-      .not("local_id", "in", `(${localIds.map((id) => `"${id.replace(/"/g, '""')}"`).join(",") || '""'})`);
-    if (staleTofusError) throw staleTofusError;
-  }
-
-  if (!tofuRows.length) return;
-  const { error: tofuError } = await client
-    .from("tofus")
-    .upsert(tofuRows, { onConflict: "piko_id,local_id" });
-  if (tofuError) throw tofuError;
+  }));
+  const { error } = await client.rpc("sync_my_library", { library: payload });
+  if (error) throw error;
 }
 
 export type ClearedCloudData = {

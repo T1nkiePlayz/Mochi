@@ -138,6 +138,25 @@ Mochi also has an **experimental Nexus Mods integration** for supported accounts
 
 Nexus Mods credentials are handled through the provider-credential backend boundary; the API key is not returned to the launcher. Nexus discovery remains experimental while the integration and game coverage mature.
 
+### Tofu management
+
+Every Piko can have several Tofus. **Manage** opens a Tofu manager where you can create, rename, duplicate and delete Tofus, point each at its own content folder, and give each its own launch settings. Launching a game always uses the selected Tofu's settings, and a Tofu's mod count reflects what is actually installed in its folder.
+
+### Runtime management
+
+Each Tofu stores how its game is started: a compatibility runtime, launch wrappers, command-line arguments, environment variables and a working directory. Mochi detects what is installed:
+
+- **Linux:** Wine, every Proton build under Steam (`compatibilitytools.d` and `steamapps/common`), and the GameMode and MangoHud wrappers. Windows programs run in a per-Tofu prefix under Mochi's data directory.
+- **macOS:** CrossOver and Whisky, used to open Windows programs.
+
+### Game process management
+
+Mochi follows launched games: the Play button turns into **Stop** while a game runs, library cards show *Running now*, and playtime is credited when the game exits (or when Mochi quits). Games Mochi starts directly are tracked through their process group; games handed to another launcher (Steam, Heroic, ...) are followed by their install folder. Stop asks the game to quit and force-closes it if it does not.
+
+### Mod and profile management
+
+The Tofu workspace installs mods, resource packs and shaders from Modrinth, enables, disables and deletes them, and shows downloads as they finish. **Profiles** save which mods are enabled and switch between sets in one click. **Updates** identifies installed files on Modrinth by hash and updates them in place (a disabled mod stays disabled).
+
 ### Native file and folder selection
 
 Adding a file-based game uses the Tauri native file dialog. The import flow also uses a native folder picker when a source needs a manually supplied library path.
@@ -145,6 +164,10 @@ Adding a file-based game uses the Tauri native file dialog. The import flow also
 ### Steam library and shortcut import
 
 On Linux, Mochi imports installed Steam games from Steam library manifests and also discovers **non-Steam games added to Steam as shortcuts**. Non-Steam shortcuts remain Steam-owned launch targets, so Mochi starts them through Steam instead of bypassing Steam's launch context.
+
+### Linux desktop integration
+
+Beyond launching, Mochi integrates with the Linux desktop: it registers the `mochi://` URL scheme, installs a managed AppImage copy so desktop and autostart entries survive moves, can add any game to the **application menu** (a `.desktop` shortcut that opens `mochi://launch/<id>`), opens game folders in the file manager, imports games from the **Desktop applications** source (anything in your menu categorised as a Game), and reads Flatpak metadata without spawning a process per application.
 
 ### Flatpak discovery
 
@@ -230,6 +253,9 @@ The current launch layer recognises several target types:
 | .py | Runs the script through python3 |
 | .js | Runs the script through node |
 | macOS `.app` | Opens the application bundle through macOS |
+| `.exe` / `.bat` | Runs through the Tofu's compatibility runtime (Wine/Proton on Linux, CrossOver/Whisky on macOS) |
+| `steam://`, `heroic://`, `lutris:`, `bottles:`, `itch://` | Handed to the owning launcher |
+| `mochi://launch/<id>` | Starts a library game from outside Mochi (used by application-menu shortcuts) |
 | Custom | Preserves a supported custom launch target |
 
 The exact capabilities are reported by the native platform adapter. Platform-specific values such as launch methods, application-bundle support, startup support, notifications, and native paths are kept inside the relevant adapter rather than being hard-coded in shared UI code.
@@ -368,13 +394,13 @@ The Linux implementation currently has the strongest native integration, includi
 
 ### macOS
 
-macOS has a dedicated native platform adapter and now supports `.app` bundle selection/launching, native executables and scripts, source discovery for supported local launchers, process tracking for playtime, launch-at-login through LaunchAgents, native URL opening, desktop notifications, and static `mochi://` deep-link registration. The Tauri configuration also defines a macOS-specific minimum system version and hardened runtime settings.
+macOS has a dedicated native platform adapter and supports `.app` bundle selection/launching, native executables and scripts, source discovery for supported local launchers, process tracking for playtime, launch-at-login through LaunchAgents, native URL opening, desktop notifications, and static `mochi://` deep-link registration. The Tauri configuration also defines a macOS-specific minimum system version and hardened runtime settings.
 
-The application is validated in CI on both Intel and Apple-silicon macOS runners. Public distribution still needs Apple signing and notarization before it should be considered a release-ready macOS build.
+The application is validated in CI on both Intel and Apple-silicon macOS runners. The release workflow builds DMGs for both architectures and signs and notarizes them when these repository secrets exist: `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD` and `APPLE_TEAM_ID`. Without them the DMGs are produced unsigned.
 
-### Windows
+macOS also discovers games from your Applications folders (apps categorised as games), supports Steam, Heroic and itch.io libraries, and handles the Dock icon reopening a window hidden to the menu bar.
 
-Windows is intentionally outside the current development scope. Mochi is being developed Linux-first, with macOS isolated as the secondary platform target.
+Mochi supports Linux and macOS only.
 
 ## Technology stack
 
@@ -401,6 +427,8 @@ Windows is intentionally outside the current development scope. Mochi is being d
     │       ├── platform/     # OS-specific native behavior
     │       └── sources/      # Game-source discovery and import adapters
     │
+    ├── packaging/            # Arch PKGBUILD and desktop entry
+    ├── scripts/              # Release tooling
     ├── docs/                 # Architecture and project documentation
     ├── supabase/             # Database migrations/backend definitions
     ├── public/               # Static assets, including the Mochi logo
@@ -503,14 +531,12 @@ Current limitations include:
 - Source scanners depend on the source launcher's local configuration format or CLI and may require compatibility work as those launchers evolve.
 - Some source scanners depend on the source launcher's local configuration format or CLI and may require future compatibility work as those launchers evolve.
 - Manual library-path scanning is currently most complete for Steam; source-specific path semantics for the other integrations will continue to mature.
-- Tofu management is early-stage.
-- Game process lifecycle management is not complete.
-- Runtime management is not yet a complete system.
-- Mod and profile management is planned.
+- Mod profiles and update checks are built around Modrinth; Nexus Mods content is link-out only.
+- Games handed to another launcher can only be stopped once Mochi detects them (they need a known install folder).
+- Runtimes are detected, not installed: Mochi does not download Wine, Proton or CrossOver for you.
 - Synced paths may not work on another machine.
 - Linux has the strongest platform integration.
 - macOS public release packaging still requires signing and notarization.
-- Windows is not currently a development target.
 - Cloud synchronization is metadata-only.
 - APIs, storage formats, and UI behavior may change before a stable release.
 
@@ -549,14 +575,14 @@ The roadmap is intentionally evolutionary rather than a promise of fixed release
 - [x] Modrinth community content discovery with project details and Tofu installation
 - [x] Experimental Nexus Mods game discovery and trending-mod tabs
 - [x] Live Nexus Mods game search and persistent custom Discovery tabs
-- [ ] Full Tofu management
-- [ ] Game process management
-- [ ] Runtime management
-- [ ] Mod and profile management
-- [ ] More Linux desktop integrations
+- [x] Full Tofu management
+- [x] Game process management
+- [x] Runtime management
+- [x] Mod and profile management
+- [x] More Linux desktop integrations
 - [x] Expanded modular macOS platform support
-- [ ] Linux distribution packages
-- [ ] macOS signed/notarized release packages
+- [x] Linux distribution packages (AppImage, DEB, RPM and an Arch `PKGBUILD`)
+- [ ] macOS signed/notarized release packages (the release workflow signs and notarizes once Apple credentials are added as repository secrets)
 - [ ] Stable release
 
 ## Related projects

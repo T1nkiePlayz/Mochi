@@ -11,8 +11,6 @@ src-tauri/target/
 *.deb
 *.rpm
 *.dmg
-*.msi
-*.exe
 
 # OS/editor files
 .DS_Store

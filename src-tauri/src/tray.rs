@@ -31,7 +31,7 @@ pub fn build_menu(app: &tauri::AppHandle) -> Result<Menu<tauri::Wry>, tauri::Err
     } else {
         for (index, game) in games.into_iter().take(5).enumerate() {
             let label = format!("{}. {} — {}", index + 1, game.name, format_playtime(game.seconds));
-            let item = MenuItem::with_id(app, &format!("tray-game-{}", index + 1), label, false, None::<&str>)?;
+            let item = MenuItem::with_id(app, format!("tray-game-{}", index + 1), label, false, None::<&str>)?;
             builder = builder.item(&item);
         }
     }

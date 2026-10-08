@@ -133,12 +133,24 @@ export async function getDownloads(): Promise<Array<{
   return invoke("get_downloads");
 }
 
-export async function downloadModrinthFile(url: string, path: string): Promise<void> {
-  await invoke("download_modrinth_file", { url, path });
-}
 export async function setModFileEnabled(path: string, enabled: boolean): Promise<void> {
   await invoke("set_mod_file_enabled", { path, enabled });
 }
 export async function deleteModFile(path: string): Promise<void> {
   await invoke("delete_mod_file", { path });
+}
+export async function applyModProfile(path: string, enabledFiles: string[]): Promise<void> {
+  await invoke("apply_mod_profile", { path, enabledFiles });
+}
+
+export type ModUpdate = { versionId: string; versionNumber: string; filename: string; url: string; size: number };
+export type ModAnalysis = {
+  filename: string; path: string; enabled: boolean; projectId: string; title: string;
+  iconUrl?: string; currentVersion: string; update?: ModUpdate;
+};
+export async function analyzeModFiles(path: string, gameVersion?: string, loader?: string): Promise<ModAnalysis[]> {
+  return invoke<ModAnalysis[]>("analyze_mod_files", { path, gameVersion: gameVersion || null, loader: loader || null });
+}
+export async function updateModFile(path: string, update: ModUpdate): Promise<void> {
+  await invoke("update_mod_file", { path, url: update.url, filename: update.filename });
 }

@@ -44,6 +44,8 @@ jobs:
           cache: npm
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
       - name: Cache Rust
         uses: swatinem/rust-cache@v2
         with:
@@ -54,6 +56,10 @@ jobs:
         run: npm run build
       - name: Check Tauri backend
         run: cargo check --manifest-path src-tauri/Cargo.toml
+      - name: Lint Tauri backend
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+      - name: Test Tauri backend
+        run: cargo test --manifest-path src-tauri/Cargo.toml
 
   macos:
     name: macOS backend (${{ matrix.os }})
@@ -69,6 +75,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
       - name: Cache Rust
         uses: swatinem/rust-cache@v2
         with:
@@ -81,3 +89,11 @@ jobs:
         env:
           CARGO_PROFILE_DEV_DEBUG: "0"
         run: cargo check --manifest-path src-tauri/Cargo.toml
+      - name: Lint Tauri backend
+        env:
+          CARGO_PROFILE_DEV_DEBUG: "0"
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml
+      - name: Test Tauri backend
+        env:
+          CARGO_PROFILE_DEV_DEBUG: "0"
+        run: cargo test --manifest-path src-tauri/Cargo.toml

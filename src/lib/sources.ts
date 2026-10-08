@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { ImportSourceId } from "../models";
 
-export type ImportSourceId = "flatpak" | "heroic" | "steam" | "lutris" | "bottles" | "itch";
+export type { ImportSourceId };
 
 export type DetectedImportSource = {
   id: ImportSourceId;
@@ -10,10 +11,9 @@ export type DetectedImportSource = {
   gameCount: number | null;
 };
 
-export async function detectImportSources(): Promise<DetectedImportSource[]> {
-  return invoke<DetectedImportSource[]>("detect_import_sources");
-}
+export type ImportedGame = { id: string; name: string; source: ImportSourceId; launchTarget: string; installPath?: string | null };
 
+export const detectImportSources = () => invoke<DetectedImportSource[]>("detect_import_sources");
 
-export type ImportedGame={id:string;name:string;source:ImportSourceId;launchTarget:string;installPath?:string|null};
-export async function scanImportGames(source:ImportSourceId, libraryPath?:string):Promise<ImportedGame[]>{return invoke<ImportedGame[]>("scan_import_games",{source,libraryPath:libraryPath??null})}
+export const scanImportGames = (source: ImportSourceId, libraryPath?: string) =>
+  invoke<ImportedGame[]>("scan_import_games", { source, libraryPath: libraryPath ?? null });

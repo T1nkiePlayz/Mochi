@@ -10,14 +10,13 @@ Mochi separates platform behaviour from game-source discovery so new integration
 
 Platform-specific native behavior lives in `src-tauri/src/platform/`.
 
-- `mod.rs` — shared types and the platform dispatch boundary.
+- `mod.rs` — shared types, launch pipeline (`LaunchConfig`, process-group spawning, timeouts) and the thin dispatch to the OS module.
 - `linux.rs` — Linux launch targets, Flatpak discovery, desktop integration, startup, notifications, and launch behaviour.
 - `macos.rs` — macOS launch targets, `.app` bundles, LaunchAgent startup, notifications, URL handling, and capabilities.
-- `unsupported.rs` — safe fallback for platforms that are not explicitly supported.
 
 The Tauri commands in `main.rs` are deliberately thin. They validate the command boundary and delegate immediately to the platform adapter.
 
-When adding a new platform, create a dedicated adapter module and add its dispatch in `mod.rs`. Shared commands should expose intent only; platform modules own native commands, paths, filenames, launch methods, startup integration, notifications, URL handling, and capability values. Do not put OS-specific process commands in React components or shared application logic.
+Mochi builds only for Linux and macOS; other targets fail at compile time. When adding a new platform, create a dedicated adapter module and select it in `mod.rs`. Shared commands should expose intent only; platform modules own native commands, paths, filenames, launch methods, startup integration, notifications, URL handling, and capability values. Do not put OS-specific process commands in React components or shared application logic.
 
 ## Game source architecture
 
@@ -31,6 +30,9 @@ Linux and macOS provide read-only discovery/import adapters for their supported 
 - Lutris
 - Bottles
 - itch.io
+- Desktop applications (Linux `.desktop` entries and macOS `.app` bundles categorised as games)
+
+Shared scanners live in `sources/mod.rs`; `sources/linux.rs` and `sources/macos.rs` only say where each launcher keeps its data and which extra sources exist. Sources are scanned in parallel with timeouts, and Steam, Lutris, Bottles and itch data is read directly (no shelling out to `gzip` or `sh`).
 
 Source discovery reads the source's existing local state and produces a normalized ImportedGame record containing a stable source ID, display name, install path when available, and a source-aware launch target. Mochi does not take over installation, updates, authentication, Wine/Proton prefixes, or source configuration.
 
@@ -67,15 +69,22 @@ Current macOS support includes:
 1. Native `.app` bundle selection and launching through the macOS application system.
 2. Native executable, shell, Python, and JavaScript launching.
 3. Steam library discovery using macOS application-support paths and Steam library manifests.
-4. Heroic, Lutris, Bottles, and itch.io source detection/import where those applications and their local data are available.
+4. Steam, Heroic and itch.io source detection/import, plus an Applications-folder source for games that declare the games category.
 5. macOS process tracking for playtime and launcher hand-off detection.
 6. Launch-at-login through a per-user LaunchAgent.
 7. Native URL opening through `open`.
 8. Native desktop notifications through `osascript`.
 9. Static `mochi://` deep-link registration through the Tauri bundle configuration.
 10. macOS CI validation on Intel and Apple-silicon runners.
+11. Windows programs through CrossOver or Whisky, chosen per Tofu.
+12. Game session tracking and Stop through process groups.
+13. Hardened-runtime entitlements and a release job that signs and notarizes when credentials are configured.
 
-Public macOS distribution still requires normal Apple signing/notarization work; that is a release-engineering concern rather than a reason to scatter signing logic through the launcher.
+Public macOS distribution requires Apple Developer credentials supplied as repository secrets (see the README); signing logic lives in the release workflow, not in the launcher.
+
+## Game sessions
+
+`playtime.rs` owns running-game state. A launch returns whether the child is the game itself; direct launches are tracked by the process group Mochi created, while hand-offs are tracked by install path. `stop_game` signals the group (SIGTERM, then SIGKILL after five seconds). The frontend subscribes to the `game-sessions-changed` event through `src/hooks.ts`.
 
 ## Design rule
 
