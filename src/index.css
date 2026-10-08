@@ -545,7 +545,7 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 .discover-instance-card .secondary-button{align-self:flex-start;margin-top:auto;}
 @media(max-width:700px){.discover-instance-grid{grid-template-columns:1fr;}.discover-instance-stats{grid-template-columns:1fr;}}
 
-.search-box>.mochi-icon-wrap{display:grid!important;place-items:center!important;flex:0 0 16px!important;width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;overflow:hidden}.search-box>.mochi-icon-wrap .mochi-icon-custom{display:block!important;width:100%!important;height:100%!important;background-position:center!important;background-size:contain!important;background-repeat:no-repeat!important}
+.search-box>.mochi-icon-wrap{display:grid!important;place-items:center!important;flex:0 0 16px!important;width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;overflow:hidden}.search-box>.mochi-icon-wrap .mochi-icon-custom{display:block!important;width:100%!important;height:100%!important;background-position:center!important;background-size:100% 100%!important;background-repeat:no-repeat!important}
 
 /* Compact Modrinth versions: readable at a glance, with changelogs kept one click away. */
 .project-version{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:14px 16px;border:1px solid var(--mochi-border);border-radius:10px;background:var(--mochi-surface-raised);}
@@ -595,7 +595,7 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 .project-markdown h1,.project-markdown h2,.project-markdown h3,.project-markdown h4,.project-markdown h5,.project-markdown h6{margin:20px 0 9px;color:var(--mochi-text-strong);line-height:1.25;}
 .project-markdown h1{font-size:23px}.project-markdown h2{font-size:20px}.project-markdown h3{font-size:17px}.project-markdown h4{font-size:15px}.project-markdown h5,.project-markdown h6{font-size:13px;}
 .project-markdown>h1:first-child,.project-markdown>h2:first-child,.project-markdown>h3:first-child{margin-top:0;}
-.project-markdown ul,.project-markdown ol{margin:4px 0 14px;padding-left:22px;color:var(--mochi-text);}
+.project-markdown ul,.project-markdown ol{margin:4px 0 14px;padding-left:22px;color:var(--mochi-text);}.project-markdown ul{list-style-type:disc;}.project-markdown ol{list-style-type:decimal;}
 .project-markdown li{margin:4px 0;padding-left:3px;}
 .project-markdown li::marker{color:var(--mochi-accent-strong);}
 .project-markdown blockquote{margin:12px 0;padding:9px 12px;border-left:3px solid var(--mochi-accent);border-radius:0 7px 7px 0;background:var(--mochi-surface-raised);color:var(--mochi-text-muted);}
@@ -638,3 +638,4 @@ footer { display: flex; justify-content: space-between; margin-top: 50px; color:
 .nexus-game-picker-row>svg{color:var(--mochi-text-muted);}
 @media(max-width:700px){.discover-game-tabs{padding-bottom:5px;}.discover-game-tab{min-height:38px;padding:6px 9px;}.discover-game-icon{width:24px;height:24px;flex-basis:24px;}.discover-game-add{width:38px;height:38px;flex-basis:38px;}}
 
+\n[data-mochi-theme="minecraft-ore"] .notification-wrap > .icon-button .mochi-icon-wrap{width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;flex-basis:20px!important}.notification-wrap > .icon-button .mochi-icon-custom{background-size:100% 100%!important}\n
