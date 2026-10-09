@@ -24,6 +24,8 @@ export type Behavior = {
   modSources: ModSourceSettings;
   /** Update installed mods (SHA-1 verified, with a rollback copy) when a game is launched. Off by default. */
   autoUpdateMods: boolean;
+  /** Save achievements to Mochi Cloud while Cloud sync is on. */
+  achievementsToCloud: boolean;
   /** Discover adds other mod sites to a game that lists fewer than this many mods (0 = never, max 100). */
   modAutoExtendBelow: number;
 };
@@ -43,6 +45,7 @@ export const defaultBehavior: Behavior = {
   experimentalSeen: [],
   modSources: { ...allSourcesOn },
   autoUpdateMods: false,
+  achievementsToCloud: true,
   modAutoExtendBelow: DEFAULT_AUTO_EXTEND_BELOW,
 };
 
@@ -74,6 +77,7 @@ export function normalizeBehavior(raw: unknown): Behavior {
       nexus: bool(modSources.nexus, true),
     },
     autoUpdateMods: bool(stored.autoUpdateMods, defaultBehavior.autoUpdateMods),
+    achievementsToCloud: bool(stored.achievementsToCloud, defaultBehavior.achievementsToCloud),
     modAutoExtendBelow: clampAutoExtendBelow(stored.modAutoExtendBelow),
   };
 }

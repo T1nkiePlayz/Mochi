@@ -5,11 +5,12 @@ import { getSteamAchievementTotals, STEAM_ACHIEVEMENTS_CHANGED, summariseTotals 
 import { useControllerState } from "../controller/manager";
 import { useBigPictureActive } from "../bigpicture/mode";
 import { getPlaytimeHistory, type SessionRecord } from "../lib/stats";
-import { readJson, writeJson } from "../lib/storage";
+import { readJson, removeKey, writeJson } from "../lib/storage";
 import { collectionsKeyFor } from "./useCollections";
 
 const KEY = "mochi:achievements";
 const CHANGED = "mochi-achievements-changed";
+export const ACHIEVEMENTS_CHANGED = CHANGED;
 
 /** Bump when achievements are added: ones already earned are then unlocked silently once, not announced as a flood. */
 const CATALOG_VERSION = 2;
@@ -34,6 +35,18 @@ export function readAchievements(): StoredAchievements {
     seeded: Boolean(raw.seeded),
     catalog: typeof raw.catalog === "number" ? raw.catalog : 0,
   };
+}
+
+/** Saves a record (for example after merging the cloud copy) and tells the UI and the watcher. */
+export function saveAchievements(stored: StoredAchievements) {
+  writeJson(KEY, stored);
+  window.dispatchEvent(new Event(CHANGED));
+}
+
+/** Forgets every unlock and flag on this device. Achievements still earned are re-recorded quietly on the next check. */
+export function resetLocalAchievements() {
+  removeKey(KEY);
+  window.dispatchEvent(new Event(CHANGED));
 }
 
 /** Stored unlocks, refreshed whenever the watcher records a change. */

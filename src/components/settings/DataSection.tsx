@@ -6,6 +6,9 @@ import { ConfirmDialog } from "../library/ConfirmDialog";
 import { clearAllDataSources, clearDataSource, dataSources, gamesWithArtworkFrom, type DataSourceId } from "../../lib/providerData";
 import { providerLabels } from "../../state/useCredentials";
 import type { ProviderId } from "../../lib/metadata/types";
+import { supabase } from "../../lib/supabase";
+import { clearCloudAchievements } from "../../lib/achievementsCloud";
+import { resetLocalAchievements } from "../../state/useAchievements";
 import { SettingsGroup, ToggleRow } from "./Section";
 
 export function DataSection() {
@@ -15,6 +18,9 @@ export function DataSection() {
   const [confirm, setConfirm] = useState<DataSourceId | "all" | null>(null);
   const [busy, setBusy] = useState<DataSourceId | "all" | null>(null);
   const [note, setNote] = useState("");
+  const [confirmAchievements, setConfirmAchievements] = useState(false);
+  const [achievementsBusy, setAchievementsBusy] = useState(false);
+  const [achievementsNote, setAchievementsNote] = useState("");
   const saved = { igdb: credentials.status.igdb, steamgriddb: credentials.status.steamgriddb };
   // Each source says precisely what it needs, so a disabled button is never a mystery.
   const needs = (id: ProviderId): { ready: boolean; text: string } => {
@@ -30,6 +36,16 @@ export function DataSection() {
       setNote(id === "all" ? "Cleared saved data for every source. Your own artwork was kept." : `Cleared ${dataSources.find((source) => source.id === id)?.label} data${removed ? ` and ${removed} cover${removed === 1 ? "" : "s"}` : ""}.`);
     } catch (error) { setNote(error instanceof Error ? error.message : "Could not clear that data."); }
     finally { setBusy(null); }
+  };
+  const clearAchievements = async () => {
+    setConfirmAchievements(false); setAchievementsBusy(true); setAchievementsNote("");
+    try {
+      // Cloud first: if it fails nothing local changes, so the user can simply try again.
+      if (supabase && user) await clearCloudAchievements(supabase, user.id);
+      resetLocalAchievements();
+      setAchievementsNote(supabase && user ? "Achievements cleared on this device and in Mochi Cloud." : "Achievements cleared on this device.");
+    } catch (error) { setAchievementsNote(error instanceof Error ? error.message : "Could not clear achievements."); }
+    finally { setAchievementsBusy(false); }
   };
   return <SettingsGroup title="Data & privacy" subtitle="Local-first storage" id="settings-data">
     <div className="data-source-list" role="list" aria-label="Metadata sources">
@@ -58,6 +74,10 @@ export function DataSection() {
       confirmLabel={confirm === "all" ? "Clear all" : "Delete artwork"} onCancel={() => setConfirm(null)} onConfirm={() => void run(confirm)} />}
     <div className="setting-row"><span><strong>Cloud data</strong><small>{cloud.cloudDataAccessAllowed ? "Delete your cloud Pikos and Tofus. Your local library, account, and saved provider credentials stay unchanged." : "Mochi Cloud data controls are not enabled for this account."}</small></span><button type="button" className="secondary-button danger-outline" disabled={!account.user || !cloud.cloudDataAccessAllowed || cloud.cloudDataBusy} onClick={() => void cloud.clearCloudData()}>{cloud.cloudDataBusy ? "Clearing…" : cloud.cloudDataAccessAllowed ? "Clear cloud data" : "Unavailable"}</button></div>
     {cloud.cloudDataMessage && <p className="metadata-note settings-note" role="status">{cloud.cloudDataMessage}</p>}
+    <ToggleRow title="Save achievements to Mochi Cloud" description={cloud.cloudSyncEnabled ? "Keeps your unlocked achievements in sync across your devices." : "On by default. Takes effect when Cloud sync is turned on for your account."} checked={behavior.achievementsToCloud} onChange={(achievementsToCloud) => setBehavior((current) => ({ ...current, achievementsToCloud }))} />
+    <div className="setting-row"><span><strong>Achievements data</strong><small>Remove your unlock history and progress from this device{user ? " and from Mochi Cloud" : ""}. Achievements you still qualify for are earned again quietly from your play history.</small></span><button type="button" className="secondary-button danger-outline" disabled={achievementsBusy} onClick={() => setConfirmAchievements(true)}>{achievementsBusy ? "Clearing…" : "Clear achievements"}</button></div>
+    {achievementsNote && <p className="metadata-note settings-note" role="status">{achievementsNote}</p>}
+    {confirmAchievements && <ConfirmDialog danger title="Clear all achievements data?" message={`Your unlock history and progress are removed from this device${user ? " and from Mochi Cloud" : ""}. Your library and play history are not touched.`} confirmLabel="Clear achievements" onCancel={() => setConfirmAchievements(false)} onConfirm={() => void clearAchievements()} />}
     <div className="setting-row setting-location-row"><span><strong>Library location</strong><small>Your Mochi configuration, themes and launcher data are stored here.</small></span><span className="setting-location-value"><code>{themeEngine.configInfo?.configPath || "Default Mochi location"}</code><button type="button" className="secondary-button" onClick={() => void chooseConfigLocation()}>Change</button></span></div>
     <button className="setting-row setting-button" aria-expanded={showAdvanced} onClick={() => setShowAdvanced(!showAdvanced)}><span><strong>Advanced settings</strong><small>Diagnostics and launcher controls.</small></span><MochiIcon name="chevron" fallback={ChevronDown} className={showAdvanced ? "rotate" : ""} size={16} /></button>
     {showAdvanced && <div className="advanced-settings">
