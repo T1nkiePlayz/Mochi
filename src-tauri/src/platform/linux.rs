@@ -403,8 +403,28 @@ fn parse_name_has_owner(output: &str) -> bool {
     !output.trim().starts_with("(false")
 }
 
+/// The installed Mochi icon (`ensure_platform_integration` puts it there), written on demand so
+/// notifications carry it even before desktop integration has run.
+fn notification_icon() -> Option<PathBuf> {
+    let icon = data_home()?.join("icons/hicolor/512x512/apps/mochi.png");
+    if icon.is_file() { return Some(icon); }
+    fs::create_dir_all(icon.parent()?).ok()?;
+    crate::util::fsio::write_atomic(&icon, ICON_PNG).ok()?;
+    Some(icon)
+}
+
+/// `notify-send` arguments: Mochi's name, its icon file (or the themed `mochi` icon) and the
+/// desktop-entry hint that lets GNOME/KDE group the notification under Mochi's launcher entry.
+fn notify_send_args(title: &str, body: &str, icon: Option<&Path>) -> Vec<OsString> {
+    let icon: OsString = icon.map(|path| path.as_os_str().to_owned()).unwrap_or_else(|| "mochi".into());
+    let mut icon_arg = OsString::from("--icon=");
+    icon_arg.push(icon);
+    let desktop_entry = DESKTOP_FILE.trim_end_matches(".desktop");
+    vec!["--app-name=Mochi".into(), icon_arg, format!("--hint=string:desktop-entry:{desktop_entry}").into(), "--".into(), title.into(), body.into()]
+}
+
 pub fn send_system_notification(title: &str, body: &str) -> Result<(), String> {
-    let status = Command::new("notify-send").args(["--app-name=Mochi", "--", title, body]).status().map_err(|e| format!("Unable to start notify-send: {e}"))?;
+    let status = Command::new("notify-send").args(notify_send_args(title, body, notification_icon().as_deref())).status().map_err(|e| format!("Unable to start notify-send: {e}"))?;
     if status.success() { Ok(()) } else { Err("The system notification daemon rejected the notification.".into()) }
 }
 
@@ -417,6 +437,14 @@ mod tests {
         assert!(parse_name_has_owner("(true,)\n"));
         assert!(!parse_name_has_owner("(false,)\n"));
         assert!(parse_name_has_owner(""));
+    }
+
+    #[test]
+    fn notifications_carry_the_mochi_icon_and_desktop_entry() {
+        let args = notify_send_args("Title", "-n body", Some(Path::new("/home/me/.local/share/icons/hicolor/512x512/apps/mochi.png")));
+        let args: Vec<_> = args.iter().map(|arg| arg.to_string_lossy().into_owned()).collect();
+        assert_eq!(args, ["--app-name=Mochi", "--icon=/home/me/.local/share/icons/hicolor/512x512/apps/mochi.png", "--hint=string:desktop-entry:dev.sidequestgames.Mochilauncher", "--", "Title", "-n body"]);
+        assert_eq!(notify_send_args("t", "b", None)[1], "--icon=mochi");
     }
 
     #[test]
