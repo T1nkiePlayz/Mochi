@@ -200,10 +200,80 @@ pub(crate) const EXTRACT_LIMITS: ExtractLimits = ExtractLimits {
 /// beyond the entry/size/ratio caps are rejected. Sizes are enforced on bytes actually written, not on headers.
 /// On failure the files this call created are removed again.
 pub(crate) fn extract_zip(archive: &Path, dest: &Path, limits: ExtractLimits) -> Result<usize, String> {
-    let mut created = Vec::new();
-    let result = extract_zip_inner(archive, dest, limits, &mut created);
-    if result.is_err() { for path in created.iter().rev() { let _ = fs::remove_file(path); } }
-    result
+    // Never extract directly over live files. Validate and unpack the complete archive in a sibling
+    // staging directory first, then replace destination files while retaining rollback copies.
+    static NEXT_EXTRACT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    let parent = dest.parent().ok_or("Unable to resolve extraction parent folder.")?;
+    fs::create_dir_all(parent).map_err(|e| format!("Unable to create extraction parent: {e}"))?;
+    let name = dest.file_name().and_then(|n| n.to_str()).unwrap_or("extracted");
+    let id = NEXT_EXTRACT_ID.fetch_add(1, Ordering::Relaxed);
+    let stage = parent.join(format!(".{name}.mochi-stage-{id}"));
+    let backup = parent.join(format!(".{name}.mochi-backup-{id}"));
+    fs::create_dir(&stage).map_err(|e| format!("Unable to create extraction staging folder: {e}"))?;
+    let _stage_cleanup = TempDirCleanup(stage.clone());
+    let _backup_cleanup = TempDirCleanup(backup.clone());
+    fs::create_dir(&backup).map_err(|e| format!("Unable to create extraction rollback folder: {e}"))?;
+
+    let mut ignored = Vec::new();
+    let count = extract_zip_inner(archive, &stage, limits, &mut ignored)?;
+    fs::create_dir_all(dest).map_err(|e| format!("Unable to create extraction folder: {e}"))?;
+    let mut files = Vec::new();
+    collect_regular_files(&stage, &stage, &mut files)?;
+    let mut installed: Vec<PathBuf> = Vec::new();
+    let mut saved: Vec<(PathBuf, PathBuf)> = Vec::new();
+    let commit = (|| -> Result<(), String> {
+        for relative in files {
+            let source = stage.join(&relative);
+            let target = dest.join(&relative);
+            let parent = target.parent().ok_or("Invalid extraction target.")?;
+            fs::create_dir_all(parent).map_err(|e| format!("Unable to create extraction folder: {e}"))?;
+            ensure_inside(parent, &fs::canonicalize(dest).map_err(|e| e.to_string())?)?;
+            if let Ok(meta) = fs::symlink_metadata(&target) {
+                if meta.file_type().is_symlink() || !meta.is_file() {
+                    return Err(format!("Refusing to replace non-regular extraction target '{}'.", relative.display()));
+                }
+                let saved_path = backup.join(&relative);
+                if let Some(saved_parent) = saved_path.parent() {
+                    fs::create_dir_all(saved_parent).map_err(|e| format!("Unable to prepare rollback: {e}"))?;
+                }
+                fs::rename(&target, &saved_path).map_err(|e| format!("Unable to preserve existing '{}': {e}", relative.display()))?;
+                saved.push((saved_path, target.clone()));
+            }
+            if let Err(e) = fs::rename(&source, &target) {
+                return Err(format!("Unable to install '{}': {e}", relative.display()));
+            }
+            installed.push(target);
+        }
+        Ok(())
+    })();
+    if let Err(error) = commit {
+        for path in installed.iter().rev() { let _ = fs::remove_file(path); }
+        for (saved_path, target) in saved.iter().rev() {
+            if let Some(parent) = target.parent() { let _ = fs::create_dir_all(parent); }
+            let _ = fs::rename(saved_path, target);
+        }
+        return Err(error);
+    }
+    Ok(count)
+}
+
+struct TempDirCleanup(PathBuf);
+impl Drop for TempDirCleanup {
+    fn drop(&mut self) { let _ = fs::remove_dir_all(&self.0); }
+}
+
+fn collect_regular_files(root: &Path, current: &Path, files: &mut Vec<PathBuf>) -> Result<(), String> {
+    for entry in fs::read_dir(current).map_err(|e| format!("Unable to list staged extraction: {e}"))? {
+        let entry = entry.map_err(|e| format!("Unable to read staged extraction entry: {e}"))?;
+        let path = entry.path();
+        let meta = fs::symlink_metadata(&path).map_err(|e| format!("Unable to inspect staged extraction: {e}"))?;
+        if meta.file_type().is_symlink() { return Err("Staging folder unexpectedly contains a symlink.".into()); }
+        if meta.is_dir() { collect_regular_files(root, &path, files)?; }
+        else if meta.is_file() {
+            files.push(path.strip_prefix(root).map_err(|e| e.to_string())?.to_path_buf());
+        } else { return Err("Staging folder contains a special file.".into()); }
+    }
+    Ok(())
 }
 
 fn extract_zip_inner(archive: &Path, dest: &Path, limits: ExtractLimits, created: &mut Vec<PathBuf>) -> Result<usize, String> {
