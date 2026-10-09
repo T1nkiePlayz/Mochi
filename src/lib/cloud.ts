@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Piko, Tofu } from "../models";
+import { eligibleForPush } from "./cloudStatus";
 
 /**
  * Source ids the `pikos_source_id_check` constraint accepts (see 20261009150000_more_import_sources.sql).
@@ -73,9 +74,10 @@ export async function pullLibrary(client: SupabaseClient, userId: string): Promi
 
 const clamp = (value: string | undefined, max: number) => (value && value.length > max ? value.slice(0, max) : value);
 
-/** Replaces the cloud library with `library` in one transaction on the server. */
-export async function pushLibrary(client: SupabaseClient, library: Piko[]) {
-  const payload = library.map((piko) => ({
+/** Replaces the cloud library with `library` in one transaction on the server. Returns the ids now confirmed in the cloud. */
+export async function pushLibrary(client: SupabaseClient, library: Piko[]): Promise<Set<string>> {
+  const sent = eligibleForPush(library);
+  const payload = sent.map((piko) => ({
     local_id: piko.id,
     name: clamp(piko.name, 300),
     description: clamp(piko.description, 20000),
@@ -103,6 +105,7 @@ export async function pushLibrary(client: SupabaseClient, library: Piko[]) {
   }));
   const { error } = await client.rpc("sync_my_library", { library: payload });
   if (error) throw error;
+  return new Set(sent.map((piko) => piko.id));
 }
 
 export type ClearedCloudData = {

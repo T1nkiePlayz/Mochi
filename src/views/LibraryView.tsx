@@ -6,6 +6,7 @@ import { CollectionManager } from "../components/library/CollectionManager";
 import { GameCard } from "../components/library/GameCard";
 import { GameContextMenu } from "../components/library/GameContextMenu";
 import { LibraryFilterBar } from "../components/library/LibraryFilterBar";
+import { cloudStatusFor } from "../lib/cloudStatus";
 import { removeGameShortcut } from "../lib/platform";
 import { cycleViewMode, readViewMode, viewModeLabel, viewModes, writeViewMode, type LibraryViewMode } from "../lib/libraryView";
 import { tagCounts } from "../lib/library";
@@ -30,6 +31,7 @@ export function LibraryView() {
   const app = useApp();
   const { lib, actions, sessions, playtime, cloud, add, account, credentials, platformCapabilities, collections } = app;
   const { selectedPiko, selectedTofu, gameDetailsId, search } = lib;
+  const cloudCtx = { enabled: cloud.cloudSyncEnabled, confirmed: cloud.confirmedIds, syncState: cloud.syncState };
   const details = lib.library.find((piko) => piko.id === gameDetailsId);
   const [menu, setMenu] = useState<{ gameId: string; x: number; y: number } | null>(null);
   const [selecting, setSelecting] = useState(false);
@@ -63,7 +65,7 @@ export function LibraryView() {
       playtime={playtime.find((entry) => entry.gameId === gameDetailsId)}
       launchError={actions.launchError}
       launching={actions.isLaunching}
-      synced={cloud.syncState === "synced"}
+      cloudStatus={cloudStatusFor(details, cloudCtx)}
       running={sessions.isRunning(details.id)}
       canStop={Boolean(sessions.sessions.find((session) => session.gameId === details.id)?.canStop)}
       capabilities={platformCapabilities}
@@ -160,7 +162,7 @@ export function LibraryView() {
       {lib.groupedPikos.map(([category, games]) => <div className="library-category" key={category}>
         <div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div>
         <div className="game-card-grid">{games.map((piko) => <GameCard key={piko.id} piko={piko}
-          selected={selectedPiko.id === piko.id} running={sessions.isRunning(piko.id)} synced={cloud.syncState === "synced"}
+          selected={selectedPiko.id === piko.id} running={sessions.isRunning(piko.id)} cloudStatus={cloudStatusFor(piko, cloudCtx)}
           selecting={selecting} checked={checked.has(piko.id)}
           onOpen={openGame} onToggleFavorite={toggleFavorite} onToggleChecked={toggleChecked} onMenu={openMenu} />)}</div>
       </div>)}
