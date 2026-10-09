@@ -11,6 +11,7 @@ use std::{
 
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 mod launchagent;
+pub mod launchopts;
 #[cfg(target_os = "linux")]
 mod linux;
 // Compiled on Linux for tests only, so the macOS adapter is type-checked and unit-tested everywhere.
@@ -70,11 +71,20 @@ pub struct LaunchConfig {
     pub args: Vec<String>,
     pub env: BTreeMap<String, String>,
     pub working_dir: Option<String>,
+    /// Linux only: run the game inside gamescope.
+    pub gamescope: GamescopeConfig,
     #[serde(skip)]
     pub prefix_dir: Option<PathBuf>,
     /// Where this game's session logs go; output is captured when set.
     #[serde(skip)]
     pub log_dir: Option<PathBuf>,
+}
+
+#[derive(Debug, Default, Deserialize, Clone)]
+#[serde(rename_all = "camelCase", default)]
+pub struct GamescopeConfig {
+    pub enabled: bool,
+    pub args: Vec<String>,
 }
 
 /// What `launch_game` started.
@@ -232,12 +242,15 @@ pub fn launch_game(target: &str, config: &LaunchConfig) -> Result<Launched, Stri
     let target = target.trim();
     if target.is_empty() { return Err("Launch target is empty.".into()); }
     if target.contains('\0') { return Err("Launch target contains an invalid character.".into()); }
-    let Prepared { mut command, direct } = os::prepare_launch(target, config)?;
-    for (key, value) in &config.env {
-        if valid_env_name(key) { command.env(key, value); }
+    // Options only reach programs Mochi starts itself (and flatpak flags); other launchers keep their own settings.
+    let applies = launchopts::classify(target).0;
+    if matches!(applies, launchopts::Applies::Full | launchopts::Applies::Flatpak) {
+        if let Some(error) = launchopts::validate(config, cfg!(target_os = "linux"), applies == launchopts::Applies::Full).into_iter().next() { return Err(error); }
     }
-    if let Some(dir) = config.working_dir.as_deref().filter(|dir| Path::new(dir).is_dir()) {
-        command.current_dir(dir);
+    let Prepared { mut command, direct } = os::prepare_launch(target, config)?;
+    if applies == launchopts::Applies::Full {
+        for (key, value) in &config.env { command.env(key, value); }
+        if let Some(dir) = config.working_dir.as_deref().filter(|dir| !dir.is_empty()) { command.current_dir(dir); }
     }
     // A log that cannot be created must never stop the game from starting.
     let log = config.log_dir.as_deref().and_then(|dir| crate::gamelogs::begin_session(dir, direct, &format!("Mochi launched {target}{}", if direct { "" } else { " (through another launcher: its output is not captured)" })).ok());
@@ -290,6 +303,16 @@ pub fn capabilities() -> PlatformCapabilities {
     PlatformCapabilities { is_steam_deck: crate::bigpicture::is_steam_deck(), is_gamescope: crate::bigpicture::is_gamescope(), ..os::capabilities() }
 }
 pub fn list_runtimes() -> Vec<RuntimeInfo> { os::list_runtimes() }
+
+/// Runs `work` with the real tool lookups (PATH, detected runtimes, the Steam root).
+pub fn with_system_tools<R>(work: impl FnOnce(&launchopts::Tools) -> R) -> R {
+    work(&launchopts::Tools { which: &command_path, runtimes: &os::list_runtimes, steam_root: &os::steam_root })
+}
+
+/// The final command for a target, built by the same code that launches it.
+pub fn preview_launch(target: &str, config: &LaunchConfig) -> launchopts::LaunchPreview {
+    with_system_tools(|tools| launchopts::preview(target, config, tools, cfg!(target_os = "linux"), config.prefix_dir.as_deref()))
+}
 pub fn send_system_notification(title: &str, body: &str) -> Result<(), String> { os::send_system_notification(title.trim(), body.trim()) }
 pub fn create_game_shortcut(game_id: &str, name: &str) -> Result<String, String> { os::create_game_shortcut(game_id, name) }
 pub fn remove_game_shortcut(game_id: &str) -> Result<(), String> { os::remove_game_shortcut(game_id) }

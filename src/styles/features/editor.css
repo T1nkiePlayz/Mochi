@@ -64,3 +64,19 @@
 .artwork-crop-controls input[type="range"] { flex: 1; accent-color: var(--mochi-accent-strong); }
 
 @media (max-width: 560px) { .metadata-provider-list li { grid-template-columns: 1fr; } .artwork-dropzone { flex-direction: column; align-items: flex-start; } }
+
+/* Launch options (LaunchTab) */
+.launch-options { display: grid; gap: 14px; padding-top: 14px; border-top: var(--mochi-border-width, 1px) solid var(--mochi-border); }
+.launch-options-heading h3 { margin: 0; color: var(--mochi-text-strong); font-size: 13px; font-weight: var(--mochi-heading-weight, 700); }
+.launch-options-heading p { margin: 4px 0 0; color: var(--mochi-text-muted); font-size: 11px; line-height: 1.5; }
+.launch-env { display: grid; gap: 8px; }
+.launch-env-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; gap: 8px; align-items: center; }
+.launch-env-row input[aria-invalid="true"] { border-color: var(--mochi-danger); }
+.launch-field-error { grid-column: 1 / -1; color: var(--mochi-danger); font-size: 11px; }
+.launch-env-add { justify-self: start; }
+.launch-toggles { display: grid; gap: 10px; }
+.launch-error { margin: 0; }
+.launch-command-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: start; }
+.launch-command { display: block; min-width: 0; padding: 10px 12px; border: var(--mochi-border-width, 1px) solid var(--mochi-input-border); border-radius: var(--mochi-radius-md, 8px); background: var(--mochi-surface); color: var(--mochi-text-strong); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+.launch-command:focus-visible { outline: 2px solid var(--mochi-input-focus-border); outline-offset: 1px; }
+.launch-hint { margin: 0; color: var(--mochi-text-muted); font-size: 11px; line-height: 1.5; }

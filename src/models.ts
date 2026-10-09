@@ -13,6 +13,26 @@ export type TofuLaunchConfig = {
   workingDir?: string;
 };
 
+/**
+ * Per-game launch options (stored on the Piko). A Tofu's own `launch` settings are applied on top: its variables
+ * and working directory win, its arguments replace these when set, its runtime wins, and wrappers are added.
+ */
+export type LaunchOptions = {
+  /** Environment variables, in the order the user entered them. */
+  env: Array<[string, string]>;
+  /** Command-line arguments as separate words (parsed from the editor's text with shell-like quoting, never run through a shell). */
+  args: string[];
+  workingDir?: string;
+  /** Linux only. `id` is a detected runtime id from `list_launch_runtimes` ("wine" or "proton:<path>"). */
+  runtime?: { kind: "native" | "proton" | "wine"; id?: string };
+  /** Linux only: wrap the game in `gamemoderun`. */
+  gamemode?: boolean;
+  /** Linux only: wrap the game in `mangohud`. */
+  mangohud?: boolean;
+  /** Linux only: run the game inside gamescope with these arguments. */
+  gamescope?: { enabled: boolean; args: string[] };
+};
+
 /** A saved set of enabled mods for a Tofu folder. */
 export type ModProfile = {
   id: string;
@@ -105,6 +125,8 @@ export type Piko = {
   firstReleaseDate?: number;
   platformCategory?: string;
   executablePath?: string;
+  /** Environment, arguments, working directory, runtime and wrappers for launching this game. */
+  launchOptions?: LaunchOptions;
   /** Where the game is installed on this device; used to follow its process. Never synced. */
   installPath?: string;
   source?: "built-in" | "custom";

@@ -42,6 +42,24 @@ export type PlaytimeEntry = { gameId: string; name: string; seconds: number; las
 export const getPlatformCapabilities = () => invoke<PlatformCapabilities>("get_platform_capabilities");
 export const listInstalledFlatpaks = () => invoke<FlatpakApp[]>("list_flatpaks");
 export const listRuntimes = () => invoke<RuntimeInfo[]>("list_runtimes");
+export const listLaunchRuntimes = () => invoke<RuntimeInfo[]>("list_launch_runtimes");
+
+/** What a launch with these options would run, built by the launcher's own code. */
+export type LaunchPreview = {
+  applies: "full" | "flatpak" | "steam" | "none";
+  note: string | null;
+  argv: string[];
+  env: Array<[string, string]>;
+  cwd: string | null;
+  command: string | null;
+  steamOptions: string | null;
+  errors: string[];
+};
+
+export function previewLaunchCommand(piko: Piko, tofu: Tofu | undefined): Promise<LaunchPreview> {
+  return invoke<LaunchPreview>("preview_launch_command", { request: { gameId: piko.id, launchTarget: launchTargetFor(piko, tofu) ?? "", tofuId: tofu?.id ?? null, config: buildLaunchConfig(tofu?.launch, piko.launchOptions) } });
+}
+
 export const getPlaytime = () => invoke<PlaytimeEntry[]>("get_playtime");
 export const getActiveSessions = () => invoke<ActiveSession[]>("get_active_sessions");
 export const stopGame = (gameId: string) => invoke<void>("stop_game", { gameId });
@@ -60,7 +78,7 @@ export function launchGame(piko: Piko, tofu: Tofu | undefined): Promise<void> {
       launchTarget,
       installPath: tofu?.installPath ?? piko.installPath ?? null,
       tofuId: tofu?.id ?? null,
-      config: buildLaunchConfig(tofu?.launch),
+      config: buildLaunchConfig(tofu?.launch, piko.launchOptions),
       // A Tofu with its own store is copied into the game folder, Tofus sharing a folder swap their mods; natively, right before starting.
       modSync: modSyncFor(tofu, piko.tofus) ?? null,
     },

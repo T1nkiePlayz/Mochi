@@ -144,6 +144,29 @@ const handlers: Record<string, Handler> = {
     { id: "gamemoderun", name: "GameMode", kind: "wrapper", path: "/usr/bin/gamemoderun" },
     { id: "mangohud", name: "MangoHud", kind: "wrapper", path: "/usr/bin/mangohud" },
   ],
+  list_launch_runtimes: () => [
+    { id: "wine", name: "Wine", kind: "compat", path: "/usr/bin/wine" },
+    { id: "proton:/home/me/.steam/steam/compatibilitytools.d/GE-Proton9-27/proton", name: "GE-Proton9-27 (custom)", kind: "compat", path: "/home/me/.steam/steam/compatibilitytools.d/GE-Proton9-27/proton" },
+    { id: "gamemoderun", name: "GameMode", kind: "wrapper", path: "/usr/bin/gamemoderun" },
+    { id: "mangohud", name: "MangoHud", kind: "wrapper", path: "/usr/bin/mangohud" },
+  ],
+  // A small mirror of the launcher's own command builder, for the browser build only.
+  preview_launch_command: (args) => {
+    const request = args.request as { launchTarget: string; config: { args: string[]; env: Record<string, string>; wrappers: string[]; gamescope: { enabled: boolean; args: string[] }; runtime: string | null; workingDir: string | null } };
+    const { launchTarget: target, config } = request;
+    const quote = (word: string) => /^[A-Za-z0-9_@%+=:,./-]+$/.test(word) ? word : `'${word.replace(/'/g, "'\\''")}'`;
+    const env = Object.entries(config.env);
+    const bad = env.filter(([key]) => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)).map(([key]) => `"${key}" is not a valid variable name. Use letters, digits and underscores, not starting with a digit.`);
+    const base = { argv: [] as string[], env: [] as string[][], cwd: null, command: null, steamOptions: null, errors: bad, note: null };
+    if (target.startsWith("steam://")) {
+      const words = [...env.map(([key, value]) => `${key}=${quote(value)}`), ...(config.gamescope.enabled ? ["gamescope", ...config.gamescope.args.map(quote), "--"] : []), ...config.wrappers, "%command%", ...config.args.map(quote)];
+      return { ...base, applies: "steam", note: "Steam starts this game itself. Paste the option string below into the game's Properties, Launch options in Steam.", steamOptions: bad.length ? null : words.join(" ") };
+    }
+    if (target.endsWith(".desktop")) return { ...base, applies: "none", errors: [], note: "Launch options cannot be passed through a .desktop entry. Point the launch target at the program itself to use them." };
+    const argv = [...(config.gamescope.enabled ? ["/usr/bin/gamescope", ...config.gamescope.args, "--"] : []), ...config.wrappers.map((id) => `/usr/bin/${id}`), target, ...config.args];
+    const prefix = [...(config.workingDir ? [`cd ${quote(config.workingDir)} &&`] : []), ...env.map(([key, value]) => `${key}=${quote(value)}`)];
+    return { ...base, applies: "full", argv, env, cwd: config.workingDir, command: bad.length ? null : [...prefix, ...argv.map(quote)].join(" ") };
+  },
   get_downloads: () => [
     { id: "d1", tofuId: "default", tofuName: "Default", itemName: "Sodium", filename: "sodium-0.6.jar", downloaded: 3_200_000, total: 8_000_000, status: "downloading", createdAt: Date.now(), provider: "modrinth", dir: "/mods", projectId: "AANobbMI" },
     { id: "d2", tofuId: "default", tofuName: "Default", itemName: "Iris Shaders", filename: "iris-1.8.jar", downloaded: 2_000_000, total: 2_000_000, status: "completed", createdAt: Date.now() - 1000, finishedAt: Date.now(), provider: "curseforge", dir: "/mods" },

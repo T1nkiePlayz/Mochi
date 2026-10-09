@@ -4,6 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { AlertTriangle } from "lucide-react";
 import { chooseGameAppBundle, chooseGameTarget, listInstalledFlatpaks, normalizeLaunchTarget, type FlatpakApp, type LaunchMethodId } from "../../../lib/platform";
 import { Select } from "../../ui/Select";
+import { LaunchOptionsSection } from "./LaunchOptionsSection";
 import type { EditorContext } from "./types";
 
 const methodOf = (target: string): LaunchMethodId => target.startsWith("flatpak://") ? "flatpak" : /\.app\/?$/i.test(target) ? "app" : "file";
@@ -57,6 +58,7 @@ export function LaunchTab({ ctx }: { ctx: EditorContext }) {
         <button type="button" className="secondary-button" onClick={() => void guarded(async () => { const picked = await open({ directory: true, multiple: false, title: "Choose install folder" }); if (typeof picked === "string") patch({ installPath: picked }); })}>Choose folder…</button>
       </div>
     </label>
+    <LaunchOptionsSection ctx={ctx} />
     {error && <p className="auth-error" role="alert">{error}</p>}
   </div>;
 }
