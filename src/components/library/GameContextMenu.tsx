@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { FolderOpen, FolderPlus, Heart, Pencil, Play, Trash2 } from "lucide-react";
+import { Bookmark, Check, FolderOpen, FolderPlus, Heart, Pencil, Play, Trash2 } from "lucide-react";
 import type { Collection, Piko } from "../../models";
+import { backlogStatuses, withBacklogStatus, type Backlog } from "../../lib/backlog";
 import { CollectionPicker } from "./CollectionPicker";
 import { useDismiss } from "./useDismiss";
 
@@ -15,15 +16,16 @@ type Props = {
   onFavorite: () => void;
   onToggleCollection: (collectionId: string, on: boolean) => void;
   onCreateCollection: (name: string) => Collection | null;
+  onBacklog: (next: Backlog | undefined) => void;
   onEdit: () => void;
   onOpenFolder: () => void;
   onRemove: () => void;
 };
 
 /** Right-click / long-press / menu-key menu for a game card. */
-export function GameContextMenu({ game, x, y, collections, canOpenFolder, onClose, onPlay, onFavorite, onToggleCollection, onCreateCollection, onEdit, onOpenFolder, onRemove }: Props) {
+export function GameContextMenu({ game, x, y, collections, canOpenFolder, onClose, onPlay, onFavorite, onToggleCollection, onCreateCollection, onBacklog, onEdit, onOpenFolder, onRemove }: Props) {
   const ref = useRef<HTMLDivElement>(null);
-  const [view, setView] = useState<"menu" | "collections">("menu");
+  const [view, setView] = useState<"menu" | "collections" | "backlog">("menu");
   const [position, setPosition] = useState({ x, y });
   const close = useCallback(onClose, [onClose]);
   useDismiss(ref, true, close);
@@ -48,9 +50,14 @@ export function GameContextMenu({ game, x, y, collections, canOpenFolder, onClos
       <button type="button" role="menuitem" onClick={run(onPlay)}><Play size={14} /> Play</button>
       <button type="button" role="menuitem" onClick={run(onFavorite)}><Heart size={14} fill={game.favorite ? "currentColor" : "none"} /> {game.favorite ? "Remove from favourites" : "Add to favourites"}</button>
       <button type="button" role="menuitem" aria-haspopup="true" onClick={() => setView("collections")}><FolderPlus size={14} /> Add to collection…</button>
+      <button type="button" role="menuitem" aria-haspopup="true" onClick={() => setView("backlog")}><Bookmark size={14} /> Backlog…</button>
       <button type="button" role="menuitem" onClick={run(onEdit)}><Pencil size={14} /> Edit</button>
       {canOpenFolder && <button type="button" role="menuitem" onClick={run(onOpenFolder)}><FolderOpen size={14} /> Open folder</button>}
       <button type="button" role="menuitem" className="danger" onClick={run(onRemove)}><Trash2 size={14} /> Remove</button>
+    </> : view === "backlog" ? <>
+      <button type="button" role="menuitem" onClick={() => setView("menu")}>← Back</button>
+      {backlogStatuses.map(({ id, label }) => <button type="button" key={id} role="menuitemradio" aria-checked={game.backlog?.status === id} onClick={run(() => onBacklog(withBacklogStatus(game.backlog, id)))}><Check size={14} style={{ opacity: game.backlog?.status === id ? 1 : 0 }} /> {label}</button>)}
+      {game.backlog && <button type="button" role="menuitem" onClick={run(() => onBacklog(undefined))}>Remove from backlog</button>}
     </> : <>
       <button type="button" role="menuitem" onClick={() => setView("menu")}>← Back</button>
       <CollectionPicker collections={collections} games={[game]} onToggle={onToggleCollection} onCreate={onCreateCollection} />

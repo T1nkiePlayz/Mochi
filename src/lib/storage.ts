@@ -12,6 +12,8 @@ export const storageKeys = {
   libraryFilter: "mochi:library-filter",
   accessibility: "mochi:accessibility",
   collections: "mochi:collections",
+  /** Games the user wants but does not own (`src/lib/wishlist.ts`). */
+  wishlist: "mochi:wishlist",
   /** User corrections of game/launcher detection, keyed by import id. */
   launcherOverrides: "mochi:launcher-overrides",
 } as const;
