@@ -27,16 +27,16 @@ export function useSystemStatus(): SystemStatus | null {
 }
 
 /** The best image URL for a game: the offline cache first, then the remote URL. */
-export function useArtworkUrl(piko: Piko | undefined): string {
+export function useArtworkUrl(piko: Piko | undefined, enabled = true): string {
   const [cached, setCached] = useState("");
   const key = piko?.artworkCacheKey;
   useEffect(() => {
     setCached("");
-    if (!key) return;
+    if (!key || !enabled) return;
     let cancelled = false;
     void loadArtwork(key).then((value) => { if (!cancelled && value) setCached(value); }).catch(() => {});
     return () => { cancelled = true; };
-  }, [key]);
+  }, [key, enabled]);
   return cached || piko?.artworkUrl || "";
 }
 

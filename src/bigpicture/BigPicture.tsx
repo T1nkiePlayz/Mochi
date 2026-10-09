@@ -100,6 +100,7 @@ export default function BigPicture() {
     void actions.launchGame(piko, { skipConfirm: true });
   }, [actions, sessions]);
   const openGame = useCallback((piko: Piko) => { lastCard.current = piko.id; setPreview(""); setGameId(piko.id); }, []);
+  const focusCard = useCallback((piko: Piko) => { lastCard.current = piko.id; setFocusId(piko.id); }, []);
   const toggleFavorite = useCallback((id: string) => { const piko = byId.get(id); if (piko) lib.updateGame(id, { favorite: !piko.favorite }); }, [byId, lib]);
 
   // Focus follows the screen: the Play button on a game page, the card you came from on the home screen.
@@ -192,7 +193,7 @@ export default function BigPicture() {
         ? <GamePage piko={game} entry={entries.get(game.id)} running={sessions.isRunning(game.id)} busy={actions.isLaunching}
             onPlay={() => play(game)} onStop={() => void actions.stopRunningGame(game)} onFavorite={() => toggleFavorite(game.id)} onPreview={setPreview} />
         : <Home hero={hero} entryFor={(id) => entries.get(id)} shelves={shelves} query={query} isRunning={sessions.isRunning} grid={display.layout === "grid" || Boolean(query)}
-            onOpen={openGame} onPlay={play} onFocusCard={(piko) => { lastCard.current = piko.id; setFocusId(piko.id); }} onExit={() => leave()} />}
+            onOpen={openGame} onPlay={play} onFocusCard={focusCard} onExit={() => leave()} />}
     </main>
     {launchError && <div className="bp-toast" role="alert">{launchError}</div>}
     <Legend items={legend} />

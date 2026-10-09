@@ -3,6 +3,18 @@ import { listen } from "@tauri-apps/api/event";
 import { keepIfEqual } from "./lib/equal";
 import { getActiveSessions, type ActiveSession } from "./lib/platform";
 
+/** Resolves true once the element is (nearly) on screen, so off-screen covers in a long library are not loaded. Stays true once reached. */
+export function useNearViewport(ref: React.RefObject<HTMLElement>, skip: boolean, rootMargin = "400px") {
+  const [near, setNear] = useState(() => skip || typeof IntersectionObserver === "undefined");
+  useEffect(() => {
+    if (near || !ref.current) return;
+    const observer = new IntersectionObserver((entries) => { if (entries.some((entry) => entry.isIntersecting)) setNear(true); }, { rootMargin });
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [near, ref, rootMargin]);
+  return near;
+}
+
 /** Tracks which games are currently running, updating as the native side reports changes. */
 export function useGameSessions() {
   const [sessions, setSessions] = useState<ActiveSession[]>([]);

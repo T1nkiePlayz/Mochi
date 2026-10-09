@@ -4,19 +4,8 @@ import { loadArtwork, peekArtwork } from "../lib/artworkCache";
 import { cssUrl } from "../lib/metadata/merge";
 import { artworkBackground, generatedArt } from "../lib/fallbackArt";
 import type { Piko } from "../models";
+import { useNearViewport } from "../hooks";
 import { GeneratedMarks, generatedStyle } from "./GeneratedArt";
-
-/** Resolves true once the element is (nearly) on screen, so off-screen covers in a long library are not loaded. */
-function useNearViewport(ref: React.RefObject<HTMLElement>, skip: boolean) {
-  const [near, setNear] = useState(() => skip || typeof IntersectionObserver === "undefined");
-  useEffect(() => {
-    if (near || !ref.current) return;
-    const observer = new IntersectionObserver((entries) => { if (entries.some((entry) => entry.isIntersecting)) setNear(true); }, { rootMargin: "400px" });
-    observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [near, ref]);
-  return near;
-}
 
 /** The game's cover, or a generated local cover (its initials on a colour taken from its name) when there is none. Never an empty box. */
 export function GameArtwork({ className, cacheKey, fallback, name, kind, sourceId }: { className: string; cacheKey?: string; fallback: string; name?: string } & Pick<Piko, "kind" | "sourceId">) {
