@@ -125,3 +125,16 @@
 .dep-link { flex: 0 0 auto; width: auto; min-width: 0; padding: 0 10px; white-space: nowrap; }
 .dep-warning { display: flex; align-items: center; gap: 6px; margin: 12px 0 0; color: var(--mochi-warning); }
 .dep-actions { flex: 0 0 auto; margin-top: 14px; }
+
+/* Conflict check (pre-launch dialog and Tofu page) */
+.conflict-dialog { width: min(100%, 600px); max-height: calc(100vh - 32px); display: flex; flex-direction: column; overflow: hidden; }
+.conflict-dialog .dep-body { margin-top: 12px; }
+.conflict-list { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.conflict-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 10px; padding: 10px 12px; border: var(--mochi-border-width, 1px) solid var(--mochi-border); border-radius: 9px; background: var(--mochi-surface-raised); }
+.conflict-row > svg { flex: 0 0 auto; margin-top: 2px; color: var(--mochi-text-muted); }
+.conflict-row[data-severity="warning"] > svg { color: var(--mochi-warning); }
+.conflict-text { display: grid; gap: 2px; min-width: 0; flex: 1 1 220px; overflow-wrap: anywhere; }
+.conflict-text small { color: var(--mochi-text-muted); font-size: 12px; line-height: 1.45; }
+.conflict-actions { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 100%; padding-left: 25px; }
+.conflict-message { min-height: 1.2em; margin: 8px 0 0; color: var(--mochi-text-muted); font-size: 12px; }
+.conflict-check-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }

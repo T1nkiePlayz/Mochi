@@ -5,7 +5,7 @@ import type { ModFile, ModItem, ModSource, ResolvedDownload } from "./types";
 const startModDownload = vi.fn(async (..._args: unknown[]) => "download-1");
 vi.mock("../downloads", () => ({ startModDownload: (...args: unknown[]) => startModDownload(...args) }));
 
-const { installBest, installFile, NoCompatibleFileError } = await import("./install");
+const { conflictFacts, installBest, installFile, NoCompatibleFileError } = await import("./install");
 
 const tofu = (over: Partial<Tofu> = {}): Tofu => ({ id: "t1", name: "T", version: "1.20.1", runtime: "Native", mods: 0, status: "Ready", path: "/store", gameDir: "/game/mods", contentRoot: "/game", ...over });
 const item = (over: Partial<ModItem> = {}): ModItem => ({ source: "curseforge", id: "42", name: "Cool Mod", summary: "", pageUrl: "https://www.curseforge.com/minecraft/mc-mods/cool", native: {}, ...over });
@@ -35,6 +35,17 @@ describe("installFile", () => {
       record: { source: "curseforge", projectId: "42", fileId: "7", fileDate: "2025-01-01T00:00:00Z" },
     });
     expect((startModDownload.mock.calls[0][0] as { subdir?: string }).subdir).toBeUndefined();
+  });
+
+  it("stores conflict-check facts for Modrinth files but nothing from CurseForge", async () => {
+    const rich: ModFile = { ...file, gameVersions: ["1.20.1"], loaders: ["fabric"], dependencies: [{ id: "API", url: "", required: true }, { id: "ext", url: "", required: true, external: true }, { id: "API", url: "", required: true }], incompatibles: [{ id: "BAD", url: "", required: false }] };
+    expect(conflictFacts(rich)).toEqual({ gameVersions: ["1.20.1"], loaders: ["fabric"], requires: ["API"], incompatible: ["BAD"] });
+    expect(conflictFacts(file)).toEqual({});
+    await installFile({ ...sourceFor({ fileName: "a.jar", url: "https://cdn.modrinth.com/a.jar", pageUrl: "" }), id: "modrinth" }, item({ source: "modrinth" }), rich, tofu());
+    expect((startModDownload.mock.calls[0][0] as { record: object }).record).toMatchObject({ requires: ["API"], loaders: ["fabric"] });
+    startModDownload.mockClear();
+    await installFile(sourceFor({ fileName: "a.jar", url: "https://edge.forgecdn.net/a.jar", pageUrl: "" }), item(), rich, tofu());
+    expect((startModDownload.mock.calls[0][0] as { record: object }).record).not.toHaveProperty("requires");
   });
 
   it("puts resource packs and shaders in their folder and never asks to extract them", async () => {

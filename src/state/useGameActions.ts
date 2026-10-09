@@ -6,6 +6,8 @@ import { describeModSync, subscribeNative, type ModSyncResult } from "../lib/nat
 import { launchTargetFor } from "../lib/minecraftPiko";
 import type { Behavior } from "./settings";
 import { updateBeforeLaunch } from "./modUpdates";
+import { askConflictChoice } from "../lib/mods/conflictPrompt";
+import { checkTofuMods } from "../lib/mods/conflictService";
 import type { LibraryState } from "./useLibrary";
 
 type Params = {
@@ -51,6 +53,15 @@ export function useGameActions({ lib, behavior, refreshPlaytime, refreshSessions
     launching.current.add(piko.id);
     setIsLaunching(true);
     try {
+      // Offline and fast (local files only); a warning never blocks: the user can always launch anyway.
+      if (tofu && !tofu.skipModCheck && tofu.path) {
+        const issues = await checkTofuMods(piko, tofu);
+        if (issues.length) {
+          const choice = await askConflictChoice({ piko, tofu, issues });
+          if (choice === "cancel") return;
+          if (choice === "launch-and-silence") lib.updateGame(piko.id, { tofus: piko.tofus.map((item) => item.id === tofu.id ? { ...item, skipModCheck: true } : item) });
+        }
+      }
       // Optional and off by default: bring the Tofu's mods up to date first (bounded wait; launching always continues).
       if (behavior.autoUpdateMods && tofu) await updateBeforeLaunch(tofu, piko, behavior.modSources, notify);
       await startGame(piko, tofu);

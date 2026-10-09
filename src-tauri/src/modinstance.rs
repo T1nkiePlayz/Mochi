@@ -81,19 +81,37 @@ pub struct ModRecord {
     /// The download was a .zip unpacked into the folder: `file` names the archive, which is no longer on disk.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub extracted: bool,
+    /// Install-time facts for the offline conflict check (never stored for CurseForge, see `RecordInput::into_record`).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub game_versions: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub loaders: Vec<String>,
+    /// Project ids (of the same source) the file needs.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub requires: Vec<String>,
+    /// Project ids (of the same source) the author marked as incompatible.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub incompatible: Vec<String>,
 }
 
 impl Default for ModRecord {
     fn default() -> Self {
         Self { file: String::new(), subdir: String::new(), enabled: true, source: "manual".into(), project_id: String::new(), file_id: String::new(),
-            version: String::new(), title: String::new(), icon_url: None, sha1: None, file_date: None, installed_at: 0, rollback: None, extracted: false }
+            version: String::new(), title: String::new(), icon_url: None, sha1: None, file_date: None, installed_at: 0, rollback: None, extracted: false,
+            game_versions: Vec::new(), loaders: Vec::new(), requires: Vec::new(), incompatible: Vec::new() }
     }
 }
 
 /// What the frontend knows about a file when it starts a download or an update.
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(rename_all = "camelCase", default)]
-pub struct RecordInput { pub source: String, pub project_id: String, pub file_id: String, pub version: String, pub title: String, pub icon_url: Option<String>, pub file_date: Option<String> }
+pub struct RecordInput { pub source: String, pub project_id: String, pub file_id: String, pub version: String, pub title: String, pub icon_url: Option<String>, pub file_date: Option<String>,
+    pub game_versions: Vec<String>, pub loaders: Vec<String>, pub requires: Vec<String>, pub incompatible: Vec<String> }
+
+/// Keeps at most `max` short, non-empty entries.
+fn clean_list(list: Vec<String>, max: usize, len: usize) -> Vec<String> {
+    list.into_iter().map(|item| item.trim().chars().take(len).collect::<String>()).filter(|item| !item.is_empty()).take(max).collect()
+}
 
 impl RecordInput {
     pub fn into_record(self, file: &str, subdir: &str, sha1: Option<String>) -> ModRecord {
@@ -104,6 +122,11 @@ impl RecordInput {
             version: self.version.chars().take(120).collect(), title: self.title.chars().take(160).collect(), // CurseForge terms: no stored API content beyond what identifies the installed file, so no icon for those.
             icon_url: self.icon_url.filter(|url| !is_curseforge && url.starts_with("https://") && url.len() < 500),
             sha1, file_date: self.file_date.map(|value| value.chars().take(40).collect()), installed_at: now_ms(), rollback: None, extracted: false,
+            // CurseForge terms: no persistent copy of its API data, so these stay empty for CurseForge files.
+            game_versions: if is_curseforge { Vec::new() } else { clean_list(self.game_versions, 60, 24) },
+            loaders: if is_curseforge { Vec::new() } else { clean_list(self.loaders, 8, 24) },
+            requires: if is_curseforge { Vec::new() } else { clean_list(self.requires, 100, 80) },
+            incompatible: if is_curseforge { Vec::new() } else { clean_list(self.incompatible, 100, 80) },
         }
     }
 }
@@ -885,6 +908,27 @@ mod tests {
         assert!(modrinth.icon_url.is_some());
         assert!(content_dir(Path::new("/x"), "../etc").is_err());
         assert_eq!(content_dir(Path::new("/x"), "shaderpacks").unwrap(), PathBuf::from("/x/shaderpacks"));
+    }
+
+    #[test]
+    fn conflict_check_facts_are_stored_cleaned_and_optional() {
+        let strings = |items: &[&str]| items.iter().map(|item| item.to_string()).collect::<Vec<_>>();
+        let input = |source: &str| RecordInput { source: source.into(), game_versions: strings(&["1.20.1", " ", "1.20.4"]), loaders: strings(&["fabric"]), requires: strings(&["P1", &"x".repeat(200)]), incompatible: strings(&["P2"]), ..Default::default() };
+        let record = input("modrinth").into_record("a.jar", "", None);
+        assert_eq!(record.game_versions, strings(&["1.20.1", "1.20.4"]));
+        assert_eq!(record.loaders, strings(&["fabric"]));
+        assert_eq!(record.requires.len(), 2);
+        assert_eq!(record.requires[1].len(), 80);
+        assert_eq!(record.incompatible, strings(&["P2"]));
+        // CurseForge terms: nothing from its API is kept beyond what identifies the file.
+        let cf = input("curseforge").into_record("a.jar", "", None);
+        assert!(cf.game_versions.is_empty() && cf.loaders.is_empty() && cf.requires.is_empty() && cf.incompatible.is_empty());
+        // Old mods.json files (no new fields) still load, and empty lists are not written back.
+        let old: ModRecord = serde_json::from_str(r#"{"file":"a.jar","source":"modrinth","projectId":"P"}"#).unwrap();
+        assert!(old.requires.is_empty() && old.enabled);
+        let json = serde_json::to_string(&old).unwrap();
+        assert!(!json.contains("requires") && !json.contains("gameVersions"));
+        assert!(serde_json::to_string(&record).unwrap().contains("\"requires\""));
     }
 
     #[test]

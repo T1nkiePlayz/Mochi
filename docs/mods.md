@@ -51,6 +51,17 @@ Installing a mod first looks up its required dependencies and offers them in a c
 - **Install**: chosen dependencies go through `installFile` one at a time, deepest first, then the mod: same folder rules, SHA-1 check, install record and Downloads entry as a single download. A dependency that fails or needs a manual download is listed in the result message (never silent) and the rest still installs, including the mod.
 - **Limits**: Modrinth dependencies that name only a version (no project) are skipped; "Install missing dependencies" for mods installed earlier is not offered yet.
 
+## Conflict check
+
+Before a game launches (and on demand from Manage Tofus, "Mod check", button "Check mods") Mochi looks for problems in the Tofu's mod folder. It is advisory: a warning dialog offers fixes, and "Launch anyway" is always there. Turn it off per Tofu with "Don't warn for this Tofu" or the "Check mods before launching" checkbox (`Tofu.skipModCheck`).
+
+- Pure checker: `checkTofu(entries, tofu, opts) -> Issue[]` in `src/lib/mods/conflicts.ts`. Service (file list + fix buttons): `conflictService.ts`. Dialog: `components/mods/ConflictPromptHost.tsx`, list: `ConflictIssues.tsx`.
+- Offline and fast: it reads the folder listing and `mods.json` only (no network, about a millisecond for 300 mods; a test enforces < 50 ms). The pre-launch read gives up after 1.5 s and the game starts without the check.
+- Found: the same file with and without `.disabled`; the same project twice (or the same title from two sites), keeping the newest; a mod for another loader or game version (only clear mismatches, so "same release series" and Quilt running Fabric mods stay quiet); a missing required mod (or one that is installed but switched off); mods their authors marked incompatible.
+- Fixes: "Disable duplicate", "Enable <mod>", "Install missing dependency" (Modrinth: looks the mod up and installs the best file for the Tofu; the network is used only after the click; other sites open the page), "Open mod page", and for incompatible pairs one "Disable <mod>" per side. Disabling renames to `.disabled`, so it is reversible.
+- Data: records gained optional `gameVersions`, `loaders`, `requires`, `incompatible` (project ids of the same site), written at install time by `conflictFacts()` (`install.ts`) through `RecordInput` (`modinstance.rs`). Old `mods.json` files load unchanged and are simply not judged on what they do not say. CurseForge files never store these (terms: no persistent copy of its API data), so for them only duplicates are checked.
+- Limits: manual files without a record, mods installed before this feature, and updates through the update button (which do not carry the new fields) are only checked for duplicates. Dependencies are read from the install-time list, not resolved recursively, and Nexus requirements that are not in the file's own list are not known. Names are compared case-insensitively.
+
 ## Rules to keep
 
 - CurseForge: show "Powered by CurseForge" and a "View on CurseForge" link; never construct forgecdn URLs; when the author disabled third-party downloads (`allowModDistribution === false` or no `downloadUrl`) show the message and "Open on CurseForge". Mod descriptions are HTML written by strangers: render only through `sanitizeHtml` / `SafeHtml`, never `dangerouslySetInnerHTML`.
