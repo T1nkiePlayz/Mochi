@@ -540,7 +540,7 @@ mod asset_path_tests {
 
     #[test]
     fn resolves_files_inside_the_cache_and_rejects_escapes() {
-        let root = std::env::temp_dir().join(format!("mochi-art-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("mochi-art-path-{}", std::process::id()));
         let cache = root.join("cache");
         fs::create_dir_all(&cache).unwrap();
         fs::write(cache.join("a.png"), b"x").unwrap();
