@@ -19,3 +19,13 @@
 .tofu-settings .mod-folder-editor .metadata-note { margin: 0; }
 .tofu-settings .mod-folder-editor .form-row { grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); }
 @media (max-width: 760px) { .tofu-manager-list { grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); overflow-x: auto; overflow-y: hidden; } }
+
+/* Snapshots section: a short list of saved states with per-row actions. */
+.tofu-snapshots { display: grid; gap: 10px; }
+.tofu-snapshots-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tofu-snapshot-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.tofu-snapshot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border: var(--mochi-border-width, 1px) solid var(--mochi-border); border-radius: var(--mochi-radius-md, 8px); background: var(--mochi-surface-raised, var(--mochi-surface)); }
+.tofu-snapshot-text { display: grid; gap: 2px; min-width: 0; flex: 1 1 200px; }
+.tofu-snapshot-text strong { color: var(--mochi-text-strong); font-size: 12px; overflow-wrap: anywhere; }
+.tofu-snapshot-text small { color: var(--mochi-text-muted); font-size: 11px; }
+.tofu-snapshot-buttons { display: flex; gap: 6px; }

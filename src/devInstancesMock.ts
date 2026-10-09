@@ -12,7 +12,19 @@ let nxmRegistered = false;
 const logs: Record<string, string> = {};
 const logText = (sessionId: string) => logs[sessionId] ??= "# Mochi launched /usr/bin/mock-game\n[12:00:01] Loading assets...\n[12:00:03] Fabric loader 0.15.7 ready\n[12:00:04] [WARN] Missing texture: block/mock\n";
 
+type MockSnapshot = { id: string; createdAt: number; reason: string; isRestore: boolean; files: number; size: number; folders: number; reused: boolean };
+const hour = 3_600_000;
+let snapshots: MockSnapshot[] = [
+  { id: "s3", createdAt: Date.now() - 2 * hour, reason: "Before restore", isRestore: true, files: 41, size: 118_400_000, folders: 3, reused: false },
+  { id: "s2", createdAt: Date.now() - 5 * hour, reason: "Before updating 6 mods", isRestore: false, files: 41, size: 118_100_000, folders: 3, reused: false },
+  { id: "s1", createdAt: Date.now() - 30 * hour, reason: "Before updating Sodium", isRestore: false, files: 39, size: 112_900_000, folders: 3, reused: false },
+];
+
 export const instanceHandlers: Record<string, Handler> = {
+  list_tofu_snapshots: () => snapshots,
+  create_tofu_snapshot: (args) => { const made = { id: `s${Date.now()}`, createdAt: Date.now(), reason: String(args.reason ?? ""), isRestore: false, files: 41, size: 118_400_000, folders: 3, reused: false }; snapshots = [made, ...snapshots]; return made; },
+  restore_tofu_snapshot: () => ({ restored: 4, removed: 1, unchanged: 36, safetySnapshotId: "s3" }),
+  delete_tofu_snapshot: (args) => { snapshots = snapshots.filter((snapshot) => snapshot.id !== args.snapshotId); return null; },
   list_instance_mods: (args) => mods.map((mod) => ({ ...mod, modifiedMs: 1_700_000_000_000, foreign: Array.isArray(args.siblings) && mod.filename.startsWith("other-tofu") })),
   list_instance_records: () => mods.filter((mod) => mod.record).map((mod) => mod.record),
   hash_mod_files: (args) => (args.paths as string[]).map((path, index) => ({ path, filename: path.split("/").pop(), size: 1000, sha1: `${index}`.padStart(40, "a"), md5: `${index}`.padStart(32, "b"), fingerprint: 1000 + index })),

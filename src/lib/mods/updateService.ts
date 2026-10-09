@@ -8,6 +8,7 @@ import { tofuTarget, type TofuTarget } from "./compat";
 import { createCurseforgeSource, curseforgeItem } from "./curseforgeSource";
 import { modSupportOf } from "./gameSupport";
 import { listInstanceMods } from "./instances";
+import { withSnapshot } from "./snapshots";
 import { createNexusSource } from "./nexusSource";
 import type { ModSourceSettings } from "./resolveSources";
 import type { ModItem } from "./types";
@@ -98,9 +99,13 @@ export async function checkTofuUpdates(tofu: Tofu, piko: Piko | undefined, modSo
   return done();
 }
 
-/** Installs one update: SHA-1 verified, the old file kept as a rollback copy, the Tofu's record updated. */
-export async function applyModUpdate(tofu: Tofu, item: ModUpdateItem): Promise<void> {
+/**
+ * Installs one update: SHA-1 verified, the old file kept as a rollback copy, the Tofu's record updated.
+ * A snapshot of the Tofu is saved first; "update all" passes `snapshot: false` after taking one snapshot for the whole batch.
+ */
+export async function applyModUpdate(tofu: Tofu, item: ModUpdateItem, options: { snapshot?: boolean } = {}): Promise<void> {
   if (item.apply.kind !== "download") throw new Error(item.apply.reason);
   const { provider, url, filename, sha1 } = item.apply;
-  await updateModFile(item.path, { url, filename, sha1 }, { provider, tofuId: tofu.id, record: { ...item.record, fileDate: item.record.fileDate } });
+  const install = () => updateModFile(item.path, { url, filename, sha1 }, { provider, tofuId: tofu.id, record: { ...item.record, fileDate: item.record.fileDate } });
+  if (options.snapshot === false) await install(); else await withSnapshot(tofu, `Before updating ${item.title}`, install);
 }
