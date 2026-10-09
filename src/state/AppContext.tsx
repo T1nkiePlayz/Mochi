@@ -22,6 +22,8 @@ import { useAddGame } from "./useAddGame";
 import { useGameActions } from "./useGameActions";
 import { useDeepLinks } from "./useDeepLinks";
 import { AchievementWatcher } from "../components/stats/AchievementWatcher";
+import { ConfirmHost } from "../components/ui/ConfirmHost";
+import { confirmAction } from "../lib/confirm";
 
 export type NavId = "Library" | "Installed" | "Discover" | "Downloads" | "Stats" | "Settings";
 
@@ -124,7 +126,11 @@ function useAppController() {
   };
 
   const resetLocalData = async () => {
-    if (!window.confirm("Clear all Mochi app data and return to the welcome screen? Your Mochi account will not be deleted.")) return;
+    if (!await confirmAction({
+      title: "Clear all Mochi app data?", danger: true, confirmLabel: "Clear everything",
+      message: "Mochi returns to the welcome screen on this device. Your Mochi account and your installed games are not deleted.",
+      items: ["Your library, collections, tags and favourites on this device", "Settings, themes choice and notifications", "Saved achievements, playtime cache and downloaded artwork", "Signed-in sessions on this device"],
+    })) return;
     discardPendingWrites();
     try { window.localStorage.clear(); } catch { /* storage unavailable */ }
     try {
@@ -148,7 +154,7 @@ const AppContext = createContext<AppController | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const controller = useAppController();
-  return <AppContext.Provider value={controller}><AchievementWatcher />{children}</AppContext.Provider>;
+  return <AppContext.Provider value={controller}><AchievementWatcher />{children}<ConfirmHost /></AppContext.Provider>;
 }
 
 export function useApp(): AppController {

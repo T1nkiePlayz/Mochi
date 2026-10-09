@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { MochiIcon } from "../MochiIcon";
 import { useApp } from "../../state/AppContext";
-import { ConfirmDialog } from "../library/ConfirmDialog";
+import { confirmAction } from "../../lib/confirm";
 import { clearAllDataSources, clearDataSource, dataSources, gamesWithArtworkFrom, type DataSourceId } from "../../lib/providerData";
 import { providerLabels } from "../../state/useCredentials";
 import type { ProviderId } from "../../lib/metadata/types";
@@ -12,7 +12,6 @@ export function DataSection() {
   const { behavior, setBehavior, account, credentials, lib, metadata, cloud, themeEngine, chooseConfigLocation } = useApp();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const user = account.user;
-  const [confirm, setConfirm] = useState<DataSourceId | "all" | null>(null);
   const [busy, setBusy] = useState<DataSourceId | "all" | null>(null);
   const [note, setNote] = useState("");
   const saved = { igdb: credentials.status.igdb, steamgriddb: credentials.status.steamgriddb };
@@ -23,8 +22,24 @@ export function DataSection() {
     if (!saved[id]) return { ready: false, text: `Save your ${providerLabels[id]} key under Mod & metadata providers to use it. Other sources keep working without it.` };
     return { ready: true, text: "Ready." };
   };
+  const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
+  // Names exactly what goes: the source's saved lookups plus how many covers on this device came from it.
+  const ask = (id: DataSourceId | "all") => {
+    if (id === "all") {
+      const covers = dataSources.filter((source) => source.id !== "custom-artwork").reduce((sum, source) => sum + gamesWithArtworkFrom(lib.library, source.id).length, 0);
+      return confirmAction({ title: "Clear all cached data?", danger: true, confirmLabel: "Clear all",
+        message: "Games stay in your library and show generated covers until you refresh. Artwork you chose yourself is kept.",
+        items: [...dataSources.filter((source) => source.id !== "custom-artwork").map((source) => `Saved ${source.label} data`), plural(covers, "downloaded cover")] });
+    }
+    const source = dataSources.find((item) => item.id === id)!;
+    const covers = gamesWithArtworkFrom(lib.library, id).length;
+    if (id === "custom-artwork") return confirmAction({ title: "Delete your own artwork?", danger: true, confirmLabel: "Delete artwork", message: "Every cover you picked yourself is deleted from this device. This cannot be undone and they are not fetched again.", items: [plural(covers, "custom cover")] });
+    return confirmAction({ title: `Clear ${source.label} data?`, danger: true, confirmLabel: "Clear", message: `${source.detail} Games stay in your library; refresh to fetch it again.`,
+      items: [`Saved ${source.label} data on this device`, ...(covers ? [plural(covers, `cover from ${source.label}`)] : [])] });
+  };
   const run = async (id: DataSourceId | "all") => {
-    setConfirm(null); setBusy(id); setNote("");
+    if (!await ask(id)) return;
+    setBusy(id); setNote("");
     try {
       const removed = id === "all" ? await clearAllDataSources(lib.library, lib.setLibrary, user?.id) : await clearDataSource(id, lib.library, lib.setLibrary, user?.id);
       setNote(id === "all" ? "Cleared saved data for every source. Your own artwork was kept." : `Cleared ${dataSources.find((source) => source.id === id)?.label} data${removed ? ` and ${removed} cover${removed === 1 ? "" : "s"}` : ""}.`);
@@ -42,7 +57,7 @@ export function DataSection() {
           <span><strong>{source.label}</strong><small>{source.detail}</small></span>
           <span className="data-source-actions">
             {provider && <button type="button" className="secondary-button" disabled={!need?.ready || count === 0 || metadata.refreshBusy} title={!need?.ready ? need?.text : count === 0 ? "No game in your library can use this source." : undefined} onClick={() => void metadata.refreshAll(lib.library, provider)}>{metadata.refreshBusy ? "Refreshing…" : `Refresh${count ? ` (${count})` : ""}`}</button>}
-            <button type="button" className="secondary-button danger-outline" disabled={busy !== null || (source.id === "custom-artwork" && covers === 0)} onClick={() => (source.id === "custom-artwork" ? setConfirm(source.id) : void run(source.id))}>{busy === source.id ? "Clearing…" : `Clear ${source.label} data`}</button>
+            <button type="button" className="secondary-button danger-outline" disabled={busy !== null || (source.id === "custom-artwork" && covers === 0)} onClick={() => void run(source.id)}>{busy === source.id ? "Clearing…" : `Clear ${source.label} data`}</button>
           </span>
           {need && <p className={`data-source-state${need.ready ? " ready" : ""}`}>{need.ready && count === 0 ? "No game in your library can use this source yet." : need.text}</p>}
         </div>;
@@ -50,12 +65,9 @@ export function DataSection() {
     </div>
     <div className="data-source-footer">
       <small className="metadata-note">Clearing removes saved lookups and downloaded covers from this device only. Games stay in your library and Mochi shows generated covers until you refresh.</small>
-      <button type="button" className="secondary-button danger-outline" disabled={busy !== null} onClick={() => setConfirm("all")}>{busy === "all" ? "Clearing…" : "Clear all cached data"}</button>
+      <button type="button" className="secondary-button danger-outline" disabled={busy !== null} onClick={() => void run("all")}>{busy === "all" ? "Clearing…" : "Clear all cached data"}</button>
     </div>
     {note && <p className="metadata-note settings-note" role="status">{note}</p>}
-    {confirm && <ConfirmDialog danger title={confirm === "all" ? "Clear all cached data?" : "Delete your own artwork?"}
-      message={confirm === "all" ? "Saved lookups, downloaded covers and saved achievements are removed. Artwork you chose yourself is kept." : "Every cover you picked yourself is deleted from this device. This cannot be undone."}
-      confirmLabel={confirm === "all" ? "Clear all" : "Delete artwork"} onCancel={() => setConfirm(null)} onConfirm={() => void run(confirm)} />}
     <div className="setting-row"><span><strong>Cloud data</strong><small>{cloud.cloudDataAccessAllowed ? "Delete your cloud Pikos and Tofus. Your local library, account, and saved provider credentials stay unchanged." : "Mochi Cloud data controls are not enabled for this account."}</small></span><button type="button" className="secondary-button danger-outline" disabled={!account.user || !cloud.cloudDataAccessAllowed || cloud.cloudDataBusy} onClick={() => void cloud.clearCloudData()}>{cloud.cloudDataBusy ? "Clearing…" : cloud.cloudDataAccessAllowed ? "Clear cloud data" : "Unavailable"}</button></div>
     {cloud.cloudDataMessage && <p className="metadata-note settings-note" role="status">{cloud.cloudDataMessage}</p>}
     <div className="setting-row setting-location-row"><span><strong>Library location</strong><small>Your Mochi configuration, themes and launcher data are stored here.</small></span><span className="setting-location-value"><code>{themeEngine.configInfo?.configPath || "Default Mochi location"}</code><button type="button" className="secondary-button" onClick={() => void chooseConfigLocation()}>Change</button></span></div>

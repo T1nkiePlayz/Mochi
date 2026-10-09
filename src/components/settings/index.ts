@@ -6,6 +6,7 @@ import { ModSourcesSection } from "./ModSourcesSection";
 import { GeneralSection } from "./GeneralSection";
 import { SecuritySection } from "./SecuritySection";
 import { DataSection } from "./DataSection";
+import { AchievementsSection } from "./AchievementsSection";
 import { HelpSection } from "./HelpSection";
 import { UpdateSection } from "./UpdateSection";
 import { BigPictureSection, ControllerSection } from "./ControllerSection";
@@ -25,6 +26,7 @@ export const settingsSections: Array<{ id: string; Section: ComponentType }> = [
   { id: "bigpicture", Section: BigPictureSection },
   { id: "security", Section: SecuritySection },
   { id: "updates", Section: UpdateSection },
+  { id: "achievements", Section: AchievementsSection },
   { id: "data", Section: DataSection },
   { id: "experimental", Section: ExperimentalSection },
   { id: "help", Section: HelpSection },

@@ -1,4 +1,3 @@
-import { RemoteImage } from "./RemoteImage";
 import { useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, ExternalLink, FolderOpen, FolderPlus, Heart, Pencil, Play, Square, Trash2 } from "lucide-react";
 import { openExternalUrl, type PlatformCapabilities } from "../lib/platform";
@@ -14,6 +13,8 @@ import { useDismiss } from "./library/useDismiss";
 import { SteamAchievements } from "./SteamAchievements";
 import { GameLogsButton } from "./GameLogs";
 import { steamAppIdOf } from "../lib/metadata/merge";
+import { ScreenshotGallery, singleCredit } from "./details/ScreenshotGallery";
+import { imageSourceLabels } from "../lib/imageSource";
 
 type Props = {
   game: Piko;
@@ -51,6 +52,12 @@ export function GameDetails({ game, synced, running, playtime, launchError, laun
   const memberOf = collections.filter((collection) => game.collectionIds?.includes(collection.id));
   const trailer = game.trailerId && /^[A-Za-z0-9_-]{6,20}$/.test(game.trailerId) ? game.trailerId : "";
   const steamAppId = steamAppIdOf(game);
+  const screenshots = game.screenshots ?? [];
+  const screenshotCredit = singleCredit(screenshots);
+  // Name the providers this game's details can come from instead of always crediting IGDB.
+  const textSources = [game.igdbId ? "IGDB" : "", steamAppId !== null ? "Steam" : ""].filter(Boolean);
+  const infoCredit = game.lockedFields?.includes("description") ? "Description written by you." : textSources.length ? `Details from ${textSources.join(" and ")}.` : "Details you added.";
+  const coverCredit = !game.artworkSource ? "" : game.artworkSource === "custom" ? "Chosen by you" : game.artworkSource === "icon" ? "Made from the app icon" : imageSourceLabels[game.artworkSource];
   const folder = game.installPath || (game.executablePath?.startsWith("/") ? game.executablePath : "");
   return <section className="game-details-page">
     <button type="button" className="text-button game-details-back" onClick={onBack}><ArrowLeft size={15}/> Back to library</button>
@@ -75,13 +82,15 @@ export function GameDetails({ game, synced, running, playtime, launchError, laun
         <div><dt>Last played</dt><dd>{running ? "Playing now" : playtime?.lastPlayed ? formatRelativeTime(playtime.lastPlayed) : "Never"}</dd></div>
         <div><dt>Launch target</dt><dd className="path-text" title={game.executablePath}>{game.executablePath || "Not set"}</dd></div>
       </dl></div></div>
-    <div className="game-workspace">{workspace}</div>
-    <div className="game-details-content">
-      <section className="game-details-section"><div className="discover-section-heading"><div><h3>About {game.name}</h3><p>Game information from IGDB when available.</p></div></div><div className="game-details-info">{game.categories?.length ? <div><small>Genres</small><strong>{game.categories.join(", ")}</strong></div> : null}{game.firstReleaseDate ? <div><small>First released</small><strong>{new Date(game.firstReleaseDate * 1000).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</strong></div> : null}<div><small>Platform</small><strong>{game.platformCategory || game.sourceId || "Custom"}</strong></div></div>{game.description && <p className="game-details-description">{game.description}</p>}</section>
-      {steamAppId !== null && <SteamAchievements key={steamAppId} appid={steamAppId} gameName={game.name} />}
-      {game.screenshots?.length ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Screenshots</h3><p>Images from IGDB.</p></div></div><div className="game-screenshot-grid">{game.screenshots.map((url, index) => <RemoteImage key={`${url}-${index}`} src={url} alt={`${game.name} screenshot ${index + 1}`} loading="lazy" />)}</div></section> : null}
-      {trailer ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Trailer</h3><p>Watch the trailer in Mochi.</p></div><button type="button" className="text-button" onClick={() => void openExternalUrl(`https://www.youtube.com/watch?v=${trailer}`).catch(() => undefined)}><ExternalLink size={13}/> Open on YouTube</button></div><div className="game-trailer-frame">{playTrailer && online ? <iframe src={`https://www.youtube-nocookie.com/embed/${trailer}?autoplay=1&controls=1&playsinline=1`} title={`${game.name} trailer`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <button type="button" className="game-trailer-start" disabled={!online} onClick={() => setPlayTrailer(true)}><GameArtwork className="game-trailer-poster" cacheKey={game.artworkCacheKey} fallback={game.artwork} name={game.name} kind={game.kind} sourceId={game.sourceId} /><span><Play size={23} fill="currentColor"/> {online ? "Play trailer" : "Trailer needs internet"}</span></button>}</div></section> : null}
+    <div className="game-details-content game-details-primary">
+      <section className="game-details-section game-details-about" aria-label={`About ${game.name}`}><div className="discover-section-heading"><div><h3>Game information</h3><p>{infoCredit}</p></div></div><div className="game-details-info">{game.categories?.length ? <div><small>Genres</small><strong>{game.categories.join(", ")}</strong></div> : null}{game.firstReleaseDate ? <div><small>First released</small><strong>{new Date(game.firstReleaseDate * 1000).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</strong></div> : null}<div><small>Platform</small><strong>{game.platformCategory || game.sourceId || "Custom"}</strong></div>{coverCredit ? <div><small>Cover art</small><strong>{coverCredit}</strong></div> : null}</div>{game.description && <p className="game-details-description">{game.description}</p>}</section>
+      {screenshots.length ? <section className="game-details-section game-details-screenshots"><div className="discover-section-heading"><div><h3>Screenshots</h3><p>{screenshotCredit ?? "Images from several sources."}</p></div></div><ScreenshotGallery urls={screenshots} gameName={game.name} /></section> : null}
     </div>
+    <div className="game-workspace">{workspace}</div>
+    {(steamAppId !== null || trailer) && <div className="game-details-content">
+      {steamAppId !== null && <SteamAchievements key={steamAppId} appid={steamAppId} gameName={game.name} />}
+      {trailer ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Trailer</h3><p>Watch the trailer in Mochi.</p></div><button type="button" className="text-button" onClick={() => void openExternalUrl(`https://www.youtube.com/watch?v=${trailer}`).catch(() => undefined)}><ExternalLink size={13}/> Open on YouTube</button></div><div className="game-trailer-frame">{playTrailer && online ? <iframe src={`https://www.youtube-nocookie.com/embed/${trailer}?autoplay=1&controls=1&playsinline=1`} title={`${game.name} trailer`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <button type="button" className="game-trailer-start" disabled={!online} onClick={() => setPlayTrailer(true)}><GameArtwork className="game-trailer-poster" cacheKey={game.artworkCacheKey} fallback={game.artwork} name={game.name} kind={game.kind} sourceId={game.sourceId} /><span><Play size={23} fill="currentColor"/> {online ? "Play trailer" : "Trailer needs internet"}</span></button>}</div></section> : null}
+    </div>}
     {mods && <div className="game-workspace game-mods-section">{mods}</div>}
   </section>;
 }

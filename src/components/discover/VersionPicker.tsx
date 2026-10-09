@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 import { Check, ChevronDown, Search } from "lucide-react";
 import { groupVersions, latestRelease, pinnedVersions, type GameVersion } from "../../lib/gameVersions";
 import { usePopoverPlacement } from "../ui/usePopoverPlacement";
+import { useDismiss } from "../ui/useDismiss";
 
 type Row = { id: string; value: string; label: string; hint?: string; heading?: string };
 
@@ -47,12 +48,7 @@ export function VersionPicker({ value, onChange, versions, loading, label = "Min
     return result;
   }, [versions, query, snapshots, latest, open]);
 
-  useEffect(() => {
-    if (!open) return;
-    const close = (event: MouseEvent) => { if (!root.current?.contains(event.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [open]);
+  useDismiss(root, open, () => setOpen(false));
 
   useEffect(() => { if (open) setActive(Math.max(0, rows.findIndex((row) => row.value === value && row.id !== "latest"))); }, [open, query, snapshots]);
   useEffect(() => { if (open) list.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" }); }, [active, open]);

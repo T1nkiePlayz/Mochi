@@ -9,7 +9,9 @@ import { readJson, writeJson } from "../lib/storage";
 import { collectionsKeyFor } from "./useCollections";
 
 const KEY = "mochi:achievements";
-const CHANGED = "mochi-achievements-changed";
+/** Fired on window whenever the stored achievements change (watcher, cloud merge, clear). */
+export const ACHIEVEMENTS_CHANGED = "mochi-achievements-changed";
+const CHANGED = ACHIEVEMENTS_CHANGED;
 
 /** Bump when achievements are added: ones already earned are then unlocked silently once, not announced as a flood. */
 const CATALOG_VERSION = 2;
@@ -35,6 +37,18 @@ export function readAchievements(): StoredAchievements {
     catalog: typeof raw.catalog === "number" ? raw.catalog : 0,
   };
 }
+
+export function writeAchievements(stored: StoredAchievements) {
+  writeJson(KEY, stored);
+  window.dispatchEvent(new Event(CHANGED));
+}
+
+/** Forgets every unlock and recorded flag. Achievements still earned unlock again quietly on the next check. */
+export function clearLocalAchievements() {
+  writeAchievements(emptyStored());
+  window.dispatchEvent(new Event(CLEARED));
+}
+const CLEARED = "mochi-achievements-cleared";
 
 /** Stored unlocks, refreshed whenever the watcher records a change. */
 export function useStoredAchievements() {
@@ -62,7 +76,8 @@ export function useAchievementWatcher() {
   // Loading Steam achievements for any game refreshes the Steam-based totals.
   useEffect(() => {
     window.addEventListener(STEAM_ACHIEVEMENTS_CHANGED, recompute);
-    return () => window.removeEventListener(STEAM_ACHIEVEMENTS_CHANGED, recompute);
+    window.addEventListener(CLEARED, recompute);
+    return () => { window.removeEventListener(STEAM_ACHIEVEMENTS_CHANGED, recompute); window.removeEventListener(CLEARED, recompute); };
   }, [recompute]);
 
   useEffect(() => {
@@ -89,8 +104,7 @@ export function useAchievementWatcher() {
       fresh.forEach((def) => { unlocked[def.id] = at; });
       const changed = fresh.length > 0 || !stored.seeded || stored.catalog !== CATALOG_VERSION || JSON.stringify(flags) !== JSON.stringify(stored.flags);
       if (!changed) return;
-      writeJson(KEY, { unlocked, flags, seeded: true, catalog: CATALOG_VERSION });
-      window.dispatchEvent(new Event(CHANGED));
+      writeAchievements({ unlocked, flags, seeded: true, catalog: CATALOG_VERSION });
       if (stored.seeded && stored.catalog === CATALOG_VERSION) {
         if (fresh.length > MAX_TOASTS) notify("Achievements unlocked", `${fresh.length} new achievements, including ${fresh[0].title}.`);
         else fresh.forEach((def) => notify("Achievement unlocked", `${def.title}: ${def.description}`));

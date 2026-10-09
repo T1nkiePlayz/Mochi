@@ -70,7 +70,9 @@ const handlers: Record<string, Handler> = {
     status: "ok", stale: false, fetchedAt: now, message: null,
     details: {
       appid, name: `Steam app ${appid}`, description: "Sample description from the Steam Store (development mock).", genres: ["Action", "Adventure"],
-      screenshots: [], movies: [], developers: ["Mock Studio"], publishers: ["Mock Publisher"], releaseDate: 1_100_563_200, releaseDateText: "16 Nov, 2004",
+      // Mixed sizes on purpose so the justified screenshot gallery can be checked in the browser.
+      screenshots: ["header.jpg", "library_hero.jpg", "capsule_616x353.jpg", "library_600x900.jpg", "capsule_231x87.jpg"].map((file) => `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/${file}`),
+      movies: [], developers: ["Mock Studio"], publishers: ["Mock Publisher"], releaseDate: 1_100_563_200, releaseDateText: "16 Nov, 2004",
       coverUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/library_600x900.jpg`,
       headerUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`,
       heroUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/library_hero.jpg`,

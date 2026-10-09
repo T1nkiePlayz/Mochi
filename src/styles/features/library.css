@@ -81,11 +81,6 @@
 .emoji-popover input { width: 60px; min-height: 28px; border: var(--mochi-border-width) solid var(--mochi-input-border); border-radius: var(--mochi-input-radius); background: var(--mochi-input-background); color: var(--mochi-text); }
 .emoji-popover .text-button { width: auto; padding: 0 6px; font-size: 11px; }
 
-.confirm-backdrop { z-index: 70; }
-.confirm-dialog { width: min(400px, calc(100vw - 32px)); }
-.confirm-dialog h2 { font-size: 18px; }
-.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
-
 .bulk-bar { position: sticky; top: 8px; z-index: 20; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 12px 0; padding: 10px 14px; border: var(--mochi-border-width) solid var(--mochi-accent-strong); border-radius: var(--mochi-card-radius); background: var(--mochi-panel-background); box-shadow: var(--mochi-panel-shadow); }
 .bulk-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
 
