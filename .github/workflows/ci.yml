@@ -40,29 +40,17 @@ jobs:
       - name: Test CurseForge proxy
         run: deno test --allow-env supabase/functions/curseforge-proxy/
 
-  build:
+  frontend:
+    name: Frontend
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-      - name: Install Linux dependencies
-        run: |
-          sudo sed -i             -e 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g'             -e 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g'             /etc/apt/sources.list.d/ubuntu.sources
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends             libwebkit2gtk-4.1-dev             libayatana-appindicator3-dev             librsvg2-dev             patchelf             libudev-dev
       - name: Setup Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: lts/*
           cache: npm
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable (2026-10-09)
-        with:
-          components: clippy
-      - name: Cache Rust
-        uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          workspaces: "./src-tauri -> target"
       - name: Install dependencies
         run: npm ci
       - name: Build frontend (includes theme validation)
@@ -71,8 +59,37 @@ jobs:
         run: npm run lint
       - name: Test frontend
         run: npm test
-      - name: Check Tauri backend
-        run: cargo check --manifest-path src-tauri/Cargo.toml
+
+  # Rust on Linux only runs when the backend changed (the backend does not read anything outside src-tauri).
+  build:
+    name: build
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-24.04
+    env:
+      CARGO_PROFILE_DEV_DEBUG: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      # Restores the installed packages from the Actions cache instead of downloading them from a (sometimes very slow) Ubuntu mirror.
+      - name: Install Linux dependencies
+        uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1.6.3
+        with:
+          packages: libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libudev-dev
+          version: "1"
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable (2026-10-09)
+        with:
+          components: clippy
+      - name: Cache Rust
+        uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: "./src-tauri -> target"
+          # PR caches are 1 GB+ each and only ever reused by the same PR; main's cache serves every PR.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Prepare Tauri frontend directory
+        run: mkdir -p dist
+      # Clippy performs the same type check as `cargo check`, so a separate check step is not needed.
       - name: Lint Tauri backend
         run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
       - name: Test Tauri backend
@@ -102,10 +119,6 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Prepare Tauri frontend directory
         run: mkdir -p dist
-      - name: Check Tauri backend
-        env:
-          CARGO_PROFILE_DEV_DEBUG: "0"
-        run: cargo check --manifest-path src-tauri/Cargo.toml
       - name: Lint Tauri backend
         env:
           CARGO_PROFILE_DEV_DEBUG: "0"
