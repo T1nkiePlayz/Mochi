@@ -44,6 +44,8 @@ export type ModFile = {
   size?: number;
   date?: string;
   gameVersions?: string[];
+  /** Mod loaders the file was built for, when the source says (Modrinth). CurseForge mixes them into `gameVersions`; use `metaFromModFile`. */
+  loaders?: string[];
   dependencies?: ModDependency[];
   primary?: boolean;
   native: unknown;

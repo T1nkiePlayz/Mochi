@@ -21,6 +21,9 @@ export type ModProfile = {
   files: string[];
 };
 
+/** Mod loader of a Minecraft Tofu. */
+export type ModLoader = "vanilla" | "fabric" | "quilt" | "forge" | "neoforge";
+
 export type Tofu = {
   id: string;
   name: string;
@@ -34,6 +37,15 @@ export type Tofu = {
   activeProfileId?: string;
   /** Unpack .zip downloads into the folder (for games whose mods are archives, not single files). */
   extractArchives?: boolean;
+  /** Minecraft: which loader this Tofu runs (the game version is `version`). */
+  loader?: ModLoader;
+  /**
+   * The folder the game itself loads mods from. When it differs from `path` (the Tofu's own saved mods),
+   * the Tofu's enabled mods are copied there when the game is launched; equal or unset means no sync.
+   */
+  gameDir?: string;
+  /** Minecraft: the game folder holding `resourcepacks` and `shaderpacks`, synced like `gameDir`. */
+  contentRoot?: string;
 };
 
 export type Piko = {
