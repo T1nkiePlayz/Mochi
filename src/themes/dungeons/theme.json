@@ -37,6 +37,7 @@
     "fontDisplay": "\"Cinzel\", serif",
     "radiusSm": "3px",
     "radiusMd": "4px",
+    "pillRadius": "4px",
     "radiusLg": "6px",
     "heroRadius": "6px",
     "sidebarWidth": "262px",

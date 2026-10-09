@@ -37,6 +37,7 @@
     "fontDisplay": "\"Baloo 2\", sans-serif",
     "radiusSm": "6px",
     "radiusMd": "8px",
+    "pillRadius": "6px",
     "radiusLg": "10px",
     "heroRadius": "10px",
     "sidebarWidth": "240px",
