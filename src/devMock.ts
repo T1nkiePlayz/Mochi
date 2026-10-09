@@ -25,6 +25,41 @@ const fakeVersions = [
 const apiResult = (data: unknown) => ({ data, cached: false, stale: false, fetchedAt: Date.now() });
 
 const now = Math.floor(Date.now() / 1000);
+/** Pretend native events: the dev mock keeps the listeners `listen()` registers so mocked commands can emit to them. */
+const eventListeners = new Map<string, Array<(message: { event: string; id: number; payload: unknown }) => void>>();
+const callbacks = new Map<number, (message: never) => void>();
+const emitMockEvent = (event: string, payload: unknown) => eventListeners.get(event)?.forEach((callback) => callback({ event, id: 0, payload }));
+const mockScan = (() => {
+  const mochi = [["artwork", "Artwork cache", "artwork", 186_000_000, "artworkCache"], ["themes", "Themes", "themes", 2_400_000, null], ["fonts", "Theme fonts", "themes", 5_100_000, null], ["sound-packs", "Sound packs", "sound", 3_300_000, null], ["logs", "Game logs", "logs", 41_000_000, "logs"], ["snapshots", "Snapshots", "snapshots", 612_000_000, "snapshots"], ["instances", "Mod records", "data", 900_000, null], ["prefixes", "Wine prefixes", "data", 3_900_000_000, null]] as const;
+  const games = Array.from({ length: 1500 }, (_, index) => ({ id: `mock-${index}`, name: `Mock game ${index + 1}`, bytes: Math.round(((index * 7919) % 997 + 3) * 4_200_000) }));
+  return { mochi, games };
+})();
+let storageJob = 0;
+const storageHandlers: Record<string, Handler> = {
+  "plugin:event|listen": (args) => { const list = eventListeners.get(String(args.event)) ?? []; const callback = callbacks.get(Number(args.handler)); if (callback) list.push(callback as never); eventListeners.set(String(args.event), list); return list.length; },
+  "plugin:event|unlisten": () => undefined,
+  scan_storage: (args) => {
+    const job = (storageJob += 1);
+    const request = args.request as { games: Array<{ id: string; name: string }>; tofus: Array<{ id: string; name: string }> };
+    const locations = [
+      ...mockScan.mochi.map(([key, name, category, , clear]) => ({ key: `mochi:${key}`, name, category, path: `/home/me/.config/Mochi/${key}`, clear, inside: null })),
+      ...mockScan.games.map((game) => ({ key: `game:${game.id}`, name: game.name, category: "games", path: `/games/${game.id}`, clear: null, inside: null })),
+      ...request.tofus.map((tofu) => ({ key: `tofu:${tofu.id}`, name: tofu.name, category: "mods", path: `/mods/${tofu.id}`, clear: null, inside: null })),
+      { key: "mochi:rollback", name: "Mod rollback copies", category: "rollback", path: null, clear: "rollbackCopies", inside: "mods" },
+      { key: "mochi:download-temp", name: "Unfinished downloads", category: "downloads", path: null, clear: "downloadTemp", inside: "mods" },
+    ];
+    const results: Array<[string, number]> = [...mockScan.mochi.map(([key, , , bytes]) => [`mochi:${key}`, bytes] as [string, number]), ...mockScan.games.map((game) => [`game:${game.id}`, game.bytes] as [string, number]), ...request.tofus.map((tofu, index) => [`tofu:${tofu.id}`, (index + 1) * 83_000_000] as [string, number]), ["mochi:rollback", 24_000_000], ["mochi:download-temp", 3_000_000]];
+    // Results trickle in (with a growing partial number first) like the real scan.
+    results.forEach(([key, bytes], index) => {
+      setTimeout(() => emitMockEvent("storage-scan-progress", { job, key, bytes: Math.round(bytes * 0.4), files: 10, truncated: false, done: false, error: null }), 300 + index * 2);
+      setTimeout(() => emitMockEvent("storage-scan-progress", { job, key, bytes, files: Math.max(1, Math.round(bytes / 90_000)), truncated: false, done: true, error: null }), 600 + index * 2);
+    });
+    setTimeout(() => emitMockEvent("storage-scan-finished", { job, cancelled: false }), 700 + results.length * 2);
+    return { job, locations };
+  },
+  cancel_storage_scan: () => undefined,
+  clear_storage_location: () => ({ files: 214, bytes: 186_000_000 }),
+};
 let mockSoundPacks: Array<Record<string, unknown> & { id: string }> = [];
 
 /** Deterministic pseudo-random history (about 14 months) so Stats and achievements have something to show. */
@@ -80,6 +115,7 @@ const handlers: Record<string, Handler> = {
     },
   }),
   get_playtime_history: (args) => { const since = Number(args.sinceEpoch ?? 0); return mockHistory().filter((r) => { const x = r as { start: number; seconds: number; kind: string }; return x.kind === "historic" || x.start + x.seconds >= since; }); },
+  ...storageHandlers,
   get_dir_size: () => ({ bytes: 412_000_000, files: 1_284, truncated: false }),
   analyze_mod_files: () => [
     { filename: "sodium-0.6.jar", path: "/mods/sodium-0.6.jar", enabled: true, projectId: "AANobbMI", title: "Sodium", currentVersion: "0.6.0", update: { versionId: "v2", versionNumber: "0.6.3", filename: "sodium-0.6.3.jar", url: "https://cdn.modrinth.com/x", size: 930_000 } },
@@ -292,6 +328,7 @@ export function installDevMock() {
   const w = window as unknown as Record<string, unknown>;
   if ("__TAURI_INTERNALS__" in w) return;
   installModsMock();
+  w.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener: () => {} };
   w.__MOCHI_DEV_MOCK__ = true; // lets src/lib/updater.ts fake an available update
   w.__TAURI_INTERNALS__ = {
     invoke: async (command: string, args: Record<string, unknown> = {}) => {
@@ -299,7 +336,7 @@ export function installDevMock() {
       if (!handler) throw new Error(`devMock: ${command} is not available outside Tauri`);
       return handler(args);
     },
-    transformCallback: () => 0,
+    transformCallback: (callback: (message: never) => void) => { const id = callbacks.size + 1; callbacks.set(id, callback); return id; },
     unregisterCallback: () => {},
     metadata: { currentWindow: { label: "main" }, currentWebview: { label: "main", windowLabel: "main" } },
   };

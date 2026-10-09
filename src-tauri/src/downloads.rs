@@ -16,7 +16,9 @@ use std::{
 
 /// Downloads running at once; more would just compete for the same bandwidth and disk.
 const MAX_ACTIVE_DOWNLOADS: usize = 8;
-const TEMP_MARKER: &str = ".mochi-download-";
+pub(crate) const TEMP_MARKER: &str = ".mochi-download-";
+/// Names the folder that keeps the originals while a zip is extracted over them.
+pub(crate) const BACKUP_MARKER: &str = ".mochi-backup-";
 const STALE_TEMP_SECS: u64 = 60 * 60;
 
 /// Destinations currently being written, so two downloads of one filename cannot interleave.
@@ -218,7 +220,7 @@ pub(crate) fn extract_zip(archive: &Path, dest: &Path, limits: ExtractLimits) ->
     let name = dest.file_name().and_then(|n| n.to_str()).unwrap_or("extracted");
     let id = NEXT_EXTRACT_ID.fetch_add(1, Ordering::Relaxed);
     let stage = parent.join(format!(".{name}.mochi-stage-{id}"));
-    let backup = parent.join(format!(".{name}.mochi-backup-{id}"));
+    let backup = parent.join(format!(".{name}{BACKUP_MARKER}{id}"));
     fs::create_dir(&stage).map_err(|e| format!("Unable to create extraction staging folder: {e}"))?;
     let _stage_cleanup = TempDirCleanup::new(stage.clone());
     let mut backup_cleanup = TempDirCleanup::new(backup.clone());

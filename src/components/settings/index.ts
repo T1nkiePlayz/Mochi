@@ -12,6 +12,7 @@ import { UpdateSection } from "./UpdateSection";
 import { BigPictureSection, ControllerSection } from "./ControllerSection";
 import { ExperimentalSection } from "./ExperimentalSection";
 import { SoundSection } from "./SoundSection";
+import { StorageSection } from "./StorageSection";
 
 /**
  * Settings sections in display order. To add one, create a component in this folder
@@ -30,6 +31,7 @@ export const settingsSections: Array<{ id: string; Section: ComponentType }> = [
   { id: "updates", Section: UpdateSection },
   { id: "achievements", Section: AchievementsSection },
   { id: "data", Section: DataSection },
+  { id: "storage", Section: StorageSection },
   { id: "experimental", Section: ExperimentalSection },
   { id: "help", Section: HelpSection },
 ];

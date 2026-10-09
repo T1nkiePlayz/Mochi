@@ -1,0 +1,48 @@
+/* Settings > Storage: stacked bar, legend and the sortable breakdown table. Spacing follows the settings tokens. */
+.storage-cat-games { --cat: var(--mochi-accent); }
+.storage-cat-mods { --cat: var(--mochi-success); }
+.storage-cat-rollback { --cat: var(--mochi-warning); }
+.storage-cat-downloads { --cat: var(--mochi-danger); }
+.storage-cat-artwork { --cat: color-mix(in srgb, var(--mochi-accent) 50%, var(--mochi-warning)); }
+.storage-cat-themes { --cat: var(--mochi-accent-strong); }
+.storage-cat-sound { --cat: color-mix(in srgb, var(--mochi-success) 50%, var(--mochi-accent)); }
+.storage-cat-logs { --cat: var(--mochi-text-muted); }
+.storage-cat-snapshots { --cat: color-mix(in srgb, var(--mochi-warning) 50%, var(--mochi-danger)); }
+.storage-cat-backups { --cat: color-mix(in srgb, var(--mochi-accent) 50%, var(--mochi-danger)); }
+.storage-cat-data { --cat: var(--mochi-text-faint); }
+
+.storage-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: var(--settings-pad-y) var(--settings-pad-x); }
+.storage-summary > span:first-child { display: grid; gap: 2px; min-width: 0; }
+.storage-total { color: var(--mochi-text-strong); font-family: var(--mochi-font-display); font-size: 24px; }
+.storage-summary small { color: var(--mochi-text-muted); font-size: 12px; line-height: 1.45; }
+.storage-summary-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.storage-bar { display: flex; gap: 2px; height: 14px; margin: 0 var(--settings-pad-x); overflow: hidden; border-radius: var(--mochi-radius-sm); background: var(--mochi-surface-raised); }
+.storage-segment { flex-basis: 0; min-width: 3px; background: var(--cat); }
+.storage-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: var(--settings-pad-y) var(--settings-pad-x); list-style: none; color: var(--mochi-text); font-size: 12px; }
+.storage-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.storage-legend small { color: var(--mochi-text-muted); }
+.storage-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--cat); }
+.storage-table-wrap { max-width: 100%; overflow-x: auto; padding: 0 var(--settings-pad-x); }
+.storage-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.storage-table th, .storage-table td { padding: 8px 10px; border-bottom: var(--mochi-border-width, 1px) solid var(--mochi-border); text-align: left; vertical-align: middle; }
+.storage-table th { color: var(--mochi-text-muted); font-size: 11px; font-weight: var(--mochi-label-weight); letter-spacing: var(--mochi-label-tracking); text-transform: var(--mochi-label-transform); white-space: nowrap; }
+.storage-sort { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
+.storage-sort:hover, .storage-sort:focus-visible { color: var(--mochi-text-strong); }
+.storage-name { min-width: 0; overflow-wrap: anywhere; }
+.storage-name strong { display: block; color: var(--mochi-text-strong); font-size: 13px; }
+.storage-name small { display: block; color: var(--mochi-text-muted); font-size: 11px; }
+.storage-share-col { text-align: right !important; white-space: nowrap; }
+.storage-row-actions { text-align: right !important; white-space: nowrap; }
+.storage-open { display: inline-flex; align-items: center; gap: 4px; padding-block: 4px; font-size: 12px; }
+.storage-size { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.storage-size-bar { display: inline-block; width: 72px; height: 6px; overflow: hidden; border-radius: 3px; background: var(--mochi-surface-raised); }
+.storage-fill { display: block; height: 100%; background: var(--cat); }
+.storage-error { color: var(--mochi-text-muted); font-size: 12px; }
+.storage-skeleton { display: inline-block; width: 110px; height: 12px; border-radius: 6px; vertical-align: middle; background: linear-gradient(90deg, var(--mochi-surface) 25%, var(--mochi-surface-raised) 50%, var(--mochi-surface) 75%); background-size: 200% 100%; animation: storage-shimmer 1.3s linear infinite; }
+.storage-skeleton-row { display: block; width: 100%; height: 18px; }
+@keyframes storage-shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .storage-skeleton { animation: none; } }
+.storage-more { padding: var(--settings-pad-y) var(--settings-pad-x) 0; }
+.storage-note { display: block; padding: var(--settings-pad-y) var(--settings-pad-x); }
+.storage-clear-head { border-top: var(--mochi-border-width, 1px) solid var(--mochi-border); }
+@media (max-width: 700px) { .storage-size-bar, .storage-table th:nth-child(2), .storage-table td:nth-child(2) { display: none; } }
