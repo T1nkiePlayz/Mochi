@@ -3,7 +3,7 @@
 //! unit-tested on Linux as well; only the roots below are macOS specific.
 #![cfg_attr(not(target_os = "macos"), allow(dead_code))]
 
-use super::{classify, make, make_launcher, scan_epic_manifests, sort_games, ImportedGame, SourceDef};
+use super::{classify, icons, make, make_launcher, scan_epic_manifests, sort_games, ImportedGame, SourceDef};
 use crate::platform::command_exists;
 use std::{
     fs,
@@ -69,14 +69,18 @@ fn app_item(path: &Path, info: &plist::Value, own_exe: Option<&Path>) -> Option<
     if classify::is_mochi(&[&stem], &name, bundle_id, own_exe, executable.as_deref().and_then(Path::to_str)) { return None; }
     // Launch targets are stored as text; a path that is not valid UTF-8 would be corrupted.
     let location = path.to_str()?.to_owned();
+    let icon = icons::bundle_icon(path, text("CFBundleIconFile")).and_then(|icon| icon.to_str().map(str::to_owned));
     if let Some(def) = classify::classify_launcher(&[&stem], &name, bundle_id) {
         if classify::SOURCE_OWNED_LAUNCHERS.contains(&def.id) { return None; }
         let mut item = make_launcher(format!("apps:{location}"), name, "apps", location.clone(), def.id);
         item.install_path = Some(location);
+        item.icon_path = icon;
         return Some(item);
     }
     if !(is_games_category(info) || is_crossover_program(bundle_id)) || classify::is_non_game(&[&stem], &name) { return None; }
-    Some(make(format!("apps:{location}"), name, "apps", location.clone(), Some(location)))
+    let mut item = make(format!("apps:{location}"), name, "apps", location.clone(), Some(location));
+    item.icon_path = icon;
+    Some(item)
 }
 
 /// Looks for `.app` bundles in `dir` and (up to two levels) in plain sub-folders such as

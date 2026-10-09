@@ -24,7 +24,7 @@ fn valid_cache_key(key: &str) -> bool {
 }
 
 /// The key is used verbatim (no trimming): every lookup below compares against the same exact string.
-fn cache_path(app: &AppHandle, key: &str) -> Result<PathBuf, String> {
+pub(crate) fn cache_path(app: &AppHandle, key: &str) -> Result<PathBuf, String> {
     if !valid_cache_key(key) {
         return Err("Invalid game artwork cache key.".into());
     }
@@ -39,18 +39,18 @@ fn mime_for_path(path: &Path) -> &'static str {
     }
 }
 
-fn data_url(path: &Path) -> Result<String, String> {
+pub(crate) fn data_url(path: &Path) -> Result<String, String> {
     let bytes = fs::read(path).map_err(|error| format!("Unable to read cached artwork: {error}"))?;
     Ok(format!("data:{};base64,{}", mime_for_path(path), STANDARD.encode(bytes)))
 }
 
 /// The cached file for `base` (the extension-less path), probing the few extensions Mochi writes.
-fn find_cached(base: &Path) -> Option<PathBuf> {
+pub(crate) fn find_cached(base: &Path) -> Option<PathBuf> {
     CACHE_EXTENSIONS.iter().map(|extension| base.with_extension(extension)).find(|candidate| candidate.is_file())
 }
 
 /// Drops any cached file for `base` (whatever its extension) so a changed artwork source is fetched afresh.
-fn remove_cached(base: &Path) {
+pub(crate) fn remove_cached(base: &Path) {
     for extension in CACHE_EXTENSIONS { let _ = fs::remove_file(base.with_extension(extension)); }
 }
 
@@ -62,7 +62,7 @@ fn sniff_image_extension(bytes: &[u8]) -> Option<&'static str> {
     else { None }
 }
 
-fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
+pub(crate) fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
     fsio::write_atomic(path, bytes).map_err(|error| format!("Unable to save artwork in Mochi's config folder: {error}"))
 }
 
@@ -78,8 +78,20 @@ pub async fn cache_game_artwork(app: AppHandle, url: String, cache_key: String, 
         }).await??
     };
     if let Some(cached) = hit { return Ok(cached); }
+    let bytes = download_allowed_artwork(&url).await?;
+    let extension = sniff_image_extension(&bytes).ok_or("The artwork server returned an unsupported artwork format.")?;
+    crate::util::blocking(move || {
+        // Another request for the same key may have finished first; keep whichever file is already there.
+        if let Some(existing) = find_cached(&base) { return data_url(&existing); }
+        let path = base.with_extension(extension);
+        write_atomic(&path, &bytes)?;
+        data_url(&path)
+    }).await?
+}
 
-    let parsed = reqwest::Url::parse(&url).map_err(|_| "Invalid artwork URL.".to_string())?;
+/// Downloads an image from an allow-listed artwork host (IGDB, SteamGridDB, Steam CDN), capped at 15 MiB.
+pub(crate) async fn download_allowed_artwork(url: &str) -> Result<Vec<u8>, String> {
+    let parsed = reqwest::Url::parse(url).map_err(|_| "Invalid artwork URL.".to_string())?;
     if !allowed_artwork_url(&parsed) { return Err("Only IGDB, SteamGridDB and Steam artwork URLs can be cached.".into()); }
     static CLIENT: http::SharedClient = http::SharedClient::new();
     let client = CLIENT.get(|| http::builder().connect_timeout(std::time::Duration::from_secs(10)).timeout(std::time::Duration::from_secs(30))
@@ -94,14 +106,7 @@ pub async fn cache_game_artwork(app: AppHandle, url: String, cache_key: String, 
         http::BodyError::Network(error) => format!("Unable to read downloaded artwork: {error}"),
     })?;
     if bytes.is_empty() { return Err("Artwork has an invalid size.".into()); }
-    let extension = sniff_image_extension(&bytes).ok_or("The artwork server returned an unsupported artwork format.")?;
-    crate::util::blocking(move || {
-        // Another request for the same key may have finished first; keep whichever file is already there.
-        if let Some(existing) = find_cached(&base) { return data_url(&existing); }
-        let path = base.with_extension(extension);
-        write_atomic(&path, &bytes)?;
-        data_url(&path)
-    }).await?
+    Ok(bytes)
 }
 
 #[tauri::command(async)]
@@ -181,7 +186,7 @@ fn image_reader(bytes: &[u8]) -> Result<ImageReader<Cursor<&[u8]>>, String> {
     }
 }
 
-fn decode_image(bytes: &[u8]) -> Result<DynamicImage, String> {
+pub(crate) fn decode_image(bytes: &[u8]) -> Result<DynamicImage, String> {
     if bytes.is_empty() || bytes.len() as u64 > MAX_SOURCE_BYTES { return Err("The image is empty or larger than 100 MB.".into()); }
     let (width, height) = image_reader(bytes)?.into_dimensions().map_err(|error| format!("Unable to read this image: {error}"))?;
     check_dimensions(width, height)?;
@@ -193,7 +198,7 @@ fn decode_image(bytes: &[u8]) -> Result<DynamicImage, String> {
     Ok(image)
 }
 
-fn encode_jpeg(image: &DynamicImage) -> Result<Vec<u8>, String> {
+pub(crate) fn encode_jpeg(image: &DynamicImage) -> Result<Vec<u8>, String> {
     // JPEG has no alpha: flatten onto a dark neutral so transparent PNGs stay legible.
     let rgba = image.to_rgba8();
     let mut rgb = image::RgbImage::new(rgba.width(), rgba.height());

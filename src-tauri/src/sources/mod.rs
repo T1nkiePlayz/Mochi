@@ -27,6 +27,7 @@ use linux as os;
 use macos as os;
 
 pub mod classify;
+pub mod icons;
 mod vdf;
 
 /// Steam install folders for this OS (used to find the signed-in account).
@@ -66,6 +67,8 @@ pub struct ImportedGame {
     pub kind: ImportKind,
     /// Which known launcher this is (see `classify::LAUNCHERS`), for launcher entries.
     pub launcher_id: Option<String>,
+    /// The entry's own icon file (desktop entry `Icon=`, bundle `.icns`), used as fallback artwork.
+    pub icon_path: Option<String>,
 }
 
 pub struct SourceDef {
@@ -78,11 +81,11 @@ pub struct SourceDef {
 const SCAN_TIMEOUT: Duration = Duration::from_secs(20);
 
 fn make(id: String, name: String, source: &str, target: String, path: Option<String>) -> ImportedGame {
-    ImportedGame { id, name, source: source.into(), launch_target: target, install_path: path, kind: ImportKind::Game, launcher_id: None }
+    ImportedGame { id, name, source: source.into(), launch_target: target, install_path: path, kind: ImportKind::Game, launcher_id: None, icon_path: None }
 }
 
 fn make_launcher(id: String, name: String, source: &str, target: String, launcher: &str) -> ImportedGame {
-    ImportedGame { id, name, source: source.into(), launch_target: target, install_path: None, kind: ImportKind::Launcher, launcher_id: Some(launcher.into()) }
+    ImportedGame { id, name, source: source.into(), launch_target: target, install_path: None, kind: ImportKind::Launcher, launcher_id: Some(launcher.into()), icon_path: None }
 }
 
 /// Re-labels an item as a launcher when its ids or name match a known launcher.
