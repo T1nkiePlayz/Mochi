@@ -10,6 +10,11 @@ Mochi fills in descriptions, genres, release dates, screenshots, trailers and ar
 
 Keys are stored server-side in Supabase Vault; the launcher only learns whether a key is saved. All IGDB and SteamGridDB requests go through the `store-provider-credentials` edge function (`sgdb-search`, `sgdb-assets`, `igdb-search`), which validates input and never returns a key. The Steam Store is called directly from the Rust backend (`get_steam_store_details`) with a timeout, an 8 MB response cap and a disk cache.
 
+## Icons and launcher logos
+
+- Imported games that carry their own icon (Linux desktop entries and Flatpaks via the icon theme, macOS bundles via `.icns`, Prism instance icons) get a cover drawn from it right after import (`cache_icon_cover`, `artworkSource: "icon"`). SVG icons are rasterised by the web view. A real cover from a provider later replaces it; an existing cover is never overwritten by an icon.
+- Launchers keep their bundled art offline. With IGDB keys saved, Mochi asks the `igdb-company` action for the company profile (`src/lib/iconCover.ts`, slugs such as `valve`, `epic-games`, `blizzard-entertainment`) and caches its logo as the launcher's cover. "Refresh" on a launcher only refreshes this logo: launchers never get game metadata or trailers (existing launcher trailers are dropped when the library loads).
+
 ## Merge policy (`src/lib/metadata/merge.ts`)
 
 - **Automatic**: text from IGDB, falling back to the Steam Store for Steam games. Artwork: SteamGridDB (prefers 600x900) if a key is saved, then the IGDB cover, then Steam CDN art. Each artwork candidate is downloaded in order; the first that downloads wins.

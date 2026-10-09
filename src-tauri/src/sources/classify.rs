@@ -21,7 +21,7 @@ macro_rules! launcher {
 }
 
 pub const LAUNCHERS: &[LauncherDef] = &[
-    launcher!("steam", "Steam", ["steam", "com.valvesoftware.steam"], ["steam"], ["com.valvesoftware.steam"]),
+    launcher!("steam", "Steam", ["steam", "steam-native", "com.valvesoftware.steam"], ["steam"], ["com.valvesoftware.steam"]),
     launcher!("lutris", "Lutris", ["lutris", "net.lutris.lutris"], ["lutris"], []),
     launcher!("heroic", "Heroic Games Launcher", ["heroic", "heroicgameslauncher", "com.heroicgameslauncher.hgl"], ["heroic games launcher", "heroic"], ["com.heroicgameslauncher.hgl"]),
     launcher!("bottles", "Bottles", ["bottles", "com.usebottles.bottles"], ["bottles"], []),
@@ -39,6 +39,16 @@ pub const LAUNCHERS: &[LauncherDef] = &[
     launcher!("prism", "Prism Launcher", ["prismlauncher", "prism-launcher", "org.prismlauncher.prismlauncher"], ["prism launcher"], ["org.prismlauncher.prismlauncher"]),
     launcher!("multimc", "MultiMC", ["multimc", "multimc5", "org.multimc.multimc"], ["multimc"], ["org.multimc.multimc"]),
     launcher!("polymc", "PolyMC", ["polymc", "org.polymc.polymc"], ["polymc"], ["org.polymc.polymc"]),
+    launcher!("fjord", "Fjord Launcher", ["fjordlauncher", "fjord-launcher", "io.github.unmojang.fjordlauncher"], ["fjord launcher"], ["io.github.unmojang.fjordlauncher"]),
+    launcher!("modrinth-app", "Modrinth App", ["modrinth-app", "modrinthapp", "theseus", "com.modrinth.modrinthapp", "com.modrinth.theseus"], ["modrinth app", "modrinth"], ["com.modrinth.theseus", "com.modrinth.modrinthapp"]),
+    launcher!("curseforge", "CurseForge", ["curseforge", "com.overwolf.curseforge"], ["curseforge", "curseforge app"], ["com.overwolf.curseforge"]),
+    launcher!("gdlauncher", "GDLauncher", ["gdlauncher", "gdlauncher-carbon", "io.gdl.gdlauncher"], ["gdlauncher", "gdlauncher carbon"], ["org.gorilladevs.gdlauncher"]),
+    launcher!("hmcl", "Hello Minecraft! Launcher", ["hmcl", "org.jackhuang.hmcl"], ["hello minecraft! launcher", "hmcl"], ["org.jackhuang.hmcl"]),
+    launcher!("xmcl", "X Minecraft Launcher", ["xmcl", "app.xmcl.voxelum"], ["x minecraft launcher", "xmcl"], ["xmcl"]),
+    launcher!("lunar", "Lunar Client", ["lunarclient", "lunar-client", "com.moonsworth.client"], ["lunar client"], ["com.moonsworth.client"]),
+    launcher!("hytale", "Hytale Launcher", ["hytale-launcher", "hytalelauncher", "com.hypixel.hytalelauncher", "com.hypixel.hytale-launcher"], ["hytale launcher"], ["com.hypixel.hytalelauncher"]),
+    launcher!("gamejolt", "Game Jolt Client", ["game-jolt-client", "gamejolt", "com.gamejolt.client"], ["game jolt client", "game jolt"], ["com.gamejolt.client"]),
+    launcher!("emudeck", "EmuDeck", ["emudeck"], ["emudeck"], []),
     launcher!("atlauncher", "ATLauncher", ["atlauncher", "com.atlauncher.atlauncher"], ["atlauncher"], ["com.atlauncher.atlauncher"]),
     launcher!("crossover", "CrossOver", ["crossover", "com.codeweavers.crossover"], ["crossover"], ["com.codeweavers.crossover"]),
     launcher!("whisky", "Whisky", ["whisky"], ["whisky"], ["com.isaacmarovitz.whisky"]),
@@ -153,6 +163,12 @@ mod tests {
         assert_eq!(id(&[], "Epic Games Launcher.app", Some("com.epicgames.EpicGamesLauncher")), Some("epic"));
         assert_eq!(id(&[], "Whisky", Some("com.isaacmarovitz.Whisky")), Some("whisky"));
         assert_eq!(id(&["battle.net"], "Battle.net", None), Some("battlenet"));
+        assert_eq!(id(&["com.hypixel.HytaleLauncher"], "Hytale Launcher", None), Some("hytale"));
+        assert_eq!(id(&[], "Hytale Launcher", None), Some("hytale"));
+        assert_eq!(id(&["com.modrinth.ModrinthApp"], "Modrinth App", None), Some("modrinth-app"));
+        assert_eq!(id(&[], "GOG Galaxy.app", Some("com.gog.galaxy")), Some("gog"));
+        assert_eq!(id(&["steam-native.desktop"], "Steam (Native)", None), Some("steam"));
+        assert_eq!(id(&["io.github.unmojang.FjordLauncher"], "Fjord Launcher", None), Some("fjord"));
     }
 
     #[test]
@@ -161,6 +177,8 @@ mod tests {
         assert!(classify_launcher(&["org.supertuxproject.SuperTux"], "SuperTux", None).is_none());
         assert!(classify_launcher(&["minecraft"], "Minecraft", None).is_none());
         assert!(classify_launcher(&["rarefaction"], "Rarefaction", None).is_none());
+        // The game itself is not its launcher.
+        assert!(classify_launcher(&["hytale"], "Hytale", None).is_none());
     }
 
     #[test]
