@@ -6,22 +6,43 @@ export type CfGameLike = { id: number; name: string; slug: string; iconUrl?: str
 export type NexusGameLike = { name: string; domainName: string; iconUrl?: string; modCount?: number };
 
 /**
- * Games Discover opens with, in this order. `cfId` ids and `nexusDomain` slugs were checked against the live CurseForge
- * `games` route and Nexus Mods URLs (CurseForge has no Balatro or RuneScape: Dragonwilds, so those are Nexus only).
- * The ids are only trusted when the live CurseForge list still contains them (otherwise the name is matched).
+ * Games Discover opens with, in this order: CurseForge-backed games first, then the gated ones. `cfId` ids and `nexusDomain`
+ * slugs were checked against the live CurseForge `games` route and Nexus Mods. A `cfId` is only trusted when the live
+ * CurseForge list still contains it (otherwise the name is matched).
+ * `nexusOnly` marks seeds that are not known to be on CurseForge: they show as a tab only when the live CurseForge list
+ * name-matches them, or when a Nexus API key is configured (see `visibleSeedGames`). Subnautica 2's Nexus domain and id (9198)
+ * were confirmed on the public Nexus GraphQL API; its CurseForge listing could not be verified, so it relies on the name match.
  */
-export type SeedGame = { name: string; cfId?: number; nexusDomain?: string };
+export type SeedGame = { name: string; cfId?: number; nexusDomain?: string; nexusOnly?: boolean };
 export const SEED_GAMES: SeedGame[] = [
-  { name: "Balatro", nexusDomain: "balatro" },
-  { name: "RuneScape: Dragonwilds", nexusDomain: "runescapedragonwilds" },
   { name: "Minecraft Dungeons", cfId: 69271, nexusDomain: "minecraftdungeons" },
   { name: "Stardew Valley", cfId: 669, nexusDomain: "stardewvalley" },
   { name: "Terraria", cfId: 431, nexusDomain: "terraria" },
-  { name: "Satisfactory", nexusDomain: "satisfactory" },
-  { name: "Subnautica", nexusDomain: "subnautica" },
-  { name: "Subnautica: Below Zero", nexusDomain: "subnauticabelowzero" },
-  { name: "Five Nights at Freddy's: Security Breach", nexusDomain: "fnafsecuritybreach" },
+  { name: "Subnautica 2", nexusDomain: "subnautica2", nexusOnly: true },
+  { name: "Subnautica", nexusDomain: "subnautica", nexusOnly: true },
+  { name: "Subnautica: Below Zero", nexusDomain: "subnauticabelowzero", nexusOnly: true },
+  { name: "Balatro", nexusDomain: "balatro", nexusOnly: true },
+  { name: "RuneScape: Dragonwilds", nexusDomain: "runescapedragonwilds", nexusOnly: true },
+  { name: "Five Nights at Freddy's: Security Breach", nexusDomain: "fnafsecuritybreach", nexusOnly: true },
 ];
+
+export type ResolvedSeed<T extends CfGameLike = CfGameLike> = { seed: SeedGame; cf: T | null };
+
+/**
+ * Default games to show as tabs. A seed found on CurseForge (by id, else by name) is always shown; one that is not is a
+ * Nexus-only tab, shown only when `nexusAvailable` (Nexus source enabled and an API key configured) and the seed has a Nexus domain.
+ * `cfEnabled` false skips CurseForge matching entirely.
+ */
+export function visibleSeedGames<T extends CfGameLike>(seeds: readonly SeedGame[], cfGames: readonly T[] | null | undefined, nexusAvailable: boolean, cfEnabled = true): ResolvedSeed<T>[] {
+  const out: ResolvedSeed<T>[] = [];
+  for (const seed of seeds) {
+    const byId = cfEnabled && seed.cfId ? cfGames?.find((game) => game.id === seed.cfId) : undefined;
+    const cf = byId ?? (cfEnabled && cfGames ? bestNameMatch(seed.name, cfGames) : null);
+    if (cf) out.push({ seed, cf });
+    else if (seed.nexusDomain && (nexusAvailable || !seed.nexusOnly)) out.push({ seed, cf: null });
+  }
+  return out;
+}
 
 /** Nexus Mods games that can be listed (and found by search) before the live games list is available, e.g. without a key. */
 export const KNOWN_NEXUS_GAMES: NexusGameLike[] = SEED_GAMES.filter((game) => game.nexusDomain).map((game) => ({ name: game.name, domainName: game.nexusDomain! }));

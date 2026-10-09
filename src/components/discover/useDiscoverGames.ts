@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cfAllGames, type CfGame } from "../../lib/curseforge";
-import { KNOWN_NEXUS_GAMES, SEED_GAMES } from "../../lib/mods/gameCatalog";
+import { KNOWN_NEXUS_GAMES, SEED_GAMES, visibleSeedGames } from "../../lib/mods/gameCatalog";
 import { bestNameMatch } from "../../lib/mods/gameMatch";
 import { isSourceChoice, type GameSourceChoice } from "../../lib/mods/gameSources";
 import type { ModSourceSettings } from "../../lib/mods/resolveSources";
@@ -83,11 +83,9 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean)
       if (onCf) return cfGame(onCf, domain);
       return { key: `nx:${domain}`, name, iconUrl: info?.iconUrl, source: "nexus", nexusDomain: domain };
     };
-    for (const seed of SEED_GAMES) {
-      const byId = settings.curseforge && seed.cfId ? cfGames?.find((game) => game.id === seed.cfId) : undefined;
-      const match = byId ?? (settings.curseforge && cfGames ? bestNameMatch(seed.name, cfGames) : null);
-      if (match) put(cfGame(match, seed.nexusDomain));
-      else if (seed.nexusDomain) put(nexusOnly(seed.nexusDomain, seed.name));
+    for (const { seed, cf } of visibleSeedGames(SEED_GAMES, cfGames, nexusOn, settings.curseforge)) {
+      if (cf) put(cfGame(cf, seed.nexusDomain));
+      else put(nexusOnly(seed.nexusDomain!, seed.name));
     }
     for (const entry of stored) {
       if (entry.k === "cf") {
@@ -96,7 +94,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean)
       } else put(nexusOnly(entry.domain, entry.name ?? entry.domain));
     }
     return [...out.values()];
-  }, [cfGames, cfError, catalog, stored, settings.curseforge, settings.nexus]);
+  }, [cfGames, cfError, catalog, stored, settings.curseforge, settings.nexus, nexusOn]);
 
   const add = useCallback((entry: StoredGame) => {
     setStored((current) => {

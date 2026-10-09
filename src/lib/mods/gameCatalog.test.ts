@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SEED_GAMES, entryBadges, searchGameCatalog } from "./gameCatalog";
+import { SEED_GAMES, entryBadges, searchGameCatalog, visibleSeedGames } from "./gameCatalog";
 
 const cf = [
   { id: 69271, name: "Minecraft Dungeons", slug: "minecraft-dungeons" },
@@ -37,8 +37,36 @@ describe("game catalogue search", () => {
     expect(searchGameCatalog("mcd", cf, nexus, on)[0].name).toBe("Minecraft Dungeons");
     expect(searchGameCatalog("minecraft", cf, nexus, on)[0].name).toBe("Minecraft");
   });
-  it("seeds start with Balatro, Dragonwilds and Minecraft Dungeons on their verified ids", () => {
-    expect(SEED_GAMES.slice(0, 3).map((game) => game.nexusDomain)).toEqual(["balatro", "runescapedragonwilds", "minecraftdungeons"]);
+  it("seeds list CurseForge-backed games first, then the gated Nexus-only ones", () => {
+    expect(SEED_GAMES.slice(0, 3).map((game) => game.cfId)).toEqual([69271, 669, 431]);
+    expect(SEED_GAMES.slice(0, 3).some((game) => game.nexusOnly)).toBe(false);
+    expect(SEED_GAMES.slice(3).every((game) => game.nexusOnly)).toBe(true);
     expect(SEED_GAMES.find((game) => game.name === "Minecraft Dungeons")?.cfId).toBe(69271);
+    expect(SEED_GAMES.map((game) => game.name)).not.toContain("Satisfactory");
+    expect(SEED_GAMES.find((game) => game.name === "Subnautica 2")).toMatchObject({ nexusDomain: "subnautica2", nexusOnly: true });
+  });
+});
+
+describe("visibleSeedGames", () => {
+  const names = (rows: ReturnType<typeof visibleSeedGames>) => rows.map((row) => row.seed.name);
+  it("without a Nexus key hides every Nexus-only seed", () => {
+    for (const list of [cf, []]) expect(names(visibleSeedGames(SEED_GAMES, list, false))).toEqual(["Minecraft Dungeons", "Stardew Valley", "Terraria"]);
+  });
+  it("with a Nexus key shows them as Nexus-only tabs", () => {
+    const rows = visibleSeedGames(SEED_GAMES, cf, true);
+    expect(names(rows)).toEqual(SEED_GAMES.map((game) => game.name));
+    expect(rows.find((row) => row.seed.name === "Balatro")?.cf).toBeNull();
+  });
+  it("a seed the CurseForge list contains shows without a key", () => {
+    const rows = visibleSeedGames(SEED_GAMES, [...cf, { id: 1, name: "Subnautica", slug: "subnautica" }], false);
+    expect(rows.find((row) => row.seed.name === "Subnautica")?.cf?.id).toBe(1);
+    expect(names(rows)).not.toContain("Subnautica: Below Zero");
+  });
+  it("Subnautica 2 never matches the Subnautica CurseForge entry", () => {
+    const rows = visibleSeedGames(SEED_GAMES, [{ id: 1, name: "Subnautica", slug: "subnautica" }], false);
+    expect(names(rows)).not.toContain("Subnautica 2");
+  });
+  it("CurseForge disabled skips matching", () => {
+    expect(names(visibleSeedGames(SEED_GAMES, cf, false, false))).toEqual(["Minecraft Dungeons", "Stardew Valley", "Terraria"]);
   });
 });
