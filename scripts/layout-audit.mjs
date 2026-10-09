@@ -255,8 +255,10 @@ async function prepare(page, screen) {
   } else if (screen === "modal-edit") {
     // GameEditor: open a game, then its Edit button.
     await openDetails(page);
+    await page.waitForFunction(() => [...document.querySelectorAll(".main-content button")].some((b) => b.textContent.trim() === "Edit"), null, { timeout: 5000 }).catch(() => {});
     await page.evaluate(() => [...document.querySelectorAll(".main-content button")].find((b) => b.textContent.trim() === "Edit")?.click());
-    await page.waitForTimeout(300);
+    await page.waitForSelector(".game-editor", { timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(200);
   } else if (screen === "tofu-manager") {
     await openDetails(page);
     await page.evaluate(() => document.querySelector("[aria-label='Tofu settings']")?.click() ?? [...document.querySelectorAll("button")].find((b) => /manage/i.test(b.textContent))?.click());

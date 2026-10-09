@@ -140,6 +140,15 @@
   .game-details-page > *, .game-details-hero > *, .game-details-title, .game-details-actions > * { min-width: 0; max-width: 100%; }
   .game-details-actions > button, .game-details-actions > div > button { white-space: normal; overflow-wrap: anywhere; }
   .workspace-tabs { flex-wrap: wrap; }
+  /* Button rows wrap instead of running off an edge (justify-content: flex-end overflows to the left). */
+  :where([class*="-actions"]):not(.topbar-actions) { flex-wrap: wrap; }
+  :where([class*="-actions"]):not(.topbar-actions) > * { max-width: 100%; }
+  .tofu-workspace-header { flex-wrap: wrap; min-width: 0; }
+  .tofu-workspace-header > * { min-width: 0; max-width: 100%; }
+  .tag-editor-box input { min-height: 24px; }
+  /* Grids whose single column would otherwise grow to their widest child. */
+  .a11y-preview, .bp-root { grid-template-columns: minmax(0, 1fr) !important; }
+  .bp-root > * { min-width: 0; }
   .game-card-copy, .game-card-copy > * { min-width: 0; }
   .game-card-copy small, .game-card-tags { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .game-card-tags > span { display: inline; }
