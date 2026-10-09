@@ -11,6 +11,11 @@ export type InstallOutcome =
 
 const errorText = (error: unknown) => error instanceof Error ? error.message : typeof error === "string" ? error : "Unable to queue this download.";
 
+/** No file of the mod fits the filter (game version / loader). The user may still install the newest file anyway. */
+export class NoCompatibleFileError extends Error {
+  constructor(message: string) { super(message); this.name = "NoCompatibleFileError"; }
+}
+
 /** Newest stable file, else newest of anything. */
 export function defaultFile(files: ModFile[]): ModFile | undefined {
   const ranked = files.map((file) => ({ file, releaseType: file.channel === "release" || !file.channel ? 1 : file.channel === "beta" ? 2 : 3, fileDate: file.date }));
@@ -34,9 +39,14 @@ export async function installFile(source: ModSource, item: ModItem, file: ModFil
 }
 
 /** Download the best file of a mod without asking which one (card buttons). */
-export async function installBest(source: ModSource, item: ModItem, tofu: Tofu, filter?: { gameVersion?: string; loader?: string }, kind?: ContentKind): Promise<InstallOutcome> {
-  const files = await source.files(item, filter);
+export async function installBest(source: ModSource, item: ModItem, tofu: Tofu, filter?: { gameVersion?: string; loader?: string }, kind?: ContentKind, force = false): Promise<InstallOutcome> {
+  // "Force install": ignore the game version and loader and take the newest file; never refused.
+  const files = await source.files(item, force ? undefined : filter);
   const file = defaultFile(files);
-  if (!file) throw new Error(`No ${filter?.gameVersion ? "compatible " : ""}file was found for ${item.name}.`);
+  if (!file) {
+    const filtered = !force && Boolean(filter?.gameVersion || filter?.loader);
+    if (filtered) throw new NoCompatibleFileError(`No file of ${item.name} matches ${[filter?.loader, filter?.gameVersion].filter(Boolean).join(" ")}.`);
+    throw new Error(`No file was found for ${item.name}.`);
+  }
   return installFile(source, item, file, tofu, kind);
 }

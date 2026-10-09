@@ -14,6 +14,7 @@ import { InstalledModsPanel } from "./InstalledModsPanel";
 import { LinkGameModal } from "./LinkGameModal";
 import { ModFolderModal } from "./ModFolderModal";
 import { UpdatesPanel } from "./UpdatesPanel";
+import { ModSyncStatus } from "./ModSyncStatus";
 import { useAutoModFolder } from "./useAutoModFolder";
 import { useInstalledFiles } from "./useInstalledFiles";
 import { ModsBrowser } from "./ModsBrowser";
@@ -74,6 +75,7 @@ function GameModsPanel({ piko, tofu, onUpdate }: Props) {
       <button type="button" className={tab === "installed" ? "active" : ""} aria-pressed={tab === "installed"} onClick={() => setTab("installed")}>Installed ({installedFiles.files.length})</button>
       <button type="button" className={tab === "updates" ? "active" : ""} aria-pressed={tab === "updates"} onClick={() => setTab("updates")}>{count ? `Updates (${count})` : "Updates"}</button>
     </div>
+    <ModSyncStatus tofuId={tofu.id} />
     {message && <p className="metadata-note" role="status">{message}</p>}
     {tab === "browse" ? browse : tab === "installed"
       ? (folder ? <InstalledModsPanel tofu={tofu} folder={folder} withUpdates files={installedFiles.files} loading={installedFiles.loading} refresh={installedFiles.refresh} onMessage={setMessage} /> : <p className="muted">Choose a mod folder first.</p>)

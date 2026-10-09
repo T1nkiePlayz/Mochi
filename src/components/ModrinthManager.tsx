@@ -8,6 +8,7 @@ import { ModsBrowser } from "./mods/ModsBrowser";
 import { InstalledModsPanel } from "./mods/InstalledModsPanel";
 import { ModFolderModal } from "./mods/ModFolderModal";
 import { UpdatesPanel } from "./mods/UpdatesPanel";
+import { ModSyncStatus } from "./mods/ModSyncStatus";
 import { useAutoModFolder } from "./mods/useAutoModFolder";
 import { InstallNoticeBar } from "./mods/InstallNoticeBar";
 import { useModInstall } from "./mods/useModInstall";
@@ -123,6 +124,7 @@ export function ModrinthManager({ piko, tofu, onUpdate }: Props) {
     {auto.state === "choose" && <p className="metadata-note" role="status">Mochi found {auto.candidates.length} places mods can go. <button type="button" className="text-button" onClick={() => setFolderOpen(true)}>Choose one</button></p>}
     {auto.state === "missing" && <p className="metadata-note" role="status">Mochi could not find a Minecraft folder. <button type="button" className="text-button" onClick={() => setFolderOpen(true)}>Choose the folder</button></p>}
     <div className="workspace-tabs">{tabs.map((item) => <button type="button" key={item.id} className={tab === item.id ? "active" : ""} aria-pressed={tab === item.id} onClick={() => setTab(item.id)}>{item.id === "updates" ? updatesLabel : item.label}</button>)}</div>
+    <ModSyncStatus tofuId={tofu.id} />
     {message && <p className="metadata-note" role="status">{message}</p>}
     <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />
     {pendingDownloads > 0 && <p className="metadata-note">{pendingDownloads} download{pendingDownloads === 1 ? "" : "s"} in progress. See Downloads.</p>}
