@@ -157,7 +157,9 @@ html[data-input="controller"] .bp-root button:focus { outline: 3px solid var(--m
 .bp-root[data-bp-titles="focus"] .bp-card:not(.is-generated) :is(.bp-card-title, .bp-card-shade) { opacity: 0; transition: opacity .15s ease; }
 .bp-root[data-bp-titles="focus"] .bp-card:is(:hover, :focus-visible, :focus) :is(.bp-card-title, .bp-card-shade) { opacity: 1; }
 /* Generated covers: initials sized by the tile's shorter side and lifted clear of the title, the launcher badge in a corner. */
-.bp-card .bp-art.generated-art { container-type: size; padding-bottom: 18%; --art-mark-size: min(30cqw, 34cqh); }
+/* .generated-art sets position: relative, which collapsed covers without artwork to the height of their initials. */
+.bp-card .bp-art.generated-art { position: absolute; inset: 0; container-type: size; padding-bottom: 18%; --art-mark-size: min(30cqw, 34cqh); }
+.bp-backdrop .bp-backdrop-layer.generated-art { position: absolute; inset: -3%; }
 .bp-root[data-bp-tile="landscape"] .bp-card .bp-art.generated-art { padding-bottom: 12%; }
 .bp-card .bp-art.generated-art .generated-art-source { top: .55rem; right: auto; left: .55rem; bottom: auto; width: 1.4rem; height: 1.4rem; }
 .bp-card.is-generated .bp-card-shade { opacity: .55; }
