@@ -5,7 +5,7 @@ const brands = [["steam", "Steam"], ["heroic", "Heroic"], ["lutris", "Lutris"], 
 export function WelcomeStep() {
   return (
     <section className="setup-welcome setup-page">
-      <div className="setup-logo"><img src="/mochi.png" alt="Mochi" /></div>
+      <div className="setup-logo"><img src="/mochi-mark.png" alt="Mochi" /></div>
       <p className="setup-welcome-line">Welcome</p>
       <p className="setup-to">to</p>
       <h1 className="mochi-wordmark">Mochi</h1>

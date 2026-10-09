@@ -10,7 +10,7 @@ export function AuthModal() {
   const { account: a } = useApp();
   const close = () => a.setShowAuth(false);
   return <div className="modal-backdrop" onClick={close}><form className="modal auth-modal" onSubmit={a.authenticate} onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true">
-    <div className="modal-header"><div className="auth-brand"><img src="/mochi.png" alt="Mochi" /><div><p className="eyebrow">Mochi Cloud</p><h2>{a.emailCodeStep ? "Check your email." : a.authMode === "sign-in" ? "Welcome back." : "Create your account."}</h2></div></div><button className="icon-button" type="button" aria-label="Close" onClick={close}><MochiIcon name="close" fallback={X} size={17} /></button></div>
+    <div className="modal-header"><div className="auth-brand"><img src="/mochi-mark.png" alt="Mochi" /><div><p className="eyebrow">Mochi Cloud</p><h2>{a.emailCodeStep ? "Check your email." : a.authMode === "sign-in" ? "Welcome back." : "Create your account."}</h2></div></div><button className="icon-button" type="button" aria-label="Close" onClick={close}><MochiIcon name="close" fallback={X} size={17} /></button></div>
     {a.emailCodeStep ? <>
       <p className="modal-description">We sent a six-digit verification code to <strong>{a.emailCodeEmail}</strong>. Enter it below to finish signing in.</p>
       <div className="form-fields"><label>Verification code<input className="mfa-input" inputMode="numeric" autoComplete="one-time-code" value={a.emailCode} onChange={(e) => a.setEmailCode(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="123456" maxLength={6} /></label></div>

@@ -229,18 +229,15 @@ progress { accent-color: var(--mochi-accent-strong); }
 [data-mochi-shell="bottom"] .sidebar-bottom { order: 2; margin: 0; }
 [data-mochi-shell="bottom"] .brand { display: none; }
 [data-mochi-shell="top"] .main-content, [data-mochi-shell="bottom"] .main-content { height: auto; flex: 1; min-height: 0; }
-[data-mochi-shell="bottom"] .account-menu { top: auto; bottom: calc(100% + 8px); }
-[data-mochi-shell="top"] .account-menu { left: auto; right: 0; }
 
 [data-mochi-shell="rail"] .sidebar { width: 78px; flex-basis: 78px; padding: 20px 10px; align-items: center; overflow: visible; z-index: 5; }
 [data-mochi-shell="rail"] .brand { padding: 0 0 24px; }
-[data-mochi-shell="rail"] .brand > div:not(.brand-mark), [data-mochi-shell="rail"] .nav-item > span,
-[data-mochi-shell="rail"] .sidebar-account > span, [data-mochi-shell="rail"] .sidebar-account > svg { display: none; }
+[data-mochi-shell="rail"] .brand > div:not(.brand-mark), [data-mochi-shell="rail"] .nav-item > span:not(.mochi-icon-wrap):not(.nav-new-dot),
+[data-mochi-shell="rail"] .sidebar-account > span:not(.account-avatar), [data-mochi-shell="rail"] .sidebar-account > svg:last-child { display: none; }
 [data-mochi-shell="rail"] .sidebar-account-wrap { margin-bottom: 18px; }
 [data-mochi-shell="rail"] .sidebar-account { justify-content: center; padding: 8px; }
 [data-mochi-shell="rail"] .nav-item { justify-content: center; padding: 12px; }
 [data-mochi-shell="rail"] .primary-nav, [data-mochi-shell="rail"] .sidebar-bottom { width: 100%; }
-[data-mochi-shell="rail"] .account-menu { left: 100%; top: 0; width: 240px; margin-left: 10px; }
 
 
 

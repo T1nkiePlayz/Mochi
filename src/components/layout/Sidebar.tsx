@@ -1,4 +1,5 @@
-import { memo, useRef, type KeyboardEvent } from "react";
+import { memo, useEffect, useRef, type KeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 import { RemoteImage } from "../RemoteImage";
 import { BarChart3, ChevronDown, Download, Grid2X2, Library, Plus, Settings, Sparkles } from "lucide-react";
 import { AccountAvatar } from "../AccountAvatar";
@@ -9,6 +10,7 @@ import { useExperimentalStatus } from "../../state/useExperimental";
 import { navLabel } from "../../lib/nav";
 import { useShellFit } from "../../lib/useShellFit";
 import { useDismiss } from "../ui/useDismiss";
+import { useAnchoredMenu } from "./useAnchoredMenu";
 
 export const navItems: Array<{ id: NavId; icon: typeof Library; iconName: string }> = [
   { id: "Library", icon: Library, iconName: "library" },
@@ -38,17 +40,22 @@ export const Sidebar = memo(function Sidebar() {
   const ref = useRef<HTMLElement>(null);
   useShellFit(ref);
   const accountWrap = useRef<HTMLDivElement>(null);
-  useDismiss(accountWrap, showAccountMenu, () => setShowAccountMenu(false));
+  const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  // The menu lives in a portal (themes give the sidebar their own stacking context), so it counts as "inside" via its own selector.
+  useDismiss(accountWrap, showAccountMenu, () => setShowAccountMenu(false), { inside: ".account-menu", returnFocus: triggerRef });
+  const menuStyle = useAnchoredMenu(triggerRef, showAccountMenu);
+  useEffect(() => { if (showAccountMenu && menuStyle) { const menu = menuRef.current; if (menu && !menu.contains(document.activeElement)) menu.querySelector<HTMLElement>("[role='menuitem']")?.focus({ preventScroll: true }); } }, [showAccountMenu, Boolean(menuStyle)]);
   return <aside className="sidebar" ref={ref}>
-    <div className="brand"><div className="brand-mark"><img src="/mochi.png" alt="Mochi" /></div><div><strong>Mochi</strong><span>Your games, your way.</span></div></div>
+    <div className="brand"><div className="brand-mark"><img src="/mochi-mark.png" alt="Mochi" /></div><div><strong>Mochi</strong><span>Your games, your way.</span></div></div>
     <div className="sidebar-account-wrap" ref={accountWrap}>
-      <button className="sidebar-account" title={usernameOf(user)} aria-label={`Account: ${usernameOf(user)}`} aria-haspopup="menu" aria-expanded={showAccountMenu} onClick={() => setShowAccountMenu(!showAccountMenu)}><AccountAvatar user={user} size={34} /><span><strong>{usernameOf(user)}</strong><small>{user ? "Mochi account" : "Sign in to Mochi"}</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={14} /></button>
-      {showAccountMenu && <div className="account-menu" role="menu" aria-label="Account" onKeyDown={moveInMenu}>
+      <button className="sidebar-account" ref={triggerRef} title={usernameOf(user)} aria-label={`Account: ${usernameOf(user)}`} aria-haspopup="menu" aria-expanded={showAccountMenu} onClick={() => setShowAccountMenu(!showAccountMenu)}><AccountAvatar user={user} size={34} /><span><strong>{usernameOf(user)}</strong><small>{user ? "Mochi account" : "Sign in to Mochi"}</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={14} /></button>
+      {showAccountMenu && menuStyle && createPortal(<div className="account-menu" ref={menuRef} style={menuStyle} role="menu" aria-label="Account" onKeyDown={moveInMenu}>
         {multipleAccountsEnabled && savedAccounts.map((saved) => <button type="button" key={saved.id} className={saved.id === user?.id ? "selected" : ""} role="menuitem" onClick={() => { setShowAccountMenu(false); void getApp().account.switchAccount(saved); }}><span className="account-menu-avatar">{saved.avatarUrl ? <RemoteImage className="account-menu-avatar-image" src={saved.avatarUrl} alt="" referrerPolicy="no-referrer" fallback={saved.username.slice(0, 1).toUpperCase()} /> : saved.username.slice(0, 1).toUpperCase()}</span><span><strong>{saved.username}</strong><small>Mochi account</small></span></button>)}
         {!user && <button type="button" role="menuitem" className="account-menu-add" onClick={() => { setShowAccountMenu(false); openSignIn(); }}><Plus size={14} /><span><strong>Sign in</strong><small>Add a Mochi account</small></span></button>}
         {user && multipleAccountsEnabled && savedAccounts.length < 5 && <button type="button" role="menuitem" className="account-menu-add" onClick={() => { setShowAccountMenu(false); openSignIn(); }}><Plus size={14} /><span><strong>Add User</strong><small>Sign in to another Mochi account</small></span></button>}
         {user && <button type="button" role="menuitem" className="account-menu-add" onClick={() => { setShowAccountMenu(false); void getApp().account.signOut(); }}><span className="account-menu-avatar">↪</span><span><strong>Sign out</strong><small>Keep local Mochi data</small></span></button>}
-      </div>}
+      </div>, document.body)}
     </div>
     <nav className="primary-nav" aria-label="Main navigation">
       {navItems.map(({ id, icon: Icon, iconName }) => (

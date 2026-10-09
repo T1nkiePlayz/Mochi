@@ -54,10 +54,13 @@
   .nav-item { max-width: 100%; }
   .nav-item > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .brand > div { min-width: 0; }
+  /* The brand mark is the app icon itself: no theme tile, border, padding or clip-path may distort or crop it. */
+  .brand-mark { display: grid !important; place-items: center; flex: 0 0 auto; width: 34px !important; height: 34px !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; clip-path: none !important; overflow: visible !important; }
+  .brand-mark img { display: block !important; width: 34px !important; height: 34px !important; max-width: none; object-fit: contain !important; object-position: center; border-radius: 0 !important; clip-path: none !important; }
   .brand strong, .brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sidebar-account, .sidebar-account-wrap { min-width: 0; max-width: 100%; }
-  /* The account dropdown opens over the content, whichever side the navigation lives on. */
-  .account-menu { max-width: min(320px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow-y: auto; }
+  /* The account dropdown is portalled to <body> and positioned by useAnchoredMenu, so no theme stacking context can cover it. */
+  .account-menu { position: fixed !important; z-index: 1000 !important; max-width: calc(100vw - 16px); overflow-y: auto; pointer-events: auto; }
 
   /* ---- Bar shells (top, bottom) -------------------------------------------------------------------- */
   [data-mochi-shell="top"] .sidebar, [data-mochi-shell="bottom"] .sidebar {
@@ -69,9 +72,7 @@
   [data-mochi-shell="top"] .primary-nav, [data-mochi-shell="bottom"] .primary-nav { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; flex: 0 0 auto !important; width: auto !important; }
   [data-mochi-shell="top"] .nav-item, [data-mochi-shell="bottom"] .nav-item { flex: 0 0 auto; white-space: nowrap; }
   [data-mochi-shell="top"] .sidebar-account-wrap, [data-mochi-shell="bottom"] .sidebar-account-wrap { width: auto !important; min-width: 0 !important; max-width: 260px !important; margin-block: 0 !important; }
-  [data-mochi-shell="top"] .sidebar-account-wrap { margin-left: 0 !important; }
   [data-mochi-shell="top"] .sidebar-bottom, [data-mochi-shell="bottom"] .sidebar-bottom { margin: 0 !important; width: auto !important; }
-  [data-mochi-shell="top"] .account-menu, [data-mochi-shell="bottom"] .account-menu { right: 0; left: auto; width: min(280px, calc(100vw - 24px)); }
   [data-mochi-shell="bottom"] .sidebar { flex-wrap: nowrap !important; }
 
   /* Narrowing steps, picked by useShellFit from what fits: compact (account shows its avatar only), tight (brand text goes), icons. */
@@ -106,7 +107,6 @@
   html[data-nav-mode="drawer"][data-nav-open="true"] .sidebar .sidebar-account { width: 100% !important; }
   html[data-nav-mode="drawer"][data-nav-open="true"] .sidebar .sidebar-account > span { display: grid !important; }
   html[data-nav-mode="drawer"][data-nav-open="true"] .sidebar .sidebar-bottom { order: 2 !important; margin: auto 0 0 !important; width: 100% !important; }
-  html[data-nav-mode="drawer"][data-nav-open="true"] .sidebar .account-menu { position: static; width: auto; max-width: none; margin-top: 6px; }
   html[data-nav-mode="drawer"][data-nav-open="true"] .main-content::after { content: ""; position: fixed; inset: 0; z-index: 55; background: color-mix(in srgb, var(--mochi-shadow, transparent) 45%, transparent); }
   /* No-JavaScript fallback: same drawer below 700px. */
   @media (max-width: 700px) {
@@ -122,7 +122,7 @@
   .topbar-actions > * { flex: 0 0 auto; }
   .search-box { flex: 0 1 225px !important; width: auto !important; min-width: 0 !important; max-width: 225px !important; }
   .search-box input { min-width: 0 !important; width: 100%; }
-  .notification-popover, .account-menu { max-width: calc(100vw - 16px); }
+  .notification-popover { max-width: calc(100vw - 16px); }
 
   /* ---- Text and grids: wrap instead of widening the page ------------------------------------------------ */
   /* Long unbroken strings (paths, URLs, names) wrap, but only when a whole word cannot fit: "anywhere" would let
