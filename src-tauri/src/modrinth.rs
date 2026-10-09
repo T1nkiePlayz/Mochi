@@ -13,7 +13,9 @@ use crate::util::{hex, http, MutexExt};
 
 const API_BASE: &str = "https://api.modrinth.com/v2";
 pub(crate) const MAX_DOWNLOAD_BYTES: u64 = 250 * 1024 * 1024;
-const CONTENT_EXTENSIONS: [&str; 3] = ["jar", "zip", "mrpack"];
+/// File types Mochi installs and manages: Minecraft jars/packs plus what other games' mod sites distribute
+/// (tModLoader `.tmod`, Satisfactory `.smod`, Source/Unreal `.pak`, BepInEx `.dll`, Bethesda plugins and archives).
+pub(crate) const CONTENT_EXTENSIONS: &[&str] = &["jar", "zip", "mrpack", "tmod", "smod", "pak", "dll", "esp", "esm", "esl", "ba2", "7z", "rar", "vpk"];
 const DOWNLOAD_RETENTION_MS: u64 = 10 * 60 * 1000;
 
 #[derive(Debug, Serialize)]
@@ -30,10 +32,15 @@ pub struct DownloadEntry {
     pub filename: String,
     pub downloaded: u64,
     pub total: Option<u64>,
+    /// "downloading", "completed", "failed" or "cancelled".
     pub status: String,
     pub error: Option<String>,
     pub created_at: u64,
     pub finished_at: Option<u64>,
+    /// "modrinth", "curseforge" or "nexus".
+    pub provider: String,
+    /// Folder the file lands in (for "Open folder").
+    pub dir: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -94,11 +101,11 @@ pub(crate) fn content_extension(name: &str) -> String {
 }
 
 /// Content commands may only touch mod archives, never arbitrary files.
-fn validate_content_path(path: &str) -> Result<PathBuf, String> {
+pub(crate) fn validate_content_path(path: &str) -> Result<PathBuf, String> {
     let p = validate_path(path)?;
     let name = p.file_name().and_then(|n| n.to_str()).ok_or("Invalid content filename.")?;
     if !CONTENT_EXTENSIONS.contains(&content_extension(name).as_str()) {
-        return Err("Mochi only manages .jar, .zip and .mrpack content files.".into());
+        return Err("Mochi only manages mod and content files (.jar, .zip, .mrpack, .tmod, .dll, ...).".into());
     }
     Ok(p)
 }
@@ -274,7 +281,7 @@ pub fn list_mod_files(path: String) -> Result<Vec<InstalledModFile>, String> {
     Ok(files)
 }
 
-fn rename_enabled(path: &Path, enabled: bool) -> Result<(), String> {
+pub(crate) fn rename_enabled(path: &Path, enabled: bool) -> Result<(), String> {
     let name = path.file_name().and_then(|n| n.to_str()).ok_or("Invalid content filename.")?;
     let target = match (enabled, name.strip_suffix(".disabled")) {
         (true, Some(base)) => path.with_file_name(base),
@@ -316,22 +323,43 @@ pub fn delete_mod_file(path: String) -> Result<(), String> {
 pub fn start_modrinth_download(url: String, path: String, tofu_id: String, tofu_name: String, item_name: String, filename: String) -> Result<String, String> {
     crate::downloads::start(crate::downloads::ModDownloadRequest {
         provider: crate::downloads::Provider::Modrinth, url, path, tofu_id, tofu_name, item_name, filename,
-        sha1: None, extract: None, keep_archive: None,
+        sha1: None, extract: None, keep_archive: None, subdir: None, record: None,
     })
 }
 
-/// Downloads `url` next to `path`, then removes the old file. A disabled mod stays disabled.
+/// Downloads `url` next to `path`, keeps the old file as a rollback copy, then removes it. A disabled mod stays disabled.
+/// The new file is only put in place after its SHA-1 matched (when one is known).
 #[tauri::command]
-pub async fn update_mod_file(path: String, url: String, filename: String, sha1: Option<String>) -> Result<(), String> {
+pub async fn update_mod_file(
+    path: String, url: String, filename: String, sha1: Option<String>, provider: Option<String>, tofu_id: Option<String>, record: Option<crate::modinstance::RecordInput>,
+) -> Result<(), String> {
+    use crate::downloads::Provider;
     let old = validate_content_path(&path)?;
-    let parsed = crate::downloads::parse_download_url(crate::downloads::Provider::Modrinth, &url)?;
+    let provider = match provider.as_deref() { None | Some("modrinth") => Provider::Modrinth, Some("curseforge") => Provider::Curseforge, Some("nexus") => Provider::Nexus, Some(_) => return Err("Unknown mod source.".into()) };
+    let parsed = crate::downloads::parse_download_url(provider, &url)?;
     let filename = validate_download_filename(&filename)?;
     let sha1 = sha1.as_deref().filter(|value| !value.trim().is_empty()).map(crate::downloads::normalize_sha1).transpose()?;
     let was_disabled = old.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.ends_with(".disabled"));
     let target_name = if was_disabled { format!("{filename}.disabled") } else { filename.to_string() };
     let target = old.with_file_name(target_name);
-    crate::downloads::fetch_to_file(crate::downloads::Provider::Modrinth, parsed, &target, sha1.as_deref(), |_, _| {}).await?;
+    let old_base = crate::modinstance::base_name(old.file_name().and_then(|n| n.to_str()).unwrap_or_default()).to_string();
+    let dir = old.parent().map(Path::to_path_buf);
+    // A hard link keeps the old data alive even when the new file takes over the same name.
+    let saved = crate::modinstance::save_rollback_copy(&old).ok();
+    let actual = crate::downloads::fetch_to_file(provider, parsed, &target, sha1.as_deref(), |_, _| {}).await?;
     if target != old { let _ = fs::remove_file(&old); }
+    if let (Some(tofu_id), Some(record), Some(dir)) = (tofu_id.filter(|id| !id.is_empty()), record, dir) {
+        let subdir = dir.file_name().and_then(|n| n.to_str()).filter(|n| crate::modinstance::CONTENT_SUBDIRS.contains(n)).unwrap_or("").to_string();
+        let mut next = record.into_record(filename, &subdir, Some(actual));
+        next.enabled = !was_disabled;
+        if let Some(saved) = saved {
+            // Remember what to restore: the previous file and, if we knew it, its metadata.
+            let previous = crate::modinstance::previous_record(&tofu_id, &subdir, &old_base);
+            next.rollback = Some(crate::modinstance::Rollback { file: saved, version: previous.as_ref().map(|r| r.version.clone()).unwrap_or_default(), file_id: previous.as_ref().map(|r| r.file_id.clone()).unwrap_or_default(), sha1: previous.as_ref().and_then(|r| r.sha1.clone()), file_date: previous.and_then(|r| r.file_date) });
+        }
+        crate::modinstance::drop_record(&tofu_id, &subdir, &old_base);
+        crate::modinstance::record_install(&tofu_id, next);
+    }
     Ok(())
 }
 

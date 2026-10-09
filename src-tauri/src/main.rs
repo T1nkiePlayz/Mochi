@@ -5,8 +5,11 @@ mod fonts;
 mod bigpicture;
 mod dirsize;
 mod game_artwork;
+mod gamelogs;
 mod gamepad;
 mod downloads;
+mod modinstance;
+mod modlocs;
 mod modrinth;
 mod platform;
 mod playtime;
@@ -30,6 +33,9 @@ struct LaunchRequest {
     tofu_id: Option<String>,
     #[serde(default)]
     config: platform::LaunchConfig,
+    /// Copies the Tofu's mods into the game's mods folder before the game starts.
+    #[serde(default)]
+    mod_sync: Option<modinstance::ModSyncRequest>,
 }
 
 fn safe_segment(value: &str) -> String {
@@ -66,11 +72,19 @@ fn set_launch_on_startup(enabled: bool) -> Result<(), String> { platform::set_la
 
 #[tauri::command(async)]
 fn launch_game_tracked(app: tauri::AppHandle, request: LaunchRequest) -> Result<(), String> {
-    let LaunchRequest { game_id, name, launch_target, install_path, tofu_id, mut config } = request;
+    let LaunchRequest { game_id, name, launch_target, install_path, tofu_id, mut config, mod_sync } = request;
     let target = launch_target.trim().to_string();
     if target.is_empty() { return Err("Launch target is empty.".into()); }
     let prefix = format!("{}-{}", safe_segment(&game_id), safe_segment(tofu_id.as_deref().unwrap_or("default")));
     config.prefix_dir = app.path().app_data_dir().ok().map(|dir| dir.join("prefixes").join(prefix));
+    config.log_dir = gamelogs::game_log_dir(&game_id).ok();
+    // Mods are swapped in only now, at launch: only the differences are touched and a failure never blocks the game.
+    if let Some(sync) = mod_sync {
+        let tofu_id = sync.tofu_id.clone();
+        let progress_id = tofu_id.clone();
+        let outcome = modinstance::run_sync(&sync, &|done, total| modinstance::emit("mod-sync-progress", modinstance::SyncProgress { tofu_id: progress_id.clone(), done, total }));
+        let _ = app.emit("mod-sync-result", serde_json::json!({ "tofuId": tofu_id, "report": outcome.as_ref().ok(), "error": outcome.as_ref().err() }));
+    }
 
     let request = playtime::StartRequest { game_id, name, target: target.clone(), install_path };
     playtime::start(app, request, move || platform::launch_game(&target, &config))
@@ -189,6 +203,7 @@ fn main() {
             if let Err(error) = themes::initialize_config(app.handle()) { eprintln!("Mochi config: {error}"); }
             startup_mark(startup, "config");
             let data_dir = app.path().app_data_dir()?;
+            modinstance::initialize(app.handle().clone(), data_dir.clone());
             playtime::initialize(data_dir).map_err(std::io::Error::other)?;
             startup_mark(startup, "playtime");
             tray::initialize(app);
@@ -221,6 +236,10 @@ fn main() {
             modrinth::get_public_api, modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::apply_mod_profile,
             steam_store::get_steam_store_details, steam_achievements::get_steam_achievements, steam_achievements::get_steam_achievement_totals,
             modrinth::delete_mod_file, modrinth::start_modrinth_download, downloads::start_mod_download, modrinth::update_mod_file, modrinth::analyze_mod_files,
+            downloads::cancel_mod_download, downloads::clear_finished_downloads,
+            modinstance::list_instance_mods, modinstance::get_instance_store_dir, modinstance::record_instance_mod, modinstance::set_instance_mods_enabled,
+            modinstance::rollback_mod_update, modinstance::sync_instance_mods, modinstance::import_mods_from_folder, modlocs::detect_mod_locations,
+            gamelogs::list_game_logs, gamelogs::read_game_log, gamelogs::clear_game_logs,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Mochi")
