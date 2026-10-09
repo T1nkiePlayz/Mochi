@@ -15,6 +15,9 @@ const cfGames = [
   { id: 669, name: "Stardew Valley", slug: "stardewvalley", status: 1, apiStatus: 2 },
   { id: 69271, name: "Minecraft Dungeons", slug: "minecraft-dungeons", status: 1, apiStatus: 2 },
   { id: 83374, name: "Satisfactory", slug: "satisfactory", status: 1, apiStatus: 2 },
+  { id: 78, name: "The Sims 4", slug: "sims4", status: 1, apiStatus: 2 },
+  { id: 1, name: "World of Warcraft", slug: "wow", status: 1, apiStatus: 2 },
+  { id: 80000, name: "Starfield", slug: "starfield", status: 1, apiStatus: 2 },
   { id: 70667, name: "Hidden Test Game", slug: "hidden-test-game", status: 1, apiStatus: 1 },
 ].map((game) => ({ ...game, assets: { iconUrl: "", tileUrl: "", coverUrl: "" } }));
 

@@ -121,7 +121,7 @@ export function ModrinthDiscover({ tofu, pikos, nexusConfigured, supabase }: Pro
       {tab.kind === "minecraft" && effective === "modrinth" && <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />}
 
       {tab.kind === "all" && <>
-        <AllGamesFeed games={discover.games} pikos={pikos} supabase={supabase} settings={settings} nexusKey={nexusConfigured} refreshKey={refreshKey} onOpenSettings={openSettings} />
+        <AllGamesFeed games={discover.games} cfGames={discover.cfGames} onSeeAll={selectTab} onAddGame={(entry) => { discover.add(entry); if (entry.k === "cf") setPendingKey(`cf:${entry.id}`); }} pikos={pikos} supabase={supabase} settings={settings} nexusKey={nexusConfigured} refreshKey={refreshKey} onOpenSettings={openSettings} />
         {settings.curseforge && <CurseforgeCredit />}
       </>}
 
