@@ -46,35 +46,36 @@ function findClosingDelimiter(source: string, start: number, delimiter: string):
   return -1;
 }
 
-function findClosingParenthesis(source: string, start: number): number {
-  let depth = 0;
-  for (let index = start; index < source.length; index += 1) {
-    if (source[index] === "(" && source[index - 1] !== "\\") depth += 1;
-    if (source[index] === ")" && source[index - 1] !== "\\") {
-      depth -= 1;
-      if (depth === 0) return index;
-    }
+/**
+ * Index of the matching close for every unescaped "[" and "(" in one pass (-1 when unclosed).
+ * Scanning forward from each opener instead is quadratic: a description full of "[" froze rendering.
+ */
+type Matches = { brackets: Int32Array; parens: Int32Array };
+
+function matchPairs(source: string): Matches {
+  const brackets = new Int32Array(source.length).fill(-1);
+  const parens = new Int32Array(source.length).fill(-1);
+  const openBrackets: number[] = [];
+  const openParens: number[] = [];
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    if (source[index - 1] === "\\") continue;
+    if (char === "[") openBrackets.push(index);
+    else if (char === "]" && openBrackets.length) brackets[openBrackets.pop()!] = index;
+    else if (char === "(") openParens.push(index);
+    else if (char === ")" && openParens.length) parens[openParens.pop()!] = index;
   }
-  return -1;
+  return { brackets, parens };
 }
 
-function findClosingBracket(source: string, start: number): number {
-  let depth = 0;
-  for (let index = start; index < source.length; index += 1) {
-    if (source[index] === "[" && source[index - 1] !== "\\") depth += 1;
-    if (source[index] === "]" && source[index - 1] !== "\\") {
-      depth -= 1;
-      if (depth === 0) return index;
-    }
-  }
-  return -1;
-}
+const closing = (pairs: Int32Array, source: string, start: number, open: string) =>
+  source[start] === open && source[start - 1] !== "\\" ? pairs[start] : -1;
 
-function parseInlineElement(source: string, start: number, depth: number): { node: ReactNode; end: number } | null {
+function parseInlineElement(source: string, start: number, depth: number, matches: Matches): { node: ReactNode; end: number } | null {
   if (source.startsWith("![", start)) {
-    const labelEnd = findClosingBracket(source, start + 1);
+    const labelEnd = closing(matches.brackets, source, start + 1, "[");
     if (labelEnd < 0 || source[labelEnd + 1] !== "(") return null;
-    const urlEnd = findClosingParenthesis(source, labelEnd + 1);
+    const urlEnd = closing(matches.parens, source, labelEnd + 1, "(");
     if (urlEnd < 0) return null;
     const alt = source.slice(start + 2, labelEnd);
     const url = safeHttpUrl(source.slice(labelEnd + 2, urlEnd).trim());
@@ -84,9 +85,9 @@ function parseInlineElement(source: string, start: number, depth: number): { nod
   }
 
   if (source[start] === "[") {
-    const labelEnd = findClosingBracket(source, start);
+    const labelEnd = closing(matches.brackets, source, start, "[");
     if (labelEnd < 0 || source[labelEnd + 1] !== "(") return null;
-    const urlEnd = findClosingParenthesis(source, labelEnd + 1);
+    const urlEnd = closing(matches.parens, source, labelEnd + 1, "(");
     if (urlEnd < 0) return null;
     const label = source.slice(start + 1, labelEnd);
     const url = safeHttpUrl(source.slice(labelEnd + 2, urlEnd).trim());
@@ -133,8 +134,9 @@ function renderInline(text: string, depth = 0): ReactNode[] {
     }
   };
 
+  const matches = matchPairs(text);
   for (let index = 0; index < text.length;) {
-    const candidate = parseInlineElement(text, index, depth);
+    const candidate = parseInlineElement(text, index, depth, matches);
     if (candidate) {
       flushPlain();
       nodes.push(<span key={nodes.length}>{candidate.node}</span>);
