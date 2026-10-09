@@ -48,18 +48,24 @@
   border: 1px solid var(--mochi-border); border-radius: var(--mochi-radius-md, 12px); background: var(--mochi-background);
 }
 .sgp-spacer { position: relative; width: 100%; }
-.sgp-game, .sgp-group { position: absolute; top: 0; left: 0; right: 0; box-sizing: border-box; }
+.sgp-row, .sgp-group { position: absolute; top: 0; left: 0; right: 0; box-sizing: border-box; }
 .sgp-group {
   display: flex; align-items: flex-end; margin: 0; padding: 0 14px 6px; color: var(--mochi-text-muted);
   font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
 }
+.sgp-row { display: flex; align-items: stretch; border-bottom: 1px solid var(--mochi-border); }
+.sgp-row:hover { background: var(--mochi-surface-hover); }
+.sgp-row.selected { background: color-mix(in srgb, var(--mochi-accent) 10%, transparent); }
 .sgp-game {
-  display: flex; align-items: center; gap: 12px; padding: 0 14px; border: 0; border-bottom: 1px solid var(--mochi-border);
+  display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; padding: 0 8px 0 14px; border: 0;
   background: transparent; color: var(--mochi-text-strong); text-align: left; cursor: pointer;
 }
-.sgp-game:hover { background: var(--mochi-surface-hover); }
-.sgp-game.selected { background: color-mix(in srgb, var(--mochi-accent) 10%, transparent); }
-.sgp-game:focus-visible, .sgp-source-main:focus-visible, .sgp-check:focus-visible { outline: 2px solid var(--mochi-accent-strong); outline-offset: -2px; }
+.sgp-kind {
+  display: grid; place-items: center; flex: 0 0 auto; align-self: center; width: 30px; height: 30px; margin-right: 10px; padding: 0;
+  border: 0; border-radius: 8px; background: transparent; color: var(--mochi-text-muted); cursor: pointer;
+}
+.sgp-kind:hover { color: var(--mochi-text-strong); background: var(--mochi-surface); }
+.sgp-game:focus-visible, .sgp-kind:focus-visible, .sgp-source-main:focus-visible, .sgp-check:focus-visible { outline: 2px solid var(--mochi-accent-strong); outline-offset: -2px; }
 .sgp-box {
   display: grid; place-items: center; flex: 0 0 auto; width: 18px; height: 18px; border: 1.5px solid var(--mochi-border-strong);
   border-radius: 5px; color: var(--mochi-background); font-size: 12px; font-weight: 800; line-height: 1;

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { AlertTriangle, Gamepad2, RefreshCw, Rocket, Search } from "lucide-react";
+import { AlertTriangle, Gamepad2, RefreshCw, Rocket, Search, ArrowLeftRight } from "lucide-react";
 import { launcherArt, launcherIcon } from "../../lib/launcherArt";
 import minecraftGrassBlock from "../../assets/minecraft-grass-block.svg";
 import { ImportThumb } from "./ImportThumb";
+import { applyKindOverride, applyKindOverrides, readOverrides, setOverride, overrideKeyForImport } from "../../lib/launcherOverrides";
 import { filterItems, type PickerFilter } from "./filterItems";
 import { detectImportSources, scanImportGames, type DetectedImportSource, type ImportSourceId, type ImportedGame } from "../../lib/sources";
 
@@ -54,7 +55,7 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
   const initialised = useRef<Set<string>>(new Set());
 
   // The single place scanned items enter the picker: everything downstream sees only the filtered list.
-  const scanSource = (id: ImportSourceId) => (scan ? scan(id) : scanImportGames(id)).then((items) => filterItems(items, filter));
+  const scanSource = (id: ImportSourceId) => (scan ? scan(id) : scanImportGames(id)).then((items) => filterItems(applyKindOverrides(items, readOverrides()), filter));
   const launchersOnly = filter === "launchers";
 
   // Detect installed sources, hiding any with nothing to import.
@@ -182,6 +183,14 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
     scroller.current?.querySelector<HTMLElement>(`[data-row="${focusRow}"]`)?.focus();
   });
 
+  // Flips one item between Games and Game launchers (persisted); the row moves at once and its selection is kept.
+  const flipKind = (game: ImportedGame) => {
+    const kind = game.kind === "launcher" ? "game" : "launcher";
+    setOverride(overrideKeyForImport(game), kind);
+    const patch = { [overrideKeyForImport(game)]: kind } as const;
+    setData((currentData) => Object.fromEntries(Object.entries(currentData).map(([id, state]) => [id, { ...state, games: filterItems(state.games.map((item) => (item.id === game.id ? applyKindOverride(item, patch) : item)), filter) }])));
+  };
+
   const toggle = (game: ImportedGame) => setSelected((currentSet) => {
     const next = new Set(currentSet);
     const key = keyOf(game);
@@ -221,6 +230,12 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
     else if (event.key === "End") { event.preventDefault(); moveFocus(rows.length - 1); }
     else if (event.key === "PageDown") { event.preventDefault(); moveFocus(focusRow + 8); }
     else if (event.key === "PageUp") { event.preventDefault(); moveFocus(focusRow - 8); }
+    else if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+      const target = event.target as HTMLElement;
+      const row = target.closest<HTMLElement>(".sgp-row");
+      const next = row?.querySelector<HTMLElement>(event.key === "ArrowRight" ? ".sgp-kind" : ".sgp-game");
+      if (next && next !== target) { event.preventDefault(); next.focus(); }
+    }
   };
 
   const rescan = () => { initialised.current = new Set(); setSelected(new Set()); setData({}); setNonce((value) => value + 1); };
@@ -313,20 +328,25 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
                     const game = row.game;
                     const on = selected.has(row.key);
                     const isLauncher = game.kind === "launcher";
+                    const kindLabel = isLauncher ? "Mark as game" : "Mark as launcher";
                     return (
-                      <button
-                        type="button" role="checkbox" aria-checked={on} key={row.key} data-row={index}
-                        tabIndex={index === focusable ? 0 : -1} style={style}
-                        className={"sgp-game" + (on ? " selected" : "")}
-                        onFocus={() => setFocusRow(index)} onClick={() => toggle(game)}
-                      >
-                        <span className="sgp-box" aria-hidden="true">{on ? "✓" : ""}</span>
-                        <span className={"sgp-thumb" + (isLauncher ? " launcher" : "")} aria-hidden="true">
-                          {isLauncher ? <img src={launcherArt(game.launcherId)} alt="" loading="lazy" decoding="async" /> : <ImportThumb id={game.id} />}
-                        </span>
-                        <span className="sgp-game-copy"><strong>{game.name}</strong><small>{isLauncher ? "Game launcher" : game.installPath || "Installed game"}</small></span>
-                        {isLauncher && <Rocket size={14} aria-hidden="true" className="sgp-launcher-mark" />}
-                      </button>
+                      <div className={"sgp-row" + (on ? " selected" : "")} style={style} key={row.key}>
+                        <button
+                          type="button" role="checkbox" aria-checked={on} data-row={index}
+                          tabIndex={index === focusable ? 0 : -1} className="sgp-game"
+                          onFocus={() => setFocusRow(index)} onClick={() => toggle(game)}
+                        >
+                          <span className="sgp-box" aria-hidden="true">{on ? "✓" : ""}</span>
+                          <span className={"sgp-thumb" + (isLauncher ? " launcher" : "")} aria-hidden="true">
+                            {isLauncher ? <img src={launcherArt(game.launcherId)} alt="" loading="lazy" decoding="async" /> : <ImportThumb id={game.id} />}
+                          </span>
+                          <span className="sgp-game-copy"><strong>{game.name}</strong><small>{isLauncher ? "Game launcher" : game.installPath || "Installed game"}</small></span>
+                          {isLauncher && <Rocket size={14} aria-hidden="true" className="sgp-launcher-mark" />}
+                        </button>
+                        <button type="button" className="sgp-kind" tabIndex={index === focusable ? 0 : -1} aria-label={`${kindLabel}: ${game.name}`} title={kindLabel} onFocus={() => setFocusRow(index)} onClick={() => flipKind(game)}>
+                          <ArrowLeftRight size={14} aria-hidden="true" />
+                        </button>
+                      </div>
                     );
                   })}
                 </div>

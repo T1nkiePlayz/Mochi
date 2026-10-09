@@ -12,6 +12,8 @@ export const storageKeys = {
   libraryFilter: "mochi:library-filter",
   accessibility: "mochi:accessibility",
   collections: "mochi:collections",
+  /** User corrections of game/launcher detection, keyed by import id. */
+  launcherOverrides: "mochi:launcher-overrides",
 } as const;
 
 export const igdbCacheKey = (userId?: string) => `mochi:igdb-cache:${userId || "local"}`;

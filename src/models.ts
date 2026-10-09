@@ -64,6 +64,8 @@ export type Piko = {
   kind?: "game" | "launcher";
   /** Which known launcher a launcher entry is (`src/lib/launchers.ts`), for its artwork and company logo. */
   launcherId?: string;
+  /** Id of the import item this entry came from (`ImportedGame.id`); keys the user's game/launcher override. */
+  importKey?: string;
   igdbId?: number;
   screenshots?: string[];
   trailerId?: string;

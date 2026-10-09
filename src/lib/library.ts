@@ -2,6 +2,7 @@ import type { Piko, Tofu } from "../models";
 import type { PlaytimeEntry } from "./platform";
 import { launcherArt } from "./launcherArt";
 import { launcherForPiko } from "./launchers";
+import { applyPikoKindOverride, overrideKeyForPiko, readOverrides, type KindOverrides } from "./launcherOverrides";
 
 export type SmartFilterId = "all" | "favorites" | "installed" | "recent" | "unplayed" | "most-played" | "launchers" | "running";
 /** The one "primary" filter applied to the library: a smart filter, a source or a user collection. */
@@ -91,7 +92,7 @@ const defaultTofuOf = (): Tofu => ({ id: "default", name: "Default", version: "L
  * Makes a library read from storage (or the cloud) safe to render: drops non-objects and entries without an id,
  * removes duplicate ids (React keys), and guarantees every Piko has a name and at least one valid Tofu.
  */
-export function sanitizeLibrary(value: unknown): Piko[] {
+export function sanitizeLibrary(value: unknown, overrides: KindOverrides = readOverrides()): Piko[] {
   if (!Array.isArray(value)) return [];
   const seen = new Set<string>();
   const result: Piko[] = [];
@@ -106,7 +107,7 @@ export function sanitizeLibrary(value: unknown): Piko[] {
       accent: typeof item.accent === "string" ? item.accent : "#a99ad6",
       artwork: typeof item.artwork === "string" ? item.artwork : "",
       tofus: tofus.length ? tofus.map((tofu) => ({ ...tofu, name: typeof tofu.name === "string" ? tofu.name : "Default", mods: Number.isFinite(tofu.mods) ? tofu.mods : 0 })) : [defaultTofuOf()],
-    }));
+    }, overrides));
   }
   return result;
 }
@@ -116,7 +117,9 @@ export function sanitizeLibrary(value: unknown): Piko[] {
  * `kind` existed) become launchers so they land in "Game launchers". Launchers never keep a trailer.
  * Returns the same object when nothing changes.
  */
-export function classifyLauncherEntry(piko: Piko): Piko {
+export function classifyLauncherEntry(piko: Piko, overrides: KindOverrides = {}): Piko {
+  // The user's own correction always wins over automatic detection, in both directions.
+  if (overrides[overrideKeyForPiko(piko)]) return applyPikoKindOverride(piko, overrides);
   const def = piko.kind === "launcher" && piko.launcherId ? undefined : launcherForPiko(piko);
   if (!def) {
     return piko.kind === "launcher" && piko.trailerId ? { ...piko, trailerId: undefined } : piko;
