@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 use crate::util::MutexExt;
-use std::{collections::HashMap, fs, path::Path, sync::Mutex, time::{Duration, Instant, SystemTime}};
+use std::{collections::HashMap, fs, path::Path, sync::{atomic::{AtomicBool, Ordering}, Mutex}, time::{Duration, Instant, SystemTime}};
 
 const MAX_ENTRIES: u64 = 250_000;
 const MAX_DEPTH: usize = 24;
@@ -23,15 +23,22 @@ const CACHE_TTL: Duration = Duration::from_secs(30);
 const CACHE_MAX_ENTRIES: usize = 256;
 
 type Cache = HashMap<String, (Instant, Option<SystemTime>, DirSize)>;
+static CACHE: Mutex<Option<Cache>> = Mutex::new(None);
+
+/// Forgets every cached size (after something was deleted below a measured folder).
+pub fn clear_cache() { CACHE.lock_recover().take(); }
 
 /// `dir_size` with a short-lived cache. Failed or truncated measurements are never cached.
-pub fn dir_size_cached(path: &str) -> Result<DirSize, String> {
-    static CACHE: Mutex<Option<Cache>> = Mutex::new(None);
+pub fn dir_size_cached(path: &str) -> Result<DirSize, String> { dir_size_cached_ctl(path, None, &mut |_| {}) }
+
+/// `dir_size_cached` that can be cancelled and reports the running total while it walks (see `walk`).
+pub fn dir_size_cached_ctl(path: &str, cancel: Option<&AtomicBool>, progress: &mut dyn FnMut(&DirSize)) -> Result<DirSize, String> {
     let modified = fs::metadata(path).and_then(|meta| meta.modified()).ok();
     if let Some((at, stamp, size)) = CACHE.lock_recover().get_or_insert_with(HashMap::new).get(path) {
         if at.elapsed() < CACHE_TTL && *stamp == modified { return Ok(size.clone()); }
     }
-    let size = dir_size(path)?;
+    let size = walk(path, cancel, progress)?;
+    // A cancelled walk is also flagged truncated, so it never reaches the cache.
     if !size.truncated {
         let mut guard = CACHE.lock_recover();
         let cache = guard.get_or_insert_with(HashMap::new);
@@ -43,7 +50,14 @@ pub fn dir_size_cached(path: &str) -> Result<DirSize, String> {
 }
 
 /// Sums file sizes below `path`. Symlinks are never followed; the walk stops at a cap or deadline.
-pub fn dir_size(path: &str) -> Result<DirSize, String> {
+pub fn dir_size(path: &str) -> Result<DirSize, String> { walk(path, None, &mut |_| {}) }
+
+/// How often `walk` reports its running total.
+const PROGRESS_EVERY: Duration = Duration::from_millis(150);
+
+/// `dir_size` with an optional cancel flag (a cancelled walk returns what it has, flagged truncated) and a progress
+/// callback that is called at most every `PROGRESS_EVERY`.
+fn walk(path: &str, cancel: Option<&AtomicBool>, progress: &mut dyn FnMut(&DirSize)) -> Result<DirSize, String> {
     let root = Path::new(path);
     // Follows a symlink at the root only: a game library folder that is itself a link is common. Links below it are skipped.
     let meta = fs::metadata(root).map_err(|e| format!("Unable to read folder: {e}"))?;
@@ -52,11 +66,16 @@ pub fn dir_size(path: &str) -> Result<DirSize, String> {
     let mut result = DirSize { bytes: 0, files: 0, truncated: false };
     let mut stack = vec![(root.to_path_buf(), 0usize)];
     let mut seen = 0u64;
+    let mut last_report = Instant::now();
     while let Some((dir, depth)) = stack.pop() {
         let Ok(entries) = fs::read_dir(&dir) else { continue };
         for entry in entries.flatten() {
             seen += 1;
             if seen > MAX_ENTRIES || Instant::now() > deadline { result.truncated = true; return Ok(result); }
+            if seen.is_multiple_of(256) {
+                if cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)) { result.truncated = true; return Ok(result); }
+                if last_report.elapsed() >= PROGRESS_EVERY { last_report = Instant::now(); progress(&result); }
+            }
             let Ok(meta) = entry.metadata() else { continue };
             let kind = meta.file_type();
             if kind.is_symlink() { continue; }

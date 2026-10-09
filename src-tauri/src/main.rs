@@ -27,6 +27,7 @@ mod sources;
 mod soundpacks;
 mod steam_achievements;
 mod steam_store;
+mod storage;
 mod themes;
 mod tracking;
 mod tray;
@@ -324,6 +325,7 @@ fn main() {
             bigpicture::get_system_status, bigpicture::suspend_system, bigpicture::power_action, bigpicture::get_power_capabilities, soundpacks::list_sound_packs, soundpacks::import_sound_pack, soundpacks::remove_sound_pack, soundpacks::export_sound_pack, soundpacks::read_sound_pack_file, bigpicture::quit_mochi, gamepad::get_gamepads, gamepad::gamepad_rumble,
             get_mochi_config_info, move_mochi_config, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
             fonts::cache_theme_fonts,
+            storage::scan_storage, storage::cancel_storage_scan, storage::clear_storage_location,
             game_artwork::cache_game_artwork, game_artwork::get_cached_game_artwork, game_artwork::get_cached_game_artwork_path, game_artwork::clear_game_artwork_cache,
             game_artwork::prepare_artwork_preview, game_artwork::save_custom_artwork, game_artwork::delete_game_artwork, icon_cover::cache_icon_cover, platform::check_launch_targets,
             modrinth::get_public_api, modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::apply_mod_profile,
