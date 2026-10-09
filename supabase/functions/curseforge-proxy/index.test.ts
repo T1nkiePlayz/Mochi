@@ -1,5 +1,5 @@
 import { assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
-import { handle, resetRateLimit } from "./handler.ts";
+import { clientIp, handle, rateLimited, resetRateLimit } from "./handler.ts";
 
 const SECRET = "$2a$10$super-secret-key-value";
 
@@ -117,9 +117,9 @@ Deno.test("per-IP rate limit", async () => {
   await withKey(SECRET, async () => {
     const f = mockFetch(200, { data: [] });
     let last = 0;
-    for (let i = 0; i < 125; i++) last = (await handle(post({ route: "games" }, { "x-forwarded-for": "1.2.3.4" }), f)).status;
+    for (let i = 0; i < 125; i++) last = (await handle(post({ route: "games" }, { "cf-connecting-ip": "1.2.3.4" }), f)).status;
     assertEquals(last, 429);
-    assertEquals((await handle(post({ route: "games" }, { "x-forwarded-for": "5.6.7.8" }), f)).status, 200);
+    assertEquals((await handle(post({ route: "games" }, { "cf-connecting-ip": "5.6.7.8" }), f)).status, 200);
   });
 });
 
@@ -143,4 +143,49 @@ Deno.test("fingerprints posts a deduplicated list upstream", async () => {
     assertEquals(calls[2].method, "GET");
     assertEquals(calls[2].body, undefined);
   });
+});
+
+
+Deno.test("client IP ignores caller-controlled X-Forwarded-For", () => {
+  assertEquals(clientIp(new Request("https://x.test", {
+    headers: { "x-forwarded-for": "203.0.113.55" },
+  })), "unknown");
+});
+
+Deno.test("client IP accepts valid Cloudflare IPv4 and IPv6 metadata", () => {
+  assertEquals(clientIp(new Request("https://x.test", {
+    headers: { "cf-connecting-ip": "203.0.113.7" },
+  })), "203.0.113.7");
+  assertEquals(clientIp(new Request("https://x.test", {
+    headers: { "cf-connecting-ip": "2001:DB8::1" },
+  })), "2001:db8::1");
+});
+
+Deno.test("malformed IP metadata shares the unknown bucket", () => {
+  for (const ip of ["999.1.1.1", "1.2.3", "1.2.3.4, 5.6.7.8", "not-an-ip", ""]) {
+    assertEquals(clientIp(new Request("https://x.test", {
+      headers: { "cf-connecting-ip": ip, "x-forwarded-for": "203.0.113.8" },
+    })), "unknown", ip);
+  }
+});
+
+Deno.test("rate limiter permits 120 requests and limits the next request", () => {
+  resetRateLimit();
+  for (let i = 0; i < 120; i++) assertEquals(rateLimited("198.51.100.10", 10_000), false);
+  assertEquals(rateLimited("198.51.100.10", 10_000), true);
+  assertEquals(rateLimited("198.51.100.10", 70_001), false);
+  resetRateLimit();
+});
+
+Deno.test("oversized request bodies are rejected before JSON parsing", async () => {
+  const body = JSON.stringify({ route: "games", padding: "x".repeat(9000) });
+  const response = await handle(new Request("https://x.test", {
+    method: "POST",
+    headers: { "cf-connecting-ip": "198.51.100.20", "content-type": "application/json" },
+    body,
+  }));
+  assertEquals(response.status, 400);
+  const payload = await response.json();
+  assertEquals(payload.code, "bad_request");
+  assertEquals(payload.error, "Request body is too large.");
 });

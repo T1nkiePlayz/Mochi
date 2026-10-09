@@ -58,6 +58,7 @@ mod tests {
     #[test]
     fn website_dashboard_opens_without_asking() {
         assert!(matches!(evaluate("https://mochi.ashtontink.com/#/dashboard"), Ok(UrlDecision::Open(_))));
+        assert!(matches!(evaluate("https://mochi.ashtontink.com/#/signin?app=mochi"), Ok(UrlDecision::Open(_))));
         assert!(matches!(evaluate("https://ashtontink.com/"), Ok(UrlDecision::Open(_))));
         assert!(!matches!(evaluate("https://evilashtontink.com/"), Ok(UrlDecision::Open(_))));
     }

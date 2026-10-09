@@ -224,7 +224,7 @@ pub(crate) fn extract_zip(archive: &Path, dest: &Path, limits: ExtractLimits) ->
     let canonical_dest = fs::canonicalize(dest).map_err(|e| format!("Unable to resolve extraction folder: {e}"))?;
     let canonical_archive = fs::canonicalize(archive).map_err(|e| format!("Unable to resolve archive: {e}"))?;
     if canonical_archive.parent() == Some(canonical_dest.as_path())
-        && archive.file_name().is_some_and(|name| files.iter().any(|relative| relative == Path::new(name)))
+        && archive.file_name().is_some_and(|name| files.iter().any(|relative| relative.as_os_str().eq_ignore_ascii_case(name)))
     {
         return Err("Archive contains a file that would overwrite the archive itself.".into());
     }
@@ -650,6 +650,17 @@ mod tests {
         let dir = temp_dir("self-overwrite");
         let archive = dir.join("pack.zip");
         build_zip(&archive, &[("pack.zip", b"replacement")], None);
+        let original = fs::read(&archive).unwrap();
+        assert!(extract_zip(&archive, &dir, EXTRACT_LIMITS).unwrap_err().contains("overwrite the archive itself"));
+        assert_eq!(fs::read(&archive).unwrap(), original);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn archive_self_overwrite_guard_ignores_case() {
+        let dir = temp_dir("self-overwrite-case");
+        let archive = dir.join("pack.zip");
+        build_zip(&archive, &[("PACK.ZIP", b"replacement")], None);
         let original = fs::read(&archive).unwrap();
         assert!(extract_zip(&archive, &dir, EXTRACT_LIMITS).unwrap_err().contains("overwrite the archive itself"));
         assert_eq!(fs::read(&archive).unwrap(), original);
