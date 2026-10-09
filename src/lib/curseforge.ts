@@ -27,6 +27,8 @@ export type CfMod = {
   links?: { websiteUrl?: string }; authors?: CfAuthor[]; logo?: { thumbnailUrl?: string; url?: string } | null;
   categories?: Array<{ id: number; name: string }>; latestFiles?: CfFile[]; allowModDistribution?: boolean | null;
   dateModified?: string; dateCreated?: string; status?: number;
+  /** Newest file per game version and loader (modLoader: 1 Forge, 4 Fabric, 5 Quilt, 6 NeoForge). */
+  latestFilesIndexes?: Array<{ gameVersion?: string; modLoader?: number }>;
 };
 export type CfPagination = { index: number; pageSize: number; resultCount: number; totalCount: number };
 export type CfPage<T> = { data: T[]; pagination: CfPagination };

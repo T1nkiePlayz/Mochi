@@ -112,7 +112,7 @@ i.stat-cell { border-radius: 0; }
 .stat-tip { border: 2px solid #0E0E0F; border-radius: 0; background: #2A2B2C; box-shadow: inset 0 0 0 2px #39393B, 0 6px 0 rgba(0, 0, 0, .35); }
 .stats-skeleton { border-radius: 0; border: 2px solid #0E0E0F; }
 .ach-badge { border: 2px solid #0E0E0F; border-radius: 0; background: #2A2B2C; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--rarity) 45%, #39393B); }
-.ach-icon { width: 46px; height: 46px; border: 2px solid #0E0E0F; border-radius: 0; background: #1C1D1D; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--rarity) 55%, #39393B); color: var(--rarity); }
+.ach-icon { width: 46px; height: 46px; border: 2px solid #0E0E0F; border-radius: 0; background: #1C1D1D; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--rarity) 55%, #39393B); color: var(--ach-fg, var(--rarity)); }
 .stats-link { border-radius: 0; }
 .steam-ach-row, .steam-ach-icon { border-radius: 0; }
 
@@ -133,3 +133,7 @@ i.stat-cell { border-radius: 0; }
 [data-mochi-theme="minecraft-ore"] .mochi-select-popover { border-width: 2px; box-shadow: inset 0 0 0 2px #39393B; }
 [data-mochi-theme="minecraft-ore"] .mochi-select-option.active { background: #39393B; }
 [data-mochi-theme="minecraft-ore"] .mochi-select-option.selected { background: #1855D1; color: #fff; }
+
+/* Discover: game icons stay square like every other Ore image. */
+.discover-game-tabs, .nexus-game-picker-list { --mochi-game-icon-radius: 0; }
+.discover-game-tab, .discover-game-add { border-radius: 0; }

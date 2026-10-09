@@ -7,7 +7,6 @@
 .steam-ach-row { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--mochi-border); border-radius: var(--mochi-radius-md); background: var(--mochi-surface); }
 .steam-ach-row.unlocked { border-color: color-mix(in oklab, var(--mochi-accent) 45%, var(--mochi-border)); }
 .steam-ach-row.locked { opacity: .78; }
-.steam-ach-row.locked .steam-ach-icon { filter: grayscale(1); }
 .steam-ach-icon, .steam-ach-fallback { width: 48px; height: 48px; border-radius: var(--mochi-radius-sm, 8px); object-fit: cover; background: var(--mochi-surface-raised); }
 .steam-ach-fallback { display: grid; place-items: center; color: var(--mochi-text-muted); }
 .steam-ach-text { min-width: 0; display: grid; gap: 2px; }

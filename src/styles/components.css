@@ -95,12 +95,12 @@ code, .mfa-setup-card code, .theme-config-path code, .setting-location-value cod
 .nav-item.active { background: var(--mochi-nav-active-background); box-shadow: var(--mochi-nav-active-shadow); color: var(--mochi-text-strong); }
 .sidebar-account { border-radius: var(--mochi-card-radius); }
 .sidebar-account:hover { background: var(--mochi-nav-hover-background); border-color: var(--mochi-card-border); }
-.workspace-tabs button, .discover-tabs button, .discover-game-tab, .project-tabs button {
+.workspace-tabs button, .discover-tabs button, .project-tabs button {
   border-radius: var(--mochi-button-radius); color: var(--mochi-text-muted);
   transition: background var(--mochi-transition), color var(--mochi-transition);
 }
-.workspace-tabs button:hover, .discover-tabs button:hover, .discover-game-tab:hover, .project-tabs button:hover { color: var(--mochi-text-strong); background: var(--mochi-nav-hover-background); }
-.workspace-tabs button.active, .discover-tabs button.active, .discover-game-tab.active, .project-tabs button.active { background: var(--mochi-accent-soft); color: var(--mochi-text-strong); box-shadow: inset 0 -2px var(--mochi-accent-strong); }
+.workspace-tabs button:hover, .discover-tabs button:hover, .project-tabs button:hover { color: var(--mochi-text-strong); background: var(--mochi-nav-hover-background); }
+.workspace-tabs button.active, .discover-tabs button.active, .project-tabs button.active { background: var(--mochi-accent-soft); color: var(--mochi-text-strong); box-shadow: inset 0 -2px var(--mochi-accent-strong); }
 
 /* ---- Inputs ---------------------------------------------------------------- */
 .form-fields input, .form-fields select, .form-fields textarea, .provider-credential-card input, .compact-input, .mfa-input, .setup-provider-card input, .tofu-manager-form textarea {

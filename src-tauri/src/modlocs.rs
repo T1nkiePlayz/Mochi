@@ -247,6 +247,18 @@ fn game_location(label: &str, launcher: &str, dir: PathBuf) -> ModLocation {
     ModLocation { id: dir.to_string_lossy().into_owned(), label: label.to_string(), launcher: launcher.to_string(), instance: None, exists: dir.is_dir(), mods_dir: dir.to_string_lossy().into_owned(), content_root: None, loader: None, game_version: None }
 }
 
+/// Whether two folder paths name the same directory. Spelling alone is not enough: macOS volumes ignore case
+/// (`Mods` and `mods` are one folder), so existing folders are compared by device and inode.
+fn same_dir(a: &str, b: &str) -> bool {
+    if a == b { return true; }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if let (Ok(x), Ok(y)) = (fs::metadata(a), fs::metadata(b)) { return x.dev() == y.dev() && x.ino() == y.ino(); }
+    }
+    false
+}
+
 fn game_candidates(os: Os, home: &Path, game_name: &str, install_paths: &[PathBuf]) -> Vec<ModLocation> {
     let key = normalise(game_name);
     let mut installs: Vec<PathBuf> = install_paths.iter().filter(|p| p.is_dir()).cloned().collect();
@@ -271,7 +283,7 @@ fn game_candidates(os: Os, home: &Path, game_name: &str, install_paths: &[PathBu
         for rel in GENERIC_REL {
             let dir = install.join(rel);
             // The generic guesses only count when the folder is really there; the table above may offer one that is not yet.
-            if dir.is_dir() && !out.iter().any(|existing| existing.mods_dir == dir.to_string_lossy()) { out.push(game_location(&format!("{rel} folder"), "Game folder", dir)); }
+            if dir.is_dir() && !out.iter().any(|existing| same_dir(&existing.mods_dir, &dir.to_string_lossy())) { out.push(game_location(&format!("{rel} folder"), "Game folder", dir)); }
         }
     }
     // Existing folders first, keeping the table order inside each group.
@@ -282,7 +294,7 @@ fn game_candidates(os: Os, home: &Path, game_name: &str, install_paths: &[PathBu
 pub fn detect(os: Os, home: &Path, env: &dyn Fn(&str) -> Option<std::ffi::OsString>, game_name: &str, install_paths: &[PathBuf], minecraft: bool) -> Vec<ModLocation> {
     let mut found = if minecraft { scan_minecraft(&minecraft_roots(os, home, env)) } else { game_candidates(os, home, game_name, install_paths) };
     found.sort_by_key(|location| !location.exists);
-    found.dedup_by(|a, b| a.mods_dir == b.mods_dir);
+    found.dedup_by(|a, b| same_dir(&a.mods_dir, &b.mods_dir));
     found
 }
 
@@ -372,6 +384,24 @@ mod tests {
         assert!(roots.iter().any(|r| r.path == Path::new("/data/PrismLauncher/instances")));
         assert!(roots.iter().any(|r| r.path == Path::new("/home/a/.var/app/org.prismlauncher.PrismLauncher/data/PrismLauncher/instances")));
         assert!(roots.iter().any(|r| r.path == Path::new("/home/a/.var/app/com.modrinth.ModrinthApp/data/ModrinthApp/profiles")));
+    }
+
+    #[test]
+    fn same_dir_ignores_spelling_only_when_it_is_really_the_same_folder() {
+        let home = temp("samedir");
+        fs::create_dir_all(home.join("Mods")).unwrap();
+        fs::create_dir_all(home.join("Other")).unwrap();
+        let a = home.join("Mods").to_string_lossy().into_owned();
+        assert!(same_dir(&a, &a));
+        assert!(!same_dir(&a, &home.join("Other").to_string_lossy()));
+        // A hard path alias (symlink) is the same folder; a missing path never matches an existing one.
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(home.join("Mods"), home.join("Alias")).unwrap();
+            assert!(same_dir(&a, &home.join("Alias").to_string_lossy()));
+        }
+        assert!(!same_dir(&a, &home.join("Missing").to_string_lossy()));
+        let _ = fs::remove_dir_all(&home);
     }
 
     #[test]
