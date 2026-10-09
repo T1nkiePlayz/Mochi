@@ -193,12 +193,36 @@ pub fn prepare_launch(target: &str, config: &LaunchConfig) -> Result<Prepared, S
         if !valid_flatpak_id(id) { return Err("Enter a valid Flatpak application ID, such as com.example.Game.".into()); }
         return Ok(Prepared { command: flatpak_run(id, &config.args), direct: true });
     }
+    if let Some((launcher, id)) = crate::sources::prism::parse_instance_target(target) {
+        let args = vec!["--launch".to_owned(), id];
+        if let Some(program) = launcher.commands.iter().find(|program| command_exists(program)) {
+            let mut command = Command::new(program);
+            command.args(&args);
+            return handoff(command);
+        }
+        if let Some(flatpak) = launcher.flatpak.filter(|id| flatpak_installed(id)) { return handoff(flatpak_run(flatpak, &args)); }
+        return Err(format!("{} is not installed, so this Minecraft instance cannot be started.", launcher.name));
+    }
+    if let Some((prefix, code)) = crate::sources::battlenet::parse_wine_target(target) {
+        return handoff(battlenet_wine_command(&prefix, &code)?);
+    }
     if target.ends_with(".desktop") {
         let mut command = if command_exists("gio") { let mut c = Command::new("gio"); c.arg("launch"); c } else { Command::new("xdg-open") };
         command.arg(target);
         return handoff(command);
     }
     prepare_file(target, config)
+}
+
+/// Starts Battle.net inside its Wine prefix and asks it to launch one game (`--exec="launch CODE"`).
+/// Uses the system `wine`: games set up through Lutris are better started from their Lutris entry.
+fn battlenet_wine_command(prefix: &Path, code: &str) -> Result<Command, String> {
+    let client = crate::sources::battlenet::PREFIX_CLIENTS.iter().map(|path| prefix.join(path)).find(|path| path.is_file())
+        .ok_or("Battle.net is no longer installed in this Wine prefix.")?;
+    let wine = command_path("wine").ok_or("Battle.net games in a Wine prefix need Wine. Install Wine, or start the game from Lutris or Bottles.")?;
+    let mut command = Command::new(wine);
+    command.env("WINEPREFIX", prefix).arg(client).arg(format!("--exec=launch {code}"));
+    Ok(command)
 }
 
 fn wrapper_path(id: &str) -> Result<PathBuf, String> {
@@ -445,6 +469,21 @@ mod tests {
         let args: Vec<_> = args.iter().map(|arg| arg.to_string_lossy().into_owned()).collect();
         assert_eq!(args, ["--app-name=Mochi", "--icon=/home/me/.local/share/icons/hicolor/512x512/apps/mochi.png", "--hint=string:desktop-entry:dev.sidequestgames.Mochilauncher", "--", "Title", "-n body"]);
         assert_eq!(notify_send_args("t", "b", None)[1], "--icon=mochi");
+    }
+
+    #[test]
+    fn battlenet_prefix_launch_needs_the_client() {
+        let prefix = crate::sources::testutil::temp_dir("bnet-launch");
+        assert!(battlenet_wine_command(&prefix, "WoW").err().unwrap().contains("no longer installed"));
+        let client = prefix.join(crate::sources::battlenet::PREFIX_CLIENTS[0]);
+        fs::create_dir_all(client.parent().unwrap()).unwrap();
+        fs::write(&client, b"MZ").unwrap();
+        if let Ok(command) = battlenet_wine_command(&prefix, "WoW") {
+            let args: Vec<_> = command.get_args().map(|arg| arg.to_string_lossy().into_owned()).collect();
+            assert_eq!(args, [client.to_string_lossy().into_owned(), "--exec=launch WoW".into()]);
+            assert!(command.get_envs().any(|(key, value)| key == "WINEPREFIX" && value == Some(prefix.as_os_str())));
+        }
+        let _ = fs::remove_dir_all(prefix);
     }
 
     #[test]

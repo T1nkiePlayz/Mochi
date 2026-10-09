@@ -1,4 +1,4 @@
-use super::{classify, classify_item, icons, make, make_launcher, scan_bottles, scan_lutris, sort_games, ImportedGame, SourceDef};
+use super::{battlenet, classify, classify_item, gog, icons, prism, make, make_launcher, scan_bottles, scan_lutris, sort_games, ImportedGame, SourceDef};
 use crate::platform::{command_exists, list_flatpaks};
 use std::{
     fs,
@@ -14,6 +14,9 @@ pub fn source_defs() -> Vec<SourceDef> {
         SourceDef { id: "lutris", name: "Lutris", description: "Existing Lutris games and launch configurations." },
         SourceDef { id: "bottles", name: "Bottles", description: "Windows games and applications inside Bottles." },
         SourceDef { id: "itch", name: "itch.io", description: "Games installed with the itch desktop app." },
+        SourceDef { id: "prism", name: "Minecraft instances", description: "Instances from Prism Launcher, PolyMC, MultiMC and Fjord Launcher." },
+        SourceDef { id: "battlenet", name: "Battle.net", description: "Blizzard games installed in Wine prefixes (Lutris, Bottles, Heroic)." },
+        SourceDef { id: "gog", name: "GOG", description: "GOG games from the offline installers or Minigalaxy (~/GOG Games)." },
         SourceDef { id: "apps", name: "Desktop applications", description: "Games registered in your application menu." },
     ]
 }
@@ -32,6 +35,34 @@ pub fn itch_roots(home: &Path) -> Vec<PathBuf> {
 
 fn flatpak_data(home: &Path, id: &str) -> bool { home.join(".var/app").join(id).is_dir() }
 
+fn data_home(home: &Path) -> PathBuf {
+    std::env::var_os("XDG_DATA_HOME").map(PathBuf::from).filter(|dir| dir.is_absolute()).unwrap_or_else(|| home.join(".local/share"))
+}
+
+/// Data folders of the MultiMC-family launchers (native and Flatpak).
+pub fn instance_roots(home: &Path) -> Vec<(PathBuf, &'static prism::InstanceLauncher)> {
+    let data = data_home(home);
+    prism::INSTANCE_LAUNCHERS.iter().flat_map(|launcher| {
+        let mut roots = vec![(data.join(launcher.dir), launcher)];
+        if let Some(flatpak) = launcher.flatpak { roots.push((home.join(".var/app").join(flatpak).join("data").join(launcher.dir), launcher)); }
+        roots
+    }).collect()
+}
+
+/// Wine prefixes where Battle.net is commonly installed: Lutris (`~/Games/<name>`), Heroic,
+/// Bottles (native and Flatpak) and the default `~/.wine`.
+pub fn wine_prefixes(home: &Path) -> Vec<PathBuf> {
+    let mut prefixes = vec![home.join(".wine")];
+    let children = |dir: PathBuf| fs::read_dir(dir).into_iter().flatten().flatten().filter(super::real_dir).map(|entry| entry.path()).take(200).collect::<Vec<_>>();
+    for parent in [home.join("Games"), home.join("Games/Heroic/Prefixes/default"), data_home(home).join("bottles/bottles"), home.join(".var/app/com.usebottles.bottles/data/bottles/bottles")] {
+        prefixes.extend(children(parent));
+    }
+    prefixes.retain(|prefix| prefix.join(battlenet::PREFIX_PRODUCT_DB).is_file());
+    prefixes
+}
+
+fn gog_dirs(home: &Path) -> Vec<PathBuf> { vec![home.join("GOG Games"), home.join("Games/GOG Games")] }
+
 pub fn is_installed(source: &str, home: &Path) -> bool {
     match source {
         "flatpak" => command_exists("flatpak"),
@@ -40,6 +71,9 @@ pub fn is_installed(source: &str, home: &Path) -> bool {
         "lutris" => command_exists("lutris") || flatpak_data(home, "net.lutris.Lutris"),
         "bottles" => command_exists("bottles-cli") || flatpak_data(home, "com.usebottles.bottles"),
         "itch" => command_exists("itch-setup") || home.join(".itch").exists(),
+        "prism" => instance_roots(home).iter().any(|(root, _)| root.is_dir()),
+        "battlenet" => !wine_prefixes(home).is_empty(),
+        "gog" => gog_dirs(home).iter().any(|dir| dir.is_dir()) || command_exists("minigalaxy") || flatpak_data(home, "io.github.sharkwouter.Minigalaxy"),
         _ => false,
     }
 }
@@ -152,6 +186,8 @@ pub fn scan_extra(source: &str, home: &Path) -> Vec<ImportedGame> {
         "lutris" => scan_lutris(),
         "bottles" => scan_bottles(),
         "apps" => scan_desktop_apps(home),
+        "battlenet" => battlenet::scan_prefixes(&wine_prefixes(home)),
+        "gog" => gog::scan_linux_installs(&gog_dirs(home)),
         _ => Vec::new(),
     }
 }

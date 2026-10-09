@@ -64,6 +64,11 @@ pub fn prepare_launch(target: &str, config: &LaunchConfig) -> Result<Prepared, S
         command.arg(format!("itch://games/{}", safe_launch_id(id)?));
         return Ok(Prepared { command, direct: false });
     }
+    if let Some((launcher, id)) = crate::sources::prism::parse_instance_target(target) {
+        let mut command = open_command();
+        command.args(["-b", launcher.bundle, "--args", "--launch"]).arg(id);
+        return Ok(Prepared { command, direct: false });
+    }
     if OPEN_SCHEMES.iter().any(|scheme| target.starts_with(scheme)) {
         let mut command = open_command();
         command.arg(target);
@@ -212,6 +217,14 @@ mod tests {
     fn missing_app_bundles_give_a_clear_error() {
         let error = prepare_launch("/Applications/Definitely Not Installed.app", &LaunchConfig::default()).err().expect("error");
         assert!(error.contains("no longer installed"));
+    }
+
+    #[test]
+    fn minecraft_instances_open_their_launcher_bundle() {
+        let prepared = prepare_launch("mc-instance://prism/My%20Pack", &LaunchConfig::default()).expect("instance");
+        let args: Vec<_> = prepared.command.get_args().map(|arg| arg.to_string_lossy().into_owned()).collect();
+        assert_eq!(args, ["-b", "org.prismlauncher.PrismLauncher", "--args", "--launch", "My Pack"]);
+        assert!(!prepared.direct);
     }
 
     #[test]
