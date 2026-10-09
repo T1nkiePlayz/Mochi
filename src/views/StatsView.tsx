@@ -35,8 +35,11 @@ export function StatsView() {
   useEffect(() => { void load(); }, [load, playtime]);
   useEffect(() => {
     if (!sessions.sessions.length) return;
-    const timer = window.setInterval(() => void load(), 30000);
-    return () => window.clearInterval(timer);
+    // Refresh while a game runs, but not while Mochi is hidden; catch up when it becomes visible.
+    const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 30000);
+    const onVisible = () => { if (!document.hidden) void load(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisible); };
   }, [sessions.sessions.length, load]);
 
   const changeRange = (value: RangeDays) => { setRange(value); writeString(RANGE_KEY, String(value)); };
