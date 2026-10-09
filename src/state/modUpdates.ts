@@ -21,8 +21,11 @@ const listeners = new Set<() => void>();
 /** After a check that found a problem, wait before trying again on its own. */
 const RETRY_AFTER_FAILURE_MS = 15 * 60 * 1000;
 
+let version = 0;
+
 function set(tofuId: string, next: TofuUpdateState) {
   states.set(tofuId, next);
+  version += 1;
   listeners.forEach((listener) => listener());
 }
 
@@ -33,6 +36,11 @@ export const getUpdateState = (tofuId: string): TofuUpdateState => states.get(to
 /** Live update state of one Tofu. */
 export function useTofuUpdates(tofuId: string | undefined): TofuUpdateState {
   return useSyncExternalStore(subscribe, () => (tofuId ? getUpdateState(tofuId) : IDLE), () => IDLE);
+}
+
+/** Changes whenever any Tofu's update state changes; for lists that read several Tofus with `getUpdateState`. */
+export function useUpdateVersion(): number {
+  return useSyncExternalStore(subscribe, () => version, () => 0);
 }
 
 /** Number of updates Mochi can install for the Tofu (manual ones are listed but not counted as installable). */
