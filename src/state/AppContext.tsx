@@ -23,6 +23,7 @@ import { useGameActions } from "./useGameActions";
 import { useDeepLinks } from "./useDeepLinks";
 import { AchievementWatcher } from "../components/stats/AchievementWatcher";
 import { ConfirmHost } from "../components/ui/ConfirmHost";
+import { SelfInstallPrompt } from "../components/SelfInstallPrompt";
 import { confirmAction } from "../lib/confirm";
 
 export type NavId = "Library" | "Installed" | "Discover" | "Downloads" | "Stats" | "Settings";
@@ -154,7 +155,7 @@ const AppContext = createContext<AppController | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const controller = useAppController();
-  return <AppContext.Provider value={controller}><AchievementWatcher />{children}<ConfirmHost /></AppContext.Provider>;
+  return <AppContext.Provider value={controller}><AchievementWatcher />{children}<ConfirmHost /><SelfInstallPrompt /></AppContext.Provider>;
 }
 
 export function useApp(): AppController {
