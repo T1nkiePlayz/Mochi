@@ -226,12 +226,26 @@ async function openNav(page, index) {
 
 const NAV_INDEX = { stats: 4, downloads: 3, installed: 1, discover: 2, settings: 5, library: 0 };
 
+// Opens the first game's details page and waits for it (the library loads asynchronously from the mock).
+async function openDetails(page) {
+  await page.waitForSelector(".game-card-main, .library-row", { timeout: 8000 }).catch(() => {});
+  await page.evaluate(() => document.querySelector(".game-card-main, .library-row")?.click());
+  await page.waitForSelector(".game-details-hero", { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(250);
+}
+
+/** Selector that proves the screen really opened; an audit of the wrong screen is reported as an error. */
+const EXPECT = {
+  details: ".game-details-hero", "modal-edit": ".modal, [role='dialog']", "tofu-manager": ".modal, [role='dialog']", "modal-add": ".modal, [role='dialog']",
+  bigpicture: ".bp-root, [class*='bigpicture'], [class*='bp-']", "account-menu": ".account-menu",
+};
+
 async function prepare(page, screen) {
-  if (screen === "setup" || screen.startsWith("library")) return;
+  if (screen === "setup") return;
+  if (screen.startsWith("library")) { await page.waitForSelector(".game-card-main, .library-row", { timeout: 8000 }).catch(() => {}); return; }
   if (screen in NAV_INDEX) return openNav(page, NAV_INDEX[screen]);
   if (screen === "details") {
-    await page.evaluate(() => document.querySelector(".game-card, .library-row, [class*='game-card']")?.click());
-    await page.waitForTimeout(300);
+    await openDetails(page);
   } else if (screen === "bigpicture") {
     await page.evaluate(() => document.querySelector("[aria-label='Open Big Picture mode']")?.click());
     await page.waitForTimeout(700);
@@ -240,11 +254,11 @@ async function prepare(page, screen) {
     await page.waitForTimeout(300);
   } else if (screen === "modal-edit") {
     // GameEditor: open a game, then its Edit button.
-    await page.evaluate(() => document.querySelector(".game-card, .library-row, [class*='game-card']")?.click());
-    await page.waitForTimeout(300);
+    await openDetails(page);
     await page.evaluate(() => [...document.querySelectorAll(".main-content button")].find((b) => b.textContent.trim() === "Edit")?.click());
     await page.waitForTimeout(300);
   } else if (screen === "tofu-manager") {
+    await openDetails(page);
     await page.evaluate(() => document.querySelector("[aria-label='Tofu settings']")?.click() ?? [...document.querySelectorAll("button")].find((b) => /manage/i.test(b.textContent))?.click());
     await page.waitForTimeout(300);
   } else if (screen === "account-menu") {
@@ -282,6 +296,7 @@ for (const theme of themes) {
           await page.waitForTimeout(350);
           await prepare(page, screen);
           const issues = await page.evaluate(measure);
+          if (EXPECT[screen] && !(await page.$(EXPECT[screen]))) issues.push({ type: "audit-error", selector: screen, detail: `screen did not open (${EXPECT[screen]} missing)` });
           if (args.coverage) issues.push(...(await page.evaluate(coverage)));
           total += issues.length;
           results.push({ theme, width, height, zoom, screen, issues });
