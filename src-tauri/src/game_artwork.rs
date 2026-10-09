@@ -4,7 +4,7 @@ use std::{fs, path::{Path, PathBuf}};
 use image::{imageops::FilterType, metadata::Orientation, DynamicImage, ImageDecoder, ImageFormat, ImageReader, Limits};
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 const MAX_IMAGE_BYTES: usize = 15 * 1024 * 1024;
 const CACHE_EXTENSIONS: [&str; 3] = ["jpg", "png", "webp"];
@@ -113,6 +113,38 @@ pub(crate) async fn download_allowed_artwork(url: &str) -> Result<Vec<u8>, Strin
 pub fn get_cached_game_artwork(app: AppHandle, cache_key: String) -> Result<Option<String>, String> {
     let base = cache_path(&app, &cache_key)?;
     find_cached(&base).map(|path| data_url(&path)).transpose()
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtworkFile {
+    pub path: String,
+    /// Modification time in milliseconds, used by the frontend as a cache-busting query.
+    pub version: u64,
+}
+
+/// Resolves the cached cover for `base` to a canonical path that is verified to live inside `cache_dir`.
+fn cached_file_in(cache_dir: &Path, base: &Path) -> Result<Option<(PathBuf, u64)>, String> {
+    let Some(found) = find_cached(base) else { return Ok(None) };
+    let root = cache_dir.canonicalize().map_err(|error| format!("Unable to resolve the artwork cache: {error}"))?;
+    let path = found.canonicalize().map_err(|error| format!("Unable to resolve cached artwork: {error}"))?;
+    if !path.starts_with(&root) { return Err("Cached artwork is outside the artwork cache.".into()); }
+    let version = fs::metadata(&path).and_then(|meta| meta.modified()).ok()
+        .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok()).map_or(0, |age| age.as_millis() as u64);
+    Ok(Some((path, version)))
+}
+
+/// Like `get_cached_game_artwork`, but returns the file path so the webview can load it through the asset protocol
+/// instead of receiving the bytes base64-encoded over IPC.
+#[tauri::command(async)]
+pub fn get_cached_game_artwork_path(app: AppHandle, cache_key: String) -> Result<Option<ArtworkFile>, String> {
+    let base = cache_path(&app, &cache_key)?;
+    let dir = crate::themes::game_artwork_cache_dir(&app)?;
+    let Some((path, version)) = cached_file_in(&dir, &base)? else { return Ok(None) };
+    // The artwork folder can be relocated with the config folder, so the static scope in tauri.conf.json may not cover it.
+    // Allow exactly this folder (nothing else) before handing out a path in it.
+    if let Ok(root) = dir.canonicalize() { let _ = app.asset_protocol_scope().allow_directory(root, true); }
+    Ok(Some(ArtworkFile { path: path.to_string_lossy().into_owned(), version }))
 }
 
 #[tauri::command(async)]
@@ -499,5 +531,28 @@ mod tests {
     fn rejects_garbage_bytes() {
         assert!(decode_image(b"not an image").is_err());
         assert!(decode_image(&[]).is_err());
+    }
+}
+
+#[cfg(test)]
+mod asset_path_tests {
+    use super::*;
+
+    #[test]
+    fn resolves_files_inside_the_cache_and_rejects_escapes() {
+        let root = std::env::temp_dir().join(format!("mochi-art-{}", std::process::id()));
+        let cache = root.join("cache");
+        fs::create_dir_all(&cache).unwrap();
+        fs::write(cache.join("a.png"), b"x").unwrap();
+        let (path, _) = cached_file_in(&cache, &cache.join("a")).unwrap().unwrap();
+        assert!(path.starts_with(cache.canonicalize().unwrap()));
+        assert!(cached_file_in(&cache, &cache.join("missing")).unwrap().is_none());
+        #[cfg(unix)]
+        {
+            fs::write(root.join("secret.png"), b"x").unwrap();
+            std::os::unix::fs::symlink(root.join("secret.png"), cache.join("b.png")).unwrap();
+            assert!(cached_file_in(&cache, &cache.join("b")).is_err());
+        }
+        let _ = fs::remove_dir_all(&root);
     }
 }

@@ -21,6 +21,12 @@
       }
     ],
     "security": {
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$CONFIG/Mochi/game-artwork/**"
+        ]
+      },
       "csp": {
         "default-src": [
           "'self'"
@@ -42,6 +48,8 @@
           "'self'",
           "data:",
           "blob:",
+          "asset:",
+          "http://asset.localhost",
           "https://images.igdb.com",
           "https://cdn2.steamgriddb.com",
           "https://*.steamgriddb.com",
@@ -113,6 +121,8 @@
           "'self'",
           "data:",
           "blob:",
+          "asset:",
+          "http://asset.localhost",
           "https://images.igdb.com",
           "https://cdn2.steamgriddb.com",
           "https://*.steamgriddb.com",
