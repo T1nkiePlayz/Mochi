@@ -9,7 +9,7 @@ const entry = (over: Partial<DownloadEntry> = {}): DownloadEntry => ({
 describe("describeDownload", () => {
   it("shows progress, unknown sizes, completion, failure and cancellation", () => {
     expect(describeDownload(entry({ downloaded: 512, total: 1024 }))).toMatchObject({ percent: 50, state: "active", canCancel: true });
-    expect(describeDownload(entry({ downloaded: 2048 }))).toMatchObject({ percent: null, state: "active", detail: "2.0 KB downloaded" });
+    expect(describeDownload(entry({ downloaded: 2048 }))).toMatchObject({ percent: null, state: "active", detail: "2 KiB downloaded" });
     expect(describeDownload(entry({ status: "completed", downloaded: 10, total: 10 }))).toMatchObject({ percent: 100, state: "done", canCancel: false });
     expect(describeDownload(entry({ status: "failed", error: "SHA-1 mismatch" }))).toMatchObject({ state: "failed", detail: "SHA-1 mismatch" });
     expect(describeDownload(entry({ status: "failed" })).detail).toBe("Failed");

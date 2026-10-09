@@ -1,0 +1,8 @@
+/* Game logs viewer. Tokens only. */
+.game-logs-modal { width: min(820px, calc(100vw - 32px)); max-height: calc(100vh - 48px); display: grid; gap: 10px; grid-template-rows: auto auto auto minmax(0, 1fr) auto; }
+.game-logs-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+.game-logs-toolbar label { display: grid; gap: 4px; font-size: 12px; color: var(--mochi-text-muted); }
+.game-logs-toolbar .check-row { display: flex; align-items: center; gap: 6px; align-self: center; }
+.game-logs-view { margin: 0; min-height: 220px; max-height: 52vh; overflow: auto; padding: 10px 12px; border: 1px solid var(--mochi-border); border-radius: var(--mochi-radius-sm); background: var(--mochi-background-elevated, var(--mochi-surface)); color: var(--mochi-text); font: 12px/1.5 var(--mochi-mono, monospace); white-space: pre-wrap; overflow-wrap: anywhere; }
+.game-logs-view:focus-visible { outline: none; box-shadow: var(--mochi-focus-ring); }
+.game-logs-empty { margin: 0; padding: 16px 4px; }

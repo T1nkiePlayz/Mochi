@@ -192,6 +192,6 @@ export async function analyzeModFiles(path: string, gameVersion?: string, loader
 }
 export type UpdateExtras = { provider?: "modrinth" | "curseforge" | "nexus"; tofuId?: string; record?: import("./downloads").ModRecordInput };
 /** Downloads the new file (SHA-1 checked), keeps the old one as a rollback copy, then replaces it. */
-export async function updateModFile(path: string, update: Pick<ModUpdate, "url" | "filename" | "sha1">, extras: UpdateExtras = {}): Promise<void> {
+export async function updateModFile(path: string, update: Pick<ModUpdate, "url" | "filename" | "sha1"> & Partial<ModUpdate>, extras: UpdateExtras = {}): Promise<void> {
   await invoke("update_mod_file", { path, url: update.url, filename: update.filename, sha1: update.sha1 ?? null, provider: extras.provider ?? null, tofuId: extras.tofuId ?? null, record: extras.record ?? null });
 }

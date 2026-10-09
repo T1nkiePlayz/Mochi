@@ -21,6 +21,11 @@ describe("modrinth client", () => {
   it("passes the expected sha1 to the update command", async () => {
     invoke.mockResolvedValue(undefined);
     await updateModFile("/m", { versionId: "v", versionNumber: "1", filename: "a.jar", url: "https://cdn.modrinth.com/a.jar", size: 1, sha1: "abc" });
-    expect(invoke).toHaveBeenCalledWith("update_mod_file", { path: "/m", url: "https://cdn.modrinth.com/a.jar", filename: "a.jar", sha1: "abc" });
+    expect(invoke).toHaveBeenCalledWith("update_mod_file", { path: "/m", url: "https://cdn.modrinth.com/a.jar", filename: "a.jar", sha1: "abc", provider: null, tofuId: null, record: null });
+  });
+  it("sends the source and record so the update is verified and remembered", async () => {
+    invoke.mockResolvedValue(undefined);
+    await updateModFile("/m", { url: "https://edge.forgecdn.net/a.jar", filename: "a.jar" }, { provider: "curseforge", tofuId: "t", record: { source: "curseforge", projectId: "1", fileId: "2" } });
+    expect(invoke).toHaveBeenCalledWith("update_mod_file", { path: "/m", url: "https://edge.forgecdn.net/a.jar", filename: "a.jar", sha1: null, provider: "curseforge", tofuId: "t", record: { source: "curseforge", projectId: "1", fileId: "2" } });
   });
 });
