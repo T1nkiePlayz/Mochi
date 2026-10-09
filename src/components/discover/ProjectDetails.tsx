@@ -13,6 +13,7 @@ import { Avatar } from "./Avatar";
 import { DiscoveryImage } from "./DiscoveryImage";
 import { Markdown } from "./Markdown";
 import { formatDate, getPrimaryCreator, projectTypeLabel } from "./utils";
+import { Checkbox } from "../ui/Checkbox";
 
 type Props = {
   project: ModrinthProjectDetails;
@@ -114,7 +115,7 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
         {mod && loaderChoices.length > 0 && <Select value={loader} onChange={setLoader} label="Loader" searchable={false} options={[{ value: "", label: "Any loader" }, ...loaderChoices.map((value) => ({ value, label: loaderLabels[parseLoader(value)!] ?? value }))]} />}
         <Select value={game} onChange={setGame} label="Game version" searchable={gameChoices.length > 10} options={[{ value: "", label: "Any game version" }, ...gameChoices.map((value) => ({ value, label: value }))]} />
         <Select value={channel} onChange={setChannel} label="Release type" searchable={false} options={channelOptions} />
-        {tofu && <label className="check-row version-fit-toggle"><input type="checkbox" checked={fitOnly} onChange={(event) => setFitOnly(event.target.checked)} /> Only what fits {tofu.name}</label>}
+        {tofu && <Checkbox className="version-fit-toggle" checked={fitOnly} onChange={setFitOnly} label={`Only what fits ${tofu.name}`} />}
         {(loader || game || channel || fitOnly) && <button type="button" className="text-button" onClick={() => { setLoader(""); setGame(""); setChannel(""); setFitOnly(false); }}>Clear filters</button>}
       </div>
       {versions === null ? <p className="muted"><RefreshCw size={13} className="spin" /> Loading versions...</p> : <>

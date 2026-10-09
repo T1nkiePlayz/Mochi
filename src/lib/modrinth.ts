@@ -168,6 +168,9 @@ export type DownloadEntry = {
   provider: "modrinth" | "curseforge" | "nexus";
   /** Folder the file lands in. */
   dir: string;
+  /** The mod's id on its site, when the download was started for a listed mod. */
+  projectId?: string;
+  subdir?: string;
 };
 
 export async function getDownloads(): Promise<DownloadEntry[]> {

@@ -59,8 +59,8 @@ export function launchGame(piko: Piko, tofu: Tofu | undefined): Promise<void> {
       installPath: piko.installPath ?? null,
       tofuId: tofu?.id ?? null,
       config: buildLaunchConfig(tofu?.launch),
-      // Only a Tofu that keeps its own mods needs them copied into the game's folder; the native side does it right before starting.
-      modSync: modSyncFor(tofu) ?? null,
+      // A Tofu with its own store is copied into the game folder, Tofus sharing a folder swap their mods; natively, right before starting.
+      modSync: modSyncFor(tofu, piko.tofus) ?? null,
     },
   });
 }

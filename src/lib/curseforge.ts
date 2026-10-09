@@ -111,6 +111,35 @@ export async function cfDownloadUrl(modId: number, fileId: number): Promise<{ ur
   return { url, restricted: result.restricted === true || !url };
 }
 
+export type CfFingerprintMatch = { id: number; file: CfFile & { fileFingerprint?: number }; latestFiles?: CfFile[] };
+/** Most fingerprints or mod ids the proxy accepts per call. */
+export const CF_BATCH = 500;
+
+/** Installed files identified by CurseForge fingerprint (`fingerprint` in lib/mods: MurmurHash2 without whitespace). In memory only. */
+export async function cfFingerprints(fingerprints: number[], gameId?: number): Promise<CfFingerprintMatch[]> {
+  const out: CfFingerprintMatch[] = [];
+  const unique = [...new Set(fingerprints)];
+  for (let index = 0; index < unique.length; index += CF_BATCH) {
+    const result = await call<{ data?: { exactMatches?: CfFingerprintMatch[] } }>({ route: "fingerprints", fingerprints: unique.slice(index, index + CF_BATCH), ...(gameId ? { gameId } : {}) });
+    out.push(...(Array.isArray(result.data?.exactMatches) ? result.data.exactMatches : []));
+  }
+  return out;
+}
+
+/** Names of several mods (the fingerprint answer only has file names). One `mod` call each, a few at a time, capped. */
+export async function cfModNames(modIds: number[], limit = 60): Promise<Map<number, string>> {
+  const unique = [...new Set(modIds)].filter((id) => Number.isSafeInteger(id) && id > 0).slice(0, limit);
+  const names = new Map<number, string>();
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(4, unique.length) }, async () => {
+    while (next < unique.length) {
+      const id = unique[next]; next += 1;
+      try { const mod = await cfMod(id); if (mod.name) names.set(id, mod.name); } catch { /* title falls back to the file name */ }
+    }
+  }));
+  return names;
+}
+
 function normalizePage<T>(result: { data?: T[]; pagination?: CfPagination }): CfPage<T> {
   const data = Array.isArray(result.data) ? result.data : [];
   const pagination = result.pagination ?? { index: 0, pageSize: data.length, resultCount: data.length, totalCount: data.length };

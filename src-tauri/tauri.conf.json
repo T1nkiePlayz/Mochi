@@ -211,7 +211,8 @@
     "deep-link": {
       "desktop": {
         "schemes": [
-          "mochi"
+          "mochi",
+          "nxm"
         ]
       }
     },

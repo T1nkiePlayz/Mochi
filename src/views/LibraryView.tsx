@@ -101,8 +101,8 @@ export function LibraryView() {
           <div><span className="detail-label">Install location</span><strong className="path-text">{selectedTofu.path || "No folder chosen yet"}</strong></div>
           <button className="icon-button" aria-label="Tofu settings" onClick={() => app.setShowTofuManager(true)}><MochiIcon name="settings" fallback={Settings} size={16} /></button>
         </section>
-        <GameMods key={`${details.id}:${selectedTofu.id}`} piko={details} tofu={selectedTofu} onUpdate={lib.updateSelectedTofu} />
       </>}
+      mods={<GameMods key={`${details.id}:${selectedTofu.id}`} piko={details} tofu={selectedTofu} onUpdate={lib.updateSelectedTofu} />}
     />;
   }
 

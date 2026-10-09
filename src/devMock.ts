@@ -128,7 +128,7 @@ const handlers: Record<string, Handler> = {
     { id: "mangohud", name: "MangoHud", kind: "wrapper", path: "/usr/bin/mangohud" },
   ],
   get_downloads: () => [
-    { id: "d1", tofuId: "default", tofuName: "Default", itemName: "Sodium", filename: "sodium-0.6.jar", downloaded: 3_200_000, total: 8_000_000, status: "downloading", createdAt: Date.now(), provider: "modrinth", dir: "/mods" },
+    { id: "d1", tofuId: "default", tofuName: "Default", itemName: "Sodium", filename: "sodium-0.6.jar", downloaded: 3_200_000, total: 8_000_000, status: "downloading", createdAt: Date.now(), provider: "modrinth", dir: "/mods", projectId: "AANobbMI" },
     { id: "d2", tofuId: "default", tofuName: "Default", itemName: "Iris Shaders", filename: "iris-1.8.jar", downloaded: 2_000_000, total: 2_000_000, status: "completed", createdAt: Date.now() - 1000, finishedAt: Date.now(), provider: "curseforge", dir: "/mods" },
     { id: "d3", tofuId: "modded", tofuName: "Modded", itemName: "Lithium", filename: "lithium.jar", downloaded: 0, status: "failed", error: "Modrinth download failed (404).", createdAt: Date.now() - 2000, finishedAt: Date.now(), provider: "nexus", dir: "/mods" },
   ],

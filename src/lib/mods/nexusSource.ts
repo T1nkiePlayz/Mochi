@@ -4,6 +4,7 @@ import {
   getNexusDownload, getNexusFiles, getNexusModDetail, getNexusMods, getNexusStatus, nexusModId, nexusModPageUrl,
   type NexusMod, type NexusStatus,
 } from "../nexus";
+import { nexusManagerDownloadUrl } from "./nxm";
 import type { ModDetails, ModFile, ModItem, ModPage, ModSearchOptions, ModSource } from "./types";
 
 export type NexusScope = { domain: string; name: string };
@@ -84,7 +85,8 @@ export function createNexusSource(client: SupabaseClient, scope: NexusScope): Mo
       const pageUrl = nexusModPageUrl(scope.domain, modId, true);
       const base = { fileName: file.fileName, size: file.size, pageUrl };
       const status = await nexusStatus(client).catch(() => null);
-      if (!status?.premium) return { ...base, needsPremium: true, reason: "Direct downloads need Nexus Mods Premium. Download the file on Nexus instead." };
+      // Free accounts: the page's "Mod Manager Download" button for this exact file produces an nxm:// link Mochi receives.
+      if (!status?.premium) return { ...base, pageUrl: nexusManagerDownloadUrl(scope.domain, modId, Number(file.id)), needsPremium: true, reason: "Direct downloads need Nexus Mods Premium. Download the file with \"Mod Manager Download\" on Nexus instead." };
       try {
         const link = await getNexusDownload(client, scope.domain, modId, Number(file.id));
         return { ...base, url: link.url, fileName: link.fileName || file.fileName };

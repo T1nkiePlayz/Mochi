@@ -10,14 +10,16 @@ const corsHeaders = {
 };
 
 const API_BASE = "https://api.curseforge.com";
-const MAX_BODY_BYTES = 4 * 1024;
+const MAX_BODY_BYTES = 8 * 1024;
+const MAX_FINGERPRINTS = 500;
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const UPSTREAM_TIMEOUT_MS = 15_000;
 const RATE_LIMIT = 120; // requests per client IP per minute (best effort: per function instance)
 
 type ErrorCode = "bad_request" | "not_configured" | "rate_limited" | "upstream";
 type Params = Record<string, unknown>;
-type Built = { path: string; query: URLSearchParams; downloadUrl?: boolean };
+/** `body` makes the upstream call a POST with that JSON body (only the fingerprint lookup needs it). */
+type Built = { path: string; query: URLSearchParams; downloadUrl?: boolean; body?: string };
 
 export class ProxyError extends Error {
   constructor(message: string, readonly code: ErrorCode, readonly status: number) { super(message); }
@@ -111,6 +113,24 @@ const ROUTES: Record<string, (params: Params) => Built> = {
     paging(params, query);
     return { path: `/v1/mods/${id(params, "modId")}/files`, query };
   },
+  // Identifies installed mod files: the launcher sends CurseForge's MurmurHash2 fingerprint of each file
+  // (computed locally with whitespace bytes removed) and gets back the exact matches.
+  fingerprints: (params) => {
+    const gameId = intParam(params, "gameId", { min: 1, max: ID_MAX });
+    const values = params.fingerprints;
+    if (!Array.isArray(values) || values.length === 0 || values.length > MAX_FINGERPRINTS) {
+      throw bad(`"fingerprints" must be a list of 1 to ${MAX_FINGERPRINTS} numbers.`);
+    }
+    if (!values.every((value) => typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 0xffff_ffff)) {
+      throw bad('"fingerprints" must contain unsigned 32-bit integers.');
+    }
+    const unique = [...new Set(values as number[])].sort((a, b) => a - b);
+    return {
+      path: gameId === undefined ? "/v1/fingerprints" : `/v1/fingerprints/${gameId}`,
+      query: new URLSearchParams(),
+      body: JSON.stringify({ fingerprints: unique }),
+    };
+  },
   "download-url": (params) => ({
     path: `/v1/mods/${id(params, "modId")}/files/${id(params, "fileId")}/download-url`,
     query: new URLSearchParams(),
@@ -175,10 +195,17 @@ const inFlight = new Map<string, Promise<{ status: number; text: string }>>();
 
 async function callUpstream(built: Built, apiKey: string, fetcher: typeof fetch): Promise<{ status: number; text: string }> {
   const url = `${API_BASE}${built.path}${built.query.size ? `?${built.query}` : ""}`;
-  const pending = inFlight.get(url) ?? (async () => {
+  const flightKey = built.body === undefined ? url : `${url}\n${built.body}`;
+  const pending = inFlight.get(flightKey) ?? (async () => {
     try {
       const upstream = await fetcher(url, {
-        headers: { Accept: "application/json", "x-api-key": apiKey },
+        method: built.body === undefined ? "GET" : "POST",
+        body: built.body,
+        headers: {
+          Accept: "application/json",
+          "x-api-key": apiKey,
+          ...(built.body === undefined ? {} : { "Content-Type": "application/json" }),
+        },
         signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
         redirect: "error",
       });
@@ -189,11 +216,11 @@ async function callUpstream(built: Built, apiKey: string, fetcher: typeof fetch)
       throw new ProxyError(timedOut ? "CurseForge took too long to respond." : "Unable to reach CurseForge.", "upstream", 502);
     }
   })();
-  inFlight.set(url, pending);
+  inFlight.set(flightKey, pending);
   try {
     return await pending;
   } finally {
-    if (inFlight.get(url) === pending) inFlight.delete(url);
+    if (inFlight.get(flightKey) === pending) inFlight.delete(flightKey);
   }
 }
 

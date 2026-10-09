@@ -4,3 +4,8 @@
 .download-row-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; min-width: 36px; }
 .download-row.is-cancelled .download-row-copy strong { color: var(--mochi-text-muted); }
 @media (max-width: 900px) { .download-list .download-row { grid-template-columns: 1fr; } .download-row-actions { justify-content: flex-start; } }
+
+/* Mod updates waiting or running (DownloadsView). */
+.download-update-list { list-style: none; margin: 0; padding: 0 16px 14px; display: grid; gap: 6px; }
+.download-update-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; color: var(--mochi-text); font-size: 13px; }
+.download-update-list small { color: var(--mochi-text-muted); }

@@ -23,6 +23,8 @@ type Props = {
   launchError: string;
   launching: boolean;
   workspace: ReactNode;
+  /** Rendered last on the page (the mods widget). */
+  mods?: ReactNode;
   canStop: boolean;
   capabilities: PlatformCapabilities | null;
   onBack: () => void;
@@ -40,7 +42,7 @@ type Props = {
   onTagsChange: (tags: string[]) => void;
 };
 
-export function GameDetails({ game, synced, running, playtime, launchError, launching, workspace, canStop, capabilities, onBack, onPlay, onStop, onEdit, onRemove, onOpenFolder, onShortcut, collections, tagSuggestions, onToggleFavorite, onToggleCollection, onCreateCollection, onTagsChange }: Props) {
+export function GameDetails({ game, synced, running, playtime, launchError, launching, workspace, mods, canStop, capabilities, onBack, onPlay, onStop, onEdit, onRemove, onOpenFolder, onShortcut, collections, tagSuggestions, onToggleFavorite, onToggleCollection, onCreateCollection, onTagsChange }: Props) {
   const [playTrailer, setPlayTrailer] = useState(false);
   const online = useOnline();
   const [showCollections, setShowCollections] = useState(false);
@@ -80,5 +82,6 @@ export function GameDetails({ game, synced, running, playtime, launchError, laun
       {game.screenshots?.length ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Screenshots</h3><p>Images from IGDB.</p></div></div><div className="game-screenshot-grid">{game.screenshots.map((url, index) => <RemoteImage key={`${url}-${index}`} src={url} alt={`${game.name} screenshot ${index + 1}`} loading="lazy" />)}</div></section> : null}
       {trailer ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Trailer</h3><p>Watch the trailer in Mochi.</p></div><button type="button" className="text-button" onClick={() => void openExternalUrl(`https://www.youtube.com/watch?v=${trailer}`).catch(() => undefined)}><ExternalLink size={13}/> Open on YouTube</button></div><div className="game-trailer-frame">{playTrailer && online ? <iframe src={`https://www.youtube-nocookie.com/embed/${trailer}?autoplay=1&controls=1&playsinline=1`} title={`${game.name} trailer`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /> : <button type="button" className="game-trailer-start" disabled={!online} onClick={() => setPlayTrailer(true)}><GameArtwork className="game-trailer-poster" cacheKey={game.artworkCacheKey} fallback={game.artwork} name={game.name} kind={game.kind} sourceId={game.sourceId} /><span><Play size={23} fill="currentColor"/> {online ? "Play trailer" : "Trailer needs internet"}</span></button>}</div></section> : null}
     </div>
+    {mods && <div className="game-workspace game-mods-section">{mods}</div>}
   </section>;
 }
