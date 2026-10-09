@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { supabase } from "../lib/supabase";
 import { lookupIgdbGames, type IgdbGame } from "../lib/igdb";
+import { mergeInstances, isInstanceTarget, instanceTofuId } from "../lib/minecraftPiko";
 import { importedGameToPiko } from "../lib/importMapping";
 import { applyIgdbMetadata, sanitizeKey } from "../lib/metadata";
 import { cacheArtwork } from "./useMetadata";
@@ -137,12 +138,22 @@ export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: 
 
   const importGames = (games: ImportedGame[]) => {
     const now = Date.now();
+    // Minecraft instances are Tofus of the one Minecraft Piko; they are never deduplicated by name.
+    const instances = games.filter((game) => isInstanceTarget(game.launchTarget));
+    const others = games.filter((game) => !isInstanceTarget(game.launchTarget));
     const known = new Set(lib.library.map((piko) => piko.name.trim().toLowerCase()));
-    const fresh = games.filter((game) => !known.has(game.name.trim().toLowerCase()));
+    const fresh = others.filter((game) => !known.has(game.name.trim().toLowerCase()));
     const created = fresh.map((game) => importedGameToPiko(game, now));
-    lib.setLibrary((current) => [...current, ...created.filter((piko) => !current.some((item) => item.id === piko.id))]);
-    if (created.length) void finishImport(created, new Map(created.flatMap((piko, index) => (fresh[index].iconPath && piko.kind !== "launcher" ? [[piko.id, fresh[index].iconPath!]] : []))));
-    if (created[0]) { lib.setSelectedPikoId(created[0].id); lib.setSelectedTofuId("default"); }
+    const merged = mergeInstances(lib.library, instances);
+    const isNewMinecraft = Boolean(merged) && !lib.library.some((piko) => piko.id === merged!.piko.id);
+    lib.setLibrary((current) => {
+      const withMinecraft = mergeInstances(current, instances)?.library ?? current;
+      return [...withMinecraft, ...created.filter((piko) => !withMinecraft.some((item) => item.id === piko.id))];
+    });
+    const enrich = merged && isNewMinecraft ? [merged.piko, ...created] : created;
+    if (enrich.length) void finishImport(enrich, new Map(created.flatMap((piko, index) => (fresh[index].iconPath && piko.kind !== "launcher" ? [[piko.id, fresh[index].iconPath!]] : []))));
+    const first = merged?.piko ?? created[0];
+    if (first) { lib.setSelectedPikoId(first.id); lib.setSelectedTofuId(merged ? instanceTofuId(instances[0].launchTarget) : first.tofus[0]?.id ?? "default"); }
     setShowAddPiko(false);
     closeImportPicker();
   };

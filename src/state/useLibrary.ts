@@ -5,6 +5,8 @@ import { pikoSearchMatcher } from "../lib/search";
 import type { PlaytimeEntry } from "../lib/platform";
 import { sanitizeFilter, sanitizeLibrary, matchesFilter, mostPlayedIds, smartFilters, sourceLabel, sourceOf, toggleInList, withTag, type FilterContext, type LibraryFilter, type SmartFilterId } from "../lib/library";
 import { placeholdersLast } from "../lib/fallbackArt";
+import { foldLegacyPlaytime } from "../lib/minecraftPiko";
+import { copyInstanceRecords } from "../lib/mods/instances";
 import { useInstalledStatus } from "./useInstalledStatus";
 
 export type LibrarySort = "category" | "name" | "recent" | "playtime";
@@ -45,7 +47,17 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
   const selectedPiko = library.find((piko) => piko.id === selectedPikoId) ?? library[0] ?? emptyPiko;
   const selectedTofu = selectedPiko.tofus.find((tofu) => tofu.id === selectedTofuId) ?? selectedPiko.tofus[0];
 
-  const playtimeById = useMemo(() => new Map(playtime.map((entry) => [entry.gameId, entry])), [playtime]);
+  // One-time: a Minecraft instance that used to be its own Piko keeps its installed-mod records under its old Tofu id; copy them to the new Tofu id (nothing is deleted).
+  useEffect(() => {
+    const pending = library.flatMap((piko) => piko.tofus.filter((tofu) => tofu.legacyTofuId).map((tofu) => ({ pikoId: piko.id, id: tofu.id, from: tofu.legacyTofuId! })));
+    if (!pending.length) return;
+    void Promise.all(pending.map((item) => copyInstanceRecords(item.from, item.id).then(() => true, () => false).then((ok) => ({ ...item, ok })))).then((results) => {
+      const done = new Set(results.filter((item) => item.ok).map((item) => `${item.pikoId}/${item.id}`));
+      if (done.size) setLibrary((current) => current.map((piko) => ({ ...piko, tofus: piko.tofus.map((tofu) => (done.has(`${piko.id}/${tofu.id}`) ? { ...tofu, legacyTofuId: undefined } : tofu)) })));
+    });
+  }, [library]);
+
+  const playtimeById = useMemo(() => new Map(foldLegacyPlaytime(playtime, library).map((entry) => [entry.gameId, entry])), [playtime, library]);
   const filterContext: FilterContext = useMemo(() => ({ playtime: playtimeById, installed, isRunning }), [playtimeById, installed, isRunning]);
   const mostPlayed = useMemo(() => mostPlayedIds(library, playtimeById), [library, playtimeById]);
 
@@ -97,7 +109,7 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
 
   const continuePlaying = useMemo(() => {
     const byId = new Map(library.map((piko) => [piko.id, piko]));
-    return playtime
+    return foldLegacyPlaytime(playtime, library)
       .filter((entry) => entry.lastPlayed > 0 && byId.has(entry.gameId))
       .sort((a, b) => b.lastPlayed - a.lastPlayed)
       .slice(0, 3)

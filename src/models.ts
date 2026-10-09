@@ -50,6 +50,17 @@ export type Tofu = {
   syncReplaceExisting?: boolean;
   /** When Mochi last read this Tofu's mod folder after an import; `identified` is false when the sites could not be asked (offline). */
   modScan?: { at: number; identified: boolean };
+  /** Minecraft instance: the launch target (`mc-instance://<launcher>/<id>`) that starts exactly this instance; overrides the Piko's. */
+  launchTarget?: string;
+  /** Minecraft instance: the instance folder on this device (used to follow its process). Never synced. */
+  installPath?: string;
+  /** Own cover of this Tofu (kept from a Minecraft instance that used to be a Piko of its own). */
+  artwork?: string;
+  artworkCacheKey?: string;
+  /** Id of the Piko this Tofu was before the Minecraft instances were merged into one Piko; playtime of that id counts for the Minecraft Piko. */
+  legacyPikoId?: string;
+  /** Tofu id whose installed-mod records are copied into this Tofu once (then cleared); set by the Minecraft merge. */
+  legacyTofuId?: string;
 };
 
 export type TrailerVideo = { name: string; thumbnail?: string; mp4?: string; webm?: string; hls?: string };

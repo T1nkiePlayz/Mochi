@@ -3,6 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import type { Piko, Tofu } from "../models";
 import { modSyncFor } from "./mods/targets";
 import { buildLaunchConfig } from "./launch";
+import { launchTargetFor } from "./minecraftPiko";
 
 export type PlatformId = "linux" | "macos";
 export type LaunchMethodId = "file" | "app" | "flatpak" | "custom";
@@ -50,13 +51,14 @@ export const createGameShortcut = (gameId: string, name: string) => invoke<strin
 export const removeGameShortcut = (gameId: string) => invoke<void>("remove_game_shortcut", { gameId });
 
 export function launchGame(piko: Piko, tofu: Tofu | undefined): Promise<void> {
-  if (!piko.executablePath) return Promise.reject(new Error("This game does not have a launch target. Edit the game to set one."));
+  const launchTarget = launchTargetFor(piko, tofu);
+  if (!launchTarget) return Promise.reject(new Error("This game does not have a launch target. Edit the game to set one."));
   return invoke("launch_game_tracked", {
     request: {
       gameId: piko.id,
       name: piko.name,
-      launchTarget: piko.executablePath,
-      installPath: piko.installPath ?? null,
+      launchTarget,
+      installPath: tofu?.installPath ?? piko.installPath ?? null,
       tofuId: tofu?.id ?? null,
       config: buildLaunchConfig(tofu?.launch),
       // A Tofu with its own store is copied into the game folder, Tofus sharing a folder swap their mods; natively, right before starting.
