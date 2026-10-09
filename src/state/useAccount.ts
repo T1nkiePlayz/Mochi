@@ -181,7 +181,7 @@ export function useAccount(notify: (title: string, message: string) => void) {
   };
 
   const openWebsiteSignIn = () => {
-    void openExternalUrl("https://t1nkieplayz.github.io/Mochi-Website/#/signin?app=mochi")
+    void openExternalUrl("https://mochi.ashtontink.com/#/signin?app=mochi")
       .catch((error) => setAuthError(error instanceof Error ? error.message : "Unable to open the Mochi website."));
   };
 

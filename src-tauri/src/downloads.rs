@@ -200,10 +200,128 @@ pub(crate) const EXTRACT_LIMITS: ExtractLimits = ExtractLimits {
 /// beyond the entry/size/ratio caps are rejected. Sizes are enforced on bytes actually written, not on headers.
 /// On failure the files this call created are removed again.
 pub(crate) fn extract_zip(archive: &Path, dest: &Path, limits: ExtractLimits) -> Result<usize, String> {
-    let mut created = Vec::new();
-    let result = extract_zip_inner(archive, dest, limits, &mut created);
-    if result.is_err() { for path in created.iter().rev() { let _ = fs::remove_file(path); } }
-    result
+    // Never extract directly over live files. Validate and unpack the complete archive in a sibling
+    // staging directory first, then replace destination files while retaining rollback copies.
+    static NEXT_EXTRACT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    let parent = dest.parent().ok_or("Unable to resolve extraction parent folder.")?;
+    fs::create_dir_all(parent).map_err(|e| format!("Unable to create extraction parent: {e}"))?;
+    let name = dest.file_name().and_then(|n| n.to_str()).unwrap_or("extracted");
+    let id = NEXT_EXTRACT_ID.fetch_add(1, Ordering::Relaxed);
+    let stage = parent.join(format!(".{name}.mochi-stage-{id}"));
+    let backup = parent.join(format!(".{name}.mochi-backup-{id}"));
+    fs::create_dir(&stage).map_err(|e| format!("Unable to create extraction staging folder: {e}"))?;
+    let _stage_cleanup = TempDirCleanup::new(stage.clone());
+    let mut backup_cleanup = TempDirCleanup::new(backup.clone());
+    fs::create_dir(&backup).map_err(|e| format!("Unable to create extraction rollback folder: {e}"))?;
+
+    let mut ignored = Vec::new();
+    let count = extract_zip_inner(archive, &stage, limits, &mut ignored)?;
+    fs::create_dir_all(dest).map_err(|e| format!("Unable to create extraction folder: {e}"))?;
+    let mut files = Vec::new();
+    collect_regular_files(&stage, &stage, &mut files)?;
+    // The downloaded archive itself lives in the destination directory. Refuse an archive
+    // that contains a same-named top-level entry, otherwise commit could replace the source ZIP.
+    let canonical_dest = fs::canonicalize(dest).map_err(|e| format!("Unable to resolve extraction folder: {e}"))?;
+    let canonical_archive = fs::canonicalize(archive).map_err(|e| format!("Unable to resolve archive: {e}"))?;
+    if canonical_archive.parent() == Some(canonical_dest.as_path())
+        && archive.file_name().is_some_and(|name| files.iter().any(|relative| relative.as_os_str().eq_ignore_ascii_case(name)))
+    {
+        return Err("Archive contains a file that would overwrite the archive itself.".into());
+    }
+    let mut installed: Vec<PathBuf> = Vec::new();
+    let mut saved: Vec<(PathBuf, PathBuf)> = Vec::new();
+    let commit = (|| -> Result<(), String> {
+        for relative in files {
+            let source = stage.join(&relative);
+            let target = dest.join(&relative);
+            let parent = target.parent().ok_or("Invalid extraction target.")?;
+            fs::create_dir_all(parent).map_err(|e| format!("Unable to create extraction folder: {e}"))?;
+            ensure_inside(parent, &fs::canonicalize(dest).map_err(|e| e.to_string())?)?;
+            if let Ok(meta) = fs::symlink_metadata(&target) {
+                if meta.file_type().is_symlink() || !meta.is_file() {
+                    return Err(format!("Refusing to replace non-regular extraction target '{}'.", relative.display()));
+                }
+                let saved_path = backup.join(&relative);
+                if let Some(saved_parent) = saved_path.parent() {
+                    fs::create_dir_all(saved_parent).map_err(|e| format!("Unable to prepare rollback: {e}"))?;
+                }
+                fs::rename(&target, &saved_path).map_err(|e| format!("Unable to preserve existing '{}': {e}", relative.display()))?;
+                saved.push((saved_path, target.clone()));
+            }
+            if let Err(e) = fs::rename(&source, &target) {
+                return Err(format!("Unable to install '{}': {e}", relative.display()));
+            }
+            installed.push(target);
+        }
+        Ok(())
+    })();
+    if let Err(error) = commit {
+        let mut rollback_errors = Vec::new();
+        let mut paths_removed = HashSet::new();
+        for path in installed.iter().rev() {
+            match fs::remove_file(path) {
+                Ok(()) => { paths_removed.insert(path.clone()); }
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => { paths_removed.insert(path.clone()); }
+                Err(e) => rollback_errors.push(format!("remove '{}': {e}", path.display())),
+            }
+        }
+        for (saved_path, target) in saved.iter().rev() {
+            if !paths_removed.contains(target) {
+                match fs::symlink_metadata(target) {
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                    Ok(_) => {
+                        rollback_errors.push(format!("original '{}' remains recoverable at '{}'", target.display(), saved_path.display()));
+                        continue;
+                    }
+                    Err(e) => {
+                        rollback_errors.push(format!("inspect '{}' before restore: {e}", target.display()));
+                        continue;
+                    }
+                }
+            }
+            if let Some(parent) = target.parent() {
+                if let Err(e) = fs::create_dir_all(parent) {
+                    rollback_errors.push(format!("recreate parent for '{}': {e}", target.display()));
+                    continue;
+                }
+            }
+            if let Err(e) = fs::rename(saved_path, target) {
+                rollback_errors.push(format!("restore '{}' from '{}': {e}", target.display(), saved_path.display()));
+            }
+        }
+        if !rollback_errors.is_empty() {
+            backup_cleanup.preserve();
+            return Err(format!(
+                "{error} Rollback was incomplete; recovery files were retained at '{}'. Details: {}",
+                backup.display(), rollback_errors.join("; ")
+            ));
+        }
+        return Err(error);
+    }
+    Ok(count)
+}
+
+struct TempDirCleanup { path: PathBuf, cleanup: bool }
+impl TempDirCleanup {
+    fn new(path: PathBuf) -> Self { Self { path, cleanup: true } }
+    fn preserve(&mut self) { self.cleanup = false; }
+}
+impl Drop for TempDirCleanup {
+    fn drop(&mut self) { if self.cleanup { let _ = fs::remove_dir_all(&self.path); } }
+}
+
+fn collect_regular_files(root: &Path, current: &Path, files: &mut Vec<PathBuf>) -> Result<(), String> {
+    for entry in fs::read_dir(current).map_err(|e| format!("Unable to list staged extraction: {e}"))? {
+        let entry = entry.map_err(|e| format!("Unable to read staged extraction entry: {e}"))?;
+        let path = entry.path();
+        let meta = fs::symlink_metadata(&path).map_err(|e| format!("Unable to inspect staged extraction: {e}"))?;
+        if meta.file_type().is_symlink() { return Err("Staging folder unexpectedly contains a symlink.".into()); }
+        if meta.is_dir() { collect_regular_files(root, &path, files)?; }
+        else if meta.is_file() {
+            files.push(path.strip_prefix(root).map_err(|e| e.to_string())?.to_path_buf());
+        } else { return Err("Staging folder contains a special file.".into()); }
+    }
+    Ok(())
 }
 
 fn extract_zip_inner(archive: &Path, dest: &Path, limits: ExtractLimits, created: &mut Vec<PathBuf>) -> Result<usize, String> {
@@ -524,6 +642,43 @@ mod tests {
         let zip_path = dir.join("pack.zip");
         build_zip(&zip_path, &[("a\nb.txt", b"1")], None);
         assert!(extract_zip(&zip_path, &dir.join("out"), EXTRACT_LIMITS).is_err());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn archive_cannot_overwrite_itself_during_extraction() {
+        let dir = temp_dir("self-overwrite");
+        let archive = dir.join("pack.zip");
+        build_zip(&archive, &[("pack.zip", b"replacement")], None);
+        let original = fs::read(&archive).unwrap();
+        assert!(extract_zip(&archive, &dir, EXTRACT_LIMITS).unwrap_err().contains("overwrite the archive itself"));
+        assert_eq!(fs::read(&archive).unwrap(), original);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn archive_self_overwrite_guard_ignores_case() {
+        let dir = temp_dir("self-overwrite-case");
+        let archive = dir.join("pack.zip");
+        build_zip(&archive, &[("PACK.ZIP", b"replacement")], None);
+        let original = fs::read(&archive).unwrap();
+        assert!(extract_zip(&archive, &dir, EXTRACT_LIMITS).unwrap_err().contains("overwrite the archive itself"));
+        assert_eq!(fs::read(&archive).unwrap(), original);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn invalid_archive_does_not_modify_existing_files() {
+        let dir = temp_dir("staged-failure");
+        let out = dir.join("out");
+        fs::create_dir_all(&out).unwrap();
+        fs::write(out.join("existing.txt"), b"original contents").unwrap();
+        let zip_path = dir.join("invalid.zip");
+        build_zip(&zip_path, &[("new.txt", b"new contents"), ("../escape.txt", b"bad")], None);
+        assert!(extract_zip(&zip_path, &out, EXTRACT_LIMITS).is_err());
+        assert_eq!(fs::read(out.join("existing.txt")).unwrap(), b"original contents");
+        assert!(!out.join("new.txt").exists());
+        assert!(!dir.join("escape.txt").exists());
         let _ = fs::remove_dir_all(&dir);
     }
 

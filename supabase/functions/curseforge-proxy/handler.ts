@@ -153,9 +153,47 @@ export function rateLimited(ip: string, now = Date.now()): boolean {
 
 export function resetRateLimit() { rateWindow.clear(); }
 
-function clientIp(req: Request): string {
-  const forwarded = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? "";
-  return forwarded.split(",")[0].trim() || "unknown";
+function isIpAddress(value: string): boolean {
+  if (!value || value.length > 45) return false;
+  if (value.includes(":")) {
+    try { new URL(`http://[${value}]/`); return true; } catch { return false; }
+  }
+  const parts = value.split(".");
+  return parts.length === 4 && parts.every((part) =>
+    /^(0|[1-9][0-9]{0,2})$/.test(part) && Number(part) <= 255
+  );
+}
+
+/** Uses only Cloudflare edge metadata; X-Forwarded-For is deliberately ignored. */
+export function clientIp(req: Request): string {
+  // This header is trustworthy only when deployment guarantees Cloudflare overwrites it.
+  const edgeIp = req.headers.get("cf-connecting-ip")?.trim() ?? "";
+  return isIpAddress(edgeIp) ? edgeIp.toLowerCase() : "unknown";
+}
+
+async function readRequestCapped(req: Request): Promise<string> {
+  const reader = req.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_BODY_BYTES) {
+        await reader.cancel();
+        throw bad("Request body is too large.");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const merged = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.byteLength; }
+  return new TextDecoder().decode(merged);
 }
 
 function json(body: unknown, status = 200) {
@@ -231,8 +269,7 @@ export async function handle(req: Request, fetcher: typeof fetch = fetch): Promi
   if (rateLimited(clientIp(req))) return fail(new ProxyError("Too many requests. Try again in a minute.", "rate_limited", 429));
 
   try {
-    const text = await req.text();
-    if (text.length > MAX_BODY_BYTES) throw bad("Request body is too large.");
+    const text = await readRequestCapped(req);
     let body: unknown;
     try { body = JSON.parse(text); } catch { throw bad("Invalid JSON body."); }
     if (!body || typeof body !== "object" || Array.isArray(body)) throw bad("Request body must be a JSON object.");
