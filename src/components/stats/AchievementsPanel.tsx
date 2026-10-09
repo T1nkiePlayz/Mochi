@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import {
   Award, BadgeCheck, Boxes, CalendarCheck, CalendarDays, CalendarRange, Compass, Crown, Dices, Flame, FolderTree, Footprints, Gamepad, Gamepad2, Gift, HelpCircle, Hourglass, Layers, Leaf,
   Library, Lock, Map as MapIcon, Medal, Moon, Mountain, Palette, PartyPopper, PenLine, Puzzle, RotateCcw, Rocket, Shapes, Shuffle, Star, Sunrise, Tag, Timer, Trophy, Tv, Undo2, Wrench, Zap, Heart,
@@ -15,7 +15,8 @@ const icons: Record<string, LucideIcon> = {
 const dateText = (ms: number) => new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 const roman = ["", "I", "II", "III", "IV", "V", "VI", "VII"];
 
-export function AchievementBadge({ item, unlockedAt }: { item: AchievementProgress; unlockedAt?: number }) {
+/** Memoised: filter and tab changes re-render the grid, but most badges keep the same props. */
+export const AchievementBadge = memo(function AchievementBadge({ item, unlockedAt }: { item: AchievementProgress; unlockedAt?: number }) {
   const { def } = item;
   const unlocked = unlockedAt !== undefined;
   const mystery = def.hidden && !unlocked;
@@ -33,7 +34,7 @@ export function AchievementBadge({ item, unlockedAt }: { item: AchievementProgre
       </div>
     </li>
   );
-}
+});
 
 const statusOptions: Array<{ value: AchievementFilter["status"]; label: string }> = [{ value: "all", label: "All" }, { value: "unlocked", label: "Unlocked" }, { value: "locked", label: "Locked" }];
 
@@ -42,7 +43,9 @@ export function AchievementsPanel({ progress, unlocked }: { progress: Achievemen
   const sync = useSteamSync(lib.library);
   const [category, setCategory] = useState<AchievementFilter["category"]>("all");
   const [status, setStatus] = useState<AchievementFilter["status"]>("all");
-  const at = (item: AchievementProgress) => unlocked[item.def.id] ?? (item.met ? Date.now() : undefined);
+  // One timestamp per mount keeps the badge props stable, so memoised badges are not re-rendered by unrelated state.
+  const [mountedAt] = useState(Date.now);
+  const at = (item: AchievementProgress) => unlocked[item.def.id] ?? (item.met ? mountedAt : undefined);
   const done = progress.filter((item) => at(item) !== undefined).length;
   const perCategory = useMemo(() => {
     const counts = new Map<AchievementCategory, { done: number; total: number }>();
