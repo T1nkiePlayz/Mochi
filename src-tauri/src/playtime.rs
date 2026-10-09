@@ -394,7 +394,7 @@ fn persist(guard: &TrackerState) -> Result<(), String> {
     let Some(path) = &guard.path else { return Err("Playtime tracker is not initialized.".into()) };
     let mut games: Vec<_> = guard.games.values().cloned().collect();
     games.sort_by(|a, b| b.seconds.cmp(&a.seconds).then_with(|| b.last_played.cmp(&a.last_played)));
-    let contents = serde_json::to_string_pretty(&PlaytimeFile { games }).map_err(|e| format!("Unable to serialize playtime data: {e}"))?;
+    let contents = serde_json::to_string(&PlaytimeFile { games }).map_err(|e| format!("Unable to serialize playtime data: {e}"))?;
     write_atomic(path, contents.as_bytes())
 }
 

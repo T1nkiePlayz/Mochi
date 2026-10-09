@@ -309,10 +309,32 @@ fn launch_target_exists(target: &str) -> bool {
         return expanded.is_some_and(|path| path.exists());
     }
     // A bare command name is looked up on PATH; anything with arguments cannot be checked cheaply.
-    target.contains(char::is_whitespace) || command_exists(target)
+    target.contains(char::is_whitespace) || command_exists_cached(target)
 }
 
-#[tauri::command]
+/// `command_exists` with a short-lived per-name cache: the frontend re-checks every launch target on window focus.
+fn command_exists_cached(name: &str) -> bool {
+    use std::{collections::HashMap, sync::Mutex, time::{Duration, Instant}};
+    const TTL: Duration = Duration::from_secs(30);
+    type Cache = HashMap<String, (Instant, Option<PathBuf>)>;
+    static CACHE: Mutex<Option<Cache>> = Mutex::new(None);
+    let now = Instant::now();
+    if let Ok(guard) = CACHE.lock() {
+        if let Some((at, found)) = guard.as_ref().and_then(|map| map.get(name)) {
+            if now.duration_since(*at) < TTL { return found.is_some(); }
+        }
+    }
+    let found = command_path(name);
+    let exists = found.is_some();
+    if let Ok(mut guard) = CACHE.lock() {
+        let map = guard.get_or_insert_with(HashMap::new);
+        if map.len() > 1024 { map.clear(); }
+        map.insert(name.to_string(), (now, found));
+    }
+    exists
+}
+
+#[tauri::command(async)]
 pub fn check_launch_targets(targets: Vec<String>) -> Vec<bool> {
     targets.iter().take(5000).map(|target| launch_target_exists(target)).collect()
 }
