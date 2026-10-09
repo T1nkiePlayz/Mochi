@@ -18,6 +18,7 @@ export function GeneralTab({ ctx }: { ctx: EditorContext }) {
     const { kind: k, launcherId, platformCategory, categories, artwork, trailerId } = applyPikoKindOverride(draft, { [key]: next });
     patch({ kind: k, launcherId, platformCategory, categories, artwork, trailerId });
   };
+  const isExtraType = draft.contentType === "soundtrack" || draft.contentType === "extra";
   return <div className="form-fields editor-fields">
     <label>Game name
       <input value={draft.name} onChange={(event) => patch({ name: event.target.value }, "name")} required autoFocus />
@@ -33,6 +34,10 @@ export function GeneralTab({ ctx }: { ctx: EditorContext }) {
       </div>
       <p className="metadata-note">Wrong detection? Choose what this really is. Mochi remembers your choice.</p>
     </div>
+    <label className="check-row">
+      <input type="checkbox" checked={isExtraType} onChange={(event) => patch({ contentType: event.target.checked ? "soundtrack" : "game", contentTypeLocked: true })} />
+      <span>This is a soundtrack or extra (hide from library)</span>
+    </label>
     <label>Platform category
       <input value={draft.platformCategory ?? ""} onChange={(event) => patch({ platformCategory: event.target.value || undefined })} placeholder="e.g. Steam, Heroic, Custom" maxLength={40} />
     </label>

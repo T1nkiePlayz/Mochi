@@ -64,6 +64,7 @@ export type Tofu = {
 };
 
 export type TrailerVideo = { name: string; thumbnail?: string; mp4?: string; webm?: string; hls?: string };
+export type ContentType = "game" | "soundtrack" | "extra";
 
 export type Piko = {
   id: string;
@@ -77,6 +78,10 @@ export type Piko = {
   kind?: "game" | "launcher";
   /** Which known launcher a launcher entry is (`src/lib/launchers.ts`), for its artwork and company logo. */
   launcherId?: string;
+  /** Soundtracks, artbooks and other non-game entries; hidden from the main library (default: a game). */
+  contentType?: ContentType;
+  /** The user chose `contentType` by hand, so metadata refreshes leave it alone. */
+  contentTypeLocked?: boolean;
   /** Id of the import item this entry came from (`ImportedGame.id`); keys the user's game/launcher override. */
   importKey?: string;
   igdbId?: number;

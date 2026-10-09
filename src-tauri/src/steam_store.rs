@@ -43,6 +43,16 @@ pub struct SteamStoreDetails {
     pub cover_url: String,
     pub header_url: String,
     pub hero_url: String,
+    /// "game", "soundtrack" or "extra" (DLC, video, advertising), from the store's `type`.
+    #[serde(default = "default_content_type")]
+    pub content_type: String,
+}
+
+fn default_content_type() -> String { "game".into() }
+
+/// Maps the store's app `type` to Mochi's content type.
+pub fn content_type_of(app_type: &str) -> &'static str {
+    match app_type { "music" => "soundtrack", "dlc" | "advertising" | "video" => "extra", _ => "game" }
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -181,6 +191,7 @@ pub fn parse_app_details(appid: u32, body: &str) -> Result<Option<SteamStoreDeta
         cover_url: format!("{CDN}/{appid}/library_600x900.jpg"),
         header_url: format!("{CDN}/{appid}/header.jpg"),
         hero_url: format!("{CDN}/{appid}/library_hero.jpg"),
+        content_type: content_type_of(data.get("type").and_then(Value::as_str).unwrap_or("game")).into(),
     }))
 }
 
@@ -297,6 +308,15 @@ mod tests {
         assert_eq!(details.release_date, Some(1_100_563_200));
         assert_eq!(details.cover_url, format!("{CDN}/220/library_600x900.jpg"));
         assert!(details.movies.iter().all(|m| m.thumbnail.as_deref().is_none_or(|t| !t.contains('?'))));
+    }
+
+    #[test]
+    fn store_type_maps_to_content_type() {
+        assert_eq!(parse_app_details(220, FIXTURE).unwrap().unwrap().content_type, "game");
+        let body = |kind: &str| format!(r#"{{"5":{{"success":true,"data":{{"name":"X","type":"{kind}"}}}}}}"#);
+        for (kind, want) in [("music", "soundtrack"), ("dlc", "extra"), ("advertising", "extra"), ("video", "extra"), ("game", "game"), ("demo", "game")] {
+            assert_eq!(parse_app_details(5, &body(kind)).unwrap().unwrap().content_type, want, "{kind}");
+        }
     }
 
     #[test]

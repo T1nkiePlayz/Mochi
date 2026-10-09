@@ -27,6 +27,8 @@ export type ImportedGame = {
   /** The entry's own icon file (desktop entry `Icon=`, app bundle `.icns`), drawn as a fallback cover. */
   iconPath?: string | null;
   /** Minecraft instances (Prism, MultiMC, PolyMC, Fjord): version, loader and game folder for the default Tofu. */
+  /** "soundtrack" / "extra" when the entry is not a game (guessed from its name). */
+  contentType?: "soundtrack" | "extra" | null;
   minecraft?: { version?: string | null; loader: string; gameDir: string } | null;
 };
 

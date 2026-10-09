@@ -63,3 +63,12 @@ describe("steamImportTargets", () => {
     expect(steamImportTargets([fresh, launcher, other, done, shots]).map((p) => p.id)).toEqual([fresh.id]);
   });
 });
+
+describe("content type from the Steam Store", () => {
+  const piko = { id: "a", name: "A", description: "", accent: "", artwork: "", tofus: [] };
+  it("is applied, but never over the user's own choice", () => {
+    expect(applyMetadata(piko, { text: { contentType: "soundtrack" } }).contentType).toBe("soundtrack");
+    expect(applyMetadata({ ...piko, contentType: "game", contentTypeLocked: true }, { text: { contentType: "soundtrack" } }).contentType).toBe("game");
+    expect(applyMetadata({ ...piko, contentType: "soundtrack" }, { text: { description: "x" } }).contentType).toBe("soundtrack");
+  });
+});

@@ -7,6 +7,7 @@ import { useStoredAchievements } from "../state/useAchievements";
 import { analyse, computeStreaks, dayTotals, formatDuration, formatHours, getPlaytimeHistory, groupByWeek, type RangeDays, type SessionRecord } from "../lib/stats";
 import { buildFacts, countCollections, evaluate } from "../lib/achievements";
 import { readJson, readString, storageKeys, writeString } from "../lib/storage";
+import { isExtra } from "../lib/library";
 import { Segmented } from "../components/stats/Segmented";
 import { Composition, Heatmap, HourHistogram, StackedBars, TopGames, WeekdayPattern } from "../components/stats/Charts";
 import { AchievementsPanel, RecentAchievements } from "../components/stats/AchievementsPanel";
@@ -97,7 +98,7 @@ export function StatsView() {
                 <Card id="st-top" title="Top games">{analysis.games.length ? <TopGames games={analysis.games} library={lib.library} /> : <p className="stats-muted">No games played in this range.</p>}</Card>
                 <Card id="st-hours" title="Time of day"><HourHistogram hours={analysis.hours} /></Card>
                 <Card id="st-week" title="Weekday pattern"><WeekdayPattern weekdays={analysis.weekdays} /></Card>
-                <Card id="st-comp" title="Library by source">{lib.library.length ? <Composition library={lib.library} playtime={playtimeById} /> : <p className="stats-muted">Your library is empty.</p>}</Card>
+                <Card id="st-comp" title="Library by source">{lib.library.length ? <Composition library={lib.library.filter((piko) => !isExtra(piko))} playtime={playtimeById} /> : <p className="stats-muted">Your library is empty.</p>}</Card>
               </div>
               <Card id="st-heat" title="Past year" wide><Heatmap totals={totals} /></Card>
               <RecentAchievements progress={progress} unlocked={stored.unlocked} onOpen={() => setTab("achievements")} />

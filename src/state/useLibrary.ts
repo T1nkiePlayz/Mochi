@@ -3,7 +3,7 @@ import type { Piko, Tofu } from "../models";
 import { readJson, storageKeys, writeJson, writeString, readString } from "../lib/storage";
 import { pikoSearchMatcher } from "../lib/search";
 import type { PlaytimeEntry } from "../lib/platform";
-import { sanitizeFilter, sanitizeLibrary, matchesFilter, mostPlayedIds, smartFilters, sourceLabel, sourceOf, toggleInList, withTag, type FilterContext, type LibraryFilter, type SmartFilterId } from "../lib/library";
+import { isExtra, sanitizeFilter, sanitizeLibrary, matchesFilter, mostPlayedIds, smartFilters, sourceLabel, sourceOf, toggleInList, withTag, type FilterContext, type LibraryFilter, type SmartFilterId } from "../lib/library";
 import { placeholdersLast } from "../lib/fallbackArt";
 import { foldLegacyPlaytime } from "../lib/minecraftPiko";
 import { copyInstanceRecords } from "../lib/mods/instances";
@@ -75,11 +75,15 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
 
   const visiblePikos = useMemo(() => searchedPikos.filter((piko) => matchesFilter(piko, filter, filterContext, mostPlayed)), [searchedPikos, filter, filterContext, mostPlayed]);
 
+  /** Soundtracks and other non-games matching the search: shown in their own section, never in the main library. */
+  const extraPikos = useMemo(() => searchedPikos.filter(isExtra), [searchedPikos]);
+
   const filterCounts = useMemo(() => {
     const smart = Object.fromEntries(smartFilters.map(({ id }) => [id, searchedPikos.filter((piko) => matchesFilter(piko, { kind: "smart", id }, filterContext, mostPlayed)).length])) as Record<SmartFilterId, number>;
     const sources = new Map<string, { label: string; count: number }>();
     const collections = new Map<string, number>();
     searchedPikos.forEach((piko) => {
+      if (isExtra(piko)) return;
       const id = sourceOf(piko);
       sources.set(id, { label: sourceLabel(piko), count: (sources.get(id)?.count ?? 0) + 1 });
       piko.collectionIds?.forEach((collectionId) => collections.set(collectionId, (collections.get(collectionId) ?? 0) + 1));
@@ -162,7 +166,7 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
 
   return {
     library, setLibrary, selectedPikoId, setSelectedPikoId, selectedTofuId, setSelectedTofuId, gameDetailsId, setGameDetailsId,
-    search, setSearch, librarySort, setLibrarySort, selectedPiko, selectedTofu, visiblePikos, groupedPikos, continuePlaying,
+    search, setSearch, librarySort, setLibrarySort, selectedPiko, selectedTofu, visiblePikos, extraPikos, groupedPikos, continuePlaying,
     selectPiko, updateGame, updateSelectedTofu, createTofu,
     filter, setFilter, tagFilters, setTagFilters, toggleTagFilter, filterCounts, installed, searchedPikos,
     toggleFavorite, setFavorites, setCollectionMembership, addTagToGames, removeGames,

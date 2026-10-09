@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Piko, TrailerVideo } from "../../models";
+import type { ContentType, Piko, TrailerVideo } from "../../models";
 
 export type ProviderId = "igdb" | "steamgriddb" | "steam";
 export type ArtworkSource = ProviderId;
@@ -17,6 +17,8 @@ export type TextMeta = {
   /** Unix seconds. */
   firstReleaseDate?: number;
   igdbId?: number;
+  /** From the Steam Store's app type; only set when it is known. */
+  contentType?: ContentType;
 };
 
 export type ArtChoice = { source: ArtworkSource; url: string };

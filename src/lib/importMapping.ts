@@ -36,5 +36,6 @@ export function importedGameToPiko(game: ImportedGame, now: number): Piko {
     platformCategory: launcher ? "Launchers" : platformLabel(game.source),
     categories: launcher ? ["Launcher"] : [],
     tofus: [defaultTofu(game)],
+    ...(!launcher && game.contentType ? { contentType: game.contentType } : {}),
   };
 }

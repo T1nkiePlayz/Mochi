@@ -30,3 +30,11 @@ describe("importedGameToPiko", () => {
     expect(platformLabel("gog")).toBe("GOG");
   });
 });
+
+describe("content type", () => {
+  const base = { id: "steam:1", name: "Foo Soundtrack", source: "steam", launchTarget: "steam://rungameid/1" } as const;
+  it("is carried over from the scan and absent for games", () => {
+    expect(importedGameToPiko({ ...base, contentType: "soundtrack" }, 1).contentType).toBe("soundtrack");
+    expect(importedGameToPiko({ ...base, contentType: null }, 1).contentType).toBeUndefined();
+  });
+});

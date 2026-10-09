@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { CheckSquare, Gamepad2, LayoutGrid, List, Maximize2, Play, Plus, Rows3, SlidersHorizontal, Settings, Grid3x3, X } from "lucide-react";
+import { CheckSquare, ChevronDown, ChevronRight, Gamepad2, LayoutGrid, List, Maximize2, Play, Plus, Rows3, SlidersHorizontal, Settings, Grid3x3, X } from "lucide-react";
 import { BulkActionBar } from "../components/library/BulkActionBar";
 import { ConfirmDialog } from "../components/library/ConfirmDialog";
 import { CollectionManager } from "../components/library/CollectionManager";
@@ -40,6 +40,7 @@ export function LibraryView() {
   const [view, setView] = useState<LibraryViewMode>(readViewMode);
   const changeView = (step: number) => setView((current) => { const next = cycleViewMode(current, step); writeViewMode(next); return next; });
   const ViewIcon = viewIcons[view];
+  const [showExtras, setShowExtras] = useState(false);
   const [removal, setRemoval] = useState<Piko[] | null>(null);
   const allTags = useMemo(() => tagCounts(lib.library), [lib.library]);
   const menuGame = menu ? lib.library.find((piko) => piko.id === menu.gameId) : undefined;
@@ -167,6 +168,15 @@ export function LibraryView() {
           onOpen={openGame} onToggleFavorite={toggleFavorite} onToggleChecked={toggleChecked} onMenu={openMenu} />)}</div>
       </div>)}
     </section>
+    {lib.extraPikos.length > 0 && <section className="library-extras" aria-label="Soundtracks and extras">
+      <button type="button" className="text-button library-extras-toggle" aria-expanded={showExtras} aria-controls="library-extras-grid" onClick={() => setShowExtras(!showExtras)}>
+        {showExtras ? <ChevronDown size={14} /> : <ChevronRight size={14} />} Soundtracks &amp; extras ({lib.extraPikos.length})
+      </button>
+      {showExtras && <div className="game-card-grid" id="library-extras-grid">{lib.extraPikos.map((piko) => <GameCard key={piko.id} piko={piko}
+        selected={selectedPiko.id === piko.id} running={sessions.isRunning(piko.id)} cloudStatus={cloudStatusFor(piko, cloudCtx)}
+        selecting={selecting} checked={checked.has(piko.id)}
+        onOpen={openGame} onToggleFavorite={toggleFavorite} onToggleChecked={toggleChecked} onMenu={openMenu} />)}</div>}
+    </section>}
     {menu && menuGame && <GameContextMenu game={menuGame} x={menu.x} y={menu.y} collections={collections.collections} canOpenFolder={hasFolder(menuGame)}
       onClose={() => setMenu(null)}
       onPlay={() => { lib.selectPiko(menuGame); void actions.launchGame(menuGame); }}

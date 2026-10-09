@@ -222,6 +222,7 @@ const handlers: Record<string, Handler> = {
   scan_import_games: (args) => {
     if (args.source === "steam") return [
       ...Array.from({ length: 240 }, (_, i) => ({ id: `steam:${1000 + i}`, name: `Steam Game ${String(i + 1).padStart(3, "0")}`, source: "steam", launchTarget: `steam://rungameid/${1000 + i}`, installPath: `/games/steam/game-${i}`, kind: "game", launcherId: null })),
+      { id: "steam:2000", name: "RuneScape: Dragonwilds Early Adopter Soundtrack", source: "steam", launchTarget: "steam://rungameid/2000", installPath: "/games/steam/soundtrack", kind: "game", launcherId: null, contentType: "soundtrack" },
       { id: "launcher:steam", name: "Steam", source: "steam", launchTarget: "steam://open/main", installPath: null, kind: "launcher", launcherId: "steam" },
     ];
     if (args.source === "heroic") return ["Hades", "Celeste", "Control", "Dishonored 2", "Fez", "Inside"].map((name) => ({ id: `heroic:${name}`, name, source: "heroic", launchTarget: `heroic://launch?appName=${name}`, installPath: `/games/heroic/${name}`, kind: "game", launcherId: null }));
