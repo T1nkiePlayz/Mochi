@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readString, writeString } from "./storage";
 import { layerThemeCss } from "./themeLayers";
+import { lintManifest, lintThemeCss, type ThemeLintFinding } from "../../scripts/lib/themeLint.mjs";
 
 export type ThemeManifest = {
   schemaVersion: 1;
@@ -35,6 +36,8 @@ export type ThemeDescriptor = ThemeManifest & {
 
 export type LoadedTheme = ThemeDescriptor & {
   css: string;
+  /** Layout findings for user themes (see scripts/lib/themeLint.mjs); informational, the layout layer already protects the shell. */
+  warnings?: ThemeLintFinding[];
   assetUrls: Record<string, string>;
 };
 
@@ -130,11 +133,14 @@ export async function loadTheme(theme: ThemeDescriptor): Promise<LoadedTheme> {
 
   try {
     const loaded = await invoke<NativeUserTheme>("load_user_theme", { themeId: theme.id });
+    const warnings = [...lintManifest(loaded.manifest), ...lintThemeCss(loaded.css)];
+    if (warnings.length) console.warn(`Mochi theme "${loaded.manifest.id}" layout notes:\n` + warnings.map((finding) => `- ${finding.selector} ${finding.property}: ${finding.message}`).join("\n"));
     return {
       ...loaded.manifest,
       source: "user",
       css: loaded.css,
       assetUrls: loaded.assets,
+      warnings,
     };
   } catch {
     const fallback = builtinsById.get("mochi")!;
