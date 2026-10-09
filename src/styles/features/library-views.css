@@ -39,3 +39,25 @@
 @keyframes library-view-icon { from { opacity: 0; transform: rotate(-35deg) scale(.6); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .library-grid-view, .view-switcher-icon { animation: none; } }
 @media (max-width: 700px) { .view-switcher-label, .view-switcher-dots { display: none; } .library-grid-view[data-view="list"] .game-card-main { padding-right: 48px; } }
+
+/* Instance sub-entries (Minecraft): a quiet group under the game's card, one compact row per instance. */
+.tofu-entry-group { grid-column: span 3; align-content: start; align-self: start; display: grid; gap: 8px; padding: 10px 12px 12px; border: var(--mochi-border-width) solid var(--mochi-border); border-left: 3px solid var(--mochi-accent-strong); border-radius: var(--mochi-card-radius); background: color-mix(in srgb, var(--mochi-surface-raised) 55%, transparent); content-visibility: auto; contain-intrinsic-size: auto 120px; }
+.tofu-entry-title { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--mochi-text-muted); }
+.tofu-entry-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; max-height: 232px; overflow-y: auto; padding-right: 2px; scrollbar-width: thin; }
+.tofu-entry { position: relative; display: flex; align-items: center; min-width: 0; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-button-radius); background-color: var(--mochi-surface); overflow: hidden; transition: border-color var(--mochi-transition); }
+.tofu-entry:hover, .tofu-entry:focus-within { border-color: var(--mochi-card-hover-border); }
+.tofu-entry-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 6px 4px 6px 6px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.tofu-entry-art { flex: 0 0 38px; width: 38px; height: 38px; border-radius: var(--mochi-radius-sm, 6px); background-size: cover; background-position: center; --art-mark-size: 28cqw; }
+.tofu-entry-copy { display: grid; min-width: 0; gap: 1px; }
+.tofu-entry-copy strong { color: var(--mochi-text-strong); font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tofu-entry-copy small { color: var(--mochi-text-muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tofu-entry-play { flex: 0 0 auto; width: 30px; height: 30px; margin-right: 8px; display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer; background: var(--mochi-primary-background); color: var(--mochi-primary-color); }
+.tofu-entry-main:focus-visible, .tofu-entry-play:focus-visible { outline: 2px solid var(--mochi-focus-ring); outline-offset: -2px; }
+.library-grid-view[data-view="list"] .tofu-entry-group { grid-column: 1 / -1; margin-left: 28px; }
+.library-grid-view[data-view="large"] .tofu-entry-group { grid-column: span 2; }
+@media (max-width: 1000px) { .tofu-entry-group { grid-column: 1 / -1 !important; } }
+.library-grid-view[data-view="list"] .tofu-entry-list { grid-template-columns: minmax(0, 1fr); }
+.library-grid-view[data-view="compact"] .tofu-entry-list { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.library-grid-view[data-view="large"] .tofu-entry-list { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.library-grid-view[data-view="shelves"] .tofu-entry-group { flex: 0 0 min(300px, 80vw); scroll-snap-align: start; }
+.library-grid-view[data-view="shelves"] .tofu-entry-list { grid-template-columns: minmax(0, 1fr); }

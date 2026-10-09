@@ -6,6 +6,7 @@ import type { PlaytimeEntry } from "../lib/platform";
 import { isExtra, sanitizeFilter, sanitizeLibrary, matchesFilter, mostPlayedIds, smartFilters, sourceLabel, sourceOf, toggleInList, withTag, type FilterContext, type LibraryFilter, type SmartFilterId } from "../lib/library";
 import { placeholdersLast } from "../lib/fallbackArt";
 import { foldLegacyPlaytime } from "../lib/minecraftPiko";
+import { instanceTofus, visibleInstances } from "../lib/libraryInstances";
 import { copyInstanceRecords } from "../lib/mods/instances";
 import { useInstalledStatus } from "./useInstalledStatus";
 
@@ -69,7 +70,8 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
     const wanted = tagFilters.map((tag) => tag.toLowerCase());
     return library.filter((piko) => {
       if (wanted.length && !wanted.every((tag) => piko.tags?.some((item) => item.toLowerCase() === tag))) return false;
-      return !matches || matches(piko);
+      // Minecraft also matches when one of its instances (name, version, loader) does.
+      return !matches || matches(piko) || visibleInstances(piko, query, false).length > 0;
     });
   }, [library, deferredSearch, tagFilters]);
 
@@ -111,6 +113,19 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
       .map(([category, games]) => [category, [...placeholdersLast(games.filter((game) => game.favorite)), ...placeholdersLast(games.filter((game) => !game.favorite))]] as [string, Piko[]]);
   }, [visiblePikos, librarySort, playtimeById]);
 
+  /** Instance sub-entries per Piko id (Minecraft): all of them, or only the ones the search matches. */
+  const instancesByPiko = useMemo(() => {
+    const query = deferredSearch.trim();
+    const matches = query ? pikoSearchMatcher(query) : null;
+    const map = new Map<string, Tofu[]>();
+    visiblePikos.forEach((piko) => {
+      if (!instanceTofus(piko).length) return;
+      const list = visibleInstances(piko, query, !matches || matches(piko));
+      if (list.length) map.set(piko.id, list);
+    });
+    return map;
+  }, [visiblePikos, deferredSearch]);
+
   const continuePlaying = useMemo(() => {
     const byId = new Map(library.map((piko) => [piko.id, piko]));
     return foldLegacyPlaytime(playtime, library)
@@ -120,9 +135,10 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
       .map((entry) => ({ piko: byId.get(entry.gameId)!, entry }));
   }, [library, playtime]);
 
-  const selectPiko = useCallback((piko: Piko) => {
+  /** Selects a game and one of its Tofus (the first unless `tofuId` names another). */
+  const selectPiko = useCallback((piko: Piko, tofuId?: string) => {
     setSelectedPikoId(piko.id);
-    setSelectedTofuId(piko.tofus[0]?.id ?? "");
+    setSelectedTofuId(tofuId && piko.tofus.some((tofu) => tofu.id === tofuId) ? tofuId : piko.tofus[0]?.id ?? "");
   }, []);
 
   const updateGame = useCallback((gameId: string, changes: Partial<Piko>) =>
@@ -166,7 +182,7 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
 
   return {
     library, setLibrary, selectedPikoId, setSelectedPikoId, selectedTofuId, setSelectedTofuId, gameDetailsId, setGameDetailsId,
-    search, setSearch, librarySort, setLibrarySort, selectedPiko, selectedTofu, visiblePikos, extraPikos, groupedPikos, continuePlaying,
+    search, setSearch, librarySort, setLibrarySort, selectedPiko, selectedTofu, visiblePikos, extraPikos, groupedPikos, instancesByPiko, continuePlaying,
     selectPiko, updateGame, updateSelectedTofu, createTofu,
     filter, setFilter, tagFilters, setTagFilters, toggleTagFilter, filterCounts, installed, searchedPikos,
     toggleFavorite, setFavorites, setCollectionMembership, addTagToGames, removeGames,

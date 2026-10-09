@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { CheckSquare, ChevronDown, ChevronRight, Gamepad2, LayoutGrid, List, Maximize2, Play, Plus, Rows3, SlidersHorizontal, Settings, Grid3x3, X } from "lucide-react";
 import { BulkActionBar } from "../components/library/BulkActionBar";
 import { ConfirmDialog } from "../components/library/ConfirmDialog";
 import { CollectionManager } from "../components/library/CollectionManager";
 import { GameCard } from "../components/library/GameCard";
+import { TofuEntryCard } from "../components/library/TofuEntryCard";
 import { GameContextMenu } from "../components/library/GameContextMenu";
 import { LibraryFilterBar } from "../components/library/LibraryFilterBar";
 import { cloudStatusFor } from "../lib/cloudStatus";
@@ -55,6 +56,24 @@ export function LibraryView() {
 
   const { selectPiko, setGameDetailsId, toggleFavorite } = lib;
   const openGame = useCallback((piko: Piko) => { selectPiko(piko); setGameDetailsId(piko.id); }, [selectPiko, setGameDetailsId]);
+  const { launchGame } = actions;
+  const launchRef = useRef(launchGame);
+  launchRef.current = launchGame;
+  const openInstance = useCallback((piko: Piko, tofuId: string) => { selectPiko(piko, tofuId); setGameDetailsId(piko.id); }, [selectPiko, setGameDetailsId]);
+  const playInstance = useCallback((piko: Piko, tofuId: string) => { selectPiko(piko, tofuId); void launchRef.current(piko, { tofuId }); }, [selectPiko]);
+  /** The game card followed by its instance sub-entries (Minecraft), kept in one group so they flow together. */
+  const cardWithInstances = (piko: Piko) => {
+    const instances = lib.instancesByPiko.get(piko.id);
+    const card = <GameCard key={piko.id} piko={piko}
+      selected={selectedPiko.id === piko.id} running={sessions.isRunning(piko.id)} cloudStatus={cloudStatusFor(piko, cloudCtx)}
+      selecting={selecting} checked={checked.has(piko.id)}
+      onOpen={openGame} onToggleFavorite={toggleFavorite} onToggleChecked={toggleChecked} onMenu={openMenu} />;
+    if (!instances) return card;
+    return [card, <div className="tofu-entry-group" key={`${piko.id}:instances`} role="group" aria-label={`${piko.name} instances`}>
+      <span className="tofu-entry-title">{piko.name} instances · {instances.length}</span>
+      <div className="tofu-entry-list">{instances.map((tofu) => <TofuEntryCard key={tofu.id} piko={piko} tofu={tofu} onOpen={openInstance} onPlay={playInstance} />)}</div>
+    </div>];
+  };
   const toggleChecked = useCallback((gameId: string) => setChecked((current) => { const next = new Set(current); if (!next.delete(gameId)) next.add(gameId); return next; }), []);
   const openMenu = useCallback((gameId: string, x: number, y: number) => setMenu({ gameId, x, y }), []);
 
@@ -71,7 +90,7 @@ export function LibraryView() {
       canStop={Boolean(sessions.sessions.find((session) => session.gameId === details.id)?.canStop)}
       capabilities={platformCapabilities}
       onBack={() => lib.setGameDetailsId("")}
-      onPlay={() => { lib.selectPiko(details); void actions.launchGame(details); }}
+      onPlay={() => { const tofuId = selectedPiko.id === details.id ? selectedTofu.id : undefined; lib.selectPiko(details, tofuId); void actions.launchGame(details, { tofuId }); }}
       onStop={() => void actions.stopRunningGame(details)}
       onEdit={() => app.setEditingGameId(details.id)}
       onRemove={() => actions.removeGame(details)}
@@ -162,10 +181,7 @@ export function LibraryView() {
     <section className="library-grid-view" data-view={view} data-groups={lib.groupedPikos.length} key={view}>
       {lib.groupedPikos.map(([category, games]) => <div className="library-category" key={category}>
         <div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div>
-        <div className="game-card-grid">{games.map((piko) => <GameCard key={piko.id} piko={piko}
-          selected={selectedPiko.id === piko.id} running={sessions.isRunning(piko.id)} cloudStatus={cloudStatusFor(piko, cloudCtx)}
-          selecting={selecting} checked={checked.has(piko.id)}
-          onOpen={openGame} onToggleFavorite={toggleFavorite} onToggleChecked={toggleChecked} onMenu={openMenu} />)}</div>
+        <div className="game-card-grid">{games.map(cardWithInstances)}</div>
       </div>)}
     </section>
     {lib.extraPikos.length > 0 && <section className="library-extras" aria-label="Soundtracks and extras">
