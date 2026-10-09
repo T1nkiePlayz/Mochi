@@ -154,8 +154,11 @@ export function rateLimited(ip: string, now = Date.now()): boolean {
 export function resetRateLimit() { rateWindow.clear(); }
 
 function clientIp(req: Request): string {
-  const forwarded = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? "";
-  return forwarded.split(",")[0].trim() || "unknown";
+  // Supabase Edge Functions run behind Cloudflare, which supplies this edge-derived header.
+  // Never trust x-forwarded-for: callers can provide it themselves and rotate spoofed identities.
+  const edgeIp = req.headers.get("cf-connecting-ip")?.trim() ?? "";
+  // Missing trusted metadata shares one bucket rather than trusting caller-controlled input.
+  return edgeIp && /^[0-9a-fA-F:.]+$/.test(edgeIp) ? edgeIp : "unknown";
 }
 
 function json(body: unknown, status = 200) {
