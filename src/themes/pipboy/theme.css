@@ -83,3 +83,6 @@ progress { filter: hue-rotate(0deg); }
 .eyebrow, small, .section-label, .detail-label, .metadata-note, .breadcrumb, .category-count, .library-count, .library-sort, .credential-status,
 .game-card-copy small, .continue-copy small, .setting-row small, .form-fields label, .setup-description, .modal-description, .search-box input, kbd { font-size: 1.05rem !important; }
 .continue-copy strong, .setting-row strong, .nav-item, .sidebar-account strong { font-size: 1.25rem; }
+
+/* Generated covers: a single phosphor-green tint */
+:root { --mochi-art-hue: 128; --mochi-art-saturation: 70%; --mochi-art-lightness: 12%; --mochi-art-text: #5cff7a; }

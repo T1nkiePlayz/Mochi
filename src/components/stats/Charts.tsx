@@ -80,7 +80,7 @@ export function TopGames({ games, library, limit = 8 }: { games: Analysis["games
         return (
           <li key={game.gameId}>
             <span className="stat-rank" aria-hidden="true">{i + 1}</span>
-            {piko ? <GameArtwork className="stat-thumb" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} /> : <div className="stat-thumb" aria-hidden="true" />}
+            {piko ? <GameArtwork className="stat-thumb" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} name={piko.name} kind={piko.kind} sourceId={piko.sourceId} /> : <div className="stat-thumb" aria-hidden="true" />}
             <div className="stat-top-body">
               <div className="stat-top-line"><strong>{piko?.name ?? game.name}</strong><span>{formatDuration(game.seconds)}</span></div>
               <div className="stat-meter" aria-hidden="true"><i style={{ width: `${Math.max(3, (game.seconds / max) * 100)}%`, background: seriesVar(i) }} /></div>

@@ -65,3 +65,6 @@
 .notification-popover { border-radius: 24px; border: 3px solid #fff; box-shadow: 0 6px 0 #cfe6b2, 0 16px 30px rgba(106, 87, 68, .25); }
 .stop-button, .danger-outline { box-shadow: 0 4px 0 #f3c3be; border-color: #f3c3be; }
 ::selection { background: #5cc9a7; color: #fff; }
+
+/* Generated covers: soft pastels with dark lettering */
+:root { --mochi-art-saturation: 58%; --mochi-art-lightness: 72%; --mochi-art-text: #4a3b2a; }
