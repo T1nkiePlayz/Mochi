@@ -173,7 +173,7 @@ export function LibraryView() {
         {showExtras ? <ChevronDown size={14} /> : <ChevronRight size={14} />} Soundtracks &amp; extras ({lib.extraPikos.length})
       </button>
       {showExtras && <div className="game-card-grid" id="library-extras-grid">{lib.extraPikos.map((piko) => <GameCard key={piko.id} piko={piko}
-        selected={selectedPiko.id === piko.id} running={sessions.isRunning(piko.id)} synced={cloud.syncState === "synced"}
+        selected={selectedPiko.id === piko.id} running={sessions.isRunning(piko.id)} cloudStatus={cloudStatusFor(piko, cloudCtx)}
         selecting={selecting} checked={checked.has(piko.id)}
         onOpen={openGame} onToggleFavorite={toggleFavorite} onToggleChecked={toggleChecked} onMenu={openMenu} />)}</div>}
     </section>}
