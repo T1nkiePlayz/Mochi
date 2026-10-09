@@ -57,7 +57,7 @@ export function GameDetails({ game, synced, running, playtime, launchError, laun
   // Name the providers this game's details can come from instead of always crediting IGDB.
   const textSources = [game.igdbId ? "IGDB" : "", steamAppId !== null ? "Steam" : ""].filter(Boolean);
   const infoCredit = game.lockedFields?.includes("description") ? "Description written by you." : textSources.length ? `Details from ${textSources.join(" and ")}.` : "Details you added.";
-  const coverCredit = game.artworkSource ? (game.artworkSource === "custom" ? "Chosen by you" : imageSourceLabels[game.artworkSource]) : "";
+  const coverCredit = !game.artworkSource ? "" : game.artworkSource === "custom" ? "Chosen by you" : game.artworkSource === "icon" ? "Made from the app icon" : imageSourceLabels[game.artworkSource];
   const folder = game.installPath || (game.executablePath?.startsWith("/") ? game.executablePath : "");
   return <section className="game-details-page">
     <button type="button" className="text-button game-details-back" onClick={onBack}><ArrowLeft size={15}/> Back to library</button>
