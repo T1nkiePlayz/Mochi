@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { AlertTriangle, Gamepad2, RefreshCw, Rocket, Search } from "lucide-react";
 import { launcherArt, launcherIcon } from "../../lib/launcherArt";
 import minecraftGrassBlock from "../../assets/minecraft-grass-block.svg";
+import { ImportThumb } from "./ImportThumb";
 import { detectImportSources, scanImportGames, type DetectedImportSource, type ImportSourceId, type ImportedGame } from "../../lib/sources";
 
 // The "Minecraft instances" source tile shows the game logo rather than the Prism launcher mark.
@@ -316,7 +317,7 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
                       >
                         <span className="sgp-box" aria-hidden="true">{on ? "✓" : ""}</span>
                         <span className={"sgp-thumb" + (isLauncher ? " launcher" : "")} aria-hidden="true">
-                          {isLauncher ? <img src={launcherArt(game.launcherId)} alt="" loading="lazy" decoding="async" /> : <Gamepad2 size={16} />}
+                          {isLauncher ? <img src={launcherArt(game.launcherId)} alt="" loading="lazy" decoding="async" /> : <ImportThumb id={game.id} />}
                         </span>
                         <span className="sgp-game-copy"><strong>{game.name}</strong><small>{isLauncher ? "Game launcher" : game.installPath || "Installed game"}</small></span>
                         {isLauncher && <Rocket size={14} aria-hidden="true" className="sgp-launcher-mark" />}
