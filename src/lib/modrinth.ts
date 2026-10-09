@@ -34,6 +34,8 @@ export type ModrinthProjectDetails = ModrinthProject & {
 export type ModrinthProject = {
   project_id: string; slug: string; title: string; description: string; project_type: ModrinthProjectType;
   downloads: number; icon_url?: string; author?: string; latest_version?: string; categories?: string[]; loaders?: string[];
+  /** Minecraft versions the project supports (search hits). */
+  versions?: string[];
 };
 export type ModrinthDependency = { version_id?: string | null; project_id?: string | null; file_name?: string | null; dependency_type: "required" | "optional" | "incompatible" | "embedded"; };
 export type ModrinthFile = { hashes: { sha1?: string; sha512?: string }; url: string; filename: string; primary: boolean; size: number; file_type?: string | null; };
