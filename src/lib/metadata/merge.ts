@@ -27,6 +27,17 @@ export function planProviders(choice: MetadataChoice | "steam", ready: Readiness
   };
 }
 
+/** Adds the keyless Steam Store to a plan for Steam games, whatever "Metadata source" says (used for freshly imported games). */
+export function withSteam(plan: Plan, steamAppId: number | null): Plan {
+  if (steamAppId === null) return plan;
+  return { text: plan.text.includes("steam") ? plan.text : [...plan.text, "steam"], art: plan.art.includes("steam") ? plan.art : [...plan.art, "steam"] };
+}
+
+/** Games from an import that should get Steam Store metadata: Steam games (not launchers) with no metadata yet. */
+export function steamImportTargets(pikos: Piko[]): Piko[] {
+  return pikos.filter((piko) => piko.kind !== "launcher" && steamAppIdOf(piko) !== null && !piko.screenshots?.length && !piko.artworkUrl && piko.artworkSource !== "igdb" && piko.artworkSource !== "steam" && piko.artworkSource !== "steamgriddb");
+}
+
 type Sized = { width: number; height: number };
 
 /** Prefers an exact 600x900 grid, then the closest portrait (2:3) shape, then the first item. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyMetadata, cssUrl, planProviders } from "./merge";
+import { applyMetadata, cssUrl, planProviders, steamImportTargets, withSteam } from "./merge";
 import { MAX_ENTRIES, ProviderCache } from "./cache";
 
 describe("cssUrl", () => {
@@ -40,5 +40,26 @@ describe("planProviders", () => {
     expect(planProviders("steam", none, null)).toEqual({ text: [], art: [] });
     expect(planProviders("igdb", none, 440)).toEqual({ text: [], art: [] });
     expect(planProviders("steamgriddb", { igdb: false, steamgriddb: true }, null)).toEqual({ text: [], art: ["steamgriddb"] });
+  });
+});
+
+describe("withSteam", () => {
+  it("adds Steam to explicit-provider plans for Steam games only", () => {
+    expect(withSteam({ text: [], art: [] }, 440)).toEqual({ text: ["steam"], art: ["steam"] });
+    expect(withSteam({ text: ["igdb"], art: ["igdb"] }, 440)).toEqual({ text: ["igdb", "steam"], art: ["igdb", "steam"] });
+    expect(withSteam({ text: ["steam"], art: ["steam"] }, 440)).toEqual({ text: ["steam"], art: ["steam"] });
+    expect(withSteam({ text: [], art: [] }, null)).toEqual({ text: [], art: [] });
+  });
+});
+
+describe("steamImportTargets", () => {
+  const base = { description: "", accent: "", artwork: "", tofus: [] };
+  it("selects fresh Steam games, skipping launchers, non-Steam games and ones with metadata", () => {
+    const fresh = { ...base, id: "imported-steam-steam-440-1", name: "TF2", sourceId: "steam", executablePath: "steam://rungameid/440" };
+    const launcher = { ...fresh, id: "l", kind: "launcher" as const };
+    const other = { ...base, id: "x", name: "X", executablePath: "/bin/x" };
+    const done = { ...fresh, id: "d", artworkSource: "steam" as const };
+    const shots = { ...fresh, id: "s", screenshots: ["a"] };
+    expect(steamImportTargets([fresh, launcher, other, done, shots]).map((p) => p.id)).toEqual([fresh.id]);
   });
 });
