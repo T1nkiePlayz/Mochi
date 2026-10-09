@@ -180,8 +180,9 @@ export async function getDownloads(): Promise<DownloadEntry[]> {
 export async function setModFileEnabled(path: string, enabled: boolean): Promise<void> {
   await invoke("set_mod_file_enabled", { path, enabled });
 }
-export async function deleteModFile(path: string): Promise<void> {
-  await invoke("delete_mod_file", { path });
+/** Deletes a mod file; with `tofuId` the Tofu also forgets it (it no longer shows as installed). */
+export async function deleteModFile(path: string, tofuId?: string): Promise<void> {
+  await invoke("delete_mod_file", { path, tofuId: tofuId ?? null });
 }
 export async function applyModProfile(path: string, enabledFiles: string[]): Promise<void> {
   await invoke("apply_mod_profile", { path, enabledFiles });

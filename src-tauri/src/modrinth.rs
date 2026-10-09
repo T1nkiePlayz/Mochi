@@ -314,12 +314,11 @@ pub fn apply_mod_profile(path: String, enabled_files: Vec<String>) -> Result<(),
     first_error.map_or(Ok(()), Err)
 }
 
+/// Deletes a content file. With `tofu_id`, the Tofu's record of it goes too (unless the other on/off copy is still there).
 #[tauri::command(async)]
-pub fn delete_mod_file(path: String) -> Result<(), String> {
+pub fn delete_mod_file(path: String, tofu_id: Option<String>) -> Result<(), String> {
     let p = validate_content_path(&path)?;
-    // symlink_metadata so a dangling symlink can still be removed (`exists()` follows it and says "no").
-    if fs::symlink_metadata(&p).is_ok() { fs::remove_file(p).map_err(|e| format!("Unable to delete content: {e}"))?; }
-    Ok(())
+    crate::modinstance::delete_content_in(crate::modinstance::instances_root().as_deref(), tofu_id.as_deref().unwrap_or(""), &p)
 }
 
 #[tauri::command(async)]
@@ -337,7 +336,9 @@ pub async fn update_mod_file(
     path: String, url: String, filename: String, sha1: Option<String>, provider: Option<String>, tofu_id: Option<String>, record: Option<crate::modinstance::RecordInput>,
 ) -> Result<(), String> {
     use crate::downloads::Provider;
+    // The list may still show the name from before the file was switched on or off.
     let old = validate_content_path(&path)?;
+    let old = crate::modinstance::existing_variant(&old).ok_or("The file is no longer in the folder. Refresh the list and try again.")?;
     let provider = match provider.as_deref() { None | Some("modrinth") => Provider::Modrinth, Some("curseforge") => Provider::Curseforge, Some("nexus") => Provider::Nexus, Some(_) => return Err("Unknown mod source.".into()) };
     let parsed = crate::downloads::parse_download_url(provider, &url)?;
     let filename = validate_download_filename(&filename)?;
@@ -346,13 +347,14 @@ pub async fn update_mod_file(
     let target_name = if was_disabled { format!("{filename}.disabled") } else { filename.to_string() };
     let target = old.with_file_name(target_name);
     let old_base = crate::modinstance::base_name(old.file_name().and_then(|n| n.to_str()).unwrap_or_default()).to_string();
-    let dir = old.parent().map(Path::to_path_buf);
-    // A hard link keeps the old data alive even when the new file takes over the same name.
-    let saved = crate::modinstance::save_rollback_copy(&old).ok();
+    // A hard link keeps the old data alive even when the new file takes over the same name. The copy only replaces an
+    // earlier rollback copy once the download verified: a failed update must leave "Roll back" pointing at the right file.
+    let staged = crate::modinstance::stage_rollback_copy(&old).ok();
     let actual = crate::downloads::fetch_to_file(provider, parsed, &target, sha1.as_deref(), |_, _| {}).await?;
+    let saved = staged.map(|staged| staged.commit());
     if target != old { let _ = fs::remove_file(&old); }
-    if let (Some(tofu_id), Some(record), Some(dir)) = (tofu_id.filter(|id| !id.is_empty()), record, dir) {
-        let subdir = dir.file_name().and_then(|n| n.to_str()).filter(|n| crate::modinstance::CONTENT_SUBDIRS.contains(n)).unwrap_or("").to_string();
+    if let (Some(tofu_id), Some(record)) = (tofu_id.filter(|id| !id.is_empty()), record) {
+        let subdir = crate::modinstance::subdir_of(&old);
         let mut next = record.into_record(filename, &subdir, Some(actual));
         next.enabled = !was_disabled;
         if let Some(saved) = saved {
@@ -483,7 +485,7 @@ mod tests {
         {
             let link = dir.join("gone.jar");
             std::os::unix::fs::symlink(dir.join("missing-target"), &link).unwrap();
-            delete_mod_file(link.to_string_lossy().into_owned()).unwrap();
+            delete_mod_file(link.to_string_lossy().into_owned(), None).unwrap();
             assert!(fs::symlink_metadata(&link).is_err());
         }
         // A clash is reported but the rest of the profile is still applied.

@@ -15,3 +15,9 @@ export function restrictedReason(mod: { allowModDistribution?: boolean | null },
   if (!file.downloadUrl) return RESTRICTED_MESSAGE;
   return null;
 }
+
+/** Nexus file dates arrive as unix seconds (Mochi's edge function) or ISO text; records and update checks need ISO text. */
+export function nexusFileDate(value: string | number | null | undefined): string | undefined {
+  if (typeof value === "number") return Number.isFinite(value) && value > 0 ? new Date(value > 1e11 ? value : value * 1000).toISOString() : undefined;
+  return value && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : undefined;
+}

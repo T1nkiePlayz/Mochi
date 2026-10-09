@@ -4,6 +4,7 @@ import { startModDownload } from "../../lib/downloads";
 import { getNexusDownload, getNexusFiles, getNexusModDetail } from "../../lib/nexus";
 import { ensureTofuFolder } from "../../lib/mods/autoFolder";
 import { modSupportOf } from "../../lib/mods/gameSupport";
+import { nexusFileDate } from "../../lib/mods/helpers";
 import { nxmExpired, parseNxmLink, type NxmLink } from "../../lib/mods/nxm";
 import { contentFolder } from "../../lib/mods/targets";
 import { supabase } from "../../lib/supabase";
@@ -76,7 +77,7 @@ function NxmDialog({ url, onClose }: { url: string; onClose: () => void }) {
       await startModDownload({
         provider: "nexus", url: resolved.url, path: folder.path, subdir: folder.subdir, tofuId: target.id, tofuName: target.name, itemName: name,
         filename: resolved.fileName || file?.fileName || `nexus-${link.modId}-${link.fileId}.zip`, extract: target.extractArchives === true,
-        record: { source: "nexus", projectId: String(link.modId), fileId: String(link.fileId), version: file?.version, title: name, fileDate: file?.uploadedAt ? new Date(typeof file.uploadedAt === "number" ? file.uploadedAt * 1000 : file.uploadedAt).toISOString() : undefined },
+        record: { source: "nexus", projectId: String(link.modId), fileId: String(link.fileId), version: file?.version, title: name, fileDate: nexusFileDate(file?.uploadedAt) },
       });
       setState("done"); setMessage(`Downloading ${name} into ${target.name}. Progress is in Downloads.`);
     } catch (error) { setState("error"); setMessage(errorText(error)); }

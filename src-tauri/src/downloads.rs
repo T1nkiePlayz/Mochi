@@ -139,6 +139,17 @@ fn check_sha1(actual: &str, expected: &str) -> Result<(), String> {
     if actual.eq_ignore_ascii_case(expected) { Ok(()) } else { Err("Downloaded file failed its SHA-1 check and was discarded.".into()) }
 }
 
+/// Moves a fully written temp file into place, but only when its SHA-1 is the expected one (nothing is replaced otherwise).
+fn commit_download(temp: &Path, destination: &Path, actual: &str, expected: Option<&str>) -> Result<(), String> {
+    if let Some(expected) = expected { check_sha1(actual, expected)?; }
+    fs::rename(temp, destination).map_err(|e| format!("Unable to finalize downloaded file: {e}"))
+}
+
+/// Only a .zip is unpacked, and never into a resource-pack or shader folder (those packs are used as zips).
+fn should_extract(requested: bool, filename: &str, subdir: &str) -> bool {
+    requested && subdir.is_empty() && filename.to_ascii_lowercase().ends_with(".zip")
+}
+
 /// Removes the temp file when the download ends for any reason, including the task being aborted (cancel).
 struct TempFile(PathBuf);
 
@@ -179,8 +190,7 @@ pub(crate) async fn fetch_to_file(
         file.get_ref().sync_all().map_err(|e| format!("Unable to finalize downloaded file: {e}"))?;
         drop(file);
         let actual = hex(&hasher.finalize());
-        if let Some(expected) = expected_sha1 { check_sha1(&actual, expected)?; }
-        fs::rename(&temp, destination).map_err(|e| format!("Unable to finalize downloaded file: {e}"))?;
+        commit_download(&temp, destination, &actual, expected_sha1)?;
         Ok(actual)
     }.await;
     result
@@ -404,8 +414,8 @@ pub fn start(request: ModDownloadRequest) -> Result<String, String> {
     let subdir = request.subdir.as_deref().map(str::trim).unwrap_or("").to_string();
     let filename = validate_download_filename(&request.filename)?.to_string();
     let expected_sha1 = request.sha1.as_deref().filter(|v| !v.trim().is_empty()).map(normalize_sha1).transpose()?;
-    let extract = request.extract.unwrap_or(false);
-    if extract && !filename.to_ascii_lowercase().ends_with(".zip") { return Err("Only .zip archives can be extracted.".into()); }
+    // "Extract .zip downloads" is a Tofu-wide switch: it applies to zips of the main folder, and everything else is kept as downloaded.
+    let extract = should_extract(request.extract.unwrap_or(false), &filename, &subdir);
     let keep_archive = request.keep_archive.unwrap_or(false);
     fs::create_dir_all(&root).map_err(|e| format!("Unable to create Tofu folder: {e}"))?;
     remove_stale_temp_files(&root);
@@ -531,6 +541,40 @@ mod tests {
         assert!(!ok(Provider::Nexus, "https://www.nexusmods.com/a.zip"));
         assert!(!ok(Provider::Nexus, "https://user@premium-files.nexus-cdn.com/a.zip"));
         assert!(!ok(Provider::Nexus, "https://premium-files.nexus-cdn.com:8443/a.zip"));
+    }
+
+    #[test]
+    fn only_main_folder_zips_are_extracted() {
+        assert!(should_extract(true, "Pack.ZIP", ""));
+        assert!(!should_extract(false, "pack.zip", ""));
+        // Resource packs and shaders are used as zips; a .jar/.7z/.dll is never unpacked (and must not fail the download).
+        assert!(!should_extract(true, "faithful.zip", "resourcepacks"));
+        assert!(!should_extract(true, "bloom.zip", "shaderpacks"));
+        for name in ["mod.jar", "skyui.7z", "plugin.dll", "a.tmod"] { assert!(!should_extract(true, name, ""), "{name}"); }
+    }
+
+    #[test]
+    fn a_failed_sha1_check_replaces_nothing_and_leaves_no_temp_file() {
+        let dir = temp_dir("sha-fail");
+        let (destination, temp) = (dir.join("m.jar"), dir.join("m.jar.mochi-download-7"));
+        fs::write(&destination, b"installed version").unwrap();
+        fs::write(&temp, b"tampered").unwrap();
+        {
+            let _guard = TempFile(temp.clone());
+            let actual = hex(&Sha1::digest(b"tampered"));
+            assert!(commit_download(&temp, &destination, &actual, Some("0000000000000000000000000000000000000000")).unwrap_err().contains("SHA-1"));
+        }
+        assert_eq!(fs::read(&destination).unwrap(), b"installed version");
+        assert!(!temp.exists());
+        // A match (or no expected hash) installs the file; the guard then has nothing left to remove.
+        fs::write(&temp, b"good").unwrap();
+        {
+            let _guard = TempFile(temp.clone());
+            commit_download(&temp, &destination, &hex(&Sha1::digest(b"good")), Some(&hex(&Sha1::digest(b"good")))).unwrap();
+        }
+        assert_eq!(fs::read(&destination).unwrap(), b"good");
+        assert!(!temp.exists());
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]

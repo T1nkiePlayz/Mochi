@@ -53,7 +53,8 @@ export function InstalledModsPanel({ piko, tofu, folder, withUpdates, files: all
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const updates = useTofuUpdates(withUpdates ? tofu.id : undefined);
-  const updateByPath = useMemo(() => new Map((updates.check?.items ?? []).map((item) => [item.path, item])), [updates.check]);
+  // Keyed by file name without ".disabled": switching a mod on or off renames it, which must not hide its update.
+  const updateByName = useMemo(() => new Map((updates.check?.items ?? []).map((item) => [item.filename.replace(/\.disabled$/, ""), item])), [updates.check]);
 
   const visible = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -92,7 +93,7 @@ export function InstalledModsPanel({ piko, tofu, folder, withUpdates, files: all
     </div>}
     <ul className="imp-list">
       {visible.map((file) => {
-        const update = updateByPath.get(file.path);
+        const update = updateByName.get(file.filename.replace(/\.disabled$/, ""));
         const record = file.record;
         const title = record?.title || file.filename.replace(/\.disabled$/, "");
         return <li key={file.path} className={`imp-row ${file.enabled ? "" : "is-off"}`}>
@@ -106,11 +107,11 @@ export function InstalledModsPanel({ piko, tofu, folder, withUpdates, files: all
           </span>
           {!file.foreign && needsIdentification(file) && <button type="button" className="secondary-button imp-link" aria-label={`Identify ${title}`} title="Not identified yet: pick the mod on CurseForge, Modrinth or Nexus Mods" onClick={() => setLinking(file)}><Link2 size={13} /> Identify</button>}
           {update && <span className="imp-badge" role="status">Update available: {update.newVersion}</span>}
-          {update && update.apply.kind === "download" && <button type="button" className="secondary-button" disabled={busy || updates.updating.includes(file.path)} aria-label={`Update ${title}`} onClick={() => void run(() => applyUpdates(tofu, [update]), "Update failed.")}><ArrowUpCircle size={13} /> Update</button>}
+          {update && update.apply.kind === "download" && <button type="button" className="secondary-button" disabled={busy || updates.updating.includes(update.path)} aria-label={`Update ${title}`} onClick={() => void run(() => applyUpdates(tofu, [update]), "Update failed.")}><ArrowUpCircle size={13} /> Update</button>}
           {update && update.apply.kind === "manual" && <button type="button" className="secondary-button" aria-label={`Open ${title} on its site`} title={update.apply.reason} onClick={() => void openExternalUrl((update.apply as { pageUrl: string }).pageUrl).catch(() => undefined)}><ExternalLink size={13} /> Get update</button>}
           {record?.rollback && <button type="button" className="icon-button" aria-label={`Roll ${title} back to ${record.rollback.version || "the previous version"}`} title={`Roll back to ${record.rollback.version || "the previous version"}`} disabled={busy} onClick={() => void run(async () => { await rollbackModUpdate(tofu.id, folder.path, record.file, folder.subdir); onMessage(`Restored the earlier version of ${title}.`); }, "Unable to roll back.")}><RotateCcw size={14} /></button>}
           <button type="button" role="switch" aria-checked={file.enabled} className={`imp-switch ${file.enabled ? "on" : ""}`} aria-label={`${file.enabled ? "Disable" : "Enable"} ${title}`} title={file.enabled ? "Disable (kept, just not loaded)" : "Enable"} disabled={busy} onClick={() => void setEnabled([file], !file.enabled)}><Power size={14} /></button>
-          <button type="button" className="icon-button" aria-label={`Delete ${title}`} title="Delete" disabled={busy} onClick={() => void confirmAction({ title: "Delete mod?", message: `${file.filename.replace(/\.disabled$/, "")} will be removed from this game's mods folder.`, confirmLabel: "Delete", danger: true }).then((ok) => { if (ok) void run(() => deleteModFile(file.path), "Unable to delete the file."); })}><Trash2 size={14} /></button>
+          <button type="button" className="icon-button" aria-label={`Delete ${title}`} title="Delete" disabled={busy} onClick={() => void confirmAction({ title: "Delete mod?", message: `${file.filename.replace(/\.disabled$/, "")} will be removed from this game's mods folder.`, confirmLabel: "Delete", danger: true }).then((ok) => { if (ok) void run(() => deleteModFile(file.path, tofu.id), "Unable to delete the file."); })}><Trash2 size={14} /></button>
         </li>;
       })}
     </ul>

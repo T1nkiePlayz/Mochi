@@ -167,7 +167,7 @@ export async function getNexusModDetail(client: SupabaseClient, gameDomain: stri
   return invokeProviderFunction<NexusModDetail>(client, { action: "nexus-mod", gameDomain, modId });
 }
 
-export type NexusFile = { fileId: number; name: string; fileName: string; version?: string; category?: string; sizeKb?: number; uploadedAt?: string; primary?: boolean };
+export type NexusFile = { fileId: number; name: string; fileName: string; version?: string; category?: string; sizeKb?: number; /** Unix seconds from Mochi's edge function (0 when unknown). */ uploadedAt?: string | number; primary?: boolean };
 export async function getNexusFiles(client: SupabaseClient, gameDomain: string, modId: number): Promise<NexusFile[]> {
   const data = await invokeProviderFunction<{ files?: NexusFile[] }>(client, { action: "nexus-files", gameDomain, modId });
   return Array.isArray(data.files) ? data.files : [];
