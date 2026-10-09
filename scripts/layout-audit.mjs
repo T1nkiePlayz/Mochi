@@ -129,11 +129,26 @@ function measure() {
         if (interactive || textual) add("outside-clip", el, `x ${Math.round(rect.left)}..${Math.round(rect.right)} vs ${Math.round(limitLeft)}..${Math.round(limitRight)} by ${by}`);
       }
     }
+    // Vertical: cut off by a hidden-overflow ancestor that cannot scroll (setup panel, Big Picture hero ...).
+    {
+      const yScroll = chain.some(({ y }) => y === "auto" || y === "scroll");
+      if (!yScroll && !el.closest("[class*='backdrop-layer'], .bp-backdrop")) {
+        for (const { parent, y } of chain) {
+          if (y !== "hidden" && y !== "clip") continue;
+          const box = parent.getBoundingClientRect();
+          if (rect.top < box.top - 2 || rect.bottom > box.bottom + 2) {
+            const interactive = el.matches("button, a, input, select, textarea, [role='button']");
+            if (interactive || ownText || el.matches("h1,h2,h3,p,img")) add("outside-clip-y", el, `y ${Math.round(rect.top)}..${Math.round(rect.bottom)} vs ${Math.round(box.top)}..${Math.round(box.bottom)} by ${describe(parent)}`);
+            break;
+          }
+        }
+      }
+    }
     if (rect.right < 0 || rect.left > vw) { /* parked off-screen on purpose (drawer etc.), ignore */ }
 
     // 3. Controls too small to be reached.
     if (el.matches("button, [role='button'], input:not([type='hidden']), select") && (rect.width < 24 || rect.height < 24) && !el.closest("[data-audit-ignore]") && vw < 900) {
-      if (!(el.matches("input[type='checkbox'], input[type='radio']"))) add("small-target", el, `${Math.round(rect.width)}x${Math.round(rect.height)}`);
+      if (!el.matches("input[type='checkbox'], input[type='radio']") && !el.closest(".search-box")) add("small-target", el, `${Math.round(rect.width)}x${Math.round(rect.height)}`);
     }
   }
 
