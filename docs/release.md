@@ -12,6 +12,7 @@ The workflow `.github/workflows/release.yml`:
 2. **linux** builds AppImage, deb and rpm and uploads them with the updater manifest `latest.json`.
 3. **macos** (after linux, so `latest.json` is never written concurrently) builds one universal DMG (`--target universal-apple-darwin`, arm64 and Intel) and adds its updater entries. It then verifies the `.app`: bundle id, version, game category, the `mochi` URL scheme, `LSMinimumSystemVersion`, both architectures, `codesign --verify`, and when signed/notarized the Developer ID authority, `stapler` and `spctl`.
 4. **publish** writes `SHA256SUMS.txt`, GPG-signs it and every file (`.asc`), creates GitHub build attestations, uploads them and turns the draft into a release (pre-releases are not marked "latest"; the updater reads `releases/latest`).
+   It also publishes `install-hashes.json` and `install-hashes.json.sig` (see below).
 
 To rebuild a tag: Actions > Release Mochi > Run workflow > enter the tag. Existing assets of the same name are replaced by tauri-action.
 
@@ -37,3 +38,12 @@ Behaviour: all three signing secrets present = signed with your identity; plus t
 * CI green on the tagged commit.
 * Supabase redirect URLs include `mochi://auth/callback` and `mochi://auth/verify`.
 * After publishing: open the DMG on a Mac, run the Gatekeeper steps if unsigned, test a `mochi://` link and Check for updates.
+
+## Self-install hash manifest
+
+The app verifies a freshly opened build against `install-hashes.json` (from the release of its own version) before replacing the installed copy.
+
+- The `macos` job uploads `install-hash-macos.txt`: the SHA-256 of `Mochi.app/Contents/MacOS/mochi` (the final signed universal executable that went into the DMG).
+- The `publish` job builds `install-hashes.json` (`version`, `linux` = every `.AppImage`, `macos`) and signs it with `tauri signer sign`, using the same `TAURI_SIGNING_PRIVATE_KEY` / `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secrets as the updater. The app checks `install-hashes.json.sig` against `plugins.updater.pubkey` in `tauri.conf.json`.
+- Both files also get GPG `.asc` signatures. They are not part of `SHA256SUMS.txt`.
+- Without `TAURI_SIGNING_PRIVATE_KEY` the job warns and skips the manifest; the release still publishes and the app asks before replacing an installed copy.
