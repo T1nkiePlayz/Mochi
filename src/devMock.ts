@@ -4,6 +4,7 @@
  */
 import { installModsMock } from "./devModsMock";
 import { instanceHandlers } from "./devInstancesMock";
+import { saveHandlers } from "./devSavesMock";
 type Handler = (args: Record<string, unknown>) => unknown;
 
 
@@ -63,6 +64,7 @@ function mockSteamAchievements(appid: number) {
 }
 const handlers: Record<string, Handler> = {
   ...instanceHandlers,
+  ...saveHandlers,
   get_steam_achievements: ({ appid }) => mockSteamAchievements(Number(appid)),
   clear_steam_achievements_cache: () => undefined,
   clear_steam_store_cache: () => undefined,

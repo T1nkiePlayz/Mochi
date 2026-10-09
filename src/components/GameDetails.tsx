@@ -14,6 +14,7 @@ import { TagEditor } from "./library/TagEditor";
 import { useDismiss } from "./library/useDismiss";
 import { SteamAchievements } from "./SteamAchievements";
 import { GameLogsButton } from "./GameLogs";
+import { SaveBackupsButton } from "./SaveBackups";
 import { steamAppIdOf } from "../lib/metadata/merge";
 import { ScreenshotGallery, singleCredit } from "./details/ScreenshotGallery";
 import { canPlayHlsNatively, pickTrailer } from "../lib/trailer";
@@ -75,6 +76,7 @@ export function GameDetails({ game, cloudStatus, running, playtime, launchError,
         </div>
         <button type="button" className="secondary-button" onClick={onEdit}><Pencil size={14}/> Edit</button>
         <GameLogsButton game={game} />
+        <SaveBackupsButton game={game} />
         {folder && <button type="button" className="secondary-button" onClick={onOpenFolder}><FolderOpen size={14}/> Open folder</button>}
         {capabilities?.supportsShortcuts && <button type="button" className="secondary-button" onClick={onShortcut}>Add to app menu</button>}
         <button type="button" className="secondary-button danger-outline" onClick={onRemove}><Trash2 size={14}/> Remove</button>

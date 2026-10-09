@@ -36,5 +36,5 @@ export function useGameSessions() {
     return () => { disposed = true; unlisten?.(); };
   }, [refresh]);
 
-  return { sessions, refresh, isRunning };
+  return { sessions, refresh, isRunning, running };
 }
