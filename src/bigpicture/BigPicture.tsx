@@ -94,10 +94,10 @@ export default function BigPicture() {
     return () => window.clearTimeout(timer);
   }, [backdropId]);
 
-  const play = useCallback((piko: Piko) => {
+  const play = useCallback((piko: Piko, tofuId?: string) => {
     if (sessions.isRunning(piko.id)) return;
     playSound("launch");
-    void actions.launchGame(piko, { skipConfirm: true });
+    void actions.launchGame(piko, { skipConfirm: true, tofuId });
   }, [actions, sessions]);
   const openGame = useCallback((piko: Piko) => { lastCard.current = piko.id; setPreview(""); setGameId(piko.id); }, []);
   const focusCard = useCallback((piko: Piko) => { lastCard.current = piko.id; setFocusId(piko.id); }, []);
@@ -191,7 +191,7 @@ export default function BigPicture() {
     <main className="bp-stage bp-scroll" data-scroll-default>
       {game
         ? <GamePage piko={game} entry={entries.get(game.id)} running={sessions.isRunning(game.id)} busy={actions.isLaunching}
-            onPlay={() => play(game)} onStop={() => void actions.stopRunningGame(game)} onFavorite={() => toggleFavorite(game.id)} onPreview={setPreview} />
+            onPlay={(tofuId) => play(game, tofuId)} onStop={() => void actions.stopRunningGame(game)} onFavorite={() => toggleFavorite(game.id)} onPreview={setPreview} />
         : <Home hero={hero} entryFor={(id) => entries.get(id)} shelves={shelves} query={query} isRunning={sessions.isRunning} grid={display.layout === "grid" || Boolean(query)}
             onOpen={openGame} onPlay={play} onFocusCard={focusCard} onExit={() => leave()} />}
     </main>
