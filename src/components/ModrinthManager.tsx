@@ -25,6 +25,7 @@ import { MINECRAFT_CLASS, minecraftSourceFor, resolveSources } from "../lib/mods
 import { CF_MINECRAFT_ID } from "../lib/curseforge";
 import { ALL_LOADERS, loaderLabels, tofuTarget } from "../lib/mods/compat";
 import { useApp } from "../state/AppContext";
+import { confirmAction } from "../lib/confirm";
 import { ensureChecked, updateCount, useTofuUpdates } from "../state/modUpdates";
 import type { ModProfile, Piko, Tofu } from "../models";
 
@@ -110,8 +111,10 @@ export function ModrinthManager({ piko, tofu, onUpdate }: Props) {
     setBusy(false);
   };
   const updateProfile = (profile: ModProfile) => onUpdate({ profiles: profiles.map((item) => item.id === profile.id ? { ...item, files: enabledNames() } : item) });
-  const deleteProfile = (profile: ModProfile) =>
+  const deleteProfile = async (profile: ModProfile) => {
+    if (!await confirmAction({ title: "Delete profile?", message: `The “${profile.name}” profile will be removed. Your installed mods and files are not touched.`, confirmLabel: "Delete", danger: true })) return;
     onUpdate({ profiles: profiles.filter((item) => item.id !== profile.id), activeProfileId: tofu.activeProfileId === profile.id ? undefined : tofu.activeProfileId });
+  };
 
   const isSearchTab = tab === "mod" || tab === "resourcepack" || tab === "shader";
   const effective = isSearchTab ? minecraftSourceFor(tab, provider, behavior.modSources) : null;
@@ -152,7 +155,7 @@ export function ModrinthManager({ piko, tofu, onUpdate }: Props) {
       {!tofu.path ? <p className="muted">Choose a Tofu folder to create mod profiles.</p> : <>
         <p className="muted">A profile remembers which mods are enabled. Switch profiles to enable exactly that set and disable the rest. Nothing is deleted.</p>
         <div className="profile-create"><input className="compact-input" value={profileName} onChange={(e) => setProfileName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") saveProfile(); }} placeholder="Profile name" aria-label="Profile name" maxLength={60} /><button type="button" className="secondary-button" onClick={saveProfile} disabled={!profileName.trim()}><Save size={13}/> Save current mods</button></div>
-        <div className="profile-list">{profiles.map((profile) => <div className={"profile-row " + (tofu.activeProfileId === profile.id ? "active" : "")} key={profile.id}><span><strong>{profile.name}</strong><small>{profile.files.length} mod{profile.files.length === 1 ? "" : "s"} enabled{tofu.activeProfileId === profile.id ? " · Active" : ""}</small></span><button type="button" className="secondary-button" disabled={busy} onClick={() => void applyProfile(profile)}>Apply</button><button type="button" className="secondary-button" onClick={() => updateProfile(profile)} title="Replace with the currently enabled mods">Update</button><button type="button" className="icon-button" aria-label={`Delete profile ${profile.name}`} onClick={() => deleteProfile(profile)}><Trash2 size={14}/></button></div>)}{!profiles.length && <p className="muted">No profiles yet.</p>}</div>
+        <div className="profile-list">{profiles.map((profile) => <div className={"profile-row " + (tofu.activeProfileId === profile.id ? "active" : "")} key={profile.id}><span><strong>{profile.name}</strong><small>{profile.files.length} mod{profile.files.length === 1 ? "" : "s"} enabled{tofu.activeProfileId === profile.id ? " · Active" : ""}</small></span><button type="button" className="secondary-button" disabled={busy} onClick={() => void applyProfile(profile)}>Apply</button><button type="button" className="secondary-button" onClick={() => updateProfile(profile)} title="Replace with the currently enabled mods">Update</button><button type="button" className="icon-button" aria-label={`Delete profile ${profile.name}`} onClick={() => void deleteProfile(profile)}><Trash2 size={14}/></button></div>)}{!profiles.length && <p className="muted">No profiles yet.</p>}</div>
       </>}
     </div> : <UpdatesPanel tofu={tofu} piko={piko} onRefresh={refreshInstalled} />}
     {folderOpen && <ModFolderModal piko={piko} tofu={tofu} onUpdate={onUpdate} onClose={() => setFolderOpen(false)} />}

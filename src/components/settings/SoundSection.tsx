@@ -7,6 +7,7 @@ import { loadPack, play, unlockAudio } from "../../lib/sound/engine";
 import { announceSoundPacksChanged, exportSoundPack, importSoundPack, removeSoundPack, type SoundPackInfo } from "../../lib/sound/packs";
 import { resolveSoundPack, type ResolvedPack } from "../../lib/sound/resolve";
 import { useSoundPacks } from "../../lib/sound/useSoundPacks";
+import { confirmAction } from "../../lib/confirm";
 import { formatBytes } from "../../lib/format";
 import { SettingsGroup, ToggleRow } from "./Section";
 
@@ -20,23 +21,16 @@ const packName = (pack: ResolvedPack) => pack.installed?.name ?? BUILTIN_PACKS.f
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 function PackRow({ pack, onExport, onRemove }: { pack: SoundPackInfo; onExport: () => void; onRemove: () => void }) {
-  const [confirming, setConfirming] = useState(false);
   return <li className="sound-pack">
     <span className="sound-pack-info">
       <strong>{pack.name}</strong>
       <small>{[pack.author && `by ${pack.author}`, `v${pack.version}`, `${pack.events.length} of ${SOUND_EVENTS.length} sounds`, formatBytes(pack.sizeBytes)].filter(Boolean).join(" · ")}</small>
       {pack.description && <small>{pack.description}</small>}
     </span>
-    {confirming
-      ? <span className="sound-pack-confirm" role="group" aria-label={`Remove ${pack.name}?`}>
-          <span>Remove “{pack.name}” and its {pack.events.length} sound files from Mochi?</span>
-          <button type="button" className="secondary-button danger-outline" autoFocus onClick={() => { setConfirming(false); onRemove(); }}>Remove</button>
-          <button type="button" className="secondary-button" onClick={() => setConfirming(false)}>Cancel</button>
-        </span>
-      : <span className="sound-pack-actions">
-          <button type="button" className="secondary-button" onClick={onExport}><Download size={15} aria-hidden="true" /> Export</button>
-          <button type="button" className="secondary-button danger-outline" aria-label={`Remove ${pack.name}`} onClick={() => setConfirming(true)}><Trash2 size={15} aria-hidden="true" /> Remove</button>
-        </span>}
+    <span className="sound-pack-actions">
+      <button type="button" className="secondary-button" onClick={onExport}><Download size={15} aria-hidden="true" /> Export</button>
+      <button type="button" className="secondary-button danger-outline" aria-label={`Remove ${pack.name}`} onClick={() => void confirmAction({ title: "Remove sound pack?", message: `${pack.name} will be deleted. Themes using it fall back to the Mochi sounds.`, confirmLabel: "Remove", danger: true }).then((ok) => ok && onRemove())}><Trash2 size={15} aria-hidden="true" /> Remove</button>
+    </span>
   </li>;
 }
 

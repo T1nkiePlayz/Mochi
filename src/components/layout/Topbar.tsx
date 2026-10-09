@@ -4,6 +4,7 @@ import { MochiIcon } from "../MochiIcon";
 import { useApp } from "../../state/AppContext";
 import { BigPictureButton } from "../../bigpicture/EntryButton";
 import { navLabel } from "../../lib/nav";
+import { confirmAction } from "../../lib/confirm";
 import { useDismiss } from "../ui/useDismiss";
 
 export function Topbar() {
@@ -36,7 +37,7 @@ export function Topbar() {
           <MochiIcon name="notifications" fallback={Bell} size={17} />{n.notifications.length > 0 && <span className="notification-dot" />}
         </button>
         {n.showNotifications && <div className="notification-popover" role="dialog" aria-label="Notifications">
-          <div className="notification-heading"><strong>Notifications</strong>{n.notifications.length > 0 && <button type="button" onClick={() => n.setNotifications([])}>Clear</button>}</div>
+          <div className="notification-heading"><strong>Notifications</strong>{n.notifications.length > 0 && <button type="button" onClick={() => void confirmAction({ title: "Clear all notifications?", message: `Removes ${n.notifications.length} notification${n.notifications.length === 1 ? "" : "s"} from the list.`, confirmLabel: "Clear" }).then((ok) => ok && n.setNotifications([]))}>Clear</button>}</div>
           {n.notifications.length ? n.notifications.map((item) => <div className="notification-item" key={item.id}><strong>{item.title}</strong><span>{item.message}</span>{item.progress && <progress max={item.progress.total} value={item.progress.value} />}</div>) : <div className="notification-empty">You’re all caught up.</div>}
         </div>}
       </div>}
