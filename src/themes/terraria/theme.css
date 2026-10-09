@@ -51,5 +51,5 @@
 .setup-progress span.active { background: #ffd54a; }
 .download-progress { border-radius: 4px; background: #161c52; border: 2px solid #0e1236; }
 .download-progress > span { background: linear-gradient(180deg, #8ff08a, #3fa63a); }
-.danger-outline, .stop-button { background: linear-gradient(180deg, #ff8a8a, #d94545); color: #fff; border-color: #0e1236; text-shadow: 1px 1px 0 #000; }
+.danger-outline, .stop-button { background: linear-gradient(180deg, #c93a3a, #8f1f1f); color: #fff; border-color: #0e1236; text-shadow: 1px 1px 0 #000; }
 ::selection { background: #ffd54a; color: #33260a; }

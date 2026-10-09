@@ -56,6 +56,7 @@
     "transition": "90ms linear"
   },
   "components": {
+    "dangerColor": "#ff9a8c",
     "buttonHeight": "36px",
     "borderWidth": "2px",
     "buttonWeight": "700",

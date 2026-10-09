@@ -18,6 +18,10 @@ export const CHECKS = [
   ["button", "button-color", "button-background", 4.5], ["button", "button-color", "button-hover-background", 4.5],
   ["primary", "primary-color", "primary-background", 4.5], ["primary", "primary-color", "primary-hover-background", 4.5],
   ["input", "text", "input-background", 4.5],
+  // Destructive buttons (Remove, Stop, Delete): themes repaint these freely, so each is probed from theme.css.
+  ["danger-button", "danger-color", "danger-background", 4.5], ["danger-button-hover", "danger-color", "danger-background", 4.5],
+  ["danger-text", "danger-color", "modal-background", 4.5], ["danger-text", "danger-color", "surface", 4.5],
+  ["stop-button", "danger-color", "danger-background", 4.5], ["stop-button-hover", "danger-color", "danger-background", 4.5],
   ["nav-active", "text-strong", "nav-active-background", 4.5],
   ["status", "success", "surface", 3], ["status", "warning", "surface", 3], ["status", "danger", "surface", 3],
   ["focus-ring", "accent-strong", "background", 3], ["focus-ring", "accent-strong", "surface", 3],
@@ -134,6 +138,10 @@ const RULE_PROBES = {
   "button:button-hover-background": ".secondary-button:hover",
   "primary:primary-background": ".play-button",
   "primary:primary-hover-background": ".play-button:hover",
+  "danger-button:danger-background": ".danger-outline",
+  "danger-button-hover:danger-background": [".danger-outline:hover", ".danger-outline"],
+  "stop-button:danger-background": ".stop-button",
+  "stop-button-hover:danger-background": [".stop-button:hover", ".stop-button"],
 };
 
 const composite = (top, base) => {
@@ -175,17 +183,18 @@ export function checkContrast(manifest, defaultsCss, themeCss) {
   };
   for (const [id, fgName, bgName, min, level = "error"] of CHECKS) {
     let fgs = colorsOf(tokens, fgName); let bgs = colorsOf(tokens, bgName);
-    const probe = RULE_PROBES[`${id}:${bgName}`];
-    if (probe) {
-      const color = ruleValue(themeCss, probe, ["color"]);
-      const background = ruleValue(themeCss, probe, ["background", "background-color"]);
+    const probes = [RULE_PROBES[`${id}:${bgName}`]].flat().filter(Boolean);
+    if (probes.length) {
+      const first = (props) => probes.map((probe) => ruleValue(themeCss, probe, props)).find(Boolean) ?? null;
+      const color = first(["color"]);
+      const background = first(["background", "background-color"]);
       if (color) fgs = colorsOfValue(tokens, color) ?? fgs;
       if (background) bgs = colorsOfValue(tokens, background) ?? bgs;
     }
     if (!fgs || !bgs) continue;
     let worst = Infinity; let worstBg = null; let worstFg = null;
     // Translucent backgrounds are painted over the page colour (and nav/transparent ones over the sidebar).
-    const underlay = bgName === "nav-active-background" || bgName.startsWith("button") || bgName.startsWith("primary") || bgName === "input-background"
+    const underlay = bgName === "nav-active-background" || bgName.startsWith("button") || bgName.startsWith("primary") || bgName === "danger-background" || bgName === "input-background"
       ? composite(colorsOf(tokens, "surface")[0], [pageBase[0], pageBase[1], pageBase[2], 1]) : baseOf(bgName);
     for (const bg of bgs) {
       const solid = composite(bg, underlay);

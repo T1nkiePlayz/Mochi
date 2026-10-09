@@ -56,6 +56,7 @@
     "transition": "200ms ease"
   },
   "components": {
+    "dangerColor": "#ff8095",
     "buttonHeight": "38px",
     "buttonWeight": "600",
     "buttonTransform": "uppercase",
