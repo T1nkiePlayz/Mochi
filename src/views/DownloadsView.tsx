@@ -6,6 +6,7 @@ import { getUpdateState, updateCount, useUpdateVersion } from "../state/modUpdat
 import { cancelModDownload, clearFinishedDownloads } from "../lib/downloads";
 import { openPath } from "../lib/platform";
 import { useApp } from "../state/AppContext";
+import { confirmAction } from "../lib/confirm";
 
 export function DownloadsView() {
   const { downloads, lib, setActiveNav } = useApp();
@@ -16,6 +17,11 @@ export function DownloadsView() {
   const [error, setError] = useState("");
   const groups = groupDownloads(downloads);
   const report = (reason: unknown) => setError(reason instanceof Error ? reason.message : typeof reason === "string" ? reason : "That did not work.");
+  const clearFinished = async () => {
+    const count = downloads.filter((entry) => entry.status !== "downloading").length;
+    if (!count || !await confirmAction({ title: "Clear finished downloads?", message: `Removes ${count} finished download${count === 1 ? "" : "s"} from the list. Downloaded files stay on disk.`, confirmLabel: "Clear" })) return;
+    await clearFinishedDownloads().catch(report);
+  };
   return <section className="downloads-page">
     <div className="downloads-intro">
       <p className="eyebrow">Activity</p><h2>Downloads</h2>
@@ -26,7 +32,7 @@ export function DownloadsView() {
       <div className="download-group-heading"><strong>Mod updates</strong><button type="button" className="text-button" onClick={() => setActiveNav("Installed")}>Open Mods &amp; Content</button></div>
       <ul className="download-update-list">{updating.map(({ piko, tofu, state }) => <li key={tofu.id}><span>{piko.name}: {tofu.name}</span><small>{state.updating.length ? `Updating ${state.updating.length}…` : `${updateCount(state)} update${updateCount(state) === 1 ? "" : "s"} available`}</small></li>)}</ul>
     </section>}
-    {hasFinished(downloads) && <div className="download-toolbar"><button type="button" className="secondary-button" onClick={() => void clearFinishedDownloads().catch(report)}><Trash2 size={13} /> Clear finished</button></div>}
+    {hasFinished(downloads) && <div className="download-toolbar"><button type="button" className="secondary-button" onClick={() => void clearFinished()}><Trash2 size={13} /> Clear finished</button></div>}
     {!downloads.length ? <div className="download-empty"><div className="empty-icon"><MochiIcon name="downloads" fallback={Download} size={22} /></div><h3>No active downloads</h3><p>Nothing is downloading right now.</p></div> : (
       <div className="download-groups">
         {groups.map((group) => (
