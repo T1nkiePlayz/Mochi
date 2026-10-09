@@ -1,8 +1,16 @@
-import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 
-const MAX_ENTRIES = 150; // each entry is a ~100 kB data URL
+const MAX_ENTRIES = 400; // entries are short asset URLs; the webview keeps the decoded images
 const values = new Map<string, string>();
 const inflight = new Map<string, Promise<string | null>>();
+
+type ArtworkFile = { path: string; version: number };
+
+/** Short asset-protocol URL for a cached cover; `?v=` (file mtime) makes a replaced cover reload. Data URLs (browser dev mock) pass through. */
+const artworkUrl = (file: ArtworkFile | null): string | null => {
+  if (!file) return null;
+  return file.path.startsWith("data:") ? file.path : `${convertFileSrc(file.path)}?v=${file.version}`;
+};
 
 /** The cached cover for a game, if it was already loaded this session (no native call). */
 export const peekArtwork = (cacheKey: string): string | undefined => {
@@ -17,7 +25,8 @@ export function loadArtwork(cacheKey: string): Promise<string | null> {
   if (known !== undefined) return Promise.resolve(known);
   let pending = inflight.get(cacheKey);
   if (!pending) {
-    pending = invoke<string | null>("get_cached_game_artwork", { cacheKey })
+    pending = invoke<ArtworkFile | null>("get_cached_game_artwork_path", { cacheKey })
+      .then(artworkUrl)
       .then((value) => {
         if (inflight.get(cacheKey) === pending && value) {
           values.set(cacheKey, value);
