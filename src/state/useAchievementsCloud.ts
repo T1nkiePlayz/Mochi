@@ -58,7 +58,17 @@ export function useAchievementsCloudSync() {
       console.warn("Mochi achievements cloud sync failed", error);
       setStatus({ state: "error", message: describe(error) });
     };
-    const push = async () => {
+    // Merges the cloud row into the local copy first, so another device's newer unlocks are kept instead of overwritten.
+    const pullMerge = async () => {
+      const remote = await pullCloudAchievements(client, userId);
+      if (cancelled || !remote) return;
+      lastPushed = JSON.stringify(remote);
+      const local = readAchievements();
+      const merged = mergeAchievements(local, remote);
+      if (JSON.stringify(merged) !== JSON.stringify(local)) writeAchievements(merged);
+    };
+    const push = async (pull: boolean) => {
+      if (pull) { await pullMerge(); if (cancelled) return; }
       const payload = toCloudAchievements(readAchievements());
       const json = JSON.stringify(payload);
       if (json === lastPushed) { setStatus({ state: "synced", at: Date.now() }); return; }
@@ -68,21 +78,24 @@ export function useAchievementsCloudSync() {
       lastPushed = json;
       setStatus({ state: "synced", at: Date.now() });
     };
-    const onChange = () => { window.clearTimeout(timer); timer = window.setTimeout(() => void push().catch(fail), PUSH_DELAY_MS); };
+    let busy = false;
+    let again = false;
+    // One sync at a time; changes made while one runs (including the merge's own write) are folded into a single follow-up.
+    const run = async () => {
+      if (busy) { again = true; return; }
+      busy = true;
+      try { do { again = false; await push(true); } while (again && !cancelled); }
+      catch (error) { fail(error); }
+      finally { busy = false; }
+    };
+    const onChange = () => { window.clearTimeout(timer); timer = window.setTimeout(() => void run(), PUSH_DELAY_MS); };
+    // Coming back to Mochi picks up unlocks made on another device meanwhile.
+    const onFocus = () => { if (!busy) onChange(); };
     window.addEventListener(ACHIEVEMENTS_CHANGED, onChange);
+    window.addEventListener("focus", onFocus);
     setStatus({ state: "syncing" });
-    void (async () => {
-      const remote = await pullCloudAchievements(client, userId);
-      if (cancelled) return;
-      if (remote) {
-        lastPushed = JSON.stringify(remote);
-        const local = readAchievements();
-        const merged = mergeAchievements(local, remote);
-        if (JSON.stringify(merged) !== JSON.stringify(local)) writeAchievements(merged);
-      }
-      await push();
-    })().catch(fail);
-    return () => { cancelled = true; window.clearTimeout(timer); window.removeEventListener(ACHIEVEMENTS_CHANGED, onChange); };
+    void run();
+    return () => { cancelled = true; window.clearTimeout(timer); window.removeEventListener(ACHIEVEMENTS_CHANGED, onChange); window.removeEventListener("focus", onFocus); };
   }, [active, available, userId]);
 }
 
