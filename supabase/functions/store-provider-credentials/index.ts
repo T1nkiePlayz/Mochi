@@ -20,7 +20,9 @@ type Body =
   | { action: "nexus-mod"; gameDomain: string; modId: number }
   | { action: "nexus-files"; gameDomain: string; modId: number }
   | { action: "nexus-download"; gameDomain: string; modId: number; fileId: number; key?: string; expires?: number | string }
+  | { action: "nexus-md5"; gameDomain: string; md5: string }
   | { action: "igdb-search"; query: string; limit?: number }
+  | { action: "igdb-company"; slug?: string; name?: string }
   | { action: "sgdb-search"; query: string }
   | {
     action: "sgdb-assets"; gameId?: number; steamAppId?: number; kinds?: SgdbKind[]; dimensions?: string[]; styles?: string[];
@@ -30,7 +32,7 @@ type Body =
 type IgdbCredential = { clientId: string; clientSecret: string };
 
 const pool = new Pool(Deno.env.get("SUPABASE_DB_URL")!, 1, true);
-const ACTIONS = new Set(["set", "status", "delete", "nexus-games", "nexus-mods", "nexus-status", "nexus-mod", "nexus-files", "nexus-download", "igdb-search", "sgdb-search", "sgdb-assets"]);
+const ACTIONS = new Set(["set", "status", "delete", "nexus-games", "nexus-mods", "nexus-status", "nexus-mod", "nexus-files", "nexus-download", "nexus-md5", "igdb-search", "igdb-company", "sgdb-search", "sgdb-assets"]);
 const SGDB_API = "https://www.steamgriddb.com/api/v2";
 const SGDB_KINDS = new Set<SgdbKind>(["grids", "heroes", "logos", "icons"]);
 const MAX_BODY_BYTES = 16 * 1024;
@@ -158,7 +160,7 @@ async function igdbAccessToken(credentials: IgdbCredential): Promise<string> {
   return token.access_token;
 }
 
-async function searchIgdb(userId: string, query: string, limit: number) {
+async function igdbCredentials(userId: string): Promise<IgdbCredential> {
   const raw = await getStoredSecret(userId, "igdb");
   if (!raw) throw new Error("IGDB credentials are not configured for this Mochi account.");
 
@@ -171,10 +173,16 @@ async function searchIgdb(userId: string, query: string, limit: number) {
   if (!credentials.clientId?.trim() || !credentials.clientSecret?.trim()) {
     throw new Error("Both the IGDB Client ID and Client Secret are required.");
   }
+  return credentials;
+}
 
+/** Escapes a value for use inside an IGDB Apicalypse string literal. */
+const igdbString = (value: string) => value.trim().replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+
+async function igdbPost(userId: string, endpoint: "games" | "companies", query: string): Promise<unknown> {
+  const credentials = await igdbCredentials(userId);
   const accessToken = await igdbAccessToken(credentials);
-  const escapedQuery = query.trim().replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-  const upstream = await fetch("https://api.igdb.com/v4/games", {
+  const upstream = await fetch(`https://api.igdb.com/v4/${endpoint}`, {
     method: "POST",
     headers: {
       "Client-ID": credentials.clientId.trim(),
@@ -182,13 +190,53 @@ async function searchIgdb(userId: string, query: string, limit: number) {
       "Content-Type": "text/plain",
       Accept: "application/json",
     },
-  body: `search "${escapedQuery}"; fields name,summary,cover.url,artworks.url,screenshots.url,videos.name,videos.video_id,genres.name,themes.name,game_modes.name,player_perspectives.name,first_release_date; limit ${limit};`,
+    body: query,
+    signal: AbortSignal.timeout(15_000),
   });
   if (!upstream.ok) {
     console.error("IGDB request failed", upstream.status);
     throw new Error(`IGDB metadata request failed (${upstream.status}).`);
   }
   return await upstream.json();
+}
+
+function searchIgdb(userId: string, query: string, limit: number) {
+  return igdbPost(
+    userId,
+    "games",
+    `search "${igdbString(query)}"; fields name,summary,cover.url,artworks.url,screenshots.url,videos.name,videos.video_id,genres.name,themes.name,game_modes.name,player_perspectives.name,first_release_date; limit ${limit};`,
+  );
+}
+
+const IGDB_SLUG = /^[a-z0-9-]{1,64}$/;
+const IGDB_IMAGE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
+/**
+ * Looks up a company profile (igdb.com/companies/<slug>) for launcher logos.
+ * Tries the exact slug first, then an exact case-insensitive name match. Only the logo is returned: no trailers.
+ */
+async function igdbCompany(userId: string, slug: string | undefined, name: string | undefined) {
+  const fields = "fields name,slug,url,logo.image_id,logo.width,logo.height;";
+  const attempts: string[] = [];
+  if (slug) attempts.push(`${fields} where slug = "${igdbString(slug)}"; limit 1;`);
+  if (name) attempts.push(`${fields} where name ~ "${igdbString(name)}" & logo != null; limit 1;`);
+  for (const query of attempts) {
+    const rows = await igdbPost(userId, "companies", query);
+    const company = Array.isArray(rows) ? rows[0] as Record<string, unknown> | undefined : undefined;
+    if (!company || typeof company.name !== "string") continue;
+    const logo = company.logo as { image_id?: unknown; width?: unknown; height?: unknown } | undefined;
+    const imageId = typeof logo?.image_id === "string" && IGDB_IMAGE_ID.test(logo.image_id) ? logo.image_id : undefined;
+    return {
+      name: company.name,
+      slug: typeof company.slug === "string" ? company.slug : undefined,
+      url: typeof company.url === "string" && company.url.startsWith("https://www.igdb.com/") ? company.url : undefined,
+      logoUrl: imageId ? `https://images.igdb.com/igdb/image/upload/t_logo_med/${imageId}.png` : undefined,
+      logoUrlLarge: imageId ? `https://images.igdb.com/igdb/image/upload/t_original/${imageId}.png` : undefined,
+      width: typeof logo?.width === "number" ? logo.width : undefined,
+      height: typeof logo?.height === "number" ? logo.height : undefined,
+    };
+  }
+  return null;
 }
 
 async function nexusHeaders(userId: string) {
@@ -271,6 +319,21 @@ Deno.serve(async (req) => {
     } catch (error) {
       console.error("IGDB search failed", error);
       return response({ error: error instanceof Error ? error.message : "IGDB search failed." }, 502);
+    }
+  }
+
+  if (body.action === "igdb-company") {
+    const slug = typeof body.slug === "string" ? body.slug.trim().toLowerCase() : undefined;
+    const name = typeof body.name === "string" ? body.name.trim() : undefined;
+    if ((slug !== undefined && !IGDB_SLUG.test(slug)) || (name !== undefined && (!name || name.length > 100))) {
+      return response({ error: "IGDB company lookup is invalid." }, 400);
+    }
+    if (!slug && !name) return response({ error: "Provide a company slug or name." }, 400);
+    try {
+      return response({ company: await igdbCompany(user.id, slug, name) });
+    } catch (error) {
+      console.error("IGDB company lookup failed", error instanceof Error ? error.message : "unknown");
+      return response({ error: error instanceof Error ? error.message : "IGDB company lookup failed." }, 502);
     }
   }
 
@@ -378,6 +441,31 @@ Deno.serve(async (req) => {
       return response({ configured: true, premium: info.is_premium === true, ...(typeof info.name === "string" ? { name: info.name } : {}) });
     } catch (error) {
       return nexusFailure(error, "Unable to check Nexus Mods account status.");
+    }
+  }
+
+  if (body.action === "nexus-md5") {
+    if (typeof body.gameDomain !== "string" || !NEXUS_DOMAIN.test(body.gameDomain)) return response({ error: "Invalid Nexus game." }, 400);
+    if (typeof body.md5 !== "string" || !/^[a-f0-9]{32}$/i.test(body.md5)) return response({ error: "Invalid MD5 hash." }, 400);
+    try {
+      const payload = await nexusV1(user.id, `/games/${body.gameDomain}/mods/md5_search/${body.md5.toLowerCase()}.json`);
+      const text = (value: unknown) => typeof value === "string" ? value : undefined;
+      const matches = (Array.isArray(payload) ? payload as Array<Record<string, unknown>> : []).flatMap((entry) => {
+        const mod = entry.mod as Record<string, unknown> | undefined;
+        const file = entry.file_details as Record<string, unknown> | undefined;
+        if (!mod || !file || !nexusId(mod.mod_id) || !nexusId(file.file_id)) return [];
+        return [{
+          modId: mod.mod_id, fileId: file.file_id, name: text(mod.name) ?? "Untitled mod", author: text(mod.author),
+          pictureUrl: nexusPictureUrl(mod.picture_url), modVersion: text(mod.version), fileName: text(file.file_name),
+          fileVersion: text(file.version), uploadedAt: typeof file.uploaded_timestamp === "number" ? file.uploaded_timestamp : undefined,
+          modPageUrl: `https://www.nexusmods.com/${body.gameDomain}/mods/${mod.mod_id}`,
+        }];
+      });
+      return response({ matches });
+    } catch (error) {
+      // Nexus answers 404 when no file has this hash: that is an empty result, not a failure.
+      if (error instanceof NexusError && error.status === 404) return response({ matches: [] });
+      return nexusFailure(error, "Unable to look up this file on Nexus Mods.");
     }
   }
 

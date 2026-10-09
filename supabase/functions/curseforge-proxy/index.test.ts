@@ -11,9 +11,11 @@ function post(body: unknown, headers: Record<string, string> = {}) {
   });
 }
 
-function mockFetch(status: number, payload: unknown, calls: Array<{ url: string; key: string | null }> = []): typeof fetch {
+type Call = { url: string; key: string | null; method?: string; body?: string };
+
+function mockFetch(status: number, payload: unknown, calls: Call[] = []): typeof fetch {
   return ((url: string, init?: RequestInit) => {
-    calls.push({ url: String(url), key: new Headers(init?.headers).get("x-api-key") });
+    calls.push({ url: String(url), key: new Headers(init?.headers).get("x-api-key"), method: init?.method, body: init?.body as string | undefined });
     return Promise.resolve(new Response(typeof payload === "string" ? payload : JSON.stringify(payload), { status }));
   }) as typeof fetch;
 }
@@ -44,6 +46,10 @@ Deno.test("rejects unknown routes, bad JSON and bad params", async () => {
       { route: "search", gameId: 432, gameVersion: "1.20/../x" }, { route: "search", gameId: 432, sortField: 13 },
       { route: "search", gameId: 432, sortOrder: "up" }, { route: "search", gameId: 432, modLoaderType: 4 },
       { route: "files", modId: 1, modLoaderType: 7 }, { route: "download-url", modId: 1 },
+      { route: "fingerprints" }, { route: "fingerprints", fingerprints: [] }, { route: "fingerprints", fingerprints: ["1"] },
+      { route: "fingerprints", fingerprints: [-1] }, { route: "fingerprints", fingerprints: [4294967296] },
+      { route: "fingerprints", fingerprints: [1.5] }, { route: "fingerprints", fingerprints: Array(501).fill(1) },
+      { route: "fingerprints", gameId: 0, fingerprints: [1] },
     ]) {
       const res = await handle(post(body), f);
       assertEquals(res.status, 400, JSON.stringify(body));
@@ -54,7 +60,7 @@ Deno.test("rejects unknown routes, bad JSON and bad params", async () => {
 
 Deno.test("valid search is forwarded with the key header only upstream", async () => {
   await withKey(SECRET, async () => {
-    const calls: Array<{ url: string; key: string | null }> = [];
+    const calls: Call[] = [];
     const res = await handle(
       post({ route: "search", gameId: 432, classId: 6, searchFilter: "jei", gameVersion: "1.20.1", modLoaderType: 1, sortField: 2, sortOrder: "desc" }),
       mockFetch(200, { data: [{ id: 1 }], pagination: { totalCount: 1 } }, calls),
@@ -114,5 +120,27 @@ Deno.test("per-IP rate limit", async () => {
     for (let i = 0; i < 125; i++) last = (await handle(post({ route: "games" }, { "x-forwarded-for": "1.2.3.4" }), f)).status;
     assertEquals(last, 429);
     assertEquals((await handle(post({ route: "games" }, { "x-forwarded-for": "5.6.7.8" }), f)).status, 200);
+  });
+});
+
+Deno.test("fingerprints posts a deduplicated list upstream", async () => {
+  await withKey(SECRET, async () => {
+    const calls: Call[] = [];
+    const res = await handle(
+      post({ route: "fingerprints", gameId: 432, fingerprints: [3, 1, 3, 4294967295] }),
+      mockFetch(200, { data: { exactMatches: [{ id: 1 }], exactFingerprints: [1] } }, calls),
+    );
+    assertEquals(res.status, 200);
+    assertEquals((await res.json()).data.exactFingerprints, [1]);
+    assertEquals(calls[0].url, "https://api.curseforge.com/v1/fingerprints/432");
+    assertEquals(calls[0].method, "POST");
+    assertEquals(JSON.parse(calls[0].body!), { fingerprints: [1, 3, 4294967295] });
+    const noGame = await handle(post({ route: "fingerprints", fingerprints: [7] }), mockFetch(200, { data: {} }, calls));
+    assertEquals(noGame.status, 200);
+    assertEquals(calls[1].url, "https://api.curseforge.com/v1/fingerprints");
+    const get = await handle(post({ route: "mod", modId: 5 }), mockFetch(200, { data: {} }, calls));
+    assertEquals(get.status, 200);
+    assertEquals(calls[2].method, "GET");
+    assertEquals(calls[2].body, undefined);
   });
 });
