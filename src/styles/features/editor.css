@@ -42,7 +42,7 @@
 .artwork-search-input svg { position: absolute; left: 10px; top: 11px; color: var(--mochi-text-muted); }
 .artwork-search-input input { padding-left: 32px; }
 .artwork-search-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; max-height: 340px; overflow: auto; }
-.artwork-search-item { display: grid; gap: 4px; padding: 6px; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-radius-sm); background: var(--mochi-surface); color: var(--mochi-text-muted); font-size: 10px; text-align: left; cursor: pointer; }
+.artwork-search-item { display: grid; gap: 4px; padding: 6px; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-radius-sm); background: var(--mochi-surface); color: var(--mochi-text-muted); font-size: 11px; text-align: left; cursor: pointer; }
 .artwork-search-item:hover, .artwork-search-item:focus-visible { border-color: var(--mochi-accent-strong); outline: none; }
 .artwork-search-item img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 4px; background: var(--mochi-surface-raised); }
 .artwork-search-empty { display: flex; align-items: center; gap: 6px; }

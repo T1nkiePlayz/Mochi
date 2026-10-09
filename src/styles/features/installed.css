@@ -15,7 +15,7 @@
 .inst-title code { color: var(--mochi-text-muted); font: 11px var(--mochi-mono, monospace); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .inst-stats { display: flex; gap: 22px; margin: 0; }
 .inst-stats div { display: grid; gap: 2px; text-align: right; }
-.inst-stats dt { color: var(--mochi-text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.inst-stats dt { color: var(--mochi-text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
 .inst-stats dd { margin: 0; color: var(--mochi-text-strong); font-weight: 700; font-size: 13px; white-space: nowrap; }
 .inst-skel { display: inline-block; width: 44px; height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--mochi-surface) 25%, var(--mochi-surface-hover) 50%, var(--mochi-surface) 75%) 0 0 / 200% 100%; animation: stats-shimmer 1.4s linear infinite; }
 .inst-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

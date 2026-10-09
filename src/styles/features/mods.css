@@ -49,7 +49,7 @@
 .mod-folder-item.active { border-color: var(--mochi-accent); background: var(--mochi-accent-soft); }
 .mod-folder-item:focus-visible { outline: none; box-shadow: var(--mochi-focus-ring); }
 .mod-folder-chips { display: flex; gap: 6px; }
-.mod-folder-chips i { font-style: normal; font-size: 10px; padding: 1px 7px; border-radius: var(--mochi-pill-radius, 999px); background: var(--mochi-surface-raised); color: var(--mochi-text-muted); }
+.mod-folder-chips i { font-style: normal; font-size: 11px; padding: 1px 7px; border-radius: var(--mochi-pill-radius, 999px); background: var(--mochi-surface-raised); color: var(--mochi-text-muted); }
 .mod-folder-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .mod-folder-modal { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; }
 

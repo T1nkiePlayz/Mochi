@@ -23,7 +23,7 @@
 .game-card-main { display: block; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; border-radius: inherit; }
 .game-card-main:focus-visible { outline-offset: -3px; }
 .game-card-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.game-card-tags { display: flex; gap: 6px; overflow: hidden; color: var(--mochi-text-muted); font-size: 10px; white-space: nowrap; }
+.game-card-tags { display: flex; gap: 6px; overflow: hidden; color: var(--mochi-text-muted); font-size: 11px; white-space: nowrap; }
 .game-card-heart {
   position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 30px; height: 30px; padding: 0;
   border: 0; border-radius: 50%; background: color-mix(in srgb, var(--mochi-background) 70%, transparent); color: var(--mochi-text);

@@ -39,7 +39,7 @@
 .game-card-play { border-radius: 0; background: #fcee09; color: #050505; }
 .continue-art, .game-details-cover { border-radius: 0; border: 1px solid #fcee09; }
 .continue-play { border-radius: 0; }
-.category-count, .game-details-badges span { border-radius: 0; text-transform: uppercase; letter-spacing: .12em; font-size: 10px; border-color: #00f0ff; color: #00f0ff; }
+.category-count, .game-details-badges span { border-radius: 0; text-transform: uppercase; letter-spacing: .12em; font-size: 11px; border-color: #00f0ff; color: #00f0ff; }
 .running-badge { color: #00f0a0; border-color: #00f0a0 !important; }
 .library-toolbar { border-bottom-color: #262b3d; }
 .workspace-tabs button.active { background: #fcee09; color: #050505; box-shadow: none; }
