@@ -125,9 +125,13 @@
   .notification-popover, .account-menu { max-width: calc(100vw - 16px); }
 
   /* ---- Text and grids: wrap instead of widening the page ------------------------------------------------ */
-  body { overflow-wrap: anywhere; }
+  /* Long unbroken strings (paths, URLs, names) wrap, but only when a whole word cannot fit: "anywhere" would let
+   * flex layouts squeeze short labels into one letter per line ("Ref/res/h"). */
+  body { overflow-wrap: break-word; }
+  p, dd, li, h1, h2, h3, h4, .path-text, .workspace-path { overflow-wrap: anywhere; }
   pre, code, kbd { overflow-wrap: anywhere; }
   .theme-grid { grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr)) !important; }
+  .provider-grid { grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)) !important; }
   .theme-card, .theme-card > *, .setting-row > *, .provider-credential-card, .provider-credential-card > * { min-width: 0; }
   .breadcrumb { display: flex; align-items: center; }
   .breadcrumb > span:first-child, .breadcrumb > .breadcrumb-slash { flex: 0 0 auto; }
@@ -138,8 +142,21 @@
   /* Game details: single grid column that may shrink below its widest child; buttons wrap, long labels shrink. */
   .game-details-page { grid-template-columns: minmax(0, 1fr) !important; min-width: 0; }
   .game-details-page > *, .game-details-hero > *, .game-details-title, .game-details-actions > * { min-width: 0; max-width: 100%; }
-  .game-details-actions > button, .game-details-actions > div > button { white-space: normal; overflow-wrap: anywhere; }
-  .workspace-tabs { flex-wrap: wrap; }
+  .game-details-actions > button, .game-details-actions > div > button { white-space: normal; }
+  .workspace-tabs, .editor-tabs, .provider-credential-heading, .bp-topbar, .bp-topbar-left, .bp-topbar-right { flex-wrap: wrap; }
+  .provider-credential-heading > * { min-width: 0; }
+  .provider-credential-heading > :first-child { flex: 1 1 160px; }
+  .setting-location-value .secondary-button { flex: 0 0 auto; min-width: fit-content; }
+  .bp-shelf-title span, .credential-status { white-space: nowrap; }
+  /* Ellipsis labels clip their own overflow: give tall display fonts room for ascenders and descenders. */
+  .discover-game-name { line-height: 1.3; }
+  /* Setting rows: the control drops under its label when both no longer fit side by side. */
+  .setting-row { flex-wrap: wrap; row-gap: 10px; }
+  .setting-row > :first-child { flex: 1 1 220px; min-width: 0; }
+  .setting-row > :not(:first-child) { max-width: 100%; }
+  /* Buttons never get wider than their row: long labels wrap between words. */
+  .secondary-button, .play-button, .setup-nav, .mochi-select, .mochi-select-trigger { max-width: 100%; min-width: 0; }
+  .secondary-button, .play-button, .setup-nav { white-space: normal; }
   /* Button rows wrap instead of running off an edge (justify-content: flex-end overflows to the left). */
   :where([class*="-actions"]):not(.topbar-actions) { flex-wrap: wrap; }
   :where([class*="-actions"]):not(.topbar-actions) > * { max-width: 100%; }

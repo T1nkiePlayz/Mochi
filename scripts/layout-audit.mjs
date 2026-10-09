@@ -110,6 +110,22 @@ function measure() {
       add("text-clipped-y", el, `${el.scrollHeight}>${el.clientHeight}`);
     }
 
+    // 1b. Short labels broken inside a word ("Ref/res/h"): more line boxes than words.
+    // A heading whose single word is wider than the whole window may break; a label squeezed narrow may not.
+    if (ownText && style.display !== "inline" && rect.width < Math.min(160, vw / 2)) {
+      const text = [...el.childNodes].filter((node) => node.nodeType === 3).map((node) => node.textContent).join(" ").trim();
+      if (text && text.length <= 40) {
+        const range = document.createRange();
+        const tops = new Set();
+        for (const node of el.childNodes) {
+          if (node.nodeType !== 3 || !node.textContent.trim()) continue;
+          range.selectNodeContents(node);
+          for (const box of range.getClientRects()) if (box.width > 0) tops.add(Math.round(box.top));
+        }
+        if (tops.size > text.split(/\s+/).length) add("word-broken", el, `${tops.size} lines for "${text}"`);
+      }
+    }
+
     // 2. Outside the viewport / cut by a hiding ancestor. Scrollable ancestors are fine.
     const chain = clippers(el);
     const scrollable = chain.some(({ x }) => x === "auto" || x === "scroll") || chain.some(({ parent }) => getComputedStyle(parent).textOverflow === "ellipsis");
