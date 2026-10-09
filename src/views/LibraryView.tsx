@@ -175,7 +175,7 @@ export function LibraryView() {
       onOpenFolder={() => actions.openGameFolder(menuGame)}
       onRemove={() => setRemoval([menuGame])} />}
     {showCollections && <CollectionManager state={collections} counts={collectionCounts} onClose={() => setShowCollections(false)} />}
-    {removal && <ConfirmDialog title={removal.length === 1 ? `Remove ${removal[0].name}?` : `Remove ${removal.length} games?`} message="They are removed from your Mochi library only. Nothing is uninstalled." confirmLabel="Remove" danger
+    {removal && <ConfirmDialog title={removal.length === 1 ? `Remove ${removal[0].name}?` : `Remove ${removal.length} games?`} message="They are removed from your Mochi library only, with their Tofus, tags and collection memberships. Nothing is uninstalled and no game files are deleted." items={removal.map((game) => game.name)} confirmLabel={removal.length === 1 ? "Remove" : `Remove ${removal.length} games`} danger
       onCancel={() => setRemoval(null)}
       onConfirm={() => { removal.forEach((game) => void removeGameShortcut(game.id).catch(() => {})); lib.removeGames(removal.map((game) => game.id)); setChecked(new Set()); setRemoval(null); }} />}
     <LibraryModSearch query={search} nexusEnabled={credentials.status.nexus} supabase={supabase} />

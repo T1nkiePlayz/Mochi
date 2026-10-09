@@ -1,3 +1,4 @@
+import { confirmAction } from "../lib/confirm";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
@@ -274,7 +275,7 @@ export function useAccount(notify: (title: string, message: string) => void) {
     if (!identity) return;
     if ((user.identities ?? []).length < 2) { setAuthNotice("Add another sign-in method before unlinking this account."); return; }
     const providerName = provider === "google" ? "Google" : "GitHub";
-    if (!window.confirm(`Unlink ${providerName} from your Mochi account? You will no longer be able to sign in with ${providerName} until you connect it again.`)) return;
+    if (!await confirmAction({ title: `Unlink ${providerName}?`, danger: true, confirmLabel: `Unlink ${providerName}`, message: `You will no longer be able to sign in to Mochi with ${providerName} until you connect it again. Your account and data are kept.` })) return;
     setAuthNotice("");
     await securityAction(async () => {
       const { error } = await supabase!.auth.unlinkIdentity(identity);

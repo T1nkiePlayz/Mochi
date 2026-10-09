@@ -6,6 +6,7 @@ import { openPath } from "../lib/platform";
 import type { Piko } from "../models";
 import { useApp } from "../state/AppContext";
 import { ModalShell } from "./mods/ModalShell";
+import { confirmAction } from "../lib/confirm";
 
 const when = (ms: number) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 const errorText = (error: unknown) => (error instanceof Error ? error.message : typeof error === "string" ? error : "That did not work.");
@@ -27,7 +28,6 @@ function GameLogsModal({ game, onClose }: { game: Piko; onClose: () => void }) {
   const [text, setText] = useState("");
   const [follow, setFollow] = useState(running);
   const [message, setMessage] = useState("");
-  const [confirmClear, setConfirmClear] = useState(false);
   const offset = useRef<number | undefined>(undefined);
   const view = useRef<HTMLPreElement>(null);
   const current = list?.sessions.find((item) => item.id === sessionId);
@@ -65,7 +65,8 @@ function GameLogsModal({ game, onClose }: { game: Piko; onClose: () => void }) {
     catch { setMessage("Could not copy. Select the text and copy it by hand."); }
   };
   const clear = async () => {
-    setConfirmClear(false);
+    const count = list?.sessions.length ?? 0;
+    if (!await confirmAction({ title: `Clear logs for ${game.name}?`, danger: true, confirmLabel: "Clear logs", message: "Captured output is deleted from this computer. This cannot be undone.", items: [`${count} saved log session${count === 1 ? "" : "s"}`] })) return;
     try { const count = await clearGameLogs(game.id); setMessage(`Removed ${count} log${count === 1 ? "" : "s"}.`); setText(""); offset.current = undefined; await loadList(); }
     catch (error) { setMessage(errorText(error)); }
   };
@@ -84,9 +85,7 @@ function GameLogsModal({ game, onClose }: { game: Piko; onClose: () => void }) {
       <button type="button" className="secondary-button" onClick={() => { void loadList(); void read(); }}><RefreshCw size={13} /> Refresh</button>
       <button type="button" className="secondary-button" onClick={() => void copy()} disabled={!text}><Copy size={13} /> Copy</button>
       <button type="button" className="secondary-button" onClick={() => list?.dir && void openPath(list.dir).catch((error) => setMessage(errorText(error)))} disabled={!list?.dir}><FolderOpen size={13} /> Open folder</button>
-      {confirmClear
-        ? <button type="button" className="secondary-button danger-outline" onClick={() => void clear()} onBlur={() => setConfirmClear(false)}>Clear all logs for good</button>
-        : <button type="button" className="secondary-button danger-outline" onClick={() => setConfirmClear(true)} disabled={empty}><Trash2 size={13} /> Clear</button>}
+      <button type="button" className="secondary-button danger-outline" onClick={() => void clear()} disabled={empty}><Trash2 size={13} /> Clear</button>
     </div>
     {message && <p className="metadata-note" role="status">{message}</p>}
     {empty ? <p className="muted game-logs-empty">{running ? "The game is running but no log was captured for it." : "Nothing has been captured yet. Start the game from Mochi and its output appears here."}</p>

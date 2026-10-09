@@ -1,3 +1,4 @@
+import { confirmAction } from "../lib/confirm";
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
@@ -73,7 +74,7 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
 
   const clearCloudData = async () => {
     if (!supabase || !user || !cloudDataAccessAllowed || cloudDataBusy) return;
-    if (!window.confirm("Delete all Mochi Cloud Pikos and Tofus for this account? Your local library, account, and saved provider credentials will not be changed.")) return;
+    if (!await confirmAction({ title: "Clear your cloud library?", danger: true, confirmLabel: "Clear cloud data", message: "Every Piko and Tofu stored in Mochi Cloud for this account is deleted. Your local library, account and saved provider credentials are not changed.", items: ["All cloud Pikos (games)", "All cloud Tofus (environments)"] })) return;
     setCloudDataBusy(true); setCloudDataMessage("");
     try {
       const deleted = await clearAccountCloudData(supabase);

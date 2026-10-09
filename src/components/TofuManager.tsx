@@ -1,3 +1,4 @@
+import { confirmAction } from "../lib/confirm";
 import { useEffect, useState, type ReactNode } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Copy, FolderOpen, Plus, Trash2, X } from "lucide-react";
@@ -60,8 +61,8 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
     onChange([...tofus, copy]);
     onSelect(copy.id);
   };
-  const remove = () => {
-    if (tofus.length < 2 || !window.confirm(`Delete the Tofu “${selected.name}”? Files in its folder are not touched.`)) return;
+  const remove = async () => {
+    if (tofus.length < 2 || !await confirmAction({ title: `Delete the Tofu “${selected.name}”?`, danger: true, confirmLabel: "Delete Tofu", message: "Its settings and mod profiles are removed from Mochi. Files in its folder are not touched.", items: [selected.name] })) return;
     const remaining = tofus.filter((tofu) => tofu.id !== selected.id);
     onChange(remaining);
     onSelect(remaining[0].id);
@@ -108,6 +109,6 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
         </Section>
       </div>
     </div>
-    <div className="tofu-manager-actions"><button type="button" className="secondary-button" onClick={duplicate}><Copy size={14}/> Duplicate</button><button type="button" className="secondary-button danger-outline" onClick={remove} disabled={tofus.length < 2}><Trash2 size={14}/> Delete</button><button type="button" className="play-button" onClick={onClose}>Done</button></div>
+    <div className="tofu-manager-actions"><button type="button" className="secondary-button" onClick={duplicate}><Copy size={14}/> Duplicate</button><button type="button" className="secondary-button danger-outline" onClick={() => void remove()} disabled={tofus.length < 2}><Trash2 size={14}/> Delete</button><button type="button" className="play-button" onClick={onClose}>Done</button></div>
   </div></div>;
 }
