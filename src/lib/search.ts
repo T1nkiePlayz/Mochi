@@ -1,3 +1,4 @@
+import type { Piko } from "../models";
 import type { IgdbGame } from "./igdb";
 
 export const normalizeText = (value: string) =>
@@ -13,19 +14,45 @@ export function editDistance(left: string, right: string): number {
   return row[right.length] ?? 0;
 }
 
-/** Forgiving search: substring match, or every query word within a small edit distance of a word in the candidate. */
-export function gameSearchMatches(query: string, candidate: string): boolean {
-  const needle = normalizeText(query);
-  const haystack = normalizeText(candidate);
-  if (!needle || !haystack) return false;
-  if (haystack.includes(needle)) return true;
-  const words = haystack.split(/\s+/);
-  return needle.split(/\s+/).every((word) => words.some((candidateWord) => {
+/** True when every query word is close to a word of the candidate (substring or small edit distance). */
+function fuzzyWordsMatch(needleWords: string[], words: string[]): boolean {
+  return needleWords.every((word) => words.some((candidateWord) => {
     const shortest = Math.min(candidateWord.length, word.length);
     if (candidateWord.includes(word) || word.includes(candidateWord)) return shortest >= 3;
     const threshold = shortest >= 9 ? 2 : 1;
     return shortest >= 4 && Math.abs(candidateWord.length - word.length) <= threshold && editDistance(word, candidateWord) <= threshold;
   }));
+}
+
+/** Matches against already-normalized fields: cheap substring pass over all of them first, fuzzy word pass only when none matched. */
+function matchNormalized(needle: string, fields: string[]): boolean {
+  if (!needle) return false;
+  const present = fields.filter(Boolean);
+  if (present.some((field) => field.includes(needle))) return true;
+  const needleWords = needle.split(/\s+/);
+  return present.some((field) => fuzzyWordsMatch(needleWords, field.split(/\s+/)));
+}
+
+/** Forgiving search: substring match, or every query word within a small edit distance of a word in the candidate. */
+export function gameSearchMatches(query: string, candidate: string): boolean {
+  return matchNormalized(normalizeText(query), [normalizeText(candidate)]);
+}
+
+const searchFieldCache = new WeakMap<Piko, string[]>();
+/** Normalized searchable fields of a game, computed once per Piko object (edits replace the object, which drops the entry). */
+const searchFields = (piko: Piko): string[] => {
+  let fields = searchFieldCache.get(piko);
+  if (!fields) {
+    fields = [piko.name, piko.description, piko.platformCategory || "", piko.sourceId || "", ...(piko.categories ?? []), ...(piko.tags ?? [])].map(normalizeText);
+    searchFieldCache.set(piko, fields);
+  }
+  return fields;
+};
+
+/** Builds a per-game predicate for a query, normalizing the query only once. */
+export function pikoSearchMatcher(query: string): (piko: Piko) => boolean {
+  const needle = normalizeText(query);
+  return (piko) => matchNormalized(needle, searchFields(piko));
 }
 
 /** The IGDB result that is confidently the same title, or null when nothing is close enough. */

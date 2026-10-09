@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { Piko, Tofu } from "../models";
 import { readJson, storageKeys, writeJson, writeString, readString } from "../lib/storage";
-import { gameSearchMatches } from "../lib/search";
+import { pikoSearchMatcher } from "../lib/search";
 import type { PlaytimeEntry } from "../lib/platform";
 import { sanitizeFilter, sanitizeLibrary, matchesFilter, mostPlayedIds, smartFilters, sourceLabel, sourceOf, toggleInList, withTag, type FilterContext, type LibraryFilter, type SmartFilterId } from "../lib/library";
 import { useInstalledStatus } from "./useInstalledStatus";
@@ -48,17 +48,17 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
   const filterContext: FilterContext = useMemo(() => ({ playtime: playtimeById, installed, isRunning }), [playtimeById, installed, isRunning]);
   const mostPlayed = useMemo(() => mostPlayedIds(library, playtimeById), [library, playtimeById]);
 
+  const deferredSearch = useDeferredValue(search);
   /** Search and tag filters applied; the primary filter is applied on top (chips show counts for this base). */
   const searchedPikos = useMemo(() => {
-    const query = search.trim();
+    const query = deferredSearch.trim();
+    const matches = query ? pikoSearchMatcher(query) : null;
     const wanted = tagFilters.map((tag) => tag.toLowerCase());
     return library.filter((piko) => {
       if (wanted.length && !wanted.every((tag) => piko.tags?.some((item) => item.toLowerCase() === tag))) return false;
-      if (!query) return true;
-      return [piko.name, piko.description, piko.platformCategory || "", piko.sourceId || "", ...(piko.categories ?? []), ...(piko.tags ?? [])]
-        .some((value) => gameSearchMatches(query, value));
+      return !matches || matches(piko);
     });
-  }, [library, search, tagFilters]);
+  }, [library, deferredSearch, tagFilters]);
 
   const visiblePikos = useMemo(() => searchedPikos.filter((piko) => matchesFilter(piko, filter, filterContext, mostPlayed)), [searchedPikos, filter, filterContext, mostPlayed]);
 
