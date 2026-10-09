@@ -19,6 +19,7 @@ import { useProfileStorage } from "./useProfileStorage";
 import { useCloudSync } from "./useCloudSync";
 import { useDownloads } from "./useDownloads";
 import { useMetadata } from "./useMetadata";
+import { useInstancePacks } from "./useInstancePacks";
 import { useAddGame } from "./useAddGame";
 import { useGameActions } from "./useGameActions";
 import { useDeepLinks } from "./useDeepLinks";
@@ -70,6 +71,7 @@ function useAppController() {
   const collections = useCollections(storage.ownerKey, storage.ready, lib.setLibrary);
   const cloud = useCloudSync(user, lib.library, lib.setLibrary, storage.ready, storage.ownerKey);
   const downloads = useDownloads(activeNav === "Downloads", notify);
+  useInstancePacks({ ready: storage.ready, library: lib.library, setLibrary: lib.setLibrary, sources: behavior.modSources });
 
   useEffect(() => { void listRuntimes().then(setRuntimes).catch(() => {}); }, []);
   useEffect(() => {

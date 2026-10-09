@@ -79,6 +79,9 @@ export async function getModrinthProject(projectId: string): Promise<ModrinthPro
   return project;
 }
 
+/** One project without its team: a single request, for a name and an icon. */
+export const getModrinthProjectInfo = (projectId: string) => get<ModrinthProjectDetails>(API + "/project/" + encodeURIComponent(projectId));
+
 export type DiscoverSort = "relevance" | "downloads" | "follows" | "newest" | "updated";
 export type DiscoverQuery = {
   projectType: ModrinthProjectType;

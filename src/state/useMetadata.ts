@@ -34,7 +34,7 @@ const steamPace = createPacer(350);
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Caches the artwork file on disk. Resolves true on success; offline or blocked hosts resolve false. */
-async function cacheArtworkUrl(url: string, cacheKey: string, force = false): Promise<boolean> {
+export async function cacheArtworkUrl(url: string, cacheKey: string, force = false): Promise<boolean> {
   try { await invoke("cache_game_artwork", { url, cacheKey, force }); notifyArtworkChanged(cacheKey); return true; } catch { return false; }
 }
 

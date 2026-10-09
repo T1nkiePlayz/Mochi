@@ -55,6 +55,64 @@ pub struct MinecraftInstance {
     pub loader: String,
     /// The instance's game folder (holds `mods`, `resourcepacks`, `shaderpacks`).
     pub game_dir: String,
+    /// The modpack the launcher itself recorded (`ManagedPack*` keys in `instance.cfg`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pack: Option<ManagedPack>,
+    /// Name and version from a pack manifest left in the instance (`modrinth.index.json`, CurseForge `manifest.json`); a hint, not an id.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub index: Option<PackIndex>,
+}
+
+/// A modpack project the launcher installed this instance from.
+#[derive(Clone, Serialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ManagedPack {
+    /// `modrinth` or `curseforge`.
+    pub source: String,
+    pub project_id: String,
+    pub version_id: Option<String>,
+    pub name: Option<String>,
+    pub version_name: Option<String>,
+}
+
+#[derive(Clone, Serialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PackIndex {
+    pub source: String,
+    pub name: String,
+    pub version: Option<String>,
+}
+
+/// `ManagedPack*` keys that Prism writes for packs installed from Modrinth or CurseForge (`flame`). Ids must look like ids.
+pub(super) fn managed_pack(config: &str) -> Option<ManagedPack> {
+    if ini_value(config, "ManagedPack")? != "true" { return None; }
+    let source = match ini_value(config, "ManagedPackType")?.as_str() { "modrinth" => "modrinth", "flame" => "curseforge", _ => return None };
+    let project_id = ini_value(config, "ManagedPackID")?;
+    let valid = if source == "curseforge" { project_id.chars().all(|c| c.is_ascii_digit()) } else { crate::util::valid_id(&project_id, 40) };
+    if !valid || project_id.len() > 40 { return None; }
+    let version_id = ini_value(config, "ManagedPackVersionID").filter(|id| id.len() <= 40 && id.chars().all(|c| c.is_ascii_alphanumeric()));
+    Some(ManagedPack { source: source.into(), project_id, version_id, name: ini_value(config, "ManagedPackName"), version_name: ini_value(config, "ManagedPackVersionName") })
+}
+
+/// Pack name and version from `modrinth.index.json` or a CurseForge `manifest.json` in the instance or its game folder.
+pub(super) fn pack_index(instance: &Path, game_dir: &Path) -> Option<PackIndex> {
+    for dir in [instance, game_dir] {
+        if let Some(value) = read(&dir.join("modrinth.index.json")).and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok()) {
+            let name = value.get("name").and_then(|n| n.as_str()).map(str::trim).filter(|n| !n.is_empty());
+            if let Some(name) = name {
+                let version = value.get("versionId").and_then(|v| v.as_str()).map(str::to_owned).filter(|v| !v.is_empty());
+                return Some(PackIndex { source: "modrinth".into(), name: name.into(), version });
+            }
+        }
+        if let Some(value) = read(&dir.join("manifest.json")).and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok()) {
+            let name = value.get("name").and_then(|n| n.as_str()).map(str::trim).filter(|n| !n.is_empty());
+            if let (Some("minecraftModpack"), Some(name)) = (value.get("manifestType").and_then(|t| t.as_str()), name) {
+                let version = value.get("version").and_then(|v| v.as_str()).map(str::to_owned).filter(|v| !v.is_empty());
+                return Some(PackIndex { source: "curseforge".into(), name: name.into(), version });
+            }
+        }
+    }
+    None
 }
 
 /// `key=value` lines of an INI-style file (sections ignored; the first occurrence wins).
@@ -100,7 +158,7 @@ pub(super) fn read_instance(root: &Path, dir: &Path, launcher: &InstanceLauncher
     let game_dir = [".minecraft", "minecraft"].iter().map(|sub| dir.join(sub)).find(|path| path.is_dir()).unwrap_or_else(|| dir.join(".minecraft"));
     let (version, loader) = read(&dir.join("mmc-pack.json")).map(|text| pack_info(&text)).unwrap_or((None, "vanilla".into()));
     let mut item = make(format!("{}:{}", launcher.id, id), name, "prism", instance_target(launcher.id, &id), dir.to_str().map(str::to_owned));
-    item.minecraft = Some(MinecraftInstance { version, loader, game_dir: game_dir.to_string_lossy().into_owned() });
+    item.minecraft = Some(MinecraftInstance { version, loader, game_dir: game_dir.to_string_lossy().into_owned(), pack: managed_pack(&config), index: pack_index(dir, &game_dir) });
     // Custom instance icons live in `<data>/icons/<iconKey>.png`; the built-in ones are not files.
     item.icon_path = ini_value(&config, "iconKey").filter(|key| crate::util::valid_id(key, 120))
         .and_then(|key| ["png", "svg", "jpg"].iter().map(|ext| root.join("icons").join(format!("{key}.{ext}"))).find(|path| super::icons::usable_icon(path)))
@@ -161,6 +219,28 @@ mod tests {
         assert_eq!(games[1].minecraft.as_ref().unwrap().loader, "neoforge");
         assert!(games[2].minecraft.as_ref().unwrap().game_dir.ends_with("Vanilla/.minecraft"));
         assert_eq!(games[2].minecraft.as_ref().unwrap().loader, "vanilla");
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn managed_pack_keys_and_manifests_are_read() {
+        let root = temp_dir("prism-pack");
+        let prism = launcher("prism").unwrap();
+        write(&root.join("instances/Mr/instance.cfg"), "name=Fabulously Optimized\nManagedPack=true\nManagedPackID=1KVo5zza\nManagedPackName=Fabulously Optimized\nManagedPackType=modrinth\nManagedPackVersionID=abcDEF12\nManagedPackVersionName=5.0.0\n");
+        write(&root.join("instances/Cf/instance.cfg"), "name=ATM9\nManagedPack=true\nManagedPackType=flame\nManagedPackID=715572\nManagedPackVersionID=5000001\n");
+        write(&root.join("instances/Bad/instance.cfg"), "name=Bad\nManagedPack=true\nManagedPackType=flame\nManagedPackID=../x\n");
+        write(&root.join("instances/Off/instance.cfg"), "name=Off\nManagedPack=false\nManagedPackType=modrinth\nManagedPackID=abc\n");
+        write(&root.join("instances/Idx/instance.cfg"), "name=Idx\n");
+        write(&root.join("instances/Idx/minecraft/modrinth.index.json"), r#"{"name":"Better MC [FABRIC] BMC4","versionId":"v34","files":[]}"#);
+        let games = scan_instances(&[(root.clone(), prism)]);
+        let by = |name: &str| games.iter().find(|game| game.name == name).unwrap().minecraft.clone().unwrap();
+        let mr = by("Fabulously Optimized").pack.unwrap();
+        assert_eq!((mr.source.as_str(), mr.project_id.as_str(), mr.version_id.as_deref(), mr.version_name.as_deref()), ("modrinth", "1KVo5zza", Some("abcDEF12"), Some("5.0.0")));
+        let cf = by("ATM9").pack.unwrap();
+        assert_eq!((cf.source.as_str(), cf.project_id.as_str(), cf.name), ("curseforge", "715572", None));
+        assert!(by("Bad").pack.is_none() && by("Off").pack.is_none());
+        let idx = by("Idx").index.unwrap();
+        assert_eq!((idx.source.as_str(), idx.name.as_str(), idx.version.as_deref()), ("modrinth", "Better MC [FABRIC] BMC4", Some("v34")));
         let _ = fs::remove_dir_all(root);
     }
 

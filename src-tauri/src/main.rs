@@ -149,6 +149,13 @@ async fn copy_minecraft_instance(app: tauri::AppHandle, launch_target: String) -
     }).await.map_err(|e| format!("The copy was interrupted: {e}"))?
 }
 
+/// The modpack facts of one Minecraft instance (`ManagedPack*` keys, pack manifest), read from its folder.
+#[tauri::command(async)]
+fn read_minecraft_pack(launch_target: String) -> Result<Option<sources::prism::MinecraftInstance>, String> {
+    let home = platform::home_dir().ok_or("Could not find your home folder.")?;
+    Ok(sources::mccopy::read_target(&home, &launch_target)?.minecraft)
+}
+
 #[tauri::command(async)]
 fn get_mochi_config_info(app: tauri::AppHandle) -> Result<themes::MochiConfigInfo, String> { themes::get_mochi_config_info(app) }
 
@@ -261,7 +268,7 @@ fn main() {
             send_system_notification, open_external_url, open_path_in_file_manager, set_launch_on_startup,
             launch_game_tracked, stop_game, get_active_sessions, get_playtime, get_playtime_history, get_dir_size, get_downloads,
             list_flatpaks, list_runtimes, get_platform_capabilities, create_game_shortcut, remove_game_shortcut,
-            detect_import_sources, scan_import_games, copy_minecraft_instance,
+            detect_import_sources, scan_import_games, copy_minecraft_instance, read_minecraft_pack,
             bigpicture::get_system_status, bigpicture::suspend_system, bigpicture::power_action, bigpicture::get_power_capabilities, soundpacks::list_sound_packs, soundpacks::import_sound_pack, soundpacks::remove_sound_pack, soundpacks::export_sound_pack, soundpacks::read_sound_pack_file, bigpicture::quit_mochi, gamepad::get_gamepads, gamepad::gamepad_rumble,
             get_mochi_config_info, move_mochi_config, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
             fonts::cache_theme_fonts,

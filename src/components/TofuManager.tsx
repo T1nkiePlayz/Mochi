@@ -9,6 +9,7 @@ import type { Piko, Tofu } from "../models";
 import { Select } from "./ui/Select";
 import { Checkbox, Field, Switch } from "./ui/Checkbox";
 import { ModFolderEditor } from "./mods/ModFolderEditor";
+import { LinkedPackSection } from "./mods/LinkedPackSection";
 
 type Props = {
   piko: Piko;
@@ -88,6 +89,10 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
             <Field label="Runtime label"><input value={selected.runtime} maxLength={40} onChange={(e) => patch({ runtime: e.target.value })} /></Field>
           </div>
         </Section>
+
+        {piko.id === "minecraft" && selected.launchTarget && <Section title="Modpack" description="The Modrinth or CurseForge modpack this instance came from.">
+          <LinkedPackSection tofu={selected} onPatch={(change) => onChange(tofus.map((tofu) => tofu.id === selected.id ? change(tofu) : tofu))} />
+        </Section>}
 
         <Section title="Mod folders" description="Where this Tofu's mods live and where the game loads them from.">
           <ModFolderEditor key={selected.id} piko={piko} tofu={selected} onUpdate={patch} showVersion={false} />

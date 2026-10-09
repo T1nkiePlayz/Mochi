@@ -24,6 +24,15 @@ export type ModProfile = {
 /** Mod loader of a Minecraft Tofu. */
 export type ModLoader = "vanilla" | "fabric" | "quilt" | "forge" | "neoforge";
 
+/** The modpack a Minecraft instance was installed from: only ids (user data), never CurseForge names, icons or descriptions. */
+export type TofuPack = {
+  source: "modrinth" | "curseforge";
+  projectId: string;
+  /** Installed pack version: a Modrinth version id or a CurseForge file id. Unknown when matched by name only. */
+  versionId?: string;
+  matchedBy: "managed" | "index" | "search";
+};
+
 export type Tofu = {
   id: string;
   name: string;
@@ -57,6 +66,10 @@ export type Tofu = {
   /** Own cover of this Tofu (kept from a Minecraft instance that used to be a Piko of its own). */
   artwork?: string;
   artworkCacheKey?: string;
+  /** Minecraft instance: the Modrinth/CurseForge modpack this instance belongs to, once it was matched (or linked by its launcher). */
+  pack?: TofuPack;
+  /** When Mochi last tried to match this instance to a modpack and found none (so it is not retried on every start). */
+  packCheckedAt?: number;
   /** Id of the Piko this Tofu was before the Minecraft instances were merged into one Piko; playtime of that id counts for the Minecraft Piko. */
   legacyPikoId?: string;
   /** Tofu id whose installed-mod records are copied into this Tofu once (then cleared); set by the Minecraft merge. */
