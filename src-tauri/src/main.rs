@@ -79,13 +79,49 @@ fn open_path_in_file_manager(path: String) -> Result<(), String> { platform::ope
 #[tauri::command(async)]
 fn set_launch_on_startup(enabled: bool) -> Result<(), String> { platform::set_launch_on_startup(enabled) }
 
+/// The per-game Wine/Proton prefix, created on demand at launch.
+fn prefix_dir(app: &tauri::AppHandle, game_id: &str, tofu_id: Option<&str>) -> Option<std::path::PathBuf> {
+    let name = format!("{}-{}", safe_segment(game_id), safe_segment(tofu_id.unwrap_or("default")));
+    app.path().app_data_dir().ok().map(|dir| dir.join("prefixes").join(name))
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PreviewRequest {
+    game_id: String,
+    launch_target: String,
+    tofu_id: Option<String>,
+    #[serde(default)]
+    config: platform::LaunchConfig,
+}
+
+/// The command a launch with these options would run, built by the launcher's own code.
+#[tauri::command(async)]
+fn preview_launch_command(app: tauri::AppHandle, request: PreviewRequest) -> platform::launchopts::LaunchPreview {
+    let mut config = request.config;
+    config.prefix_dir = prefix_dir(&app, &request.game_id, request.tofu_id.as_deref());
+    platform::preview_launch(&request.launch_target, &config)
+}
+
+/// Detected Proton/Wine runtimes and wrappers; scanning the Steam libraries is cached for a few seconds.
+#[tauri::command(async)]
+fn list_launch_runtimes() -> Vec<platform::RuntimeInfo> {
+    use std::{sync::Mutex, time::{Duration, Instant}};
+    static CACHE: Mutex<Option<(Instant, Vec<platform::RuntimeInfo>)>> = Mutex::new(None);
+    if let Some((at, found)) = CACHE.lock().ok().as_deref().and_then(|cache| cache.as_ref()) {
+        if at.elapsed() < Duration::from_secs(10) { return found.clone(); }
+    }
+    let found = platform::list_runtimes();
+    if let Ok(mut cache) = CACHE.lock() { *cache = Some((Instant::now(), found.clone())); }
+    found
+}
+
 #[tauri::command(async)]
 fn launch_game_tracked(app: tauri::AppHandle, request: LaunchRequest) -> Result<(), String> {
     let LaunchRequest { game_id, name, launch_target, install_path, tofu_id, mut config, mod_sync } = request;
     let target = launch_target.trim().to_string();
     if target.is_empty() { return Err("Launch target is empty.".into()); }
-    let prefix = format!("{}-{}", safe_segment(&game_id), safe_segment(tofu_id.as_deref().unwrap_or("default")));
-    config.prefix_dir = app.path().app_data_dir().ok().map(|dir| dir.join("prefixes").join(prefix));
+    config.prefix_dir = prefix_dir(&app, &game_id, tofu_id.as_deref());
     config.log_dir = gamelogs::game_log_dir(&game_id).ok();
     // Mods are swapped in only now, at launch: only the differences are touched and a failure never blocks the game.
     if let Some(sync) = mod_sync {
@@ -281,7 +317,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             write_library_index, send_system_notification, open_external_url, open_path_in_file_manager, set_launch_on_startup,
             launch_game_tracked, stop_game, get_active_sessions, get_playtime, get_playtime_history, get_dir_size, get_downloads,
-            list_flatpaks, list_runtimes, get_platform_capabilities, create_game_shortcut, remove_game_shortcut,
+            list_flatpaks, list_runtimes, list_launch_runtimes, preview_launch_command, get_platform_capabilities, create_game_shortcut, remove_game_shortcut,
             detect_import_sources, scan_import_games, copy_minecraft_instance, read_minecraft_pack,
             bigpicture::get_system_status, bigpicture::suspend_system, bigpicture::power_action, bigpicture::get_power_capabilities, soundpacks::list_sound_packs, soundpacks::import_sound_pack, soundpacks::remove_sound_pack, soundpacks::export_sound_pack, soundpacks::read_sound_pack_file, bigpicture::quit_mochi, gamepad::get_gamepads, gamepad::gamepad_rumble,
             get_mochi_config_info, move_mochi_config, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,

@@ -144,6 +144,8 @@ fn opener(url: impl Into<OsString>) -> Command {
 
 fn handoff(command: Command) -> Result<Prepared, String> { Ok(Prepared { command, direct: false }) }
 
+pub fn steam_root() -> Option<PathBuf> { steam_roots().into_iter().next() }
+
 fn flatpak_run(id: &str, extra: &[String]) -> Command {
     let mut command = Command::new("flatpak");
     command.args(["run", id]).args(extra);
@@ -193,7 +195,9 @@ pub fn prepare_launch(target: &str, config: &LaunchConfig) -> Result<Prepared, S
     if let Some(id) = target.strip_prefix("flatpak://").or_else(|| target.strip_prefix("flatpak run ")) {
         let id = id.trim();
         if !valid_flatpak_id(id) { return Err("Enter a valid Flatpak application ID, such as com.example.Game.".into()); }
-        return Ok(Prepared { command: flatpak_run(id, &config.args), direct: true });
+        let mut command = Command::new("flatpak");
+        command.args(&super::launchopts::flatpak_argv(id, config)[1..]);
+        return Ok(Prepared { command, direct: true });
     }
     if let Some((launcher, id)) = crate::sources::prism::parse_instance_target(target) {
         let args = vec!["--launch".to_owned(), id];
@@ -227,55 +231,14 @@ fn battlenet_wine_command(prefix: &Path, code: &str) -> Result<Command, String> 
     Ok(command)
 }
 
-fn wrapper_path(id: &str) -> Result<PathBuf, String> {
-    let (command, name) = WRAPPERS.iter().find(|(command, _)| *command == id).ok_or_else(|| format!("Unknown launch wrapper '{id}'."))?;
-    command_path(command).ok_or_else(|| format!("{name} is not installed."))
-}
-
 fn prepare_file(target: &str, config: &LaunchConfig) -> Result<Prepared, String> {
-    let extension = Path::new(target).extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
-    let mut argv: Vec<OsString> = Vec::new();
-    let mut envs: Vec<(String, OsString)> = Vec::new();
-
-    match extension.as_str() {
-        "exe" | "bat" | "msi" | "lnk" => {
-            let runtime = config.runtime.as_deref().filter(|id| !id.is_empty()).map(str::to_owned).or_else(|| command_exists("wine").then(|| "wine".to_owned()))
-                .ok_or("This Windows program needs Wine or Proton. Pick a runtime in the Tofu settings.")?;
-            let known = list_runtimes();
-            let selected = known.iter().find(|r| r.kind == "compat" && r.id == runtime).ok_or("The selected runtime is no longer installed.")?;
-            if let Some(prefix) = &config.prefix_dir {
-                fs::create_dir_all(prefix).map_err(|e| format!("Unable to create the runtime prefix: {e}"))?;
-                if runtime == "wine" {
-                    envs.push(("WINEPREFIX".into(), prefix.clone().into()));
-                } else {
-                    envs.push(("STEAM_COMPAT_DATA_PATH".into(), prefix.clone().into()));
-                    let client = steam_roots().into_iter().next().ok_or("Proton needs a Steam installation.")?;
-                    envs.push(("STEAM_COMPAT_CLIENT_INSTALL_PATH".into(), client.into()));
-                }
-            }
-            argv.push(selected.path.clone().into());
-            if runtime != "wine" { argv.push("run".into()); }
-            argv.push(target.into());
-        }
-        "sh" | "bash" => { argv.extend(["sh".into(), target.into()]); }
-        "py" => { argv.extend(["python3".into(), target.into()]); }
-        "js" => { argv.extend(["node".into(), target.into()]); }
-        _ => argv.push(target.into()),
-    }
-    argv.extend(config.args.iter().map(OsString::from));
-
-    let mut wrapped: Vec<OsString> = Vec::new();
-    for id in &config.wrappers {
-        let path = wrapper_path(id)?;
-        if id == "gamemoderun" || id == "mangohud" { wrapped.push(path.into()); }
-    }
-    wrapped.extend(argv);
-
-    let mut iter = wrapped.into_iter();
+    let plan = super::with_system_tools(|tools| super::launchopts::plan_file(target, config, tools, true, config.prefix_dir.as_deref()))?;
+    for dir in &plan.create_dirs { fs::create_dir_all(dir).map_err(|e| format!("Unable to create the runtime prefix: {e}"))?; }
+    let mut iter = plan.argv.into_iter();
     let program = iter.next().ok_or("Launch target is empty.")?;
     let mut command = Command::new(program);
     command.args(iter);
-    for (key, value) in envs { command.env(key, value); }
+    for (key, value) in plan.env { command.env(key, value); }
     Ok(Prepared { command, direct: true })
 }
 

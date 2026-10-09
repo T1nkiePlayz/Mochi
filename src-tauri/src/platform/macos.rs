@@ -1,5 +1,5 @@
 use super::{home_dir, launchagent, safe_launch_id, spawn_detached, FlatpakApp, LaunchConfig, PlatformCapabilities, Prepared, RuntimeInfo};
-use std::{ffi::OsString, fs, path::Path, process::Command};
+use std::{ffi::OsString, fs, path::{Path, PathBuf}, process::Command};
 
 const APP_ID: &str = "dev.sidequestgames.Mochilauncher";
 const STARTUP_PLIST: &str = "dev.sidequestgames.Mochilauncher.plist";
@@ -43,6 +43,9 @@ pub fn list_runtimes() -> Vec<RuntimeInfo> {
         })
         .collect()
 }
+
+/// Steam's Proton does not exist on macOS.
+pub fn steam_root() -> Option<PathBuf> { None }
 
 fn open_command() -> Command { Command::new("/usr/bin/open") }
 
