@@ -99,7 +99,7 @@ fn read_instance(root: &Path, dir: &Path, launcher: &InstanceLauncher) -> Option
     let name = ini_value(&config, "name").unwrap_or_else(|| id.clone());
     let game_dir = [".minecraft", "minecraft"].iter().map(|sub| dir.join(sub)).find(|path| path.is_dir()).unwrap_or_else(|| dir.join(".minecraft"));
     let (version, loader) = read(&dir.join("mmc-pack.json")).map(|text| pack_info(&text)).unwrap_or((None, "vanilla".into()));
-    let mut item = make(format!("{}:{}", launcher.id, id), name, launcher.id, instance_target(launcher.id, &id), dir.to_str().map(str::to_owned));
+    let mut item = make(format!("{}:{}", launcher.id, id), name, "prism", instance_target(launcher.id, &id), dir.to_str().map(str::to_owned));
     item.minecraft = Some(MinecraftInstance { version, loader, game_dir: game_dir.to_string_lossy().into_owned() });
     // Custom instance icons live in `<data>/icons/<iconKey>.png`; the built-in ones are not files.
     item.icon_path = ini_value(&config, "iconKey").filter(|key| crate::util::valid_id(key, 120))

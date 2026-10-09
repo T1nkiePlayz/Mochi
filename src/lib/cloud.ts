@@ -1,6 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Piko, Tofu } from "../models";
 
+/**
+ * Source ids the `pikos_source_id_check` constraint accepts. Others are synced as null (the source filter
+ * falls back to the platform label) until migration 20261009150000_more_import_sources.sql is applied;
+ * then add "epic", "whisky", "battlenet", "gog" and "prism" here.
+ */
+const CLOUD_SOURCE_IDS = new Set<string>(["flatpak", "heroic", "steam", "lutris", "bottles", "itch", "apps"]);
+
 const PIKO_COLUMNS = "local_id, name, description, accent, artwork, artwork_url, executable_path, source, source_id, platform_category, igdb_id, categories, screenshots, trailer_id, first_release_date, favorite, tags, artwork_source, kind";
 
 type PikoRow = {
@@ -78,7 +85,7 @@ export async function pushLibrary(client: SupabaseClient, library: Piko[]) {
     artwork_url: piko.artworkUrl ?? null,
     executable_path: clamp(piko.executablePath, 4096) ?? null,
     source: piko.source ?? "built-in",
-    source_id: piko.sourceId ?? null,
+    source_id: piko.sourceId && CLOUD_SOURCE_IDS.has(piko.sourceId) ? piko.sourceId : null,
     platform_category: piko.platformCategory ?? null,
     igdb_id: piko.igdbId ?? null,
     categories: (piko.categories ?? []).slice(0, 60),

@@ -193,6 +193,9 @@ const handlers: Record<string, Handler> = {
     { id: "steam", name: "Steam", description: "Games installed through Steam and its libraries.", detected: true, installed: true, gameCount: 240, launcherCount: 1 },
     { id: "heroic", name: "Heroic Games Launcher", description: "Epic, GOG and Amazon games managed by Heroic.", detected: true, installed: true, gameCount: 6, launcherCount: 0 },
     { id: "lutris", name: "Lutris", description: "Existing Lutris games and launch configurations.", detected: false, installed: true, gameCount: 0, launcherCount: 0 },
+    { id: "prism", name: "Minecraft instances", description: "Instances from Prism Launcher, PolyMC, MultiMC and Fjord Launcher.", detected: true, installed: true, gameCount: 2, launcherCount: 0 },
+    { id: "battlenet", name: "Battle.net", description: "Blizzard games installed in Wine prefixes (Lutris, Bottles, Heroic).", detected: true, installed: true, gameCount: 2, launcherCount: 0 },
+    { id: "gog", name: "GOG", description: "GOG games from the offline installers or Minigalaxy (~/GOG Games).", detected: false, installed: false, gameCount: 0, launcherCount: 0 },
     { id: "apps", name: "Desktop applications", description: "Games registered in your application menu.", detected: true, installed: true, gameCount: 2, launcherCount: 3 },
   ],
   scan_import_games: (args) => {
@@ -207,6 +210,14 @@ const handlers: Record<string, Handler> = {
       { id: "apps:prism", name: "Prism Launcher", source: "apps", launchTarget: "prismlauncher", installPath: null, kind: "launcher", launcherId: "prism" },
       { id: "apps:jagex", name: "Jagex Launcher", source: "apps", launchTarget: "jagex-launcher", installPath: null, kind: "launcher", launcherId: "jagex" },
       { id: "apps:mcpe", name: "Minecraft Bedrock Launcher", source: "apps", launchTarget: "mcpelauncher-ui-qt", installPath: null, kind: "launcher", launcherId: "minecraft-bedrock" },
+    ];
+    if (args.source === "prism") return [
+      { id: "prism:Fabric 1.21", name: "Fabric Fun", source: "prism", launchTarget: "mc-instance://prism/Fabric%201.21", installPath: "/home/dev/.local/share/PrismLauncher/instances/Fabric 1.21", kind: "game", launcherId: null, iconPath: null, minecraft: { version: "1.21.1", loader: "fabric", gameDir: "/home/dev/.local/share/PrismLauncher/instances/Fabric 1.21/minecraft" } },
+      { id: "prism:Vanilla", name: "Vanilla 1.20", source: "prism", launchTarget: "mc-instance://prism/Vanilla", installPath: "/home/dev/.local/share/PrismLauncher/instances/Vanilla", kind: "game", launcherId: null, iconPath: null, minecraft: { version: "1.20.4", loader: "vanilla", gameDir: "/home/dev/.local/share/PrismLauncher/instances/Vanilla/.minecraft" } },
+    ];
+    if (args.source === "battlenet") return [
+      { id: "battlenet:wow", name: "World of Warcraft", source: "battlenet", launchTarget: "battlenet-wine://%2Fhome%2Fdev%2FGames%2Fbattlenet/WoW", installPath: "/home/dev/Games/battlenet/drive_c/Program Files (x86)/World of Warcraft", kind: "game", launcherId: null },
+      { id: "battlenet:hs_beta", name: "Hearthstone", source: "battlenet", launchTarget: "battlenet-wine://%2Fhome%2Fdev%2FGames%2Fbattlenet/WTCG", installPath: "/home/dev/Games/battlenet/drive_c/Program Files (x86)/Hearthstone", kind: "game", launcherId: null },
     ];
     return [];
   },
