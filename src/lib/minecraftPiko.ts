@@ -33,6 +33,7 @@ export function instanceTofu(game: ImportedGame): Tofu {
   return {
     id: instanceTofuId(game.launchTarget), name: game.name, version: instance?.version || "Imported", runtime: "prism", mods: 0, status: "Ready",
     loader, launchTarget: game.launchTarget,
+    ...(instance?.pack ? { pack: { source: instance.pack.source, projectId: instance.pack.projectId, ...(instance.pack.versionId ? { versionId: instance.pack.versionId } : {}), matchedBy: "managed" as const } } : {}),
     ...(game.installPath ? { installPath: game.installPath } : {}),
     ...(dir ? { path: `${dir}/mods`, gameDir: `${dir}/mods`, contentRoot: dir } : {}),
   };
@@ -51,6 +52,7 @@ function upsertTofu(tofus: Tofu[], next: Tofu): Tofu[] {
   if (index < 0) return [...tofus, next];
   const old = tofus[index];
   const merged: Tofu = { ...old, version: next.version, loader: next.loader, launchTarget: next.launchTarget, installPath: next.installPath ?? old.installPath,
+    ...(next.pack ? { pack: next.pack } : {}), // what the launcher recorded beats a name match and refreshes the version
     path: old.path ?? next.path, gameDir: old.gameDir ?? next.gameDir, contentRoot: old.contentRoot ?? next.contentRoot };
   return tofus.map((tofu, at) => (at === index ? merged : tofu));
 }

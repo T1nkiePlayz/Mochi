@@ -101,3 +101,15 @@ describe("migration of old instance pikos", () => {
     expect(folded).toHaveLength(2);
   });
 });
+
+describe("modpack link from the launcher", () => {
+  const game = (pack?: NonNullable<ImportedGame["minecraft"]>["pack"]): ImportedGame => ({ id: "prism:A", name: "A", source: "prism", launchTarget: "mc-instance://prism/A", minecraft: { version: "1.21.1", loader: "fabric", gameDir: "/i/A/minecraft", pack } });
+  it("stores the launcher's pack record as a managed link and refreshes it on re-import", () => {
+    const first = mergeInstances([], [game({ source: "modrinth", projectId: "1KVo5zza", versionId: "v1" })])!;
+    expect(first.piko.tofus[0].pack).toEqual({ source: "modrinth", projectId: "1KVo5zza", versionId: "v1", matchedBy: "managed" });
+    const again = mergeInstances(first.library, [game({ source: "modrinth", projectId: "1KVo5zza", versionId: "v2" })])!;
+    expect(again.piko.tofus[0].pack?.versionId).toBe("v2");
+    const plain = mergeInstances(first.library, [game()])!;
+    expect(plain.piko.tofus[0].pack?.versionId).toBe("v1");
+  });
+});

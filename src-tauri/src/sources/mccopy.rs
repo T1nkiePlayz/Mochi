@@ -36,7 +36,7 @@ pub struct CopyProgress {
 enum Entry { Dir(PathBuf), File(PathBuf, u64) }
 
 /// The folder of the instance a launch target names, found only inside a known launcher's instances folder.
-fn resolve(roots: &[(PathBuf, &'static InstanceLauncher)], target: &str) -> Result<(PathBuf, PathBuf, &'static InstanceLauncher, String), String> {
+pub(super) fn resolve(roots: &[(PathBuf, &'static InstanceLauncher)], target: &str) -> Result<(PathBuf, PathBuf, &'static InstanceLauncher, String), String> {
     let (launcher, id) = parse_instance_target(target).ok_or("That is not a Minecraft instance.")?;
     for (root, candidate) in roots.iter().filter(|(_, candidate)| candidate.id == launcher.id) {
         let parent = instances_dir(root, candidate);
@@ -145,6 +145,13 @@ pub fn copy_instance_in(roots: &[(PathBuf, &'static InstanceLauncher)], target: 
     })();
     if result.is_err() { let _ = fs::remove_dir_all(&dest); }
     result
+}
+
+/// The scanned instance behind a launch target (version, loader, pack facts), for instances that were imported earlier.
+pub fn read_target(home: &Path, target: &str) -> Result<super::ImportedGame, String> {
+    let roots = super::instance_roots(home);
+    let (root, dir, launcher, _) = resolve(&roots, target)?;
+    read_instance(&root, &dir, launcher).ok_or_else(|| "That folder is not an instance.".to_string())
 }
 
 fn read_whole(path: &Path) -> Result<String, String> { fs::read_to_string(path).map_err(|e| format!("Could not read {}: {e}", path.display())) }
