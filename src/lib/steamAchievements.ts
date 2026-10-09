@@ -6,10 +6,12 @@ export type SteamAchievement = {
   unlocked: boolean; unlockedAt?: number | null; hidden: boolean;
 };
 export type SteamAchievementSet = { appid: number; gameName: string; achievements: SteamAchievement[]; unlocked: number; total: number };
-export type SteamAchievementsStatus = "ok" | "private" | "no-achievements" | "no-steam-user" | "offline" | "error";
+export type SteamAchievementsStatus = "ok" | "private" | "no-achievements" | "no-steam-user" | "offline" | "rate-limited" | "error";
 export type SteamAchievementsResult = {
   status: SteamAchievementsStatus; data?: SteamAchievementSet | null; stale: boolean; fetchedAt?: number | null;
   message?: string | null; steamId?: string | null; source: "webapi" | "community" | "cache";
+  /** Seconds until Mochi asks Steam again while it is rate limiting. */
+  retryAfterSecs?: number | null;
 };
 export type AchievementSummary = { appid: number; steamId: string; unlocked: number; total: number; fetchedAt: number };
 
