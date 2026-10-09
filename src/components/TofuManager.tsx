@@ -10,6 +10,7 @@ import { Select } from "./ui/Select";
 import { Checkbox, Field, Switch } from "./ui/Checkbox";
 import { ModFolderEditor } from "./mods/ModFolderEditor";
 import { LinkedPackSection } from "./mods/LinkedPackSection";
+import { TofuSnapshotsSection } from "./mods/TofuSnapshotsSection";
 
 type Props = {
   piko: Piko;
@@ -99,6 +100,10 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
           <Checkbox checked={selected.extractArchives === true} onChange={(checked) => patch({ extractArchives: checked })} label="Extract .zip downloads into the folder"
             description="For games whose mods are archives. A downloaded .zip is unpacked into the content folder and the archive is removed." />
         </Section>
+
+        {selected.path && <Section title="Snapshots" description="Mochi saves the mod files and records before updates. Restore puts the Tofu back to a saved state; the current one is saved first.">
+          <TofuSnapshotsSection tofu={selected} />
+        </Section>}
 
         <Section title="Launch settings">
           {compat.length > 0 && <Field label="Compatibility runtime" hint="Used for Windows programs (.exe). Native games ignore it."><Select value={launch.runtime ?? ""} onChange={(value) => patchLaunch({ runtime: value || undefined })} label="Compatibility runtime" searchable={false} options={[{ value: "", label: "Automatic" }, ...compat.map((runtime) => ({ value: runtime.id, label: runtime.name }))]} /></Field>}

@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type { Piko, Tofu } from "../models";
 import type { ModSourceSettings } from "../lib/mods/resolveSources";
+import { SnapshotError, withSnapshot } from "../lib/mods/snapshots";
 import { dueForCheck, installableUpdates, type ModUpdateItem, type UpdateCheck } from "../lib/mods/updates";
 
 /** Update state per Tofu, held in memory only: nothing from a mod site is written to disk. */
@@ -71,21 +72,29 @@ export type ApplyResult = { updated: number; failed: Array<{ title: string; erro
 /** Applies updates one after another (each verified); the rest of the list stays usable while this runs. */
 export async function applyUpdates(tofu: Tofu, items: readonly ModUpdateItem[], options: { deadline?: number } = {}): Promise<ApplyResult> {
   const result: ApplyResult = { updated: 0, failed: [] };
-  for (const item of installableUpdates(items)) {
-    if (options.deadline && Date.now() > options.deadline) break;
-    const before = getUpdateState(tofu.id);
-    set(tofu.id, { ...before, updating: [...before.updating, item.path] });
-    try {
-      await (await import("../lib/mods/updateService")).applyModUpdate(tofu, item);
-      result.updated += 1;
-      const state = getUpdateState(tofu.id);
-      set(tofu.id, { ...state, check: state.check && { ...state.check, items: state.check.items.filter((entry) => entry.path !== item.path) } });
-    } catch (error) {
-      result.failed.push({ title: item.title, error: error instanceof Error ? error.message : String(error) });
-    } finally {
-      const state = getUpdateState(tofu.id);
-      set(tofu.id, { ...state, updating: state.updating.filter((path) => path !== item.path) });
+  const wanted = installableUpdates(items);
+  const run = async () => {
+    for (const item of wanted) {
+      if (options.deadline && Date.now() > options.deadline) break;
+      const before = getUpdateState(tofu.id);
+      set(tofu.id, { ...before, updating: [...before.updating, item.path] });
+      try {
+        await (await import("../lib/mods/updateService")).applyModUpdate(tofu, item, { snapshot: false });
+        result.updated += 1;
+        const state = getUpdateState(tofu.id);
+        set(tofu.id, { ...state, check: state.check && { ...state.check, items: state.check.items.filter((entry) => entry.path !== item.path) } });
+      } catch (error) {
+        result.failed.push({ title: item.title, error: error instanceof Error ? error.message : String(error) });
+      } finally {
+        const state = getUpdateState(tofu.id);
+        set(tofu.id, { ...state, updating: state.updating.filter((path) => path !== item.path) });
+      }
     }
+  };
+  // One snapshot for the whole batch (taken first); if it cannot be saved nothing is updated.
+  try { if (wanted.length) await withSnapshot(tofu, `Before updating ${wanted.length} mod${wanted.length === 1 ? "" : "s"}`, run); } catch (error) {
+    if (!(error instanceof SnapshotError)) throw error;
+    result.failed.push({ title: "Snapshot", error: error.message });
   }
   const state = getUpdateState(tofu.id);
   set(tofu.id, { ...state, message: result.failed.length ? `Updated ${result.updated}; ${result.failed.length} failed (${result.failed[0].title}: ${result.failed[0].error}).` : result.updated ? `Updated ${result.updated} mod${result.updated === 1 ? "" : "s"}.` : state.message });
