@@ -61,3 +61,8 @@
 .download-progress { border-radius: 2px; background: #28211a; border: 2px solid #1c1812; }
 .download-progress > span { background: #43d943; }
 .danger-outline, .stop-button { color: #ffb0a2; border-color: #1c1812; background: linear-gradient(180deg, #5a3a33, #43271f); }
+
+/* Form select and component dressing (moved from the launcher stylesheets so the launcher carries no per-theme rules). */
+[data-mochi-theme="runescape"] .mochi-select-trigger { border-width: 2px; }
+[data-mochi-theme="runescape"] .mochi-select-option.active { background: #5a4d3b; box-shadow: inset 1px 1px 0 #14100b; }
+[data-mochi-theme="runescape"] .mochi-select-option.selected { color: #ff981f; }

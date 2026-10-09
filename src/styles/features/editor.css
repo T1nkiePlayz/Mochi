@@ -54,8 +54,8 @@
 .artwork-crop-stage:focus-visible { outline: 2px solid var(--mochi-focus-ring); outline-offset: 3px; }
 .artwork-crop-stage img, .artwork-preview-art img { position: absolute; max-width: none; height: auto; pointer-events: none; }
 .artwork-crop-grid { position: absolute; inset: 0; pointer-events: none; background:
-  linear-gradient(to right, transparent 33%, rgba(255,255,255,.25) 33%, rgba(255,255,255,.25) calc(33% + 1px), transparent calc(33% + 1px), transparent 66%, rgba(255,255,255,.25) 66%, rgba(255,255,255,.25) calc(66% + 1px), transparent calc(66% + 1px)),
-  linear-gradient(to bottom, transparent 33%, rgba(255,255,255,.25) 33%, rgba(255,255,255,.25) calc(33% + 1px), transparent calc(33% + 1px), transparent 66%, rgba(255,255,255,.25) 66%, rgba(255,255,255,.25) calc(66% + 1px), transparent calc(66% + 1px)); }
+  linear-gradient(to right, transparent 33%, color-mix(in srgb, var(--mochi-art-text) 25%, transparent) 33%, color-mix(in srgb, var(--mochi-art-text) 25%, transparent) calc(33% + 1px), transparent calc(33% + 1px), transparent 66%, color-mix(in srgb, var(--mochi-art-text) 25%, transparent) 66%, color-mix(in srgb, var(--mochi-art-text) 25%, transparent) calc(66% + 1px), transparent calc(66% + 1px)),
+  linear-gradient(to bottom, transparent 33%, color-mix(in srgb, var(--mochi-art-text) 25%, transparent) 33%, color-mix(in srgb, var(--mochi-art-text) 25%, transparent) calc(33% + 1px), transparent calc(33% + 1px), transparent 66%, color-mix(in srgb, var(--mochi-art-text) 25%, transparent) 66%, color-mix(in srgb, var(--mochi-art-text) 25%, transparent) calc(66% + 1px), transparent calc(66% + 1px)); }
 .artwork-crop-preview { display: grid; gap: 8px; }
 .artwork-preview-card { width: 120px; overflow: hidden; border: var(--mochi-border-width) solid var(--mochi-card-border); border-radius: var(--mochi-card-radius); background: var(--mochi-card-background); }
 .artwork-preview-card strong { display: block; padding: 6px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }

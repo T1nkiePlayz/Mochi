@@ -151,8 +151,8 @@ code, .mfa-setup-card code, .theme-config-path code, .setting-location-value cod
 .setting-row:hover { background: var(--mochi-nav-hover-background); }
 .setting-row small, .game-card-copy small, .tofu-details, .tofu-mods { color: var(--mochi-text-muted); }
 .hero-copy, .hero-meta { position: relative; z-index: 1; }
-.hero-meta { color: rgba(255, 255, 255, .78); }
-.hero-meta strong { color: #fff; }
+.hero-meta { color: color-mix(in srgb, var(--mochi-art-text) 78%, transparent); }
+.hero-meta strong { color: var(--mochi-art-text); }
 .details-strip { border-top: var(--mochi-border-width) solid var(--mochi-border); border-bottom: var(--mochi-border-width) solid var(--mochi-border); }
 .game-details-hero { background: var(--mochi-panel-background); border: var(--mochi-border-width) solid var(--mochi-panel-border); border-radius: var(--mochi-hero-radius); box-shadow: var(--mochi-shadow-card); }
 .game-details-section { background: var(--mochi-panel-background); border: var(--mochi-border-width) solid var(--mochi-panel-border); border-radius: var(--mochi-card-radius); }
@@ -197,7 +197,7 @@ progress { accent-color: var(--mochi-accent-strong); }
 .game-card-copy { padding: 11px 12px 13px; gap: 3px; background: var(--mochi-card-background); position: relative; }
 .game-card-copy strong { color: var(--mochi-text-strong); font-size: 13px; font-weight: 600; }
 .game-card-copy small { font-size: 11px; }
-.game-card-play { background: var(--mochi-primary-background); color: var(--mochi-primary-color); box-shadow: 0 6px 18px rgba(0, 0, 0, .35); }
+.game-card-play { background: var(--mochi-primary-background); color: var(--mochi-primary-color); box-shadow: 0 6px 18px color-mix(in srgb, var(--mochi-shadow) 83%, transparent); }
 .game-cloud-status { font-size: 10px; }
 .game-cloud-status.is-synced { color: var(--mochi-success); }
 .game-cloud-status.not-synced { color: var(--mochi-warning); }

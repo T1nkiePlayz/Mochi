@@ -63,3 +63,9 @@
 .account-avatar { border-radius: 3px; border: 2px solid #a67c2e; }
 .notification-popover, .account-menu { border-radius: 3px; border-color: #a67c2e; }
 .download-progress > span { background: linear-gradient(90deg, #ffc857, #e8590c); }
+
+/* Form select and component dressing (moved from the launcher stylesheets so the launcher carries no per-theme rules). */
+[data-mochi-theme="dungeons"] .mochi-select-trigger { border-width: 2px; box-shadow: var(--mochi-input-shadow), inset 0 0 0 1px rgba(166, 124, 46, .45); }
+[data-mochi-theme="dungeons"] .mochi-select-popover { border-width: 2px; }
+[data-mochi-theme="dungeons"] .mochi-select-option.active { background: rgba(240, 168, 48, .18); }
+[data-mochi-theme="dungeons"] .mochi-select-option.selected { color: #ffc857; }

@@ -10,9 +10,10 @@ import { join, relative } from "node:path";
 
 const ROOT = "src";
 const BASELINE = "scripts/token-usage-baseline.json";
-const EXEMPT = [/^src\/themes\//, /^src\/styles\/tokens\.css$/, /^src\/styles\/fonts\.generated\.css$/, /\.test\.tsx?$/];
+// accessibility.css: user-chosen focus/contrast palettes are fixed colours by design. generated-art.css: procedural cover art.
+const EXEMPT = [/^src\/styles\/features\/accessibility\.css$/, /^src\/styles\/features\/generated-art\.css$/, /^src\/themes\//, /^src\/styles\/tokens\.css$/, /^src\/styles\/fonts\.generated\.css$/, /\.test\.tsx?$/];
 const COLOR = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\(|(?<![\w-])(?:white|black|red|green|blue|yellow|orange|purple|pink|gray|grey|cyan|magenta)(?![\w-])(?=\s*[;,)}!]|\s*$)/g;
-const FONT = /font-family\s*:\s*(?!var\(|inherit|initial|unset)[^;}]*(?:"[^"]+"|'[^']+')/g;
+const FONT = /font(?:-family)?\s*:\s*(?!var\(|inherit|initial|unset)[^;}]*(?:"[^"]+"|'[^']+'|\b(?:Manrope|DM Sans|JetBrains Mono)\b)/g;
 
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {

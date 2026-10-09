@@ -86,3 +86,8 @@ progress { filter: hue-rotate(0deg); }
 
 /* Generated covers: a single phosphor-green tint */
 :root { --mochi-art-hue: 128; --mochi-art-saturation: 70%; --mochi-art-lightness: 12%; --mochi-art-text: #5cff7a; }
+
+/* Form select and component dressing (moved from the launcher stylesheets so the launcher carries no per-theme rules). */
+[data-mochi-theme="pipboy"] .mochi-select-trigger, [data-mochi-theme="pipboy"] .mochi-select-popover { font-family: inherit; text-transform: uppercase; letter-spacing: .04em; }
+[data-mochi-theme="pipboy"] .mochi-select-option.active, [data-mochi-theme="pipboy"] .mochi-select-option.selected { background: var(--mochi-accent); color: #021006; }
+[data-mochi-theme="pipboy"] .mochi-select-option.active small, [data-mochi-theme="pipboy"] .mochi-select-option.selected small { color: #0f7a36; }

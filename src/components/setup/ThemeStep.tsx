@@ -18,11 +18,11 @@ export function ThemeStep({ themes, theme, setTheme }: Props) {
             const selected = theme === option.id;
             return (
               <button type="button" role="radio" aria-checked={selected} key={option.id} className={"setup-theme-card" + (selected ? " selected" : "")} onClick={() => void setTheme(option.id)}>
-                <span className="setup-swatch" aria-hidden="true" style={{ background: swatch(colors.background, "#111") }}>
-                  <i style={{ background: swatch(colors.surface, "#222") }} />
-                  <b style={{ background: swatch(colors.accent, "#8f8") }} />
-                  <em style={{ background: swatch(colors.text, "#ddd") }} />
-                  <u style={{ background: swatch(colors.surfaceRaised ?? colors.surface, "#333") }} />
+                <span className="setup-swatch" aria-hidden="true" style={{ background: swatch(colors.background, "var(--mochi-background)") }}>
+                  <i style={{ background: swatch(colors.surface, "var(--mochi-surface)") }} />
+                  <b style={{ background: swatch(colors.accent, "var(--mochi-accent)") }} />
+                  <em style={{ background: swatch(colors.text, "var(--mochi-text)") }} />
+                  <u style={{ background: swatch(colors.surfaceRaised ?? colors.surface, "var(--mochi-surface-raised)") }} />
                 </span>
                 <span className="setup-theme-copy">
                   <strong>{option.name}{option.source === "user" ? " (yours)" : ""}</strong>

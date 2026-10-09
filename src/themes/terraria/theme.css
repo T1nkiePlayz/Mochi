@@ -53,3 +53,10 @@
 .download-progress > span { background: linear-gradient(180deg, #8ff08a, #3fa63a); }
 .danger-outline, .stop-button { background: linear-gradient(180deg, #c93a3a, #8f1f1f); color: #fff; border-color: #0e1236; text-shadow: 1px 1px 0 #000; }
 ::selection { background: #ffd54a; color: #33260a; }
+
+/* Form select and component dressing (moved from the launcher stylesheets so the launcher carries no per-theme rules). */
+[data-mochi-theme="terraria"] .mochi-select-trigger { border-width: 2px; }
+[data-mochi-theme="terraria"] .mochi-select-popover { border-width: 3px; }
+[data-mochi-theme="terraria"] .mochi-select-option { border: 2px solid transparent; }
+[data-mochi-theme="terraria"] .mochi-select-option.active { background: #3a46a8; border-color: #8a96ff; }
+[data-mochi-theme="terraria"] .mochi-select-option.selected { color: #ffd54a; }

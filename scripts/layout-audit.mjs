@@ -112,7 +112,7 @@ function measure() {
 
     // 2. Outside the viewport / cut by a hiding ancestor. Scrollable ancestors are fine.
     const chain = clippers(el);
-    const scrollable = chain.some(({ x }) => x === "auto" || x === "scroll");
+    const scrollable = chain.some(({ x }) => x === "auto" || x === "scroll") || chain.some(({ parent }) => getComputedStyle(parent).textOverflow === "ellipsis");
     if (!scrollable) {
       let limitRight = vw, limitLeft = 0, by = "viewport";
       for (const { parent, x } of chain) {

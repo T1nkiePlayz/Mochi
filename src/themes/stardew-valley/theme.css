@@ -64,3 +64,9 @@
 .download-progress > span { background: #5fae3a; }
 .play-button, .secondary-button { text-shadow: none; }
 ::selection { background: #b3261e; color: #fff; }
+
+/* Form select and component dressing (moved from the launcher stylesheets so the launcher carries no per-theme rules). */
+[data-mochi-theme="stardew-valley"] .mochi-select-trigger { box-shadow: var(--mochi-input-shadow), 0 0 0 2px #d9822b; border-width: 3px; }
+[data-mochi-theme="stardew-valley"] .mochi-select-popover { border-width: 3px; box-shadow: 0 0 0 3px #d9822b, 0 0 0 6px #5c2c0c; }
+[data-mochi-theme="stardew-valley"] .mochi-select-option.active { background: #f0c27a; }
+[data-mochi-theme="stardew-valley"] .mochi-select-option.selected { color: #b3261e; }
