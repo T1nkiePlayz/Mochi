@@ -48,6 +48,8 @@ export const LAUNCHERS: LauncherDef[] = [
   { id: "cartridges", name: "Cartridges", ids: ["cartridges", "hu.kramo.cartridges", "page.kramo.cartridges"], names: ["cartridges"], bundles: [] },
   { id: "playonlinux", name: "PlayOnLinux", ids: ["playonlinux", "playonmac"], names: ["playonlinux", "playonmac"], bundles: [] },
   { id: "gamehub", name: "GameHub", ids: ["gamehub", "com.github.tkashkin.gamehub"], names: ["gamehub"], bundles: [] },
+  { id: "sober", name: "Sober (Roblox)", ids: ["sober", "org.vinegarhq.sober"], names: ["sober"], bundles: [] },
+  { id: "vinegar", name: "Vinegar (Roblox Studio)", ids: ["vinegar", "org.vinegarhq.vinegar"], names: ["vinegar"], bundles: [] },
 ];
 
 const byId = new Map(LAUNCHERS.map((def) => [def.id, def]));

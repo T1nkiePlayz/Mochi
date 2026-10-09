@@ -131,17 +131,17 @@ fn parse_desktop_app(file: &Path, text: &str, own_exe: Option<&Path>, icon_dirs:
 
     let icon = entry.get("Icon").and_then(|value| icons::resolve_icon(value, icon_dirs)).and_then(|path| path.to_str().map(str::to_owned));
     let launcher = classify::classify_launcher(&ids, name, None);
+    // Flatpak and Steam entries are covered by their own sources.
+    let covered = entry.contains_key("X-Flatpak") || exec.contains("steam://") || exec.starts_with("flatpak run");
     if let Some(def) = launcher {
-        // Steam is imported by its own source (with a proper client launch target).
-        if classify::SOURCE_OWNED_LAUNCHERS.contains(&def.id) { return None; }
+        // Steam is imported by its own source (with a proper client launch target); Flatpak launchers by the Flatpak source.
+        if classify::SOURCE_OWNED_LAUNCHERS.contains(&def.id) || covered { return None; }
         let mut item = make_launcher(format!("apps:{file_name}"), (*name).to_owned(), "apps", file.to_string_lossy().into_owned(), def.id);
         item.install_path = entry.get("Path").map(|p| (*p).to_owned());
         item.icon_path = icon;
         return Some(item);
     }
     let is_game = entry.get("Categories").is_some_and(|c| c.split(';').any(|c| c.eq_ignore_ascii_case("Game")));
-    // Flatpak and Steam entries are covered by their own sources.
-    let covered = entry.contains_key("X-Flatpak") || exec.contains("steam://") || exec.starts_with("flatpak run");
     if !is_game || covered || classify::is_non_game(&ids, name) { return None; }
     let mut item = make(format!("apps:{file_name}"), (*name).to_owned(), "apps", file.to_string_lossy().into_owned(), entry.get("Path").map(|p| (*p).to_owned()));
     item.icon_path = icon;
@@ -169,11 +169,16 @@ fn scan_desktop_apps(home: &Path) -> Vec<ImportedGame> {
     sort_games(out)
 }
 
+/// Games, plus known launchers (Sober, Vinegar, ...) whose desktop entry may not declare the Game category.
+fn keep_flatpak(id: &str, name: &str, category: &str) -> bool {
+    category == "Games" || classify::classify_launcher(&[id], name, None).is_some()
+}
+
 pub fn scan_extra(source: &str, home: &Path) -> Vec<ImportedGame> {
     match source {
         "flatpak" => {
             let icon_dirs = icons::data_dirs(home);
-            list_flatpaks().unwrap_or_default().into_iter().filter(|app| app.category == "Games")
+            list_flatpaks().unwrap_or_default().into_iter().filter(|app| keep_flatpak(&app.id, &app.name, &app.category))
                 .filter(|app| !classify::is_mochi(&[&app.id], &app.name, None, None, None) && !classify::is_non_game(&[&app.id], &app.name))
                 .map(|app| {
                     let id = app.id.clone();
@@ -197,6 +202,22 @@ mod tests {
     use super::*;
 
     fn parse(file: &str, text: &str) -> Option<ImportedGame> { parse_desktop_app(Path::new(file), text, None, &[]) }
+
+    #[test]
+    fn flatpak_filter_keeps_launchers_without_games_category() {
+        assert!(keep_flatpak("org.vinegarhq.Sober", "Sober", "Other"));
+        assert!(keep_flatpak("org.vinegarhq.Vinegar", "Vinegar", "Other"));
+        assert!(keep_flatpak("org.supertuxproject.SuperTux", "SuperTux", "Games"));
+        assert!(!keep_flatpak("org.gnome.Calculator", "Calculator", "Other"));
+    }
+
+    #[test]
+    fn flatpak_exported_launcher_entries_are_left_to_the_flatpak_source() {
+        let entry = "[Desktop Entry]\nType=Application\nName=Sober\nExec=/usr/bin/flatpak run --branch=stable org.vinegarhq.Sober\nX-Flatpak=org.vinegarhq.Sober\n";
+        assert!(parse("/var/lib/flatpak/exports/share/applications/org.vinegarhq.Sober.desktop", entry).is_none());
+        let native = "[Desktop Entry]\nType=Application\nName=Lutris\nExec=lutris\n";
+        assert!(parse("/usr/share/applications/net.lutris.Lutris.desktop", native).is_some());
+    }
 
     #[test]
     fn mochi_desktop_entries_are_excluded() {

@@ -61,6 +61,8 @@ pub const LAUNCHERS: &[LauncherDef] = &[
     launcher!("cartridges", "Cartridges", ["cartridges", "hu.kramo.cartridges", "page.kramo.cartridges"], ["cartridges"], []),
     launcher!("playonlinux", "PlayOnLinux", ["playonlinux", "playonmac"], ["playonlinux", "playonmac"], []),
     launcher!("gamehub", "GameHub", ["gamehub", "com.github.tkashkin.gamehub"], ["gamehub"], []),
+    launcher!("sober", "Sober (Roblox)", ["sober", "org.vinegarhq.sober"], ["sober"], []),
+    launcher!("vinegar", "Vinegar (Roblox Studio)", ["vinegar", "org.vinegarhq.vinegar"], ["vinegar"], []),
 ];
 
 /// Sources whose own scan already emits a launcher entry, so the generic
@@ -169,6 +171,8 @@ mod tests {
         assert_eq!(id(&[], "GOG Galaxy.app", Some("com.gog.galaxy")), Some("gog"));
         assert_eq!(id(&["steam-native.desktop"], "Steam (Native)", None), Some("steam"));
         assert_eq!(id(&["io.github.unmojang.FjordLauncher"], "Fjord Launcher", None), Some("fjord"));
+        assert_eq!(id(&["org.vinegarhq.Sober"], "Sober", None), Some("sober"));
+        assert_eq!(id(&["org.vinegarhq.Vinegar"], "Vinegar", None), Some("vinegar"));
     }
 
     #[test]

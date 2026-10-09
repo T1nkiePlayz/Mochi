@@ -216,6 +216,7 @@ const handlers: Record<string, Handler> = {
     { id: "prism", name: "Minecraft instances", description: "Instances from Prism Launcher, PolyMC, MultiMC and Fjord Launcher.", detected: true, installed: true, gameCount: 2, launcherCount: 0 },
     { id: "battlenet", name: "Battle.net", description: "Blizzard games installed in Wine prefixes (Lutris, Bottles, Heroic).", detected: true, installed: true, gameCount: 2, launcherCount: 0 },
     { id: "gog", name: "GOG", description: "GOG games from the offline installers or Minigalaxy (~/GOG Games).", detected: false, installed: false, gameCount: 0, launcherCount: 0 },
+    { id: "flatpak", name: "Flatpak", description: "Installed games delivered through Flatpak.", detected: true, installed: true, gameCount: 1, launcherCount: 2 },
     { id: "apps", name: "Desktop applications", description: "Games registered in your application menu.", detected: true, installed: true, gameCount: 2, launcherCount: 3 },
   ],
   scan_import_games: (args) => {
@@ -230,6 +231,11 @@ const handlers: Record<string, Handler> = {
       { id: "apps:prism", name: "Prism Launcher", source: "apps", launchTarget: "prismlauncher", installPath: null, kind: "launcher", launcherId: "prism" },
       { id: "apps:jagex", name: "Jagex Launcher", source: "apps", launchTarget: "jagex-launcher", installPath: null, kind: "launcher", launcherId: "jagex" },
       { id: "apps:mcpe", name: "Minecraft Bedrock Launcher", source: "apps", launchTarget: "mcpelauncher-ui-qt", installPath: null, kind: "launcher", launcherId: "minecraft-bedrock" },
+    ];
+    if (args.source === "flatpak") return [
+      { id: "flatpak:org.supertuxproject.SuperTux", name: "SuperTux", source: "flatpak", launchTarget: "flatpak://org.supertuxproject.SuperTux", installPath: null, kind: "game", launcherId: null, iconPath: null },
+      { id: "flatpak:org.vinegarhq.Sober", name: "Sober", source: "flatpak", launchTarget: "flatpak://org.vinegarhq.Sober", installPath: null, kind: "launcher", launcherId: "sober", iconPath: null },
+      { id: "flatpak:org.vinegarhq.Vinegar", name: "Vinegar", source: "flatpak", launchTarget: "flatpak://org.vinegarhq.Vinegar", installPath: null, kind: "launcher", launcherId: "vinegar", iconPath: null },
     ];
     if (args.source === "prism") return [
       { id: "prism:Fabric 1.21", name: "Fabric Fun", source: "prism", launchTarget: "mc-instance://prism/Fabric%201.21", installPath: "/home/dev/.local/share/PrismLauncher/instances/Fabric 1.21", kind: "game", launcherId: null, iconPath: null, minecraft: { version: "1.21.1", loader: "fabric", gameDir: "/home/dev/.local/share/PrismLauncher/instances/Fabric 1.21/minecraft" } },
