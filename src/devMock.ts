@@ -120,8 +120,9 @@ const handlers: Record<string, Handler> = {
   ...storageHandlers,
   get_dir_size: () => ({ bytes: 412_000_000, files: 1_284, truncated: false }),
   analyze_mod_files: () => [
-    { filename: "sodium-0.6.jar", path: "/mods/sodium-0.6.jar", enabled: true, projectId: "AANobbMI", title: "Sodium", currentVersion: "0.6.0", update: { versionId: "v2", versionNumber: "0.6.3", filename: "sodium-0.6.3.jar", url: "https://cdn.modrinth.com/x", size: 930_000 } },
-    { filename: "lithium.jar.disabled", path: "/mods/lithium.jar.disabled", enabled: false, projectId: "gvQqBUqZ", title: "Lithium", currentVersion: "0.12.0" },
+    { filename: "sodium-0.6.jar", path: "/mods/sodium-0.6.0.jar", enabled: true, projectId: "AANobbMI", title: "Sodium", currentVersion: "0.6.0", update: { versionId: "v2", versionNumber: "0.6.3", filename: "sodium-0.6.3.jar", url: "https://cdn.modrinth.com/x", size: 930_000 } },
+    { filename: "lithium.jar.disabled", path: "/mods/lithium.jar.disabled", enabled: false, projectId: "gvQqBUqZ", title: "Lithium", currentVersion: "0.12.0", update: { versionId: "v-lithium", versionNumber: "0.12.4", filename: "lithium-0.12.4.jar", url: "https://cdn.modrinth.com/l", size: 402_000 } },
+    { filename: "iris-1.7.jar", path: "/mods/iris-1.7.jar", enabled: true, projectId: "YL57xq9U", title: "Iris Shaders", currentVersion: "1.7.0", update: { versionId: "v-iris", versionNumber: "1.8.0", filename: "iris-1.8.0.jar", url: "https://cdn.modrinth.com/i", size: 2_000_000 } },
   ],
   update_mod_file: () => null,
   start_mod_download: () => `mock-${Date.now()}`,
@@ -137,6 +138,12 @@ const handlers: Record<string, Handler> = {
       const offset = Number(url.searchParams.get("offset") || 0);
       const limit = Number(url.searchParams.get("limit") || 10);
       return apiResult({ hits: all.slice(offset, offset + limit), offset, limit, total_hits: all.length });
+    }
+    if (url.pathname.startsWith("/v2/version/")) {
+      const id = decodeURIComponent(url.pathname.split("/").pop() || "");
+      const notes: Record<string, string | null> = { "v2": "## Sodium 0.6.3\n\n- Fixed a crash when resizing the window\n- Improved chunk upload speed\n- Updated translations", "v-lithium": null, "v-iris": "### Iris 1.8.0\n\n- Support for new shader pack options\n- Fixed **shadow flicker** on some GPUs" };
+      return apiResult({ id, project_id: id, name: id, version_number: "2", game_versions: ["1.21.1"], loaders: ["fabric"], featured: true, date_published: "2025-06-01T00:00:00Z", version_type: "release", changelog: notes[id] ?? null,
+        dependencies: id === "v-iris" ? [{ project_id: "P7dR8mSH", dependency_type: "required" }] : [], files: [{ hashes: { sha1: "a".repeat(40) }, url: "https://cdn.modrinth.com/x", filename: `${id}.jar`, primary: true, size: 1000 }] });
     }
     if (/\/members$/.test(url.pathname)) return apiResult([]);
     if (/\/version$/.test(url.pathname)) return apiResult([]);
@@ -211,7 +218,7 @@ const handlers: Record<string, Handler> = {
     { id: "d3", tofuId: "modded", tofuName: "Modded", itemName: "Lithium", filename: "lithium.jar", downloaded: 0, status: "failed", error: "Modrinth download failed (404).", createdAt: Date.now() - 2000, finishedAt: Date.now(), provider: "nexus", dir: "/mods" },
   ],
   list_mod_files: () => [
-    { filename: "sodium-0.6.jar", path: "/mods/sodium-0.6.jar", enabled: true, size: 912_000 },
+    { filename: "sodium-0.6.jar", path: "/mods/sodium-0.6.0.jar", enabled: true, size: 912_000 },
     { filename: "lithium.jar.disabled", path: "/mods/lithium.jar.disabled", enabled: false, size: 402_000 },
   ],
   check_launch_targets: (args) => ((args.targets as string[]) ?? []).map(() => true),

@@ -1,6 +1,6 @@
 import { cfMod } from "../curseforge";
 import { isOnline } from "../offline";
-import { analyzeModFiles, updateModFile } from "../modrinth";
+import { analyzeModFiles, getModrinthProjectInfo, getModrinthVersion, updateModFile } from "../modrinth";
 import { nexusModPageUrl } from "../nexus";
 import { supabase } from "../supabase";
 import type { Piko, Tofu } from "../../models";
@@ -8,6 +8,9 @@ import { tofuTarget, type TofuTarget } from "./compat";
 import { createCurseforgeSource, curseforgeItem } from "./curseforgeSource";
 import { modSupportOf } from "./gameSupport";
 import { listInstanceMods } from "./instances";
+import { resolveDependencies, installOrder, type DependencyEntry, type DependencyPlan } from "./dependencies";
+import { installFile } from "./install";
+import { createModrinthSource, modrinthFile, modrinthItem } from "./modrinthSource";
 import { withSnapshot } from "./snapshots";
 import { createNexusSource } from "./nexusSource";
 import type { ModSourceSettings } from "./resolveSources";
@@ -54,7 +57,7 @@ export async function checkTofuUpdates(tofu: Tofu, piko: Piko | undefined, modSo
         if (!found.update) continue;
         items.push({
           path: found.path, filename: found.filename, title: found.title, iconUrl: found.iconUrl, source: "modrinth", enabled: found.enabled,
-          currentVersion: found.currentVersion, newVersion: found.update.versionNumber,
+          currentVersion: found.currentVersion, newVersion: found.update.versionNumber, pageUrl: `https://modrinth.com/project/${found.projectId}`,
           record: { source: "modrinth", projectId: found.projectId, fileId: found.update.versionId, version: found.update.versionNumber, title: found.title, iconUrl: found.iconUrl },
           apply: { kind: "download", provider: "modrinth", url: found.update.url, filename: found.update.filename, sha1: found.update.sha1 },
         });
@@ -85,7 +88,7 @@ export async function checkTofuUpdates(tofu: Tofu, piko: Piko | undefined, modSo
       const resolved = await source.resolveDownload(item, newest);
       items.push({
         path: file.path, filename: file.filename, title: record.title || item.name, iconUrl: record.iconUrl, source: record.source as "curseforge" | "nexus", enabled: file.enabled,
-        currentVersion: record.version || file.filename, newVersion: newest.version ?? newest.name ?? newest.fileName,
+        currentVersion: record.version || file.filename, newVersion: newest.version ?? newest.name ?? newest.fileName, pageUrl: item.pageUrl,
         record: { source: record.source as "curseforge" | "nexus", projectId: record.projectId, fileId: newest.id, version: newest.version ?? newest.name, title: record.title, iconUrl: record.iconUrl, fileDate: newest.date },
         apply: resolved.url && !resolved.restricted && !resolved.needsPremium
           ? { kind: "download", provider: record.source as "curseforge" | "nexus", url: resolved.url, filename: resolved.fileName, sha1: resolved.sha1 }
@@ -108,4 +111,37 @@ export async function applyModUpdate(tofu: Tofu, item: ModUpdateItem, options: {
   const { provider, url, filename, sha1 } = item.apply;
   const install = () => updateModFile(item.path, { url, filename, sha1 }, { provider, tofuId: tofu.id, record: { ...item.record, fileDate: item.record.fileDate } });
   if (options.snapshot === false) await install(); else await withSnapshot(tofu, `Before updating ${item.title}`, install);
+}
+
+/** Required dependencies of the NEW versions (Modrinth updates only; other sources have no per-file dependency list here). Never throws: a failed lookup is a note. */
+export async function planUpdateDependencies(tofu: Tofu, items: readonly ModUpdateItem[], minecraft: boolean): Promise<Map<string, DependencyPlan>> {
+  const plans = new Map<string, DependencyPlan>();
+  const target: TofuTarget = minecraft ? tofuTarget(tofu) : {};
+  const records = tofu.path ? (await listInstanceMods(tofu.id, tofu.path).catch(() => [])).flatMap((file) => file.record ? [file.record] : []) : [];
+  const source = createModrinthSource("mod");
+  await pool(items.filter((item) => item.source === "modrinth"), 3, async (update) => {
+    try {
+      const [project, version] = await Promise.all([getModrinthProjectInfo(update.record.projectId), getModrinthVersion(update.record.fileId)]);
+      const file = modrinthFile(version);
+      if (!file) return;
+      plans.set(update.path, await resolveDependencies({ source, item: modrinthItem(project), file, target, filter: { gameVersion: target.gameVersion, loader: target.loader }, records }));
+    } catch (error) {
+      plans.set(update.path, { entries: [], warnings: [], truncated: false, notes: [`${update.title}: could not check dependencies (${errorText(error, "lookup failed")}).`] });
+    }
+  });
+  return plans;
+}
+
+/** Downloads the chosen missing dependencies (deepest first) after the updates; failures are returned, not thrown. */
+export async function installUpdateDependencies(tofu: Tofu, entries: readonly DependencyEntry[]): Promise<{ queued: number; failed: Array<{ name: string; error: string }> }> {
+  const source = createModrinthSource("mod");
+  const result = { queued: 0, failed: [] as Array<{ name: string; error: string }> };
+  for (const entry of installOrder(entries)) {
+    if (!entry.item || !entry.file) continue;
+    try {
+      const outcome = await installFile(source, entry.item, entry.file, tofu);
+      if (outcome.kind === "queued") result.queued += 1; else result.failed.push({ name: entry.name, error: "Download it on the site." });
+    } catch (error) { result.failed.push({ name: entry.name, error: errorText(error, "download failed") }); }
+  }
+  return result;
 }
