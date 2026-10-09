@@ -41,7 +41,7 @@ export function useGameSourceChoice(gameKey: string): [GameSourceChoice, (choice
   return [isSourceChoice(value) ? value : "auto", set];
 }
 
-export function useDiscoverGames(settings: ModSourceSettings) {
+export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean) {
   const [cfGames, setCfGames] = useState<CfGame[] | null>(null);
   const [cfError, setCfError] = useState("");
   const [cfLoading, setCfLoading] = useState(false);
@@ -83,7 +83,7 @@ export function useDiscoverGames(settings: ModSourceSettings) {
       if (onCf) return cfGame(onCf, domain);
       return { key: `nx:${domain}`, name, iconUrl: info?.iconUrl, source: "nexus", nexusDomain: domain };
     };
-    for (const { seed, cf } of visibleSeedGames(SEED_GAMES, cfGames, nexusOn, settings.curseforge)) {
+    for (const { seed, cf } of visibleSeedGames(SEED_GAMES, cfGames, nexusOn && nexusKey, settings.curseforge)) {
       if (cf) put(cfGame(cf, seed.nexusDomain));
       else put(nexusOnly(seed.nexusDomain!, seed.name));
     }
@@ -94,7 +94,7 @@ export function useDiscoverGames(settings: ModSourceSettings) {
       } else put(nexusOnly(entry.domain, entry.name ?? entry.domain));
     }
     return [...out.values()];
-  }, [cfGames, cfError, catalog, stored, settings.curseforge, settings.nexus, nexusOn]);
+  }, [cfGames, cfError, catalog, stored, settings.curseforge, settings.nexus, nexusOn, nexusKey]);
 
   const add = useCallback((entry: StoredGame) => {
     setStored((current) => {
