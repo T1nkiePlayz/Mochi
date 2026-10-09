@@ -87,7 +87,8 @@ export async function pushLibrary(client: SupabaseClient, library: Piko[]) {
     first_release_date: piko.firstReleaseDate ?? null,
     favorite: piko.favorite ?? false,
     tags: (piko.tags ?? []).slice(0, 60).map((tag) => tag.slice(0, 60)),
-    artwork_source: piko.artworkSource ?? null,
+    // "icon" covers are drawn from a file on this device and the column does not allow the value.
+    artwork_source: piko.artworkSource === "icon" ? null : piko.artworkSource ?? null,
     kind: piko.kind ?? null,
     tofus: (piko.tofus ?? []).map((tofu) => ({
       local_id: tofu.id, name: clamp(tofu.name, 200), version: clamp(tofu.version, 100), runtime: clamp(tofu.runtime, 100),

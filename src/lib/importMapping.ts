@@ -13,6 +13,7 @@ export function importedGameToPiko(game: ImportedGame, now: number): Piko {
     id: `imported-${game.source}-${sanitizeKey(game.id)}-${now}`,
     name: game.name,
     kind: launcher ? "launcher" : "game",
+    ...(launcher && game.launcherId ? { launcherId: game.launcherId } : {}),
     description: launcher
       ? `${game.name} game launcher. Mochi starts it so you can reach its library.`
       : `Imported from ${game.source}. The original launcher remains responsible for the installation and runtime.`,
