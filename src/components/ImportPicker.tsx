@@ -12,7 +12,7 @@ type ImportPickerProps = {
 };
 
 const manualSources: Array<{ id: ImportSourceId; name: string }> = [
-  { id: "steam", name: "Steam" }, { id: "heroic", name: "Heroic Games Launcher" }, { id: "itch", name: "itch.io" },
+  { id: "steam", name: "Steam" }, { id: "heroic", name: "Heroic Games Launcher" }, { id: "itch", name: "itch.io" }, { id: "prism", name: "Prism / MultiMC folder" },
 ];
 
 export function ImportPicker({ onClose, onImport }: ImportPickerProps) {

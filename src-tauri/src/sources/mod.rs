@@ -540,6 +540,10 @@ pub fn scan_import_games(source: &str, library_path: Option<String>) -> Vec<Impo
         ("steam", Some(path)) => scan_steam_path(&path),
         ("heroic", Some(path)) => scan_heroic(&[path]),
         ("itch", Some(path)) => scan_itch(&[path]),
+        // A portable MultiMC/Prism folder (the one holding `instances`).
+        ("prism", Some(path)) => prism::INSTANCE_LAUNCHERS.iter().find(|launcher| path.join(launcher.config).is_file())
+            .map(|launcher| prism::scan_instances(&[(path.clone(), launcher)]))
+            .unwrap_or_else(|| prism::scan_instances(&[(path.clone(), &prism::INSTANCE_LAUNCHERS[0])])),
         _ => take_prescan(source).unwrap_or_else(|| scan(source, &home)),
     }
 }
