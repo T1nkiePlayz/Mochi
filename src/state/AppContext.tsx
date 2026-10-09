@@ -23,6 +23,9 @@ import { useInstancePacks } from "./useInstancePacks";
 import { useAddGame } from "./useAddGame";
 import { useGameActions } from "./useGameActions";
 import { useDeepLinks } from "./useDeepLinks";
+import { useCliIntents } from "./useCliIntents";
+import { useLibraryIndex } from "./useLibraryIndex";
+import { CliChooser } from "../components/CliChooser";
 import { AchievementWatcher } from "../components/stats/AchievementWatcher";
 import { ConfirmHost } from "../components/ui/ConfirmHost";
 import { SelfInstallPrompt } from "../components/SelfInstallPrompt";
@@ -81,22 +84,15 @@ function useAppController() {
     void invoke("set_launch_on_startup", { enabled: behavior.launchOnStartup }).catch(() => { /* browser/development mode */ });
   }, [behavior.launchOnStartup]);
 
-  // A launch link that arrives before the (per-account) library has loaded waits instead of reporting "not found".
-  const pendingLaunch = useRef("");
-  const launchFromLink = (gameId: string) => {
-    if (!storage.ready) { pendingLaunch.current = gameId; return; }
-    const game = lib.library.find((piko) => piko.id === gameId);
-    if (!game) { actions.setLaunchError("That game is not in your Mochi library."); return; }
-    lib.selectPiko(game);
-    void actions.launchGame(game);
-  };
-  useDeepLinks(account, launchFromLink);
-  useEffect(() => {
-    if (!storage.ready || !pendingLaunch.current) return;
-    const gameId = pendingLaunch.current;
-    pendingLaunch.current = "";
-    launchFromLink(gameId);
-  }, [storage.ready]); // eslint-disable-line react-hooks/exhaustive-deps
+  // mochi launch|open <game> and mochi:// links: resolved against the live library, launched through the normal path.
+  const cliIntents = useCliIntents({
+    ready: storage.ready, library: lib.library,
+    launch: (game) => { lib.selectPiko(game); void actions.launchGame(game); },
+    open: (game) => { lib.selectPiko(game); lib.setGameDetailsId(game.id); setActiveNav("Library"); },
+    report: actions.setLaunchError,
+  });
+  useDeepLinks(account, cliIntents.handle);
+  useLibraryIndex(lib.library, storage.ready);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -148,7 +144,7 @@ function useAppController() {
     behavior, setBehavior, activeNav, setActiveNav, showFirstLaunchSetup, finishFirstLaunchSetup,
     platformCapabilities, runtimes, showTofuManager, setShowTofuManager, editingGameId, setEditingGameId,
     notifications, account, credentials, sessions, playtime, refreshPlaytime, lib, collections, themeEngine, actions, metadata, add, storage, cloud, downloads,
-    hasIgdb, chooseConfigLocation, resetLocalData,
+    hasIgdb, chooseConfigLocation, resetLocalData, cliIntents,
   };
 }
 
@@ -176,7 +172,7 @@ export function AppStoreProvider({ controller, children }: { controller: AppCont
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const controller = useAppController();
-  return <AppStoreProvider controller={controller}><AppContext.Provider value={controller}><AchievementWatcher />{children}<ConfirmHost /><SelfInstallPrompt /></AppContext.Provider></AppStoreProvider>;
+  return <AppStoreProvider controller={controller}><AppContext.Provider value={controller}><AchievementWatcher />{children}<ConfirmHost /><SelfInstallPrompt />{controller.cliIntents.choice && <CliChooser {...controller.cliIntents.choice} onPick={controller.cliIntents.pick} onClose={controller.cliIntents.closeChoice} />}</AppContext.Provider></AppStoreProvider>;
 }
 
 export function useApp(): AppController {

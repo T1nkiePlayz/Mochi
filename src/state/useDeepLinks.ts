@@ -8,16 +8,17 @@ import type { AccountState } from "./useAccount";
 import { enterBigPicture } from "../bigpicture/mode";
 import { isNxmUrl } from "../lib/mods/nxm";
 import { queueNxmLink } from "./nxmLinks";
+import { parseCliUrl, type CliIntent } from "../lib/cliIntent";
 
 let startupHandled = false;
 
-/** Handles mochi://launch/<id> and the mochi://auth/* sign-in links. */
-export function useDeepLinks(account: AccountState, launchFromLink: (gameId: string) => void) {
+/** Handles mochi://launch/<game>, mochi://open/<game>, mochi://bigpicture and the mochi://auth/* sign-in links. */
+export function useDeepLinks(account: AccountState, onCliIntent: (intent: CliIntent) => void) {
   const accountRef = useRef(account);
   accountRef.current = account;
   // Always points at the latest launch logic so links never act on stale library state.
-  const launchRef = useRef(launchFromLink);
-  launchRef.current = launchFromLink;
+  const intentRef = useRef(onCliIntent);
+  intentRef.current = onCliIntent;
 
   useEffect(() => {
     const client = supabase;
@@ -30,12 +31,9 @@ export function useDeepLinks(account: AccountState, launchFromLink: (gameId: str
         if (isNxmUrl(url)) { queueNxmLink(url); continue; }
         const parsed = parse(url);
         if (parsed?.protocol === "mochi:" && parsed.hostname === "bigpicture") { enterBigPicture(); return; }
-        if (parsed?.protocol === "mochi:" && parsed.hostname === "launch") {
-          let gameId = "";
-          try { gameId = decodeURIComponent(parsed.pathname.replace(/^\//, "")); } catch { /* malformed escape: ignore the link */ }
-          if (gameId) launchRef.current(gameId);
-          return;
-        }
+        // Only launch/open are understood; the app resolves the name against the library (src/lib/cliIntent.ts).
+        const intent = parseCliUrl(url);
+        if (intent) { intentRef.current(intent); return; }
       }
       if (!client) return;
       const { setShowAuth, setAuthBusy, setAuthError, setAuthNotice } = accountRef.current;
