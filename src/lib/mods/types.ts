@@ -79,6 +79,8 @@ export interface ModSource {
   readonly defaultSort: string;
   /** False when the provider cannot search by text, so the query only filters what was already loaded. */
   readonly searchesServerSide: boolean;
+  /** True once the list also holds mods from other sites (auto-extend), so cards show which site each came from. */
+  readonly mixed?: boolean;
   categories(): Promise<ModCategory[]>;
   search(options: ModSearchOptions): Promise<ModPage>;
   details(item: ModItem): Promise<ModDetails>;
