@@ -24,6 +24,7 @@ export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: 
   const [showAddPiko, setShowAddPiko] = useState(false);
   const [showCustomGame, setShowCustomGame] = useState(false);
   const [showImportPicker, setShowImportPicker] = useState(false);
+  const [importMode, setImportMode] = useState<"games" | "launchers">("games");
   const [step, setStep] = useState<AddStep>("form");
   const [formName, setFormName] = useState("");
   const [formCategory, setFormCategory] = useState("Custom");
@@ -42,6 +43,8 @@ export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: 
 
   const clearForm = () => { setFormName(""); setFormCategory("Custom"); setFormError(""); setCover(null); setAdding(false); };
   const reset = () => { setPendingGame(null); setStep("form"); setShowCustomGame(false); setShowAddPiko(false); setLaunchTarget(""); clearForm(); };
+  const openImportPicker = (mode: "games" | "launchers" = "games") => { setImportMode(mode); setShowImportPicker(true); setShowAddPiko(false); };
+  const closeImportPicker = () => { setShowImportPicker(false); setImportMode("games"); };
   const openCustom = () => { setShowCustomGame(true); setStep("form"); setPendingGame(null); setLaunchType("file"); setLaunchTarget(""); clearForm(); };
 
   const addToLibrary = async (name: string, executablePath: string, metadataMatch: IgdbGame | null, category = "Custom", coverChoice: ArtworkSelection | null = null) => {
@@ -141,7 +144,7 @@ export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: 
     if (created.length) void finishImport(created, new Map(created.flatMap((piko, index) => (fresh[index].iconPath && piko.kind !== "launcher" ? [[piko.id, fresh[index].iconPath!]] : []))));
     if (created[0]) { lib.setSelectedPikoId(created[0].id); lib.setSelectedTofuId("default"); }
     setShowAddPiko(false);
-    setShowImportPicker(false);
+    closeImportPicker();
   };
 
   /**
@@ -173,7 +176,7 @@ export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: 
   };
 
   return {
-    showAddPiko, setShowAddPiko, showCustomGame, setShowCustomGame, showImportPicker, setShowImportPicker, step, setStep,
+    showAddPiko, setShowAddPiko, showCustomGame, setShowCustomGame, showImportPicker, setShowImportPicker, importMode, openImportPicker, closeImportPicker, step, setStep,
     pendingGame, setPendingGame, launchType, setLaunchType, launchTarget, setLaunchTarget, igdbBusy, hasIgdb,
     flatpakPickerOpen, setFlatpakPickerOpen, flatpaks, flatpakBusy, loadFlatpaks, chooseFile,
     openCustom, reset, submitCustom, approveIgdbGame, importGames, addToLibrary,
