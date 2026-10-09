@@ -1,5 +1,5 @@
 import {
-  CF_LOADER, CF_SORT, cfCategories, cfDescription, cfDownloadUrl, cfFiles, cfMod, cfModUrl, cfSearch, cfSha1, CF_SITE,
+  CF_CLASS, CF_LOADER, CF_MINECRAFT_ID, CF_SORT, cfCategories, cfDescription, cfDownloadUrl, cfFiles, cfMod, cfModUrl, cfSearch, cfSha1, CF_SITE,
   type CfFile, type CfMod,
 } from "../curseforge";
 import { RESTRICTED_MESSAGE, restrictedReason } from "./helpers";
@@ -8,6 +8,10 @@ import type { ModCategory, ModDetails, ModFile, ModItem, ModSearchOptions, ModSo
 export type CurseforgeScope = { gameId: number; gameSlug?: string; classId?: number; kind?: string };
 
 const loaderIds: Record<string, number> = { forge: CF_LOADER.forge, fabric: CF_LOADER.fabric, quilt: CF_LOADER.quilt, neoforge: CF_LOADER.neoForge };
+/** CurseForge `relationType` values of a file's dependencies. */
+export const CF_RELATION = { embedded: 1, optional: 2, required: 3, tool: 4, incompatible: 5, include: 6 } as const;
+/** Minecraft class ids to the kind label that decides the install folder. */
+const minecraftKinds: Record<number, string> = { [CF_CLASS.mods]: "Mods", [CF_CLASS.resourcePacks]: "Resource Packs", [CF_CLASS.shaders]: "Shaders" };
 const channels = ["release", "beta", "alpha"] as const;
 
 export function curseforgeItem(mod: CfMod, scope: CurseforgeScope): ModItem {
@@ -20,11 +24,14 @@ export function curseforgeItem(mod: CfMod, scope: CurseforgeScope): ModItem {
 const modOf = (item: ModItem) => item.native as CfMod;
 
 export function curseforgeFile(file: CfFile, mod: CfMod): ModFile {
-  const required = (file.dependencies ?? []).filter((dependency) => dependency.relationType === 3);
+  // relationType: 3 required, 5 incompatible. Embedded (1), optional (2), tool (4) and include (6) are never installed.
+  const required = (file.dependencies ?? []).filter((dependency) => dependency.relationType === CF_RELATION.required);
+  const incompatible = (file.dependencies ?? []).filter((dependency) => dependency.relationType === CF_RELATION.incompatible);
   return {
     id: String(file.id), name: file.displayName || file.fileName, fileName: file.fileName, version: file.displayName,
     channel: channels[(file.releaseType ?? 1) - 1], size: file.fileLength, date: file.fileDate, gameVersions: file.gameVersions,
     dependencies: required.map((dependency) => ({ id: String(dependency.modId), url: `${CF_SITE}/projects/${dependency.modId}`, required: true })),
+    incompatibles: incompatible.map((dependency) => ({ id: String(dependency.modId), url: `${CF_SITE}/projects/${dependency.modId}`, required: false })),
     native: { file, mod },
   };
 }
@@ -71,6 +78,10 @@ export function createCurseforgeSource(scope: CurseforgeScope): ModSource {
       const mod = modOf(item);
       const page = await cfFiles(mod.id, { gameVersion: filter?.gameVersion, modLoaderType: filter?.loader ? loaderIds[filter.loader] : undefined, pageSize: 30 });
       return page.data.filter((file) => file.isAvailable !== false).map((file) => curseforgeFile(file, mod));
+    },
+    async dependencyItem(dependency) {
+      const mod = await cfMod(Number(dependency.id));
+      return curseforgeItem(mod, { ...scope, kind: (scope.gameId === CF_MINECRAFT_ID && mod.classId ? minecraftKinds[mod.classId] : undefined) ?? scope.kind });
     },
     async resolveDownload(_item, modFile) {
       const { file, mod } = modFile.native as { file: CfFile; mod: CfMod };

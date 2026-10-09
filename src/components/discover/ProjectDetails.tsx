@@ -54,7 +54,7 @@ function VersionRow({ version, fit, onDownload }: { version: ModrinthVersion; fi
       {version.game_versions.length > 3 && <p><strong>Game versions</strong> {version.game_versions.join(", ")}</p>}
       {version.changelog ? <div className="version-changelog"><Markdown source={version.changelog} /></div> : <p className="muted">No changelog was provided.</p>}
       <div className="project-file-list">{version.files.map((file) => <div key={file.filename}><span>{file.filename}</span><small>{formatBytes(file.size)}{file.primary ? " · Primary" : ""}</small></div>)}</div>
-      {version.dependencies.length > 0 && <p className="muted">{version.dependencies.length} dependenc{version.dependencies.length === 1 ? "y" : "ies"} listed on Modrinth. Mochi does not install them for you.</p>}
+      {version.dependencies.length > 0 && <p className="muted">{version.dependencies.length} dependenc{version.dependencies.length === 1 ? "y" : "ies"} listed on Modrinth. Mochi offers to install the required ones before the mod.</p>}
     </div>}
   </div>;
 }

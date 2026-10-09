@@ -11,6 +11,7 @@ import { UpdatesPanel } from "./mods/UpdatesPanel";
 import { ModSyncStatus } from "./mods/ModSyncStatus";
 import { useAutoModFolder } from "./mods/useAutoModFolder";
 import { InstallNoticeBar } from "./mods/InstallNoticeBar";
+import { DependencySheet } from "./mods/DependencySheet";
 import { useModInstall } from "./mods/useModInstall";
 import { useInstalledFiles } from "./mods/useInstalledFiles";
 import { useInstallState } from "./mods/useInstallState";
@@ -139,6 +140,7 @@ export function ModrinthManager({ piko, tofu, onUpdate }: Props) {
     {switching.message && <p className="metadata-note" role="status">{switching.message}</p>}
     {message && <p className="metadata-note" role="status">{message}</p>}
     <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />
+    {install.prompt && <DependencySheet prompt={install.prompt} />}
     {pendingDownloads > 0 && <p className="metadata-note">{pendingDownloads} download{pendingDownloads === 1 ? "" : "s"} in progress. See Downloads.</p>}
     {isSearchTab && enabledSources.length > 1 && <div className="mod-source-switch" role="group" aria-label="Mod source">
       <span>Source</span>{enabledSources.map((id) => <button key={id} type="button" className={effective === id ? "active" : ""} aria-pressed={effective === id} onClick={() => setProvider(id as "modrinth" | "curseforge")}>{id === "modrinth" ? "Modrinth" : "CurseForge"}</button>)}

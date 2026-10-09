@@ -53,7 +53,8 @@ const filesFor = (modId: number) => [0, 1, 2].map((offset) => {
     fileDate: new Date(Date.now() - offset * 30 * 86_400_000).toISOString(), fileLength: 800_000 + offset * 90_000, isAvailable: true,
     downloadUrl: restricted ? null : `https://edge.forgecdn.net/files/${Math.floor(id / 1000)}/${id % 1000}/mod-${modId}.zip`,
     gameVersions: ["1.21.1", "Fabric"], hashes: [{ value: "da39a3ee5e6b4b0d3255bfef95601890afd80709", algo: 1 }],
-    dependencies: offset === 0 ? [{ modId: modId + 1, relationType: 3 }, { modId: modId + 2, relationType: 2 }] : [],
+    // Dependency fixtures: +1 required, +2 optional (ignored), mod 360438 is "installed" in devInstancesMock (required when id%4==2, incompatible when id%4==1).
+    dependencies: offset === 0 ? [{ modId: modId + 1, relationType: 3 }, { modId: modId + 2, relationType: 2 }, ...(modId % 4 === 2 ? [{ modId: 360438, relationType: 3 }] : []), ...(modId % 4 === 1 ? [{ modId: 360438, relationType: 5 }] : [])] : [],
   };
 });
 
@@ -121,6 +122,11 @@ export function installModsMock() {
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input, init) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    // Nexus requirements come straight from the public GraphQL API; every mod requires mod 1 and one outside site.
+    if (url.includes("api.nexusmods.com/v2/graphql") && typeof init?.body === "string" && init.body.includes("modRequirements")) {
+      const nodes = [{ modId: "1", modName: "Mock Framework", gameId: "1", url: "", externalRequirement: false }, { modId: "9", modName: "Script Extender (outside Nexus)", gameId: "1", url: "https://example.com/extender", externalRequirement: true }];
+      return new Response(JSON.stringify({ data: { legacyModsByDomain: { nodes: [{ modId: 5, gameId: 1, modRequirements: { nexusRequirements: { nodes } } }] } } }), { status: 200, headers: { "content-type": "application/json" } });
+    }
     const target = url.includes("/functions/v1/curseforge-proxy") ? "cf" : url.includes("/functions/v1/store-provider-credentials") ? "nexus" : "";
     if (target && typeof init?.body === "string") {
       let body: Json = {};

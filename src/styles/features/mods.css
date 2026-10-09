@@ -106,3 +106,22 @@
 .metadata-note.is-error { color: var(--mochi-danger); }
 .mod-notice-extra { flex: 1 1 100%; display: grid; gap: 8px; color: var(--mochi-text-muted); }
 .nxm-toggle { display: grid; gap: 6px; }
+
+/* Dependency sheet */
+.dependency-sheet { display: flex; flex-direction: column; width: min(100%, 560px); overflow: hidden; }
+.dep-body { min-height: 0; overflow: auto; padding-right: 2px; }
+.dep-list { display: grid; gap: 7px; margin: 14px 0 0; padding: 0; list-style: none; }
+.dep-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 12px; border: 1px solid var(--mochi-border); border-radius: 9px; background: var(--mochi-surface-raised); }
+.dep-row[data-status="already-installed"] { opacity: .6; }
+.dep-row[data-status="unavailable"] { border-style: dashed; }
+.dep-row-text { display: grid; gap: 2px; min-width: 0; flex: 1 1 200px; }
+.dep-row-text small { color: var(--mochi-text-muted); font-size: 11px; }
+.dep-row .mochi-check { flex: 1 1 200px; min-width: 0; }
+.dep-install { color: var(--mochi-success); }
+.dep-already-installed { color: var(--mochi-text-muted); }
+.dep-unavailable { color: var(--mochi-danger); }
+.dep-external { color: var(--mochi-warning); }
+.dep-heading { margin-top: 16px; }
+.dep-link { flex: 0 0 auto; width: auto; min-width: 0; padding: 0 10px; white-space: nowrap; }
+.dep-warning { display: flex; align-items: center; gap: 6px; margin: 12px 0 0; color: var(--mochi-warning); }
+.dep-actions { flex: 0 0 auto; margin-top: 14px; }

@@ -39,7 +39,15 @@ export type ModSearchOptions = {
 
 export type ModPage = { items: ModItem[]; total: number; nextOffset: number; hasMore: boolean };
 
-export type ModDependency = { id: string; name?: string; url: string; required: boolean };
+export type ModDependency = {
+  id: string; name?: string; url: string; required: boolean;
+  /** A specific version of the dependency the author pinned (Modrinth). */
+  versionId?: string;
+  /** Not a mod of this source (Nexus requirement on another site or game): only a link, never installed. */
+  external?: boolean;
+  /** Which game's domain the dependency lives in (Nexus); absent means the source's own game. */
+  gameDomain?: string;
+};
 
 export type ModFile = {
   id: string;
@@ -52,7 +60,10 @@ export type ModFile = {
   gameVersions?: string[];
   /** Mod loaders the file was built for, when the source says (Modrinth). CurseForge mixes them into `gameVersions`; use `metaFromModFile`. */
   loaders?: string[];
+  /** Required dependencies. */
   dependencies?: ModDependency[];
+  /** Mods the author marked as incompatible with this file. */
+  incompatibles?: ModDependency[];
   primary?: boolean;
   native: unknown;
 };
@@ -92,4 +103,8 @@ export interface ModSource {
   details(item: ModItem): Promise<ModDetails>;
   files(item: ModItem, filter?: { gameVersion?: string; loader?: string }): Promise<ModFile[]>;
   resolveDownload(item: ModItem, file: ModFile): Promise<ResolvedDownload>;
+  /** Requirements that belong to the whole mod rather than to a file (Nexus). Optional. */
+  requirements?(item: ModItem): Promise<{ required: ModDependency[]; incompatible?: ModDependency[] }>;
+  /** The listed mod behind a dependency, so its files can be looked up and installed. Optional; without it dependencies are only links. */
+  dependencyItem?(dependency: ModDependency): Promise<ModItem | null>;
 }
