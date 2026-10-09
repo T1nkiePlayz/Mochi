@@ -59,3 +59,8 @@
 .download-progress > span { background: linear-gradient(90deg, #2cc4de, #7ff0ff); box-shadow: 0 0 12px #4de8ff; }
 .danger-outline, .stop-button { color: #ff9f43; border-color: rgba(255, 159, 67, .6); }
 .danger-outline:hover:not(:disabled), .stop-button:hover:not(:disabled) { background: rgba(255, 159, 67, .16); border-color: #ff9f43; }
+
+/* Form select and component dressing (moved from the launcher stylesheets so the launcher carries no per-theme rules). */
+[data-mochi-theme="subnautica"] .mochi-select-popover { backdrop-filter: blur(10px); clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+[data-mochi-theme="subnautica"] .mochi-select-trigger { backdrop-filter: blur(4px); }
+[data-mochi-theme="subnautica"] .mochi-select-option.active { background: rgba(77, 232, 255, .16); }

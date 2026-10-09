@@ -1,0 +1,3 @@
+/* Cascade layer order. Launcher styles live in `tokens` and `base`; `layout` holds the protected shell rules
+ * (see layout.css); built-in themes load into `theme` and user-installed themes into `user`. */
+@layer reset, tokens, base, layout, theme, user;

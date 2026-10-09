@@ -47,7 +47,7 @@ export const GameCard = memo(function GameCard({ piko, selected, running, synced
       onClick={() => { if (fired.current) { fired.current = false; return; } if (selecting) onToggleChecked(piko.id); else onOpen(piko); }}>
       <GameArtwork className="game-card-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} name={piko.name} kind={piko.kind} sourceId={piko.sourceId} />
       <div className="game-card-copy">
-        <strong><span className="game-card-name">{piko.name}</span><span className={`game-cloud-status ${synced ? "is-synced" : "not-synced"}`} title={synced ? "Synced to Mochi Cloud" : "Not synced to Mochi Cloud"}>{synced ? "✓" : "!"}</span></strong>
+        <strong><span className="game-card-name" title={piko.name}>{piko.name}</span><span className={`game-cloud-status ${synced ? "is-synced" : "not-synced"}`} title={synced ? "Synced to Mochi Cloud" : "Not synced to Mochi Cloud"}>{synced ? "✓" : "!"}</span></strong>
         <small>{running ? "Running now" : piko.categories?.join(" · ") || piko.platformCategory || "Other"}</small>
         {piko.tags?.length ? <span className="game-card-tags">{piko.tags.slice(0, 3).map((tag) => <span key={tag}>#{tag}</span>)}</span> : null}
       </div>

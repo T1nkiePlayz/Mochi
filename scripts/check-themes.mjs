@@ -1,6 +1,7 @@
 // Validates every built-in theme: manifest shape, unique ids, asset files, fonts, and token names.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { lintThemeCss } from "./lib/themeLint.mjs";
 import { a11yThemeReport, printContrastReport } from "./lib/contrast.mjs";
 
 const root = "src/themes";
@@ -72,6 +73,12 @@ for (const folder of readdirSync(root, { withFileTypes: true }).filter((entry) =
     }
   }
   for (const gap of gaps) console.warn(`! ${gap}`);
+}
+// Layout lint: built-in themes must not fight the protected layout layer (src/styles/layout.css).
+for (const folder of readdirSync(root, { withFileTypes: true }).filter((entry) => entry.isDirectory())) {
+  const file = join(root, folder.name, "theme.css");
+  if (!existsSync(file)) continue;
+  for (const finding of lintThemeCss(readFileSync(file, "utf8"))) errors.push(`${folder.name}: layout ${finding.selector} ${finding.message}`);
 }
 printContrastReport(a11yReports, process.argv.includes("--verbose"));
 

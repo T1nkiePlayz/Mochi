@@ -57,3 +57,9 @@
 .danger-outline, .stop-button { color: #ff003c; border-color: #ff003c; }
 .danger-outline:hover:not(:disabled), .stop-button:hover:not(:disabled) { background: #c40030; color: #fff; }
 ::selection { background: #fcee09; color: #050505; }
+
+/* Form select and component dressing (moved from the launcher stylesheets so the launcher carries no per-theme rules). */
+[data-mochi-theme="cyberpunk"] .mochi-select-trigger { clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); }
+[data-mochi-theme="cyberpunk"] .mochi-select-popover { clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); }
+[data-mochi-theme="cyberpunk"] .mochi-select-option.active { background: #fcee09; color: #050505; }
+[data-mochi-theme="cyberpunk"] .mochi-select-option.selected { color: #00f0ff; }

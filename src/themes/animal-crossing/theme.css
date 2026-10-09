@@ -68,3 +68,9 @@
 
 /* Generated covers: soft pastels with dark lettering */
 :root { --mochi-art-saturation: 58%; --mochi-art-lightness: 72%; --mochi-art-text: #4a3b2a; }
+
+/* Form select and component dressing (moved from the launcher stylesheets so the launcher carries no per-theme rules). */
+[data-mochi-theme="animal-crossing"] .mochi-select-trigger { border-radius: 999px; padding: 0 16px; border-width: 2px; }
+[data-mochi-theme="animal-crossing"] .mochi-select-popover { border-radius: 22px; border-width: 3px; }
+[data-mochi-theme="animal-crossing"] .mochi-select-option { border-radius: 999px; }
+[data-mochi-theme="animal-crossing"] .mochi-select-option.active { background: #e8f6d6; }

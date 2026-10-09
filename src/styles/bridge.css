@@ -132,7 +132,7 @@ footer { color: var(--mochi-text-faint); }
 .mfa-setup-card > div:first-child { display: grid; gap: 3px; }
 .mfa-setup-card strong { color: var(--mochi-text-strong); font-size: 12px; }
 .mfa-setup-card small { color: var(--mochi-text-muted); font-size: 9px; }
-.mfa-setup-card img { width: 176px; height: 176px; padding: 8px; border-radius: var(--mochi-radius-md); background: #fff; }
+.mfa-setup-card img { width: 176px; height: 176px; padding: 8px; border-radius: var(--mochi-radius-md); background: var(--mochi-art-text); }
 .mfa-setup-card code { overflow-wrap: anywhere; color: var(--mochi-text-muted); font: 9px var(--mochi-mono); }
 .mfa-setup-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .mfa-setup-actions .mfa-input { width: 130px; }

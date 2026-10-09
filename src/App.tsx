@@ -12,6 +12,7 @@ import { ControllerRuntime } from "./controller/ControllerRuntime";
 import { ShortcutsHelp } from "./components/ShortcutsHelp";
 import { AccessibilityProvider } from "./state/accessibility";
 import { installAccessibilityEnhancer } from "./lib/dialogs";
+import { installTruncationTitles } from "./lib/truncationTitles";
 import { Cloud } from "lucide-react";
 import { OfflineBanner } from "./components/OfflineBanner";
 
@@ -107,5 +108,6 @@ function Shell() {
 
 export default function App() {
   useEffect(() => installAccessibilityEnhancer(), []);
+  useEffect(() => installTruncationTitles(), []);
   return <AccessibilityProvider><AppProvider><ControllerRuntime /><BigPictureGate><Shell /></BigPictureGate><ShortcutsHelp /></AppProvider></AccessibilityProvider>;
 }

@@ -6,10 +6,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/check-themes.mjs && tsc --noEmit && vite build",
+    "build": "node scripts/check-themes.mjs && node scripts/check-token-usage.mjs && tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
     "check:themes": "node scripts/check-themes.mjs",
+    "check:tokens": "node scripts/check-token-usage.mjs",
+    "audit:layout": "node scripts/layout-audit.mjs",
     "test:metadata": "node --test scripts/metadata.test.mjs",
     "test:mods": "node --test scripts/mods.test.mjs",
     "build:launcher-art": "node scripts/build-launcher-art.mjs",
