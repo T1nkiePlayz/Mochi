@@ -38,6 +38,7 @@
     "radiusSm": "0px",
     "radiusMd": "0px",
     "radiusLg": "0px",
+    "pillRadius": "0px",
     "heroRadius": "0px",
     "topbarHeight": "58px",
     "contentMaxWidth": "1320px",
