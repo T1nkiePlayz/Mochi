@@ -7,11 +7,12 @@ import { removeKey, igdbCacheKey } from "../lib/storage";
 import { sanitizeKey } from "../lib/metadata";
 import { ProviderCache, clearProviderCaches } from "../lib/metadata/cache";
 import {
-  applyMetadata, classifyError, mergeText, planProviders, providers, steamAppIdOf,
+  applyMetadata, classifyError, mergeText, planProviders, providers, steamAppIdOf, steamImportTargets, withSteam,
   type ArtChoice, type MetadataChoice, type ProviderId, type ProviderResult,
 } from "../lib/metadata/index";
 import type { Piko } from "../models";
 import { applyLauncherLogos } from "../lib/iconCover";
+import { createPacer } from "../lib/throttle";
 
 type Params = {
   user: User | null;
@@ -28,6 +29,8 @@ type Params = {
 
 const CONCURRENCY = 3;
 const MAX_RETRIES = 3;
+/** Steam Store lookups start at least this far apart, across all workers, to respect its rate limit. */
+const steamPace = createPacer(350);
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Caches the artwork file on disk. Resolves true on success; offline or blocked hosts resolve false. */
@@ -40,7 +43,7 @@ export async function cacheArtwork(piko: Piko): Promise<void> {
   await cacheArtworkUrl(piko.artworkUrl, piko.artworkCacheKey);
 }
 
-type Options = { force?: boolean; /** Ask only this provider (per-provider refresh); default is the "Metadata source" setting. */ only?: ProviderId };
+type Options = { force?: boolean; /** Also ask the keyless Steam Store for Steam games, even when the "Metadata source" setting excludes it. */ includeSteam?: boolean; /** Ask only this provider (per-provider refresh); default is the "Metadata source" setting. */ only?: ProviderId };
 type Outcome = { piko: Piko; changed: boolean };
 
 /**
@@ -65,6 +68,7 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
       const wait = (pausedUntil.current[id] ?? 0) - Date.now();
       if (wait > 0) await sleep(wait);
       try {
+        if (id === "steam") await steamPace();
         const result = await providers[id].lookup({ client: supabase }, piko);
         cache.set(key, result);
         return result;
@@ -79,7 +83,7 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
 
   /** Resolves one game: text from the first provider that has some, artwork from the first that yields a cacheable image. */
   const resolveGame = async (piko: Piko, caches: Map<ProviderId, ProviderCache>, options: Options): Promise<Outcome> => {
-    const plan = planProviders(options.only ?? provider, ready, steamAppIdOf(piko));
+    const plan = planFor(piko, options);
     const results = new Map<ProviderId, ProviderResult>();
     const failures: string[] = [];
     const ask = async (id: ProviderId) => {
@@ -135,19 +139,27 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
     return updated;
   };
 
-  const anyProvider = (game: Piko, only?: ProviderId) => { const plan = planProviders(only ?? provider, ready, steamAppIdOf(game)); return plan.text.length + plan.art.length > 0; };
+  const planFor = (game: Piko, options: Options) => { const plan = planProviders(options.only ?? provider, ready, steamAppIdOf(game)); return options.includeSteam ? withSteam(plan, steamAppIdOf(game)) : plan; };
+  const anyProvider = (game: Piko, only?: ProviderId, includeSteam?: boolean) => { const plan = planFor(game, { only, includeSteam }); return plan.text.length + plan.art.length > 0; };
 
   const commit = (updated: Map<string, Piko>) =>
     setLibrary((current) => current.map((piko) => updated.get(piko.id) ? mergeInto(piko, updated.get(piko.id)!) : piko));
 
   /** Looks games up (3 at a time), caches artwork on disk and writes the results into the library. */
   const enrich = async (games: Piko[], options: Options = {}) => {
-    const targets = games.filter((game) => anyProvider(game, options.only));
+    const targets = games.filter((game) => anyProvider(game, options.only, options.includeSteam));
     if (!targets.length) return;
     const jobId = startProgress("Updating your library", `Finding metadata for ${targets.length} games…`, targets.length);
     const updated = await run(targets, options, (done) => updateProgress(jobId, { value: done, total: targets.length }, `Looking up games: ${done} of ${targets.length}`));
     commit(updated);
     updateProgress(jobId, { value: targets.length, total: targets.length }, `Metadata update finished for ${targets.length} games.`);
+  };
+
+  /** Freshly imported games: the usual enrichment plus Steam Store data (no keys or account needed) for new Steam games. */
+  const enrichImported = async (games: Piko[]) => {
+    const steam = new Set(steamImportTargets(games).map((piko) => piko.id));
+    const [withSteamData, rest] = [games.filter((piko) => steam.has(piko.id)), games.filter((piko) => !steam.has(piko.id))];
+    await Promise.all([enrich(withSteamData, { includeSteam: true }), enrich(rest)]);
   };
 
   /** Clears the lookup caches and re-fetches every game; `only` restricts it to one provider so each works on its own. */
@@ -199,7 +211,7 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
     }
   };
 
-  return { enrich, refreshAll, refreshGame, refreshBusy, refreshableCount, ready };
+  return { enrich, enrichImported, refreshAll, refreshGame, refreshBusy, refreshableCount, ready };
 }
 
 /** Applies only the metadata fields from a fresh result onto the live Piko, so edits made while it ran are kept. */
