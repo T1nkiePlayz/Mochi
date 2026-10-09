@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Piko } from "../models";
 import { createGameShortcut, launchGame as startGame, openPath, removeGameShortcut, stopGame } from "../lib/platform";
 import { describeModSync, subscribeNative, type ModSyncResult } from "../lib/nativeEvents";
+import { launchTargetFor } from "../lib/minecraftPiko";
 import type { Behavior } from "./settings";
 import { updateBeforeLaunch } from "./modUpdates";
 import type { LibraryState } from "./useLibrary";
@@ -39,15 +40,17 @@ export function useGameActions({ lib, behavior, refreshPlaytime, refreshSessions
     return behavior.detailedErrors ? text : (/^.*?[.!?](?=\s|$)/s.exec(text)?.[0] ?? text);
   };
 
-  const launchGame = async (piko: Piko = lib.selectedPiko, options: { skipConfirm?: boolean } = {}) => {
-    if (piko.id === "__empty" || !piko.executablePath) { setLaunchError("This game does not have a launch target. Edit the game to set one."); return; }
+  /** Starts a game; `options.tofuId` launches that Tofu (a Minecraft instance), else the selected one, else the first. */
+  const launchGame = async (piko: Piko = lib.selectedPiko, options: { skipConfirm?: boolean; tofuId?: string } = {}) => {
+    const chosen = options.tofuId ? piko.tofus.find((item) => item.id === options.tofuId) : piko.id === lib.selectedPiko.id ? lib.selectedTofu : undefined;
+    const tofu = chosen ?? piko.tofus[0];
+    if (piko.id === "__empty" || !launchTargetFor(piko, tofu)) { setLaunchError("This game does not have a launch target. Edit the game to set one."); return; }
     if (launching.current.has(piko.id)) return;
     if (behavior.confirmLaunch && !options.skipConfirm && !await confirmAction({ title: `Launch ${piko.name}?`, message: "You can turn this question off under Settings → Data & privacy → Advanced settings.", confirmLabel: "Launch" })) return;
     setLaunchError("");
     launching.current.add(piko.id);
     setIsLaunching(true);
     try {
-      const tofu = piko.id === lib.selectedPiko.id ? lib.selectedTofu : piko.tofus[0];
       // Optional and off by default: bring the Tofu's mods up to date first (bounded wait; launching always continues).
       if (behavior.autoUpdateMods && tofu) await updateBeforeLaunch(tofu, piko, behavior.modSources, notify);
       await startGame(piko, tofu);

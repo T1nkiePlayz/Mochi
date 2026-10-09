@@ -1,5 +1,6 @@
 import type { Piko, Tofu } from "../models";
 import type { PlaytimeEntry } from "./platform";
+import { migrateMinecraftPikos } from "./minecraftPiko";
 import { launcherArt } from "./launcherArt";
 import { launcherForPiko } from "./launchers";
 import { applyPikoKindOverride, overrideKeyForPiko, readOverrides, type KindOverrides } from "./launcherOverrides";
@@ -109,7 +110,7 @@ export function sanitizeLibrary(value: unknown, overrides: KindOverrides = readO
       tofus: tofus.length ? tofus.map((tofu) => ({ ...tofu, name: typeof tofu.name === "string" ? tofu.name : "Default", mods: Number.isFinite(tofu.mods) ? tofu.mods : 0 })) : [defaultTofuOf()],
     }, overrides));
   }
-  return result;
+  return migrateMinecraftPikos(result);
 }
 
 /**

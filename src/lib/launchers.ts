@@ -69,7 +69,7 @@ export function classifyLauncher(ids: string[], name: string, bundleId?: string)
 }
 
 /** Launch targets that start a game through its launcher (so the entry is a game, never the launcher itself). */
-const GAME_TARGET = /^(steam:\/\/rungameid\/|heroic:\/\/launch|lutris:rungameid\/|bottles:run\/|itch:\/\/(games|run-game)\/|com\.epicgames\.launcher:\/\/apps\/|battlenet:|goggalaxy:)/i;
+const GAME_TARGET = /^(steam:\/\/rungameid\/|mc-instance:\/\/|heroic:\/\/launch|lutris:rungameid\/|bottles:run\/|itch:\/\/(games|run-game)\/|com\.epicgames\.launcher:\/\/apps\/|battlenet:|goggalaxy:)/i;
 
 /** Ids a stored launch target says about the program: a desktop-entry stem, Flatpak id, bundle name or program name. */
 export function targetIds(target: string | undefined): string[] {

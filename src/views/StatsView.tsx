@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { foldLegacyPlaytime } from "../lib/minecraftPiko";
 import { BarChart3, Gamepad2 } from "lucide-react";
 import { MochiIcon } from "../components/MochiIcon";
 import { useApp } from "../state/AppContext";
@@ -49,7 +50,7 @@ export function StatsView() {
   const streaks = useMemo(() => computeStreaks(totals), [totals]);
   const weekly = range === 365;
   const buckets = useMemo(() => (weekly ? groupByWeek(analysis.buckets) : analysis.buckets), [weekly, analysis.buckets]);
-  const playtimeById = useMemo(() => new Map(playtime.map((entry) => [entry.gameId, entry.seconds])), [playtime]);
+  const playtimeById = useMemo(() => new Map(foldLegacyPlaytime(playtime, lib.library).map((entry) => [entry.gameId, entry.seconds])), [playtime, lib.library]);
   const progress = useMemo(() => evaluate(buildFacts(data, lib.library, stored.flags, countCollections(readJson<unknown>(storageKeys.collections, []), lib.library))), [data, lib.library, stored.flags]);
 
   if (records === null) {
