@@ -3,7 +3,7 @@
 //! unit-tested on Linux as well; only the roots below are macOS specific.
 #![cfg_attr(not(target_os = "macos"), allow(dead_code))]
 
-use super::{classify, make, make_launcher, scan_epic_manifests, sort_games, ImportedGame, SourceDef};
+use super::{battlenet, classify, gog, icons, make, prism, make_launcher, scan_epic_manifests, sort_games, ImportedGame, SourceDef};
 use crate::platform::command_exists;
 use std::{
     fs,
@@ -17,6 +17,9 @@ pub fn source_defs() -> Vec<SourceDef> {
         SourceDef { id: "epic", name: "Epic Games Launcher", description: "Games installed with the Epic Games Launcher." },
         SourceDef { id: "itch", name: "itch.io", description: "Games installed with the itch desktop app." },
         SourceDef { id: "whisky", name: "Whisky", description: "Windows programs pinned in your Whisky bottles." },
+        SourceDef { id: "battlenet", name: "Battle.net", description: "Blizzard games installed with the Battle.net app." },
+        SourceDef { id: "gog", name: "GOG Galaxy", description: "GOG games installed with GOG Galaxy." },
+        SourceDef { id: "prism", name: "Minecraft instances", description: "Instances from Prism Launcher, PolyMC, MultiMC and Fjord Launcher." },
         SourceDef { id: "apps", name: "Applications", description: "Games in your Applications folders." },
     ]
 }
@@ -33,6 +36,22 @@ fn epic_manifests(home: &Path) -> PathBuf { support(home).join("Epic/EpicGamesLa
 
 fn whisky_bottles(home: &Path) -> PathBuf { home.join("Library/Containers/com.isaacmarovitz.Whisky/Bottles") }
 
+/// Data folders of the MultiMC-family launchers.
+pub fn instance_roots(home: &Path) -> Vec<(PathBuf, &'static prism::InstanceLauncher)> {
+    prism::INSTANCE_LAUNCHERS.iter().map(|launcher| (support(home).join(launcher.dir), launcher)).collect()
+}
+
+/// The Blizzard agent's database (shared by every user of the Mac).
+const BATTLENET_PRODUCT_DB: &str = "/Users/Shared/Battle.net/Agent/product.db";
+
+fn gog_dirs(home: &Path) -> Vec<PathBuf> {
+    let mut dirs = gog::galaxy_library_dirs(Path::new(gog::GALAXY_CONFIG));
+    dirs.extend([PathBuf::from("/Applications"), home.join("Applications")]);
+    let mut seen = std::collections::HashSet::new();
+    dirs.retain(|dir| seen.insert(dir.clone()));
+    dirs
+}
+
 fn app_exists(name: &str, home: &Path) -> bool {
     Path::new("/Applications").join(name).exists() || home.join("Applications").join(name).exists()
 }
@@ -44,6 +63,9 @@ pub fn is_installed(source: &str, home: &Path) -> bool {
         "epic" => support(home).join("Epic/EpicGamesLauncher").exists() || app_exists("Epic Games Launcher.app", home),
         "itch" => support(home).join("itch").exists() || app_exists("itch.app", home) || command_exists("itch-setup"),
         "whisky" => whisky_bottles(home).exists() || app_exists("Whisky.app", home),
+        "battlenet" => Path::new(BATTLENET_PRODUCT_DB).is_file() || app_exists("Battle.net.app", home),
+        "gog" => app_exists("GOG Galaxy.app", home) || Path::new(gog::GALAXY_CONFIG).is_file(),
+        "prism" => instance_roots(home).iter().any(|(root, _)| root.is_dir()),
         _ => false,
     }
 }
@@ -69,14 +91,18 @@ fn app_item(path: &Path, info: &plist::Value, own_exe: Option<&Path>) -> Option<
     if classify::is_mochi(&[&stem], &name, bundle_id, own_exe, executable.as_deref().and_then(Path::to_str)) { return None; }
     // Launch targets are stored as text; a path that is not valid UTF-8 would be corrupted.
     let location = path.to_str()?.to_owned();
+    let icon = icons::bundle_icon(path, text("CFBundleIconFile")).and_then(|icon| icon.to_str().map(str::to_owned));
     if let Some(def) = classify::classify_launcher(&[&stem], &name, bundle_id) {
         if classify::SOURCE_OWNED_LAUNCHERS.contains(&def.id) { return None; }
         let mut item = make_launcher(format!("apps:{location}"), name, "apps", location.clone(), def.id);
         item.install_path = Some(location);
+        item.icon_path = icon;
         return Some(item);
     }
     if !(is_games_category(info) || is_crossover_program(bundle_id)) || classify::is_non_game(&[&stem], &name) { return None; }
-    Some(make(format!("apps:{location}"), name, "apps", location.clone(), Some(location)))
+    let mut item = make(format!("apps:{location}"), name, "apps", location.clone(), Some(location));
+    item.icon_path = icon;
+    Some(item)
 }
 
 /// Looks for `.app` bundles in `dir` and (up to two levels) in plain sub-folders such as
@@ -143,6 +169,8 @@ pub fn scan_extra(source: &str, home: &Path) -> Vec<ImportedGame> {
         }
         "epic" => scan_epic_manifests(&epic_manifests(home)),
         "whisky" => scan_whisky(&whisky_bottles(home)),
+        "battlenet" => battlenet::scan_native(Path::new(BATTLENET_PRODUCT_DB)),
+        "gog" => gog::scan_bundles(&gog_dirs(home)),
         _ => Vec::new(),
     }
 }
@@ -257,5 +285,6 @@ mod tests {
         assert_eq!(heroic_roots(home), [PathBuf::from("/Users/me/Library/Application Support/heroic")]);
         assert_eq!(epic_manifests(home), PathBuf::from("/Users/me/Library/Application Support/Epic/EpicGamesLauncher/Data/Manifests"));
         assert_eq!(whisky_bottles(home), PathBuf::from("/Users/me/Library/Containers/com.isaacmarovitz.Whisky/Bottles"));
+        assert_eq!(instance_roots(home)[0].0, PathBuf::from("/Users/me/Library/Application Support/PrismLauncher"));
     }
 }

@@ -26,7 +26,11 @@ use linux as os;
 #[cfg(target_os = "macos")]
 use macos as os;
 
+pub mod battlenet;
 pub mod classify;
+pub mod gog;
+pub mod icons;
+pub mod prism;
 mod vdf;
 
 /// Steam install folders for this OS (used to find the signed-in account).
@@ -66,6 +70,10 @@ pub struct ImportedGame {
     pub kind: ImportKind,
     /// Which known launcher this is (see `classify::LAUNCHERS`), for launcher entries.
     pub launcher_id: Option<String>,
+    /// The entry's own icon file (desktop entry `Icon=`, bundle `.icns`), used as fallback artwork.
+    pub icon_path: Option<String>,
+    /// Minecraft instances (Prism and friends): version, loader and game folder for the default Tofu.
+    pub minecraft: Option<prism::MinecraftInstance>,
 }
 
 pub struct SourceDef {
@@ -78,11 +86,11 @@ pub struct SourceDef {
 const SCAN_TIMEOUT: Duration = Duration::from_secs(20);
 
 fn make(id: String, name: String, source: &str, target: String, path: Option<String>) -> ImportedGame {
-    ImportedGame { id, name, source: source.into(), launch_target: target, install_path: path, kind: ImportKind::Game, launcher_id: None }
+    ImportedGame { id, name, source: source.into(), launch_target: target, install_path: path, kind: ImportKind::Game, launcher_id: None, icon_path: None, minecraft: None }
 }
 
 fn make_launcher(id: String, name: String, source: &str, target: String, launcher: &str) -> ImportedGame {
-    ImportedGame { id, name, source: source.into(), launch_target: target, install_path: None, kind: ImportKind::Launcher, launcher_id: Some(launcher.into()) }
+    ImportedGame { id, name, source: source.into(), launch_target: target, install_path: None, kind: ImportKind::Launcher, launcher_id: Some(launcher.into()), icon_path: None, minecraft: None }
 }
 
 /// Re-labels an item as a launcher when its ids or name match a known launcher.
@@ -470,6 +478,7 @@ fn scan(source: &str, home: &Path) -> Vec<ImportedGame> {
         "steam" => scan_steam(&os::steam_roots(home), os::is_installed("steam", home)),
         "heroic" => scan_heroic(&os::heroic_roots(home)),
         "itch" => scan_itch(&os::itch_roots(home)),
+        "prism" => prism::scan_instances(&os::instance_roots(home)),
         other => os::scan_extra(other, home),
     }
 }
@@ -531,6 +540,10 @@ pub fn scan_import_games(source: &str, library_path: Option<String>) -> Vec<Impo
         ("steam", Some(path)) => scan_steam_path(&path),
         ("heroic", Some(path)) => scan_heroic(&[path]),
         ("itch", Some(path)) => scan_itch(&[path]),
+        // A portable MultiMC/Prism folder (the one holding `instances`).
+        ("prism", Some(path)) => prism::INSTANCE_LAUNCHERS.iter().find(|launcher| path.join(launcher.config).is_file())
+            .map(|launcher| prism::scan_instances(&[(path.clone(), launcher)]))
+            .unwrap_or_else(|| prism::scan_instances(&[(path.clone(), &prism::INSTANCE_LAUNCHERS[0])])),
         _ => take_prescan(source).unwrap_or_else(|| scan(source, &home)),
     }
 }

@@ -31,6 +31,10 @@ gilrs = "0.11.2"
 # Reads macOS Info.plist / Whisky metadata; platform-neutral so the parsers are tested on Linux too.
 plist = "1"
 
+# macOS notifications under Mochi's own name and icon (osascript ones show Script Editor's).
+[target.'cfg(target_os = "macos")'.dependencies]
+mac-notification-sys = "0.6"
+
 [features]
 custom-protocol = ["tauri/custom-protocol"]
 default = ["custom-protocol"]

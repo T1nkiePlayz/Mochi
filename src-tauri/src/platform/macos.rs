@@ -64,6 +64,11 @@ pub fn prepare_launch(target: &str, config: &LaunchConfig) -> Result<Prepared, S
         command.arg(format!("itch://games/{}", safe_launch_id(id)?));
         return Ok(Prepared { command, direct: false });
     }
+    if let Some((launcher, id)) = crate::sources::prism::parse_instance_target(target) {
+        let mut command = open_command();
+        command.args(["-b", launcher.bundle, "--args", "--launch"]).arg(id);
+        return Ok(Prepared { command, direct: false });
+    }
     if OPEN_SCHEMES.iter().any(|scheme| target.starts_with(scheme)) {
         let mut command = open_command();
         command.arg(target);
@@ -149,9 +154,32 @@ pub fn open_path(path: &Path) -> Result<(), String> {
 }
 
 pub fn send_system_notification(title: &str, body: &str) -> Result<(), String> {
+    // Inside Mochi.app the notification centre shows Mochi's name and icon. `osascript` remains the
+    // fallback (dev builds, or when the centre refuses), where macOS attributes it to Script Editor.
+    if running_from_bundle(std::env::current_exe().ok().as_deref()) && send_native_notification(title, body).is_ok() { return Ok(()); }
     let script = notification_script(title, body);
     let status = Command::new("/usr/bin/osascript").args(["-e", &script]).status().map_err(|e| format!("Unable to start macOS notifications: {e}"))?;
     if status.success() { Ok(()) } else { Err("macOS rejected the system notification.".into()) }
+}
+
+/// True for an executable inside an application bundle (`Mochi.app/Contents/MacOS/mochi`).
+fn running_from_bundle(exe: Option<&Path>) -> bool {
+    exe.and_then(Path::to_str).is_some_and(|path| path.contains(".app/Contents/MacOS/"))
+}
+
+#[cfg(target_os = "macos")]
+fn send_native_notification(title: &str, body: &str) -> Result<(), String> {
+    static APPLICATION: std::sync::Once = std::sync::Once::new();
+    APPLICATION.call_once(|| { let _ = mac_notification_sys::set_application(APP_ID); });
+    let (title, body) = (clip_notification_text(title), clip_notification_text(body));
+    mac_notification_sys::Notification::new().title(&title).message(&body).asynchronous(true).send().map(|_| ()).map_err(|error| error.to_string())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn send_native_notification(_title: &str, _body: &str) -> Result<(), String> { Err("macOS only".into()) }
+
+fn clip_notification_text(value: &str) -> String {
+    value.chars().filter(|c| !c.is_control() || matches!(c, '\n' | '\t')).take(400).collect()
 }
 
 /// AppleScript for a notification. Text is embedded as string literals with `\` and `"` escaped
@@ -177,9 +205,26 @@ mod tests {
     }
 
     #[test]
+    fn native_notifications_only_inside_a_bundle() {
+        assert!(running_from_bundle(Some(Path::new("/Applications/Mochi.app/Contents/MacOS/mochi"))));
+        assert!(!running_from_bundle(Some(Path::new("/Users/me/src/mochi/target/debug/mochi"))));
+        assert!(!running_from_bundle(None));
+        assert_eq!(clip_notification_text("a\u{7}b\nc"), "ab\nc");
+        assert_eq!(clip_notification_text(&"x".repeat(900)).len(), 400);
+    }
+
+    #[test]
     fn missing_app_bundles_give_a_clear_error() {
         let error = prepare_launch("/Applications/Definitely Not Installed.app", &LaunchConfig::default()).err().expect("error");
         assert!(error.contains("no longer installed"));
+    }
+
+    #[test]
+    fn minecraft_instances_open_their_launcher_bundle() {
+        let prepared = prepare_launch("mc-instance://prism/My%20Pack", &LaunchConfig::default()).expect("instance");
+        let args: Vec<_> = prepared.command.get_args().map(|arg| arg.to_string_lossy().into_owned()).collect();
+        assert_eq!(args, ["-b", "org.prismlauncher.PrismLauncher", "--args", "--launch", "My Pack"]);
+        assert!(!prepared.direct);
     }
 
     #[test]

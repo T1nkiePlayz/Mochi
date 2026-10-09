@@ -11,7 +11,7 @@ import { cssUrl } from "../../../lib/metadata/merge";
 const providerOf = (ctx: EditorContext, field: "name" | "description" | "categories" | "artwork") => {
   const { draft } = ctx;
   if (draft.lockedFields?.includes(field) || (field === "artwork" && draft.artworkSource === "custom")) return "You (edited)";
-  if (field === "artwork") return draft.artworkSource === "igdb" ? "IGDB" : draft.artworkSource === "steamgriddb" ? "SteamGridDB" : draft.artworkSource === "steam" ? "Steam" : draft.artworkUrl || draft.artworkCacheKey ? "Imported" : "None";
+  if (field === "artwork") return draft.artworkSource === "igdb" ? "IGDB" : draft.artworkSource === "steamgriddb" ? "SteamGridDB" : draft.artworkSource === "steam" ? "Steam" : draft.artworkSource === "icon" ? "App icon" : draft.artworkUrl || draft.artworkCacheKey ? "Imported" : "None";
   return draft.igdbId ? "IGDB" : "Local";
 };
 const year = (game: IgdbGame) => game.first_release_date ? new Date(game.first_release_date * 1000).getFullYear() : null;
