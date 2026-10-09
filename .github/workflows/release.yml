@@ -352,5 +352,34 @@ jobs:
           cd assets
           gh release upload "$TAG" SHA256SUMS.txt *.asc --clobber
 
+      - name: Add copy-and-paste verification commands to the release notes
+        run: |
+          marker="<!-- verify-commands -->"
+          gh release view "$TAG" --json body -q .body > notes.md
+          if grep -qF "$marker" notes.md; then echo "Verification commands already present."; exit 0; fi
+          {
+            echo
+            echo "$marker"
+            echo "### Verify your download"
+            echo
+            echo "Files: $(cd assets && ls | grep -v '\.asc$' | grep -v '^SHA256SUMS.txt$' | sed 's/.*/`&`/' | paste -sd, - | sed 's/,/, /g')"
+            echo
+            echo '```bash'
+            echo "# Checksums (put SHA256SUMS.txt next to your download; use shasum -a 256 on macOS)"
+            echo "sha256sum -c --ignore-missing SHA256SUMS.txt"
+            if ls assets/*.asc >/dev/null 2>&1; then
+              echo
+              echo "# GPG signature (key fingerprint: C735 859C E725 06BA 7BCD  C4F2 0F89 D3A3 E4B4 680F)"
+              echo "curl -fsSL https://raw.githubusercontent.com/${GH_REPO}/main/docs/release-signing-key.asc | gpg --import"
+              echo "gpg --verify SHA256SUMS.txt.asc SHA256SUMS.txt"
+              for f in $(cd assets && ls | grep -v '\.asc$' | grep -v '^SHA256SUMS.txt$'); do echo "gpg --verify $f.asc $f"; done
+            fi
+            echo
+            echo "# Build attestation"
+            for f in $(cd assets && ls | grep -v '\.asc$' | grep -v '^SHA256SUMS.txt$'); do echo "gh attestation verify $f --repo ${GH_REPO}"; done
+            echo '```'
+          } >> notes.md
+          gh release edit "$TAG" --notes-file notes.md
+
       - name: Publish the release
         run: gh release edit "$TAG" --draft=false --latest=$([[ "$TAG" == *-* ]] && echo false || echo true)

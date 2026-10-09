@@ -10,6 +10,8 @@ Every Mochi release file has up to three independent proofs. Use whichever you c
 
 None of these replace platform code signing: macOS builds are still ad-hoc signed and not notarized (see the README).
 
+Every release page also lists these commands with the exact file names filled in, so you can copy them.
+
 ## 1. Checksums
 
 Put `SHA256SUMS.txt` next to the downloaded files:
@@ -28,13 +30,19 @@ curl -fsSL https://raw.githubusercontent.com/T1nkiePlayz/Mochi/main/docs/release
 gpg --fingerprint "Mochi Releases"
 ```
 
-**Release key fingerprint:** published in this file when the first signed release is cut (the release workflow refuses to sign with any key other than `docs/release-signing-key.asc`).
+**Release key fingerprint:**
+
+```
+C735 859C E725 06BA 7BCD  C4F2 0F89 D3A3 E4B4 680F
+```
+
+The release workflow refuses to sign with any key other than `docs/release-signing-key.asc`.
 
 Verify a file and the checksum list (the `.asc` files are attached to the same release):
 
 ```bash
 gpg --verify SHA256SUMS.txt.asc SHA256SUMS.txt
-gpg --verify Mochi_0.1.0_amd64.AppImage.asc Mochi_0.1.0_amd64.AppImage
+gpg --verify <file>.asc <file>     # <file> is the name of the file you downloaded
 ```
 
 You want `Good signature from "Mochi Releases"` and the primary key fingerprint above. A "not certified with a trusted signature" warning is normal unless you have signed the key yourself.
@@ -42,7 +50,7 @@ You want `Good signature from "Mochi Releases"` and the primary key fingerprint 
 ## 3. Build attestation
 
 ```bash
-gh attestation verify Mochi_0.1.0_amd64.AppImage --repo T1nkiePlayz/Mochi
+gh attestation verify <file> --repo T1nkiePlayz/Mochi
 ```
 
 This checks a signature from GitHub that ties the file to this repository's `release.yml` workflow and the tagged commit.
