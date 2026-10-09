@@ -41,7 +41,7 @@
 @media (max-width: 700px) { .view-switcher-label, .view-switcher-dots { display: none; } .library-grid-view[data-view="list"] .game-card-main { padding-right: 48px; } }
 
 /* Instance sub-entries (Minecraft): a quiet group under the game's card, one compact row per instance. */
-.tofu-entry-group { grid-column: span 3; align-content: start; display: grid; gap: 8px; padding: 10px 12px 12px; border: var(--mochi-border-width) solid var(--mochi-border); border-left: 3px solid var(--mochi-accent-strong); border-radius: var(--mochi-card-radius); background: color-mix(in srgb, var(--mochi-surface-raised) 55%, transparent); content-visibility: auto; contain-intrinsic-size: auto 120px; }
+.tofu-entry-group { grid-column: span 3; align-content: start; align-self: start; display: grid; gap: 8px; padding: 10px 12px 12px; border: var(--mochi-border-width) solid var(--mochi-border); border-left: 3px solid var(--mochi-accent-strong); border-radius: var(--mochi-card-radius); background: color-mix(in srgb, var(--mochi-surface-raised) 55%, transparent); content-visibility: auto; contain-intrinsic-size: auto 120px; }
 .tofu-entry-title { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--mochi-text-muted); }
 .tofu-entry-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; max-height: 232px; overflow-y: auto; padding-right: 2px; scrollbar-width: thin; }
 .tofu-entry { position: relative; display: flex; align-items: center; min-width: 0; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-button-radius); background-color: var(--mochi-surface); overflow: hidden; transition: border-color var(--mochi-transition); }

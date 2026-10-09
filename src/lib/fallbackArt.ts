@@ -1,5 +1,6 @@
 import type { Piko } from "../models";
 import { launcherIcon } from "./launcherArt";
+import grassBlock from "../assets/minecraft-grass-block.svg";
 import { cssUrl } from "./metadata/merge";
 
 /** Older libraries stored one fixed purple gradient as "no artwork"; it is not real artwork. */
@@ -61,7 +62,8 @@ export function generatedArt(subject: ArtSubject): GeneratedArt {
   return {
     hue: hueOf(subject.name.trim().toLowerCase() || subject.id || "game"),
     initials: initialsOf(subject.name),
-    sourceIcon: subject.sourceId ? launcherIcon(subject.sourceId) : "",
+    // Minecraft instances come from Prism-style launchers, but the badge is the game's own grass block, not the launcher triangle.
+    sourceIcon: subject.sourceId === "prism" ? grassBlock : subject.sourceId ? launcherIcon(subject.sourceId) : "",
     launcher,
   };
 }
