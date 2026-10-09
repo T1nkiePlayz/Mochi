@@ -51,6 +51,8 @@ mod tests {
         assert!(matches!(evaluate("https://modrinth.com/mod/sodium"), Ok(UrlDecision::Open(_))));
         assert!(matches!(evaluate("https://www.curseforge.com/minecraft"), Ok(UrlDecision::Open(_))));
         assert!(matches!(evaluate("https://t1nkieplayz.github.io/Mochi-Website/#/signin"), Ok(UrlDecision::Confirm { .. })));
+        assert!(matches!(evaluate("https://example.github.io/"), Ok(UrlDecision::Confirm { .. })));
+        assert!(matches!(evaluate("https://github.io/"), Ok(UrlDecision::Confirm { .. })));
     }
 
     #[test]

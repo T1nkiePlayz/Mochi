@@ -210,8 +210,8 @@ pub(crate) fn extract_zip(archive: &Path, dest: &Path, limits: ExtractLimits) ->
     let stage = parent.join(format!(".{name}.mochi-stage-{id}"));
     let backup = parent.join(format!(".{name}.mochi-backup-{id}"));
     fs::create_dir(&stage).map_err(|e| format!("Unable to create extraction staging folder: {e}"))?;
-    let _stage_cleanup = TempDirCleanup(stage.clone());
-    let _backup_cleanup = TempDirCleanup(backup.clone());
+    let _stage_cleanup = TempDirCleanup::new(stage.clone());
+    let mut backup_cleanup = TempDirCleanup::new(backup.clone());
     fs::create_dir(&backup).map_err(|e| format!("Unable to create extraction rollback folder: {e}"))?;
 
     let mut ignored = Vec::new();
@@ -219,6 +219,15 @@ pub(crate) fn extract_zip(archive: &Path, dest: &Path, limits: ExtractLimits) ->
     fs::create_dir_all(dest).map_err(|e| format!("Unable to create extraction folder: {e}"))?;
     let mut files = Vec::new();
     collect_regular_files(&stage, &stage, &mut files)?;
+    // The downloaded archive itself lives in the destination directory. Refuse an archive
+    // that contains a same-named top-level entry, otherwise commit could replace the source ZIP.
+    let canonical_dest = fs::canonicalize(dest).map_err(|e| format!("Unable to resolve extraction folder: {e}"))?;
+    let canonical_archive = fs::canonicalize(archive).map_err(|e| format!("Unable to resolve archive: {e}"))?;
+    if canonical_archive.parent() == Some(canonical_dest.as_path())
+        && archive.file_name().is_some_and(|name| files.iter().any(|relative| relative == Path::new(name)))
+    {
+        return Err("Archive contains a file that would overwrite the archive itself.".into());
+    }
     let mut installed: Vec<PathBuf> = Vec::new();
     let mut saved: Vec<(PathBuf, PathBuf)> = Vec::new();
     let commit = (|| -> Result<(), String> {
@@ -247,19 +256,58 @@ pub(crate) fn extract_zip(archive: &Path, dest: &Path, limits: ExtractLimits) ->
         Ok(())
     })();
     if let Err(error) = commit {
-        for path in installed.iter().rev() { let _ = fs::remove_file(path); }
+        let mut rollback_errors = Vec::new();
+        let mut paths_removed = HashSet::new();
+        for path in installed.iter().rev() {
+            match fs::remove_file(path) {
+                Ok(()) => { paths_removed.insert(path.clone()); }
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => { paths_removed.insert(path.clone()); }
+                Err(e) => rollback_errors.push(format!("remove '{}': {e}", path.display())),
+            }
+        }
         for (saved_path, target) in saved.iter().rev() {
-            if let Some(parent) = target.parent() { let _ = fs::create_dir_all(parent); }
-            let _ = fs::rename(saved_path, target);
+            if !paths_removed.contains(target) {
+                match fs::symlink_metadata(target) {
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                    Ok(_) => {
+                        rollback_errors.push(format!("original '{}' remains recoverable at '{}'", target.display(), saved_path.display()));
+                        continue;
+                    }
+                    Err(e) => {
+                        rollback_errors.push(format!("inspect '{}' before restore: {e}", target.display()));
+                        continue;
+                    }
+                }
+            }
+            if let Some(parent) = target.parent() {
+                if let Err(e) = fs::create_dir_all(parent) {
+                    rollback_errors.push(format!("recreate parent for '{}': {e}", target.display()));
+                    continue;
+                }
+            }
+            if let Err(e) = fs::rename(saved_path, target) {
+                rollback_errors.push(format!("restore '{}' from '{}': {e}", target.display(), saved_path.display()));
+            }
+        }
+        if !rollback_errors.is_empty() {
+            backup_cleanup.preserve();
+            return Err(format!(
+                "{error} Rollback was incomplete; recovery files were retained at '{}'. Details: {}",
+                backup.display(), rollback_errors.join("; ")
+            ));
         }
         return Err(error);
     }
     Ok(count)
 }
 
-struct TempDirCleanup(PathBuf);
+struct TempDirCleanup { path: PathBuf, cleanup: bool }
+impl TempDirCleanup {
+    fn new(path: PathBuf) -> Self { Self { path, cleanup: true } }
+    fn preserve(&mut self) { self.cleanup = false; }
+}
 impl Drop for TempDirCleanup {
-    fn drop(&mut self) { let _ = fs::remove_dir_all(&self.0); }
+    fn drop(&mut self) { if self.cleanup { let _ = fs::remove_dir_all(&self.path); } }
 }
 
 fn collect_regular_files(root: &Path, current: &Path, files: &mut Vec<PathBuf>) -> Result<(), String> {
@@ -594,6 +642,32 @@ mod tests {
         let zip_path = dir.join("pack.zip");
         build_zip(&zip_path, &[("a\nb.txt", b"1")], None);
         assert!(extract_zip(&zip_path, &dir.join("out"), EXTRACT_LIMITS).is_err());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn archive_cannot_overwrite_itself_during_extraction() {
+        let dir = temp_dir("self-overwrite");
+        let archive = dir.join("pack.zip");
+        build_zip(&archive, &[("pack.zip", b"replacement")], None);
+        let original = fs::read(&archive).unwrap();
+        assert!(extract_zip(&archive, &dir, EXTRACT_LIMITS).unwrap_err().contains("overwrite the archive itself"));
+        assert_eq!(fs::read(&archive).unwrap(), original);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn invalid_archive_does_not_modify_existing_files() {
+        let dir = temp_dir("staged-failure");
+        let out = dir.join("out");
+        fs::create_dir_all(&out).unwrap();
+        fs::write(out.join("existing.txt"), b"original contents").unwrap();
+        let zip_path = dir.join("invalid.zip");
+        build_zip(&zip_path, &[("new.txt", b"new contents"), ("../escape.txt", b"bad")], None);
+        assert!(extract_zip(&zip_path, &out, EXTRACT_LIMITS).is_err());
+        assert_eq!(fs::read(out.join("existing.txt")).unwrap(), b"original contents");
+        assert!(!out.join("new.txt").exists());
+        assert!(!dir.join("escape.txt").exists());
         let _ = fs::remove_dir_all(&dir);
     }
 
