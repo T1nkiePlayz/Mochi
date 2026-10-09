@@ -6,6 +6,7 @@ import { sourceLabels } from "../../lib/mods/types";
 import type { Piko, Tofu } from "../../models";
 import { useApp } from "../../state/AppContext";
 import { applyUpdates, ensureChecked, useTofuUpdates } from "../../state/modUpdates";
+import { Switch } from "../ui/Checkbox";
 
 /** Update check results for one Tofu: per-mod Update buttons, "Update all", manual links, and the automatic-update switch. */
 export function UpdatesPanel({ tofu, piko, onRefresh }: { tofu: Tofu; piko?: Piko; onRefresh: () => Promise<void> }) {
@@ -26,8 +27,8 @@ export function UpdatesPanel({ tofu, piko, onRefresh }: { tofu: Tofu; piko?: Pik
       <button type="button" className="secondary-button" onClick={() => void ensureChecked(tofu, piko, behavior.modSources, true)} disabled={checking || working}><RefreshCw size={14} className={checking ? "spin" : ""} /> {checking ? "Checking..." : "Check now"}</button>
       {installable.length > 1 && <button type="button" className="secondary-button" onClick={() => void updateAll()} disabled={checking || working}><ArrowUpCircle size={13} /> Update all ({installable.length})</button>}
     </div>
-    <label className="check-row"><input type="checkbox" checked={behavior.autoUpdateMods} onChange={(event) => setBehavior((current) => ({ ...current, autoUpdateMods: event.target.checked }))} /> Automatically update mods when I launch a game</label>
-    <small className="metadata-note">Off by default. When on, Mochi checks for updates and installs them right before the game starts (never while it runs).</small>
+    <Switch checked={behavior.autoUpdateMods} onChange={(on) => setBehavior((current) => ({ ...current, autoUpdateMods: on }))} label="Automatically update mods when I launch a game"
+      description="Off by default. When on, Mochi checks for updates and installs them right before the game starts (never while it runs)." />
     {state.message && <p className="metadata-note" role="status">{state.message}</p>}
     {state.check && !checking && !items.length && <p className="metadata-note" role="status">{state.check.notes.length ? "Could not finish checking." : "Everything Mochi can identify is up to date."}</p>}
     <ul className="imp-list">

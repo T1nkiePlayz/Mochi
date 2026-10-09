@@ -1,6 +1,6 @@
 import { RemoteImage } from "./RemoteImage";
 import { useEffect, useMemo, useState } from "react";
-import { Download, FolderOpen, PackageOpen, RefreshCw, Save, Search, Settings2, Trash2 } from "lucide-react";
+import { Check, Download, FolderOpen, PackageOpen, RefreshCw, Save, Search, Settings2, Trash2 } from "lucide-react";
 import { applyModProfile, searchModrinth, type ModrinthProject, type ModrinthProjectType } from "../lib/modrinth";
 import { openPath } from "../lib/platform";
 import { Select } from "./ui/Select";
@@ -13,10 +13,14 @@ import { useAutoModFolder } from "./mods/useAutoModFolder";
 import { InstallNoticeBar } from "./mods/InstallNoticeBar";
 import { useModInstall } from "./mods/useModInstall";
 import { useInstalledFiles } from "./mods/useInstalledFiles";
+import { useInstallState } from "./mods/useInstallState";
+import type { InstallState } from "../lib/mods/installState";
 import { createCurseforgeSource } from "../lib/mods/curseforgeSource";
 import { createModrinthSource, modrinthItem } from "../lib/mods/modrinthSource";
 import { describeFolders } from "../lib/mods/folders";
-import { contentFolder, type ContentKind } from "../lib/mods/targets";
+import { ensureTofuFolder } from "../lib/mods/autoFolder";
+import { contentFolder, tofusSharing, type ContentKind } from "../lib/mods/targets";
+import { useTofuSwitch } from "./mods/useTofuSwitch";
 import { MINECRAFT_CLASS, minecraftSourceFor, resolveSources } from "../lib/mods/resolveSources";
 import { CF_MINECRAFT_ID } from "../lib/curseforge";
 import { ALL_LOADERS, loaderLabels, tofuTarget } from "../lib/mods/compat";
@@ -54,12 +58,15 @@ export function ModrinthManager({ piko, tofu, onUpdate }: Props) {
   const install = useModInstall();
   const updates = useTofuUpdates(tofu.id);
   const auto = useAutoModFolder(piko, tofu, onUpdate);
+  const stateOf = useInstallState(tofu);
 
   // Follow the Tofu's own loader/version when the user sets them in its folder settings.
   useEffect(() => { setGameVersion(target.gameVersion ?? ""); setLoader(target.loader && target.loader !== "vanilla" ? target.loader : ""); }, [tofu.id, target.gameVersion, target.loader]);
 
   const folder = contentFolder(tofu, kindOf(tab === "profiles" || tab === "updates" ? "mod" : tab));
-  const { files: installed, loading: loadingFiles, error: filesError, refresh: refreshInstalled, pending: pendingDownloads } = useInstalledFiles(tofu, folder);
+  const siblingIds = useMemo(() => tofusSharing(piko.tofus, tofu).map((other) => other.id), [piko.tofus, tofu]);
+  const { files: installed, loading: loadingFiles, error: filesError, refresh: refreshInstalled, pending: pendingDownloads } = useInstalledFiles(tofu, folder, siblingIds);
+  const switching = useTofuSwitch(piko, tofu, installed.map((file) => `${file.filename}:${file.record?.source ?? ""}`).join("|"), () => void refreshInstalled());
   useEffect(() => { if (filesError) setMessage(filesError); }, [filesError]);
 
   // Keep the Tofu's mod count truthful (main folder only).
@@ -78,9 +85,11 @@ export function ModrinthManager({ piko, tofu, onUpdate }: Props) {
   };
 
   const installProject = async (project: ModrinthProject) => {
-    if (!tofu.path) { setMessage("Choose a Tofu folder first."); return; }
+    // A Tofu without a folder takes the detected one; only when nothing was found does the user have to choose.
+    const ready = await ensureTofuFolder(piko, tofu, onUpdate);
+    if (!ready) { setMessage("Mochi could not find where Minecraft loads mods. Choose the folder under Mod folders."); setFolderOpen(true); return; }
     const type: ModrinthProjectType = tab === "resourcepack" || tab === "shader" ? tab : "mod";
-    await install.installBest(createModrinthSource(type), modrinthItem(project), tofu, { gameVersion: gameVersion || undefined, loader: loader || undefined });
+    await install.installBest(createModrinthSource(type), modrinthItem(project), ready, { gameVersion: gameVersion || undefined, loader: loader || undefined });
   };
 
   // ----- Profiles -----
@@ -114,17 +123,17 @@ export function ModrinthManager({ piko, tofu, onUpdate }: Props) {
     <p className="metadata-note" role="status">All mod sources are turned off. <button type="button" className="text-button" onClick={() => setActiveNav("Settings")}>Open Settings</button> and enable Modrinth or CurseForge under Mod sources.</p></section>;
 
   const fileFilter = { gameVersion: gameVersion || undefined, loader: loader || undefined };
-  const installedPanel = folder ? <InstalledModsPanel tofu={tofu} folder={folder} withUpdates={!folder.subdir} files={installed} loading={loadingFiles} refresh={refreshInstalled} onMessage={setMessage} /> : <p className="muted">Choose a Tofu folder to manage {noun(tab)}.</p>;
+  const installedPanel = folder ? <InstalledModsPanel piko={piko} tofu={tofu} folder={folder} withUpdates={!folder.subdir} files={installed} loading={loadingFiles} refresh={refreshInstalled} onMessage={setMessage} /> : <p className="muted">Choose a Tofu folder to manage {noun(tab)}.</p>;
   const openTarget = tofu.gameDir && !tofu.path ? tofu.gameDir : tofu.path;
 
   return <section className="modrinth-manager">
     <div className="tofu-workspace-header"><div><p className="eyebrow">Tofu workspace</p><h3>{tofu.name}{target.loader || target.gameVersion ? <small className="workspace-meta"> {[target.loader ? loaderLabels[target.loader] : "", target.gameVersion ?? ""].filter(Boolean).join(" ")}</small> : null}</h3><p className="workspace-path">{tofu.path ? describeFolders(tofu) : "Choose a folder to enable content management."}</p></div>
       <div className="tofu-workspace-actions">{openTarget && <button type="button" className="secondary-button" onClick={() => void openPath(openTarget).catch((error) => setMessage(errorText(error, "Unable to open the folder.")))}><FolderOpen size={14}/> Open</button>}<button type="button" className="secondary-button" onClick={() => setFolderOpen(true)}><Settings2 size={14}/> Mod folders</button></div></div>
-    {auto.state === "applied" && auto.applied && <p className="metadata-note" role="status">Found {auto.applied.label}. Mochi will manage mods in {auto.applied.modsDir}.</p>}
-    {auto.state === "choose" && <p className="metadata-note" role="status">Mochi found {auto.candidates.length} places mods can go. <button type="button" className="text-button" onClick={() => setFolderOpen(true)}>Choose one</button></p>}
+    {auto.state === "applied" && auto.applied && <p className="metadata-note" role="status">Found {auto.applied.label}. Mochi will manage mods in {auto.applied.modsDir}.{auto.others > 0 && <> {auto.others} other place{auto.others === 1 ? "" : "s"} found. <button type="button" className="text-button" onClick={() => setFolderOpen(true)}>Change</button></>}</p>}
     {auto.state === "missing" && <p className="metadata-note" role="status">Mochi could not find a Minecraft folder. <button type="button" className="text-button" onClick={() => setFolderOpen(true)}>Choose the folder</button></p>}
     <div className="workspace-tabs">{tabs.map((item) => <button type="button" key={item.id} className={tab === item.id ? "active" : ""} aria-pressed={tab === item.id} onClick={() => setTab(item.id)}>{item.id === "updates" ? updatesLabel : item.label}</button>)}</div>
     <ModSyncStatus tofuId={tofu.id} />
+    {switching.message && <p className="metadata-note" role="status">{switching.message}</p>}
     {message && <p className="metadata-note" role="status">{message}</p>}
     <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />
     {pendingDownloads > 0 && <p className="metadata-note">{pendingDownloads} download{pendingDownloads === 1 ? "" : "s"} in progress. See Downloads.</p>}
@@ -134,11 +143,11 @@ export function ModrinthManager({ piko, tofu, onUpdate }: Props) {
     {isSearchTab && effective === "curseforge" && curseforgeSource ? <>
       <div className="modrinth-controls"><input className="compact-input" value={gameVersion} onChange={(e) => setGameVersion(e.target.value)} placeholder="Game version" aria-label="Game version" />{tab === "mod" && <Select className="compact-select" value={loader} onChange={setLoader} options={loaderOptions} label="Loader" searchable={false} />}</div>
       <div className="content-split">{installedPanel}
-      <div><div className="workspace-section-title"><strong>Discover on CurseForge</strong></div><ModsBrowser key={tab} source={curseforgeSource} target={{ kind: "tofu", tofu, onUpdateTofu: onUpdate }} filter={fileFilter} noun={noun(tab)} /></div></div>
+      <div><div className="workspace-section-title"><strong>Discover on CurseForge</strong></div><ModsBrowser key={tab} source={curseforgeSource} target={{ kind: "tofu", tofu, onUpdateTofu: onUpdate, piko }} filter={fileFilter} noun={noun(tab)} collapsedCount={8} /></div></div>
     </> : isSearchTab ? <>
       <div className="modrinth-controls"><label className="search-box"><Search size={15}/><input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void search(); }} placeholder={"Search Modrinth " + noun(tab) + "..."} aria-label={"Search Modrinth " + noun(tab)} /><kbd>Enter</kbd></label><input className="compact-input" value={gameVersion} onChange={(e) => setGameVersion(e.target.value)} placeholder="Game version" aria-label="Game version" />{tab === "mod" && <Select className="compact-select" value={loader} onChange={setLoader} options={loaderOptions} label="Loader" searchable={false} />}<button type="button" className="secondary-button" onClick={() => void search()} disabled={busy}>{busy ? <RefreshCw size={14} className="spin"/> : <Search size={14}/>} Search</button></div>
       <div className="content-split">{installedPanel}
-      <div><div className="workspace-section-title"><strong>Discover on Modrinth</strong><span>{results.length} results</span></div><div className="modrinth-results">{results.map((project) => <article className="modrinth-result" key={project.project_id}>{project.icon_url ? <RemoteImage src={project.icon_url} alt="" /> : <div className="modrinth-result-icon"><PackageOpen size={17}/></div>}<div><strong>{project.title}</strong><small>{project.author || "Modrinth creator"} · {(project.downloads ?? 0).toLocaleString()} downloads</small><p>{project.description}</p></div><button type="button" className="secondary-button" onClick={() => void installProject(project)} disabled={install.busyId === project.project_id || !tofu.path}><Download size={13}/> Install</button></article>)}</div></div></div>
+      <div><div className="workspace-section-title"><strong>Discover on Modrinth</strong><span>{results.length} results</span></div><div className="modrinth-results">{results.map((project) => <article className="modrinth-result" key={project.project_id}>{project.icon_url ? <RemoteImage src={project.icon_url} alt="" /> : <div className="modrinth-result-icon"><PackageOpen size={17}/></div>}<div><strong>{project.title}</strong><small>{project.author || "Modrinth creator"} · {(project.downloads ?? 0).toLocaleString()} downloads</small><p>{project.description}</p></div><ModrinthInstallButton project={project} state={stateOf({ source: "modrinth", id: project.project_id })} busy={install.busyId === project.project_id} onInstall={() => void installProject(project)} /></article>)}</div></div></div>
     </> : tab === "profiles" ? <div className="profile-panel">
       {!tofu.path ? <p className="muted">Choose a Tofu folder to create mod profiles.</p> : <>
         <p className="muted">A profile remembers which mods are enabled. Switch profiles to enable exactly that set and disable the rest. Nothing is deleted.</p>
@@ -148,4 +157,11 @@ export function ModrinthManager({ piko, tofu, onUpdate }: Props) {
     </div> : <UpdatesPanel tofu={tofu} piko={piko} onRefresh={refreshInstalled} />}
     {folderOpen && <ModFolderModal piko={piko} tofu={tofu} onUpdate={onUpdate} onClose={() => setFolderOpen(false)} />}
   </section>;
+}
+
+/** Install button of a Modrinth search result, following the mod's state in the Tofu (downloading, downloaded). */
+function ModrinthInstallButton({ project, state, busy, onInstall }: { project: ModrinthProject; state: InstallState; busy: boolean; onInstall: () => void }) {
+  if (state.kind === "downloading") return <button type="button" className="secondary-button mod-action is-downloading" disabled aria-busy="true"><RefreshCw size={13} className="spin" /> Downloading{state.progress != null ? ` ${Math.round(state.progress * 100)}%` : "…"}</button>;
+  if (state.kind === "installed" || state.kind === "update") return <button type="button" className="secondary-button mod-action is-installed" disabled aria-label={`${project.title} is downloaded`}><Check size={13} /> {state.kind === "update" ? "Update in Updates tab" : "Downloaded"}</button>;
+  return <button type="button" className="secondary-button mod-action" onClick={onInstall} disabled={busy} aria-label={`Install ${project.title}`}><Download size={13} /> Install</button>;
 }

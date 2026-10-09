@@ -70,6 +70,12 @@ function curseforge(body: Json): { status: number; json: unknown } {
     case "mod": return { status: 200, json: { data: { ...modsFor(Math.floor(num("modId") / 1000), undefined)[0], id: num("modId"), name: `Mod ${num("modId")}` } } };
     case "description": return { status: 200, json: { data: description(`Mod ${num("modId")}`) } };
     case "files": return { status: 200, json: { data: filesFor(num("modId")), pagination: { index: 0, pageSize: 30, resultCount: 3, totalCount: 3 } } };
+    case "fingerprints": {
+      // Every third fingerprint is "known", as mod 1000 + fingerprint.
+      const prints = (body.fingerprints as number[] | undefined) ?? [];
+      const exactMatches = prints.filter((print) => print % 3 === 0).map((print) => ({ id: 1000 + print, file: { ...filesFor(1000 + print)[0], fileFingerprint: print } }));
+      return { status: 200, json: { data: { isCacheBuilt: true, exactMatches, exactFingerprints: exactMatches.map((match) => match.file.fileFingerprint), unmatchedFingerprints: prints.filter((print) => print % 3 !== 0) } } };
+    }
     case "download-url": { const file = filesFor(num("modId")).find((entry) => entry.id === num("fileId")); return { status: 200, json: { data: file?.downloadUrl ?? null, restricted: !file?.downloadUrl } }; }
     default: return { status: 400, json: { error: "Unknown route.", code: "bad_request" } };
   }
@@ -100,7 +106,8 @@ function nexus(body: Json): { status: number; json: unknown } | null {
     }
     case "nexus-mod": return { status: 200, json: { id: Number(body.modId), name: `Nexus mod ${body.modId}`, summary: "Summary", description: "[b]Bold BBCode[/b]<br />A <b>HTML</b> body.", author: "Modder1", version: "1.2.0", endorsements: 4321, modPageUrl: `https://www.nexusmods.com/${body.gameDomain}/mods/${body.modId}` } };
     case "nexus-files": return { status: 200, json: { files: [{ fileId: Number(body.modId) * 10, name: "Main file", fileName: "main-1.2.0.zip", version: "1.2.0", category: "MAIN", sizeKb: 2048, uploadedAt: new Date().toISOString(), primary: true }, { fileId: Number(body.modId) * 10 + 1, name: "Optional", fileName: "optional.zip", version: "1.0", category: "OPTIONAL", sizeKb: 300, primary: false }] } };
-    case "nexus-download": return premium()
+    case "nexus-md5": return { status: 200, json: { matches: String(body.md5).endsWith("1") ? [{ modId: 77, fileId: 770, name: "Mock Nexus mod", fileVersion: "1.0", fileName: "mock.zip", uploadedAt: 1_700_000_000, modPageUrl: `https://www.nexusmods.com/${body.gameDomain}/mods/77` }] : [] } };
+    case "nexus-download": return premium() || body.key
       ? { status: 200, json: { url: "https://premium-files.nexus-cdn.com/mock/file.zip", fileName: "main-1.2.0.zip" } }
       : { status: 403, json: { error: "Direct downloads need Nexus Mods Premium.", code: "premium_required" } };
     default: return null;

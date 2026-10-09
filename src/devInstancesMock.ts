@@ -6,12 +6,31 @@ const mods: Mod[] = [
   { filename: "sodium-0.6.0.jar", path: "/mods/sodium-0.6.0.jar", enabled: true, size: 912_000, record: { file: "sodium-0.6.0.jar", subdir: "", enabled: true, source: "modrinth", projectId: "AANobbMI", fileId: "v1", version: "0.6.0", title: "Sodium", installedAt: 1, rollback: { file: "sodium-0.5.9.jar", version: "0.5.9", fileId: "v0" } } },
   { filename: "lithium.jar.disabled", path: "/mods/lithium.jar.disabled", enabled: false, size: 402_000, record: { file: "lithium.jar", subdir: "", enabled: false, source: "curseforge", projectId: "360438", fileId: "55", version: "0.12.0", title: "Lithium", installedAt: 1, fileDate: "2025-01-01T00:00:00Z" } },
   { filename: "unknown-mod.jar", path: "/mods/unknown-mod.jar", enabled: true, size: 55_000 },
+  { filename: "other-tofu-mod.jar.disabled", path: "/mods/other-tofu-mod.jar.disabled", enabled: false, size: 12_000 },
 ];
+let nxmRegistered = false;
 const logs: Record<string, string> = {};
 const logText = (sessionId: string) => logs[sessionId] ??= "# Mochi launched /usr/bin/mock-game\n[12:00:01] Loading assets...\n[12:00:03] Fabric loader 0.15.7 ready\n[12:00:04] [WARN] Missing texture: block/mock\n";
 
 export const instanceHandlers: Record<string, Handler> = {
-  list_instance_mods: () => mods.map((mod) => ({ ...mod })),
+  list_instance_mods: (args) => mods.map((mod) => ({ ...mod, modifiedMs: 1_700_000_000_000, foreign: Array.isArray(args.siblings) && mod.filename.startsWith("other-tofu") })),
+  list_instance_records: () => mods.filter((mod) => mod.record).map((mod) => mod.record),
+  hash_mod_files: (args) => (args.paths as string[]).map((path, index) => ({ path, filename: path.split("/").pop(), size: 1000, sha1: `${index}`.padStart(40, "a"), md5: `${index}`.padStart(32, "b"), fingerprint: 1000 + index })),
+  modrinth_identify: () => ({}),
+  record_instance_mods: (args) => {
+    for (const entry of args.entries as Array<{ file: string; enabled: boolean; record: Record<string, unknown> }>) {
+      const mod = mods.find((item) => item.filename.replace(/\.disabled$/, "") === entry.file);
+      if (mod && (!mod.record || entry.record.source !== "manual")) mod.record = { file: entry.file, subdir: "", enabled: entry.enabled, installedAt: Date.now(), ...entry.record };
+    }
+    return (args.entries as unknown[]).length;
+  },
+  copy_instance_records: () => mods.filter((mod) => mod.record).length,
+  read_tofu_manifest: () => null,
+  write_tofu_manifest: () => null,
+  restore_instance_records: () => 0,
+  apply_tofu_mods: () => ({ added: 0, removed: 0, unchanged: 0, enabled: 2, disabled: 1, conflicts: [], errors: [] }),
+  get_nxm_handler: () => ({ configurable: true, registered: nxmRegistered }),
+  set_nxm_handler: (args) => { nxmRegistered = Boolean(args.enabled); return { configurable: true, registered: nxmRegistered }; },
   set_instance_mods_enabled: (args) => {
     let changed = 0;
     for (const path of args.paths as string[]) {
@@ -32,10 +51,10 @@ export const instanceHandlers: Record<string, Handler> = {
   sync_instance_mods: () => ({ added: 2, removed: 1, unchanged: 5, conflicts: [], errors: [] }),
   detect_mod_locations: (args) => args.minecraft
     ? [
-      { id: "a", label: "Prism Launcher: Fabric Pack", launcher: "Prism Launcher", instance: "Fabric Pack", modsDir: "/home/dev/.local/share/PrismLauncher/instances/Fabric Pack/.minecraft/mods", contentRoot: "/home/dev/.local/share/PrismLauncher/instances/Fabric Pack/.minecraft", exists: true, loader: "fabric", gameVersion: "1.20.1" },
-      { id: "b", label: "Minecraft Launcher", launcher: "Minecraft Launcher", modsDir: "/home/dev/.minecraft/mods", contentRoot: "/home/dev/.minecraft", exists: true, loader: "vanilla", gameVersion: "1.21.1" },
+      { id: "a", label: "Prism Launcher: Fabric Pack", launcher: "Prism Launcher", instance: "Fabric Pack", modsDir: "/home/dev/.local/share/PrismLauncher/instances/Fabric Pack/.minecraft/mods", contentRoot: "/home/dev/.local/share/PrismLauncher/instances/Fabric Pack/.minecraft", exists: true, loader: "fabric", gameVersion: "1.20.1", fileCount: 12, modifiedMs: 1_700_000_500_000 },
+      { id: "b", label: "Minecraft Launcher", launcher: "Minecraft Launcher", modsDir: "/home/dev/.minecraft/mods", contentRoot: "/home/dev/.minecraft", exists: true, loader: "vanilla", gameVersion: "1.21.1", fileCount: 0, modifiedMs: 1_700_000_000_000 },
     ]
-    : [{ id: "c", label: "Mods folder", launcher: "Game folder", modsDir: "/home/dev/Games/Mock/Mods", exists: true }],
+    : [{ id: "c", label: "Mods folder", launcher: "Game folder", modsDir: "/home/dev/Games/Mock/Mods", exists: true, fileCount: 3, modifiedMs: 1_700_000_000_000 }],
   cancel_mod_download: () => null,
   clear_finished_downloads: () => null,
   list_game_logs: () => ({ dir: "/home/dev/.local/share/Mochi/logs/mock", sessions: [

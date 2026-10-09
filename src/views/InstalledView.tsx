@@ -6,6 +6,8 @@ import { formatBytes, useInstalled } from "../components/installed/data";
 import { TofuCard, updatesOf } from "../components/installed/TofuCard";
 import { openPath } from "../lib/platform";
 import { applyUpdates, useUpdateVersion } from "../state/modUpdates";
+import { Switch } from "../components/ui/Checkbox";
+import { NxmHandlerToggle } from "../components/mods/NxmHandlerToggle";
 
 type Sort = "name" | "size" | "updates";
 type Filter = "all" | "updates" | "disabled";
@@ -71,7 +73,8 @@ export function InstalledView() {
         <button type="button" className="secondary-button" onClick={() => void installed.checkAll()} disabled={busy || loading}><RefreshCw size={13} className={busy && progress?.label.startsWith("Checking") ? "spin" : ""} /> Check all for updates</button>
         {pending > 0 && <button type="button" className="secondary-button" onClick={() => void installed.updateAll()} disabled={busy}><Download size={13} /> Update all ({pending})</button>}
       </div>
-      <label className="check-row inst-auto"><input type="checkbox" checked={behavior.autoUpdateMods} onChange={(event) => setBehavior((current) => ({ ...current, autoUpdateMods: event.target.checked }))} /> Automatically update mods when I launch a game (off by default; each update is SHA-1 checked and the old file is kept for rollback)</label>
+      <Switch className="inst-auto" checked={behavior.autoUpdateMods} onChange={(on) => setBehavior((current) => ({ ...current, autoUpdateMods: on }))} label="Automatically update mods when I launch a game" description="Off by default. Each update is SHA-1 checked and the old file is kept for rollback." />
+      <NxmHandlerToggle />
       {progress && (
         <div className="inst-progress" role="progressbar" aria-label={progress.label} aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.done}>
           <span>{progress.label} {progress.done} of {progress.total}</span><div className="stat-meter"><i style={{ width: `${(progress.done / progress.total) * 100}%` }} /></div>

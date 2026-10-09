@@ -38,13 +38,17 @@ export async function checkTofuUpdates(tofu: Tofu, piko: Piko | undefined, modSo
   // Loader and version narrow Minecraft updates; for other games a version like "1.2.3" says nothing about mod compatibility.
   const target: TofuTarget = minecraft ? tofuTarget(tofu) : {};
   let files;
-  try { files = await listInstanceMods(tofu.id, tofu.path); } catch (error) { notes.push(errorText(error, "Could not read the mod folder.")); return done(); }
+  // Files only another Tofu on the same folder owns are not this Tofu's to update.
+  const siblings = piko && piko.tofus.length > 1 ? piko.tofus.map((other) => other.id) : undefined;
+  try { files = (await listInstanceMods(tofu.id, tofu.path, undefined, siblings)).filter((file) => !file.foreign); } catch (error) { notes.push(errorText(error, "Could not read the mod folder.")); return done(); }
   if (!files.length) return done();
 
   const identified = new Set<string>();
   if (modSources.modrinth && (minecraft || !piko)) {
     try {
+      const mine = new Set(files.map((file) => file.path));
       for (const found of await analyzeModFiles(tofu.path, target.gameVersion, target.loader)) {
+        if (!mine.has(found.path)) continue;
         identified.add(found.path);
         if (!found.update) continue;
         items.push({

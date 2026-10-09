@@ -35,9 +35,9 @@ pub(crate) fn emit(event: &str, payload: impl Serialize + Clone) {
 /// Mochi's per-user data folder (set at startup).
 pub(crate) fn data_dir() -> Option<PathBuf> { RUNTIME.get().map(|runtime| runtime.data_dir.clone()) }
 
-fn instances_root() -> Option<PathBuf> { RUNTIME.get().map(|runtime| runtime.data_dir.join("instances")) }
+pub(crate) fn instances_root() -> Option<PathBuf> { RUNTIME.get().map(|runtime| runtime.data_dir.join("instances")) }
 
-fn lock() -> std::sync::MutexGuard<'static, ()> {
+pub(crate) fn lock() -> std::sync::MutexGuard<'static, ()> {
     static LOCK: Mutex<()> = Mutex::new(());
     LOCK.lock_recover()
 }
@@ -78,12 +78,15 @@ pub struct ModRecord {
     pub file_date: Option<String>,
     pub installed_at: u64,
     pub rollback: Option<Rollback>,
+    /// The download was a .zip unpacked into the folder: `file` names the archive, which is no longer on disk.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub extracted: bool,
 }
 
 impl Default for ModRecord {
     fn default() -> Self {
         Self { file: String::new(), subdir: String::new(), enabled: true, source: "manual".into(), project_id: String::new(), file_id: String::new(),
-            version: String::new(), title: String::new(), icon_url: None, sha1: None, file_date: None, installed_at: 0, rollback: None }
+            version: String::new(), title: String::new(), icon_url: None, sha1: None, file_date: None, installed_at: 0, rollback: None, extracted: false }
     }
 }
 
@@ -100,7 +103,7 @@ impl RecordInput {
             file: file.to_string(), subdir: subdir.to_string(), enabled: true, source, project_id: self.project_id.chars().take(80).collect(), file_id: self.file_id.chars().take(80).collect(),
             version: self.version.chars().take(120).collect(), title: self.title.chars().take(160).collect(), // CurseForge terms: no stored API content beyond what identifies the installed file, so no icon for those.
             icon_url: self.icon_url.filter(|url| !is_curseforge && url.starts_with("https://") && url.len() < 500),
-            sha1, file_date: self.file_date.map(|value| value.chars().take(40).collect()), installed_at: now_ms(), rollback: None,
+            sha1, file_date: self.file_date.map(|value| value.chars().take(40).collect()), installed_at: now_ms(), rollback: None, extracted: false,
         }
     }
 }
@@ -115,7 +118,7 @@ pub(crate) fn load_records(root: &Path, tofu_id: &str) -> Vec<ModRecord> {
     fs::read(path).ok().and_then(|bytes| serde_json::from_slice::<RecordFile>(&bytes).ok()).map(|file| file.mods).unwrap_or_default()
 }
 
-fn save_records(root: &Path, tofu_id: &str, mods: Vec<ModRecord>) -> Result<(), String> {
+pub(crate) fn save_records(root: &Path, tofu_id: &str, mods: Vec<ModRecord>) -> Result<(), String> {
     let path = records_path(root, tofu_id)?;
     if let Some(parent) = path.parent() { fs::create_dir_all(parent).map_err(|e| format!("Unable to save mod records: {e}")) ?; }
     let bytes = serde_json::to_vec_pretty(&RecordFile { version: 1, mods }).map_err(|e| e.to_string())?;
@@ -141,6 +144,43 @@ pub(crate) fn record_install(tofu_id: &str, record: ModRecord) {
 pub(crate) fn previous_record(tofu_id: &str, subdir: &str, file: &str) -> Option<ModRecord> {
     let root = instances_root()?;
     load_records(&root, tofu_id).into_iter().find(|record| record.subdir == subdir && record.file == file)
+}
+
+/// A newly downloaded file of a mod the Tofu already has (same source, project and folder): the older file is kept as a
+/// rollback copy and removed so the game never loads two versions of one mod. A disabled older file keeps the new one
+/// disabled. When the old file cannot be saved or removed it is left alone (two files beat a lost one).
+pub(crate) fn retire_superseded_in(root: &Path, tofu_id: &str, dir: &Path, next: &mut ModRecord) {
+    if next.project_id.is_empty() || next.source == "manual" || next.extracted { return; }
+    let older: Vec<ModRecord> = load_records(root, tofu_id).into_iter()
+        .filter(|r| r.source == next.source && r.project_id == next.project_id && r.subdir == next.subdir && r.file != next.file && !r.extracted)
+        .collect();
+    let mut retired = Vec::new();
+    for old in older {
+        let on_disk = [old.file.clone(), format!("{}.disabled", old.file)].into_iter().map(|name| dir.join(name)).find(|path| path.is_file());
+        if let Some(path) = on_disk {
+            let was_disabled = path.extension().is_some_and(|ext| ext == "disabled");
+            let Ok(saved) = save_rollback_copy(&path) else { continue };
+            if fs::remove_file(&path).is_err() { continue; }
+            if was_disabled && next.enabled {
+                let (current, disabled) = (dir.join(&next.file), dir.join(format!("{}.disabled", next.file)));
+                if fs::rename(&current, &disabled).is_ok() { next.enabled = false; }
+            }
+            next.rollback = Some(Rollback { file: saved, version: old.version.clone(), file_id: old.file_id.clone(), sha1: old.sha1.clone(), file_date: old.file_date.clone() });
+        }
+        retired.push(old.file);
+    }
+    if retired.is_empty() { return; }
+    let _guard = lock();
+    let mut records = load_records(root, tofu_id);
+    records.retain(|record| !(record.subdir == next.subdir && retired.contains(&record.file)));
+    let _ = save_records(root, tofu_id, records);
+}
+
+/// Records a finished download after retiring older files of the same mod (see `retire_superseded_in`).
+pub(crate) fn record_download(tofu_id: &str, dir: &Path, mut record: ModRecord) {
+    let Some(root) = instances_root() else { return };
+    retire_superseded_in(&root, tofu_id, dir, &mut record);
+    let _ = upsert_record_in(&root, tofu_id, record);
 }
 
 pub(crate) fn drop_record(tofu_id: &str, subdir: &str, file: &str) {
@@ -170,10 +210,20 @@ pub struct InstanceMod {
     pub enabled: bool,
     pub size: u64,
     pub record: Option<ModRecord>,
+    /// Last modification (ms since the epoch); stands in for the file date of a mod linked by hand.
+    pub modified_ms: u64,
+    /// Another Tofu sharing this folder owns the file and this one does not: it is off while this Tofu is active.
+    pub foreign: bool,
 }
 
 /// The files of one content folder joined with what Mochi remembers about them.
+#[cfg(test)]
 pub(crate) fn list_with_records(dir: &Path, records: &[ModRecord], subdir: &str) -> Result<Vec<InstanceMod>, String> {
+    list_with_owners(dir, records, &HashSet::new(), subdir)
+}
+
+/// Like `list_with_records`, marking files that only other Tofus (`others`: base names) own.
+pub(crate) fn list_with_owners(dir: &Path, records: &[ModRecord], others: &HashSet<String>, subdir: &str) -> Result<Vec<InstanceMod>, String> {
     let mut out = Vec::new();
     if !dir.is_dir() { return Ok(out); }
     for entry in fs::read_dir(dir).map_err(|e| e.to_string())?.flatten() {
@@ -181,18 +231,26 @@ pub(crate) fn list_with_records(dir: &Path, records: &[ModRecord], subdir: &str)
         let name = entry.file_name().to_string_lossy().into_owned();
         if !meta.is_file() || name.starts_with('.') || !CONTENT_EXTENSIONS.contains(&content_extension(&name).as_str()) { continue; }
         let record = records.iter().find(|record| record.subdir == subdir && record.file == base_name(&name)).cloned();
-        out.push(InstanceMod { enabled: !name.ends_with(".disabled"), path: entry.path().to_string_lossy().into_owned(), size: meta.len(), filename: name, record });
+        let foreign = record.is_none() && others.contains(base_name(&name));
+        out.push(InstanceMod { enabled: !name.ends_with(".disabled"), path: entry.path().to_string_lossy().into_owned(), size: meta.len(), modified_ms: mtime_ms(&meta), filename: name, record, foreign });
     }
     out.sort_by_key(|item| item.filename.to_lowercase());
     Ok(out)
 }
 
+/// `siblings`: the other Tofus working on the same folder, so their files can be told apart from unmanaged ones.
 #[tauri::command(async)]
-pub fn list_instance_mods(tofu_id: String, path: String, subdir: Option<String>) -> Result<Vec<InstanceMod>, String> {
+pub fn list_instance_mods(tofu_id: String, path: String, subdir: Option<String>, siblings: Option<Vec<String>>) -> Result<Vec<InstanceMod>, String> {
     let subdir = subdir.unwrap_or_default();
     let dir = content_dir(&validate_path(&path)?, &subdir)?;
-    let records = instances_root().map(|root| load_records(&root, &tofu_id)).unwrap_or_default();
-    list_with_records(&dir, &records, &subdir)
+    let root = instances_root();
+    let records = root.as_deref().map(|root| load_records(root, &tofu_id)).unwrap_or_default();
+    let others: HashSet<String> = match (root.as_deref(), siblings) {
+        (Some(root), Some(siblings)) => siblings.iter().filter(|id| **id != tofu_id).take(64)
+            .flat_map(|id| load_records(root, id)).filter(|record| record.subdir == subdir).map(|record| record.file).collect(),
+        _ => HashSet::new(),
+    };
+    list_with_owners(&dir, &records, &others, &subdir)
 }
 
 /// Default folder for a Tofu whose mods are kept apart from the game folder.
@@ -244,6 +302,10 @@ pub(crate) fn set_enabled_many(root: &Path, tofu_id: &str, paths: &[String], ena
         for (subdir, base) in &changed_files {
             if let Some(record) = records.iter_mut().find(|record| record.subdir == *subdir && record.file == *base) {
                 if record.enabled != enabled { record.enabled = enabled; dirty = true; }
+            } else {
+                // Toggling a file in a Tofu makes it one of that Tofu's mods (it then follows Tofu switches).
+                records.push(ModRecord { file: base.clone(), subdir: subdir.clone(), enabled, title: base.clone(), installed_at: now_ms(), ..ModRecord::default() });
+                dirty = true;
             }
         }
         if dirty { let _ = save_records(root, tofu_id, records); }
@@ -344,11 +406,20 @@ pub struct ModSyncRequest {
     /// Replace same-named files Mochi did not put there (off by default: such files are left alone and reported).
     #[serde(default)]
     pub adopt_unmanaged: bool,
+    /// Every Tofu of the game (the active one included). When set, Tofus that work directly on `game_dir` share it: the
+    /// active Tofu's mods are enabled and the other Tofus' mods disabled, and `<game_dir>/.mochi/tofus.json` is written.
+    #[serde(default)]
+    pub tofus: Vec<crate::modprofiles::TofuRef>,
 }
 
 #[derive(Debug, Clone, Serialize, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct SyncReport { pub added: usize, pub removed: usize, pub unchanged: usize, pub conflicts: Vec<String>, pub errors: Vec<String> }
+pub struct SyncReport {
+    pub added: usize, pub removed: usize, pub unchanged: usize,
+    /// Shared-folder Tofus: files switched on / off in place.
+    pub enabled: usize, pub disabled: usize,
+    pub conflicts: Vec<String>, pub errors: Vec<String>,
+}
 
 #[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -387,10 +458,11 @@ fn place(src: &Path, dest: &Path) -> Result<(), String> {
 }
 
 /// Makes `dest` contain exactly the enabled files of `src` among the files Mochi manages there.
-pub(crate) fn sync_lane(src: &Path, dest: &Path, tofu_id: &str, adopt: bool, progress: &mut dyn FnMut()) -> SyncReport {
+/// `src` None empties the lane: everything Mochi placed in `dest` is taken out again.
+pub(crate) fn sync_lane(src: Option<&Path>, dest: &Path, tofu_id: &str, adopt: bool, progress: &mut dyn FnMut()) -> SyncReport {
     let mut report = SyncReport::default();
     let mut desired: Vec<(String, fs::Metadata)> = Vec::new();
-    if let Ok(read) = fs::read_dir(src) {
+    if let Some(Ok(read)) = src.map(fs::read_dir) {
         for entry in read.flatten() {
             let name = entry.file_name().to_string_lossy().into_owned();
             // Disabled files stay in the store; hidden files are Mochi's own (rollback copies, markers).
@@ -425,25 +497,25 @@ pub(crate) fn sync_lane(src: &Path, dest: &Path, tofu_id: &str, adopt: bool, pro
                 report.unchanged += 1;
                 kept.push(entry);
             }
-            (Ok(existing), Some(_)) if existing.is_file() => match fs::remove_file(&target).map_err(|e| e.to_string()).and_then(|()| place(&dir_join(src, name), &target)) {
+            (Ok(existing), Some(_)) if existing.is_file() => match fs::remove_file(&target).map_err(|e| e.to_string()).and_then(|()| place(&dir_join(src.unwrap_or(dest), name), &target)) {
                 Ok(()) => { report.added += 1; kept.push(entry); }
                 Err(error) => report.errors.push(format!("{name}: {error}")),
             },
             (Ok(existing), None) => {
                 #[cfg(unix)]
-                let identical = fs::metadata(dir_join(src, name)).map(|s| same_file(&s, &existing)).unwrap_or(false);
+                let identical = fs::metadata(dir_join(src.unwrap_or(dest), name)).map(|s| same_file(&s, &existing)).unwrap_or(false);
                 #[cfg(not(unix))]
                 let identical = false;
                 if identical { report.unchanged += 1; kept.push(entry); }
                 else if adopt && existing.is_file() {
-                    match fs::remove_file(&target).map_err(|e| e.to_string()).and_then(|()| place(&dir_join(src, name), &target)) {
+                    match fs::remove_file(&target).map_err(|e| e.to_string()).and_then(|()| place(&dir_join(src.unwrap_or(dest), name), &target)) {
                         Ok(()) => { report.added += 1; kept.push(entry); }
                         Err(error) => report.errors.push(format!("{name}: {error}")),
                     }
                 } else { report.conflicts.push(format!("{name} already exists in the game folder and Mochi did not put it there")); }
             }
             (Ok(_), Some(_)) => report.conflicts.push(format!("{name} in the game folder is not a regular file")),
-            (Err(_), _) => match place(&dir_join(src, name), &target) {
+            (Err(_), _) => match place(&dir_join(src.unwrap_or(dest), name), &target) {
                 Ok(()) => { report.added += 1; kept.push(entry); }
                 Err(error) => report.errors.push(format!("{name}: {error}")),
             },
@@ -457,13 +529,14 @@ pub(crate) fn sync_lane(src: &Path, dest: &Path, tofu_id: &str, adopt: bool, pro
 
 fn dir_join(dir: &Path, name: &str) -> PathBuf { dir.join(name) }
 
-fn count_work(src: &Path, dest: &Path) -> usize {
+fn count_work(src: Option<&Path>, dest: &Path) -> usize {
+    let Some(src) = src else { return load_managed(dest).len() };
     let files = fs::read_dir(src).map(|read| read.flatten().filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false)).count()).unwrap_or(0);
     files + load_managed(dest).len()
 }
 
-fn merge(into: &mut SyncReport, other: SyncReport) {
-    into.added += other.added; into.removed += other.removed; into.unchanged += other.unchanged;
+pub(crate) fn merge(into: &mut SyncReport, other: SyncReport) {
+    into.added += other.added; into.removed += other.removed; into.unchanged += other.unchanged; into.enabled += other.enabled; into.disabled += other.disabled;
     into.conflicts.extend(other.conflicts); into.errors.extend(other.errors);
 }
 
@@ -484,22 +557,40 @@ pub(crate) fn same_dir(a: &Path, b: &Path) -> bool {
 #[serde(rename_all = "camelCase")]
 pub struct SyncProgress { pub tofu_id: String, pub done: usize, pub total: usize }
 
-/// Runs the whole sync for a launch. `on_progress` is called as files are handled.
+/// Runs the whole sync for a launch or a Tofu switch. `on_progress` is called as files are handled.
 pub fn run_sync(request: &ModSyncRequest, on_progress: &dyn Fn(usize, usize)) -> Result<SyncReport, String> {
+    run_sync_in(instances_root().as_deref(), request, on_progress)
+}
+
+/// `run_sync` with the records folder passed in (tests use a temporary one).
+pub(crate) fn run_sync_in(records: Option<&Path>, request: &ModSyncRequest, on_progress: &dyn Fn(usize, usize)) -> Result<SyncReport, String> {
     let store = validate_path(&request.store_dir)?;
     let game = validate_sync_dir(&request.game_dir)?;
-    if same_dir(&store, &game) { return Ok(SyncReport::default()); }
-    let mut lanes: Vec<(PathBuf, PathBuf)> = vec![(store.clone(), game)];
-    if let Some(root) = request.content_root.as_deref().filter(|root| !root.trim().is_empty()) {
-        let root = validate_sync_dir(root)?;
-        for sub in CONTENT_SUBDIRS { lanes.push((store.join(sub), root.join(sub))); }
-    }
-    let total: usize = lanes.iter().map(|(src, dest)| count_work(src, dest)).sum();
-    let done = std::cell::Cell::new(0usize);
+    let content_root = request.content_root.as_deref().filter(|root| !root.trim().is_empty()).map(validate_sync_dir).transpose()?;
+    let direct = same_dir(&store, &game);
+    let shared = !request.tofus.is_empty();
     let mut report = SyncReport::default();
+    // Tofus sharing the game folder: enable the active one's mods in place and disable the other Tofus' mods.
+    if shared {
+        if let Some(root) = records { merge(&mut report, crate::modprofiles::apply_membership(root, &game, content_root.as_deref(), &request.tofu_id, &request.tofus)); }
+    }
+    if direct && !shared { return Ok(report); }
+    // A Tofu working on the game folder itself copies nothing in; whatever a separate Tofu placed there before is taken out.
+    let source = |path: PathBuf| if direct { None } else { Some(path) };
+    let mut lanes: Vec<(Option<PathBuf>, PathBuf)> = vec![(source(store.clone()), game.clone())];
+    if let Some(root) = &content_root {
+        for sub in CONTENT_SUBDIRS { lanes.push((source(store.join(sub)), root.join(sub))); }
+    }
+    let total: usize = lanes.iter().map(|(src, dest)| count_work(src.as_deref(), dest)).sum();
+    let done = std::cell::Cell::new(0usize);
     for (src, dest) in &lanes {
         let mut tick = || { done.set(done.get() + 1); on_progress(done.get().min(total), total); };
-        merge(&mut report, sync_lane(src, dest, &request.tofu_id, request.adopt_unmanaged, &mut tick));
+        merge(&mut report, sync_lane(src.as_deref(), dest, &request.tofu_id, request.adopt_unmanaged, &mut tick));
+    }
+    if shared {
+        if let Some(root) = records {
+            if let Err(error) = crate::modprofiles::write_manifest(root, &game, &request.tofu_id, &request.tofus) { report.errors.push(error); }
+        }
     }
     Ok(report)
 }
@@ -541,7 +632,7 @@ mod tests {
     }
 
     fn request(store: &Path, game: &Path, tofu: &str) -> ModSyncRequest {
-        ModSyncRequest { tofu_id: tofu.into(), store_dir: store.to_string_lossy().into(), game_dir: game.to_string_lossy().into(), content_root: None, adopt_unmanaged: false }
+        ModSyncRequest { tofu_id: tofu.into(), store_dir: store.to_string_lossy().into(), game_dir: game.to_string_lossy().into(), content_root: None, adopt_unmanaged: false, tofus: Vec::new() }
     }
 
     #[test]
@@ -655,6 +746,41 @@ mod tests {
         let listed = list_with_records(&dir, &load_records(&data, "tofu-1"), "").unwrap();
         assert_eq!(listed.len(), 2);
         assert_eq!(listed[0].record.as_ref().map(|r| r.source.as_str()), Some("modrinth"));
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn a_new_download_retires_the_older_file_of_the_same_mod() {
+        let base = temp("supersede");
+        let (data, dir) = (base.join("data"), base.join("mods"));
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("m-1.jar.disabled"), b"old").unwrap();
+        fs::write(dir.join("other.jar"), b"keep").unwrap();
+        let input = |file_id: &str, project: &str| RecordInput { source: "nexus".into(), project_id: project.into(), file_id: file_id.into(), version: file_id.into(), ..Default::default() };
+        let mut old = input("1", "P").into_record("m-1.jar", "", None);
+        old.enabled = false;
+        upsert_record_in(&data, "t", old).unwrap();
+        upsert_record_in(&data, "t", input("9", "Q").into_record("other.jar", "", None)).unwrap();
+
+        fs::write(dir.join("m-2.jar"), b"new").unwrap();
+        let mut next = input("2", "P").into_record("m-2.jar", "", None);
+        retire_superseded_in(&data, "t", &dir, &mut next);
+        upsert_record_in(&data, "t", next).unwrap();
+
+        assert!(!dir.join("m-1.jar.disabled").exists(), "old file removed");
+        assert!(rollback_dir(&dir).join("m-1.jar").is_file(), "old file kept for rollback");
+        assert!(dir.join("m-2.jar.disabled").is_file(), "disabled state carried over");
+        assert!(dir.join("other.jar").is_file(), "other mods untouched");
+        let records = load_records(&data, "t");
+        assert_eq!(records.len(), 2);
+        let new = records.iter().find(|r| r.project_id == "P").unwrap();
+        assert_eq!((new.file.as_str(), new.enabled), ("m-2.jar", false));
+        assert_eq!(new.rollback.as_ref().map(|r| r.version.as_str()), Some("1"));
+
+        // Re-downloading the same file name, or a manual file, retires nothing.
+        let mut same = input("2", "P").into_record("m-2.jar", "", None);
+        retire_superseded_in(&data, "t", &dir, &mut same);
+        assert!(same.rollback.is_none());
         let _ = fs::remove_dir_all(&base);
     }
 

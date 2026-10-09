@@ -10,7 +10,11 @@ mod gamelogs;
 mod gamepad;
 mod downloads;
 mod modinstance;
+mod modhash;
 mod modlocs;
+mod modprofiles;
+mod modscan;
+mod nxm;
 mod modrinth;
 mod platform;
 mod playtime;
@@ -193,11 +197,11 @@ fn main() {
                     #[cfg(target_os = "linux")]
                     {
                         use tauri_plugin_deep_link::DeepLinkExt;
-                        if let Err(error) = handle.deep_link().register_all() { eprintln!("Mochi deep link registration: {error}"); }
+                        // Only mochi:// here; nxm:// (also in the config) is opt-in, see nxm.rs.
+                        if let Err(error) = handle.deep_link().register("mochi") { eprintln!("Mochi deep link registration: {error}"); }
                     }
-                    #[cfg(not(target_os = "linux"))]
-                    let _ = handle;
                     if let Err(error) = platform::ensure_platform_integration() { eprintln!("Mochi platform integration: {error}"); }
+                    nxm::apply_saved(&handle);
                 });
             }
             // An unwritable config folder must not stop Mochi from opening; commands report the problem when used.
@@ -241,6 +245,8 @@ fn main() {
             downloads::cancel_mod_download, downloads::clear_finished_downloads,
             modinstance::list_instance_mods, modinstance::get_instance_store_dir, modinstance::record_instance_mod, modinstance::set_instance_mods_enabled,
             modinstance::rollback_mod_update, modinstance::sync_instance_mods, modinstance::import_mods_from_folder, modlocs::detect_mod_locations,
+            modscan::hash_mod_files, modscan::modrinth_identify, modscan::record_instance_mods, modscan::list_instance_records, modscan::copy_instance_records,
+            modprofiles::read_tofu_manifest, modprofiles::write_tofu_manifest, modprofiles::restore_instance_records, modprofiles::apply_tofu_mods, nxm::get_nxm_handler, nxm::set_nxm_handler,
             gamelogs::list_game_logs, gamelogs::read_game_log, gamelogs::clear_game_logs,
         ])
         .build(tauri::generate_context!())

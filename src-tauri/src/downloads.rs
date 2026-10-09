@@ -301,6 +301,8 @@ pub fn start(request: ModDownloadRequest) -> Result<String, String> {
         id: id.clone(), tofu_id: request.tofu_id, tofu_name: request.tofu_name, item_name: request.item_name, filename: filename.clone(),
         downloaded: 0, total: None, status: "downloading".into(), error: None, created_at: now_ms(), finished_at: None,
         provider: provider.id().into(), dir: root.to_string_lossy().into_owned(),
+        project_id: record.as_ref().map(|r| r.project_id.chars().take(80).collect()).filter(|id: &String| !id.is_empty()),
+        subdir: Some(subdir.clone()).filter(|s| !s.is_empty()),
     };
     lock_downloads().insert(id.clone(), entry);
     announce(&id);
@@ -323,9 +325,13 @@ pub fn start(request: ModDownloadRequest) -> Result<String, String> {
                 outcome
             }).await.map_err(|e| e.to_string()).and_then(|inner| inner);
         }
-        // Extracted archives have no single file to track; everything else is remembered with its origin.
-        if result.is_ok() && !extracted {
-            if let Some(input) = record { crate::modinstance::record_install(&tofu_id, input.into_record(&filename, &subdir, sha1.take())); }
+        // Everything is remembered with its origin; an unpacked archive is marked so it is only used for "Downloaded" states.
+        if result.is_ok() {
+            if let Some(input) = record {
+                let mut next = input.into_record(&filename, &subdir, sha1.take());
+                next.extracted = extracted;
+                crate::modinstance::record_download(&tofu_id, &root, next);
+            }
         }
         update_download(&task_id, |entry| {
             entry.finished_at = Some(now_ms());
@@ -597,7 +603,7 @@ mod tests {
     fn cancel_marks_only_running_downloads_and_clear_keeps_them() {
         let entry = |id: &str, status: &str, finished: Option<u64>| DownloadEntry {
             id: id.into(), tofu_id: "t".into(), tofu_name: "T".into(), item_name: "I".into(), filename: "a.jar".into(), downloaded: 0, total: None,
-            status: status.into(), error: None, created_at: 1, finished_at: finished, provider: "modrinth".into(), dir: "/tmp".into(),
+            status: status.into(), error: None, created_at: 1, finished_at: finished, provider: "modrinth".into(), dir: "/tmp".into(), project_id: None, subdir: None,
         };
         lock_downloads().insert("test-run".into(), entry("test-run", "downloading", None));
         lock_downloads().insert("test-done".into(), entry("test-done", "completed", Some(now_ms())));

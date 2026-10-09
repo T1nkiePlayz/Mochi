@@ -5,6 +5,8 @@ import { verifyEmailToken } from "../lib/auth";
 import { parseAuthCallback } from "../lib/deepLinkAuth";
 import type { AccountState } from "./useAccount";
 import { enterBigPicture } from "../bigpicture/mode";
+import { isNxmUrl } from "../lib/mods/nxm";
+import { queueNxmLink } from "./nxmLinks";
 
 let startupHandled = false;
 
@@ -23,6 +25,8 @@ export function useDeepLinks(account: AccountState, launchFromLink: (gameId: str
 
     const handle = (urls: string[]) => {
       for (const url of urls) {
+        // Nexus Mods "Mod Manager Download": ask which Tofu and download (components/mods/NxmPrompt).
+        if (isNxmUrl(url)) { queueNxmLink(url); continue; }
         const parsed = parse(url);
         if (parsed?.protocol === "mochi:" && parsed.hostname === "bigpicture") { enterBigPicture(); return; }
         if (parsed?.protocol === "mochi:" && parsed.hostname === "launch") {

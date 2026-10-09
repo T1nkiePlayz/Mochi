@@ -1,4 +1,5 @@
 import { startModDownload } from "../downloads";
+import { rememberNxmIntent } from "../../state/nxmLinks";
 import { pickBestFile } from "./helpers";
 import { contentFolder, contentKindOf, type ContentKind } from "./targets";
 import type { Tofu } from "../../models";
@@ -29,6 +30,11 @@ export async function installFile(source: ModSource, item: ModItem, file: ModFil
   let resolved: ResolvedDownload;
   try { resolved = await source.resolveDownload(item, file); } catch (error) { throw new Error(errorText(error)); }
   if (resolved.restricted) return { kind: "manual", reason: "restricted", message: resolved.reason ?? "The author disabled downloads outside this site.", pageUrl: resolved.pageUrl };
+  if (resolved.needsPremium || !resolved.url) {
+    // A free Nexus account comes back through an nxm:// link; remember the Tofu so the prompt preselects it.
+    const page = /nexusmods\.com\/([a-z0-9_-]+)\/mods\/(\d+)/i.exec(resolved.pageUrl);
+    if (item.source === "nexus" && page) rememberNxmIntent(page[1].toLowerCase(), page[2], "", tofu.id);
+  }
   if (resolved.needsPremium || !resolved.url) return { kind: "manual", reason: "premium", message: resolved.reason ?? "This file has to be downloaded on the site.", pageUrl: resolved.pageUrl };
   await startModDownload({
     provider: item.source, url: resolved.url, path: folder.path, subdir: folder.subdir, tofuId: tofu.id, tofuName: tofu.name, itemName: item.name,
