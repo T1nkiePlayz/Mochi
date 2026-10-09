@@ -27,13 +27,32 @@ pub struct HashedFile {
 #[tauri::command]
 pub async fn hash_mod_files(paths: Vec<String>) -> Result<Vec<HashedFile>, String> {
     if paths.len() > MAX_FILES { return Err("Too many files at once.".into()); }
-    crate::util::blocking(move || {
-        paths.iter().filter_map(|path| {
-            let file = validate_content_path(path).ok()?;
-            let hashes = crate::modhash::hash_file(&file, MAX_HASH_BYTES).ok()?;
-            Some(HashedFile { path: path.clone(), filename: file.file_name()?.to_string_lossy().into_owned(), size: hashes.size, sha1: hashes.sha1, md5: hashes.md5, fingerprint: hashes.fingerprint })
-        }).collect()
-    }).await
+    crate::util::blocking(move || hash_paths(&paths)).await
+}
+
+/// Hashes the files on a few threads (each file is independent), keeping the input order.
+fn hash_paths(paths: &[String]) -> Vec<HashedFile> {
+    let hash_one = |path: &String| -> Option<HashedFile> {
+        let file = validate_content_path(path).ok()?;
+        let hashes = crate::modhash::hash_file(&file, MAX_HASH_BYTES).ok()?;
+        Some(HashedFile { path: path.clone(), filename: file.file_name()?.to_string_lossy().into_owned(), size: hashes.size, sha1: hashes.sha1, md5: hashes.md5, fingerprint: hashes.fingerprint })
+    };
+    let threads = std::thread::available_parallelism().map_or(2, |n| n.get()).clamp(1, 4).min(paths.len());
+    if threads <= 1 { return paths.iter().filter_map(hash_one).collect(); }
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let mut slots: Vec<Option<HashedFile>> = (0..paths.len()).map(|_| None).collect();
+    let results = std::sync::Mutex::new(&mut slots);
+    std::thread::scope(|scope| {
+        for _ in 0..threads {
+            scope.spawn(|| loop {
+                let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                let Some(path) = paths.get(i) else { break };
+                let hashed = hash_one(path);
+                if let Ok(mut slots) = results.lock() { slots[i] = hashed; }
+            });
+        }
+    });
+    slots.into_iter().flatten().collect()
 }
 
 #[derive(Debug, Serialize)]
