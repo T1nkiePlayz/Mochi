@@ -178,6 +178,41 @@ export async function getNexusDownload(client: SupabaseClient, gameDomain: strin
   return invokeProviderFunction<{ url: string; fileName: string }>(client, { action: "nexus-download", gameDomain, modId, fileId, ...(link ? { key: link.key, expires: link.expires } : {}) });
 }
 
+export type NexusRequirement = {
+  modId: number; name: string; /** Domain of the requirement's game; undefined when Nexus did not tell and it is not the mod's own game. */ gameDomain?: string;
+  /** True for a requirement outside Nexus (a framework's own site); `url` is where to get it. */
+  external: boolean; url?: string; notes?: string;
+};
+type RawRequirement = { modId?: number | string; modName?: string; gameId?: number | string; url?: string; externalRequirement?: boolean; notes?: string };
+const REQUIREMENTS_QUERY = "query($ids: [CompositeDomainWithIdInput!]!) { legacyModsByDomain(ids: $ids) { nodes { modId gameId modRequirements { nexusRequirements { nodes { modId modName gameId url externalRequirement notes } } } } } }";
+const GAME_DOMAIN_QUERY = "query($id: ID!) { game(id: $id) { domainName } }";
+
+/** The requirements the mod's author listed on Nexus ("Requirements" tab). Public GraphQL, no key. Requirements of other games get their own domain looked up. */
+export async function getNexusRequirements(gameDomain: string, modId: number): Promise<NexusRequirement[]> {
+  const domain = gameDomain.trim().replace(/[^a-z0-9_-]/gi, "");
+  if (!domain || !Number.isSafeInteger(modId) || modId < 1) return [];
+  const data = await nexusGraphql<{ legacyModsByDomain?: { nodes?: Array<{ gameId?: number | string; modRequirements?: { nexusRequirements?: { nodes?: RawRequirement[] } } } | null> } }>(REQUIREMENTS_QUERY, { ids: [{ gameDomain: domain, modId }] });
+  const node = data.legacyModsByDomain?.nodes?.[0];
+  const raw = node?.modRequirements?.nexusRequirements?.nodes ?? [];
+  const domains = new Map<string, string | undefined>();
+  const out: NexusRequirement[] = [];
+  for (const requirement of raw.slice(0, 50)) {
+    const id = Number(requirement.modId);
+    const name = String(requirement.modName ?? "").trim();
+    if (!Number.isSafeInteger(id) || id < 1 || !name) continue;
+    const external = requirement.externalRequirement === true;
+    const url = typeof requirement.url === "string" && /^https:\/\//i.test(requirement.url) ? requirement.url : undefined;
+    let reqDomain: string | undefined = domain;
+    if (!external && requirement.gameId != null && String(requirement.gameId) !== String(node?.gameId)) {
+      const gameId = String(requirement.gameId);
+      if (!domains.has(gameId)) domains.set(gameId, await nexusGraphql<{ game?: { domainName?: string } }>(GAME_DOMAIN_QUERY, { id: gameId }).then((reply) => reply.game?.domainName?.replace(/[^a-z0-9_-]/gi, "") || undefined, () => undefined));
+      reqDomain = domains.get(gameId);
+    }
+    out.push({ modId: id, name, external, ...(url ? { url } : {}), ...(reqDomain && !external ? { gameDomain: reqDomain } : {}), ...(requirement.notes ? { notes: String(requirement.notes) } : {}) });
+  }
+  return out;
+}
+
 export const nexusModPageUrl = (gameDomain: string, modId: number, files = false) =>
   `https://www.nexusmods.com/${encodeURIComponent(gameDomain)}/mods/${modId}${files ? "?tab=files" : ""}`;
 

@@ -14,6 +14,7 @@ import { Select } from "../ui/Select";
 import { CurseforgeCredit } from "./CurseforgeCredit";
 import { InstallNoticeBar } from "./InstallNoticeBar";
 import { ModCard } from "./ModCard";
+import { DependencySheet } from "./DependencySheet";
 import { ModDetailsModal } from "./ModDetailsModal";
 import { useModFeed } from "./useModFeed";
 import { useModInstall } from "./useModInstall";
@@ -98,8 +99,9 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
   const run = useCallback(async (item: ModItem, file: ModFile | undefined, chosen: Tofu, owner?: Piko, force = false) => {
     const ready = await withFolder(chosen, owner);
     if (!ready) return;
-    if (file) await install.installFile(source, item, file, ready);
-    else await install.installBest(source, item, ready, target.kind === "choose" ? target.tofuFilter?.(ready, item) : filter, force);
+    const narrow = target.kind === "choose" ? target.tofuFilter?.(ready, item) : filter;
+    if (file) await install.installFile(source, item, file, ready, narrow, force);
+    else await install.installBest(source, item, ready, narrow, force);
   }, [withFolder, install, source, target, filter]);
 
   /** Card or modal action: download now (known Tofu) or ask which Tofu (Discover). */
@@ -122,6 +124,7 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
   const actionLabel = target.kind === "tofu" ? "Download" : "Choose Tofu instance";
 
   const modals = <>
+    {install.prompt && <DependencySheet prompt={install.prompt} />}
     {viewing && <ModDetailsModal source={source} item={viewing} filter={filter} installLabel={tofu ? `Download to ${tofu.name}` : "Choose Tofu instance"} busy={busy} notice={install.notice} onDismissNotice={() => install.setNotice(null)} onInstall={(file) => act(viewing, file)} onClose={() => setViewing(null)} />}
     {picking && target.kind === "choose" && <TofuPicker title={picking.item.name} pikos={target.pikos} ecosystem={picking.item.ecosystem ?? target.ecosystem} gameName={picking.item.game ?? target.gameName}
       metas={picking.file ? [metaFromModFile(picking.file)] : metasOfItem(picking.item)} onClose={() => setPicking(null)}

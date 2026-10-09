@@ -37,10 +37,24 @@ The single-site rule above is `resolveSources`; the per-game Discover logic (sou
 - **Versions tab** (`ProjectDetails`, `lib/mods/versionList.ts`): a table with loader and game-version chips (collapsed after three), release badge, date, size, one Download button per row, expandable changelog and files, filters for loader, game version and release type, and "Only what fits <Tofu>" with a highlight on versions that fit the selected Tofu.
 - **Avatars** (`Avatar`): lazy, no referrer, initials on error; the CSP `img-src` gained the hosts Modrinth avatars come from (see `docs/security-csp.md`).
 
+## Dependencies
+
+Installing a mod first looks up its required dependencies and offers them in a confirm sheet (`DependencySheet`). Code: `src/lib/mods/dependencies.ts` (pure resolver), `dependencyInstall.ts` (install + one summary notice), `useModInstall` (flow), `DependencySheet` (UI).
+
+- **Where it applies**: every normal install from the mod browsers (game pages, Discover, the Minecraft manager). "Install anyway" (force) skips the check, as it skips the version filter.
+- **Resolver**: starting from the chosen file it follows *required* dependencies only (Modrinth `required`, CurseForge `relationType` 3, Nexus requirements). Optional, embedded, tool and include relations are ignored. Each project is visited once (cycles end there; the key is `provider:projectId`), depth is capped at 8 and the list at 50 (the sheet says when a cap stopped the search), lookups run 3 at a time, and a failed lookup makes that one entry "unavailable" instead of failing the plan. Results are held in memory for that resolution only (nothing from CurseForge is cached or saved).
+- **File choice**: `source.files(dep, filter)` with the Tofu's game version and loader (`minecraftFilterFor`), then `compatibility()` drops files that clearly do not fit; an exact fit beats "may work"; a version the author pinned (Modrinth `version_id`) wins; else the newest stable file. Games without versions (most Nexus/CurseForge games) take the newest stable file.
+- **Statuses**: *install*; *already installed* (a record with the same source and project id, a download in progress, or the chosen file's SHA-1 equal to a recorded one, which also covers manually added files that were identified); *unavailable* (no file fits, the author disabled third-party downloads or there is no download URL, a free Nexus account, or a failed lookup; the row links to the page); *external* (a Nexus requirement on another site or game, or a source that cannot look mods up: link only).
+- **Incompatibilities**: a file marked incompatible (Modrinth `incompatible`, CurseForge `relationType` 5) with a mod that is installed in the Tofu shows a warning in the sheet. It never blocks.
+- **Nexus**: `getNexusRequirements` asks the public GraphQL API (`legacyModsByDomain` -> `modRequirements.nexusRequirements`, no key). A requirement on the same game is a normal dependency (it needs the user's key to list files, and Premium to download; otherwise it shows as unavailable with its page). A requirement flagged external, or on another game, is only a link.
+- **The sheet**: the mod plus checkboxes for each installable dependency (checked by default), already-installed ones greyed, a "Needs you" list with "Open page" links, warnings. Buttons: "Install N" (N counts the mod), "Install without dependencies", Cancel (Escape also cancels). Nothing is shown when there are no dependencies, warnings or notes.
+- **Install**: chosen dependencies go through `installFile` one at a time, deepest first, then the mod: same folder rules, SHA-1 check, install record and Downloads entry as a single download. A dependency that fails or needs a manual download is listed in the result message (never silent) and the rest still installs, including the mod.
+- **Limits**: Modrinth dependencies that name only a version (no project) are skipped; "Install missing dependencies" for mods installed earlier is not offered yet.
+
 ## Rules to keep
 
 - CurseForge: show "Powered by CurseForge" and a "View on CurseForge" link; never construct forgecdn URLs; when the author disabled third-party downloads (`allowModDistribution === false` or no `downloadUrl`) show the message and "Open on CurseForge". Mod descriptions are HTML written by strangers: render only through `sanitizeHtml` / `SafeHtml`, never `dangerouslySetInnerHTML`.
-- Nexus: premium members download through the API; free members get "Download on Nexus" opening `https://www.nexusmods.com/<game>/mods/<id>?tab=files`. Required dependencies are only listed with links; nothing is installed automatically.
+- Nexus: premium members download through the API; free members get "Download on Nexus" opening `https://www.nexusmods.com/<game>/mods/<id>?tab=files`. Requirements come from the mod's Requirements tab (public GraphQL, no key); same-game ones can be installed like any other download, the rest are links (see Dependencies).
 - Offline: remote lists show an offline state with Retry; CurseForge data is never cached for offline use.
 
 ## Tofu folders, per-Tofu mod sets and the launch sync (round 5)

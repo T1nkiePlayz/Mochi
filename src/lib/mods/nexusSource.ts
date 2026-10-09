@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { EdgeFunctionError } from "../functions";
 import {
-  getNexusDownload, getNexusFiles, getNexusModDetail, getNexusMods, getNexusStatus, nexusModId, nexusModPageUrl,
+  getNexusDownload, getNexusFiles, getNexusRequirements, getNexusModDetail, getNexusMods, getNexusStatus, nexusModId, nexusModPageUrl,
   type NexusMod, type NexusStatus,
 } from "../nexus";
 import { nexusFileDate } from "./helpers";
@@ -80,6 +80,18 @@ export function createNexusSource(client: SupabaseClient, scope: NexusScope): Mo
         id: String(file.fileId), name: file.name || file.fileName, fileName: file.fileName, version: file.version, channel: channelOf(file.category),
         size: file.sizeKb ? Math.round(file.sizeKb * 1024) : undefined, date: nexusFileDate(file.uploadedAt), primary: file.primary, native: file,
       })).sort((a, b) => Number(b.primary === true) - Number(a.primary === true));
+    },
+    async requirements(item) {
+      const requirements = await getNexusRequirements(scope.domain, numericId(item));
+      return { required: requirements.map((requirement) => {
+        const domain = requirement.gameDomain ?? scope.domain;
+        const url = requirement.external ? requirement.url ?? nexusModPageUrl(domain, requirement.modId) : nexusModPageUrl(domain, requirement.modId);
+        return { id: String(requirement.modId), name: requirement.name, url, required: true, ...(requirement.external || domain !== scope.domain ? { external: true } : {}), ...(domain !== scope.domain ? { gameDomain: domain } : {}) };
+      }) };
+    },
+    async dependencyItem(dependency) {
+      if (dependency.external) return null;
+      return nexusItem({ id: dependency.id, modId: Number(dependency.id), name: dependency.name ?? `Mod ${dependency.id}`, modPageUrl: dependency.url }, scope);
     },
     async resolveDownload(item, file) {
       const modId = numericId(item);

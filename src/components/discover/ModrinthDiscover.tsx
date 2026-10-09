@@ -10,6 +10,7 @@ import type { Piko, Tofu } from "../../models";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useApp } from "../../state/AppContext";
 import { CurseforgeCredit } from "../mods/CurseforgeCredit";
+import { DependencySheet } from "../mods/DependencySheet";
 import { InstallNoticeBar } from "../mods/InstallNoticeBar";
 import { ModsBrowser } from "../mods/ModsBrowser";
 import { useModInstall } from "../mods/useModInstall";
@@ -79,8 +80,9 @@ export function ModrinthDiscover({ tofu, pikos, supabase, nexusConfigured }: Pro
     if (!target.path) { install.setNotice({ tone: "info", message: `${target.name} has no folder yet. Choose one in the game's Tofu settings first.` }); return; }
     const source = createModrinthSource(project.project_type);
     const item = modrinthItem(project);
-    if (file) void install.installFile(source, item, file, target);
-    else void install.installBest(source, item, target, minecraftFilterFor(target, project.project_type === "mod"), force);
+    const filter = minecraftFilterFor(target, project.project_type === "mod");
+    if (file) void install.installFile(source, item, file, target, filter, force);
+    else void install.installBest(source, item, target, filter, force);
   };
 
   const minecraftCategory = tab.kind === "minecraft" ? tab.category : "mod";
@@ -119,6 +121,7 @@ export function ModrinthDiscover({ tofu, pikos, supabase, nexusConfigured }: Pro
       <DiscoverTabs tabs={tabs} active={tabId(tab)} onSelect={selectTab} onAdd={settings.curseforge || settings.nexus ? () => setShowPicker(true) : undefined} />
       {discover.cfError && <div className="discover-error" role="alert"><p><WifiOff size={14} /> CurseForge games are unavailable</p><small>{discover.cfError}</small><button type="button" className="secondary-button" onClick={discover.retry}><RefreshCw size={13} /> Retry</button></div>}
       {loadError && <p className="metadata-note" role="status">{loadError}</p>}
+      {install.prompt && <DependencySheet prompt={install.prompt} />}
       {tab.kind === "minecraft" && effective === "modrinth" && <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />}
 
       {tab.kind === "all" && <>

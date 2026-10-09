@@ -1,5 +1,5 @@
 import {
-  getModrinthProject, getModrinthVersions, searchDiscover,
+  getModrinthProject, getModrinthProjectInfo, getModrinthVersions, searchDiscover,
   type DiscoverSort, type ModrinthProject, type ModrinthProjectType, type ModrinthVersion,
 } from "../modrinth";
 import type { ModDetails, ModFile, ModItem, ModSearchOptions, ModSource } from "./types";
@@ -24,7 +24,9 @@ export function modrinthFile(version: ModrinthVersion): ModFile | null {
     id: version.id, name: version.name || version.version_number, fileName: file.filename, version: version.version_number, channel: version.version_type,
     size: file.size, date: version.date_published, gameVersions: version.game_versions, loaders: version.loaders, primary: version.featured,
     dependencies: version.dependencies.filter((dependency) => dependency.dependency_type === "required" && dependency.project_id)
-      .map((dependency) => ({ id: dependency.project_id!, url: `https://modrinth.com/project/${dependency.project_id}`, required: true })),
+      .map((dependency) => ({ id: dependency.project_id!, url: `https://modrinth.com/project/${dependency.project_id}`, required: true, ...(dependency.version_id ? { versionId: dependency.version_id } : {}) })),
+    incompatibles: version.dependencies.filter((dependency) => dependency.dependency_type === "incompatible" && dependency.project_id)
+      .map((dependency) => ({ id: dependency.project_id!, url: `https://modrinth.com/project/${dependency.project_id}`, required: false })),
     native: { url: file.url, sha1: file.hashes.sha1, size: file.size },
   };
 }
@@ -47,6 +49,7 @@ export function createModrinthSource(projectType: ModrinthProjectType): ModSourc
       const versions = await getModrinthVersions(item.id, filter?.gameVersion, projectType === "mod" ? filter?.loader : undefined);
       return versions.map(modrinthFile).filter((file): file is ModFile => file !== null);
     },
+    async dependencyItem(dependency) { return modrinthItem(await getModrinthProjectInfo(dependency.id)); },
     async resolveDownload(item, file) {
       const native = file.native as { url: string; sha1?: string; size?: number };
       return { url: native.url, fileName: file.fileName, sha1: native.sha1, size: native.size, pageUrl: item.pageUrl };
