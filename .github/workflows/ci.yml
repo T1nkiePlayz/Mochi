@@ -71,12 +71,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-      # Restores the installed packages from the Actions cache instead of downloading them from a (sometimes very slow) Ubuntu mirror.
-      - name: Install Linux dependencies
-        uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1.6.3
+      # The downloaded .deb files are kept in the Actions cache, so apt only fetches the package index from the
+      # Ubuntu mirror (which is sometimes very slow) and installs from local files.
+      - name: Cache apt packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          packages: libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libudev-dev
-          version: "1"
+          path: ~/apt-cache
+          key: apt-ubuntu-24.04-webkit-v1
+      - name: Install Linux dependencies
+        run: |
+          mkdir -p ~/apt-cache/partial
+          sudo apt-get update -o Acquire::Retries=3
+          sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 -o Dir::Cache::Archives="$HOME/apt-cache" \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libudev-dev
+          sudo rm -rf ~/apt-cache/partial ~/apt-cache/lock
+          sudo chown -R "$USER" ~/apt-cache
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable (2026-10-09)
         with:
