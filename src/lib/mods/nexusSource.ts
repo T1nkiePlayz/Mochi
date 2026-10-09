@@ -4,6 +4,7 @@ import {
   getNexusDownload, getNexusFiles, getNexusModDetail, getNexusMods, getNexusStatus, nexusModId, nexusModPageUrl,
   type NexusMod, type NexusStatus,
 } from "../nexus";
+import { nexusFileDate } from "./helpers";
 import { nexusManagerDownloadUrl } from "./nxm";
 import type { ModDetails, ModFile, ModItem, ModPage, ModSearchOptions, ModSource } from "./types";
 
@@ -77,7 +78,7 @@ export function createNexusSource(client: SupabaseClient, scope: NexusScope): Mo
       const channelOf = (category?: string): ModFile["channel"] => /optional|misc|old/i.test(category ?? "") ? "beta" : "release";
       return files.map((file) => ({
         id: String(file.fileId), name: file.name || file.fileName, fileName: file.fileName, version: file.version, channel: channelOf(file.category),
-        size: file.sizeKb ? Math.round(file.sizeKb * 1024) : undefined, date: file.uploadedAt, primary: file.primary, native: file,
+        size: file.sizeKb ? Math.round(file.sizeKb * 1024) : undefined, date: nexusFileDate(file.uploadedAt), primary: file.primary, native: file,
       })).sort((a, b) => Number(b.primary === true) - Number(a.primary === true));
     },
     async resolveDownload(item, file) {

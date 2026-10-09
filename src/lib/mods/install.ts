@@ -38,7 +38,7 @@ export async function installFile(source: ModSource, item: ModItem, file: ModFil
   if (resolved.needsPremium || !resolved.url) return { kind: "manual", reason: "premium", message: resolved.reason ?? "This file has to be downloaded on the site.", pageUrl: resolved.pageUrl };
   await startModDownload({
     provider: item.source, url: resolved.url, path: folder.path, subdir: folder.subdir, tofuId: tofu.id, tofuName: tofu.name, itemName: item.name,
-    filename: resolved.fileName, sha1: resolved.sha1, extract: tofu.extractArchives === true,
+    filename: resolved.fileName, sha1: resolved.sha1, extract: kind === "mod" && tofu.extractArchives === true,
     record: { source: source.id, projectId: item.id, fileId: file.id, version: file.version ?? file.name, title: item.name, iconUrl: item.iconUrl, fileDate: file.date },
   });
   return { kind: "queued", message: `Queued ${item.name} for ${tofu.name}.` };

@@ -146,10 +146,23 @@ pub(crate) fn previous_record(tofu_id: &str, subdir: &str, file: &str) -> Option
     load_records(&root, tofu_id).into_iter().find(|record| record.subdir == subdir && record.file == file)
 }
 
+/// The same file name was downloaded again while the older copy is disabled (`x.jar.disabled`): the fresh copy replaces it
+/// and stays disabled, so the folder never holds both (the game would load the fresh one against the user's choice).
+fn replace_disabled_twin(root: &Path, tofu_id: &str, dir: &Path, next: &mut ModRecord) {
+    let (fresh, twin) = (dir.join(&next.file), dir.join(format!("{}.disabled", next.file)));
+    if !fresh.is_file() || !twin.is_file() { return; }
+    let previous = load_records(root, tofu_id).into_iter().find(|r| r.subdir == next.subdir && r.file == next.file);
+    let Ok(saved) = save_rollback_copy(&twin) else { return };
+    if fs::remove_file(&twin).is_err() || fs::rename(&fresh, &twin).is_err() { return; }
+    next.enabled = false;
+    next.rollback = Some(Rollback { file: saved, version: previous.as_ref().map(|r| r.version.clone()).unwrap_or_default(), file_id: previous.as_ref().map(|r| r.file_id.clone()).unwrap_or_default(), sha1: previous.as_ref().and_then(|r| r.sha1.clone()), file_date: previous.and_then(|r| r.file_date) });
+}
+
 /// A newly downloaded file of a mod the Tofu already has (same source, project and folder): the older file is kept as a
 /// rollback copy and removed so the game never loads two versions of one mod. A disabled older file keeps the new one
 /// disabled. When the old file cannot be saved or removed it is left alone (two files beat a lost one).
 pub(crate) fn retire_superseded_in(root: &Path, tofu_id: &str, dir: &Path, next: &mut ModRecord) {
+    if !next.extracted { replace_disabled_twin(root, tofu_id, dir, next); }
     if next.project_id.is_empty() || next.source == "manual" || next.extracted { return; }
     let older: Vec<ModRecord> = load_records(root, tofu_id).into_iter()
         .filter(|r| r.source == next.source && r.project_id == next.project_id && r.subdir == next.subdir && r.file != next.file && !r.extracted)
@@ -190,6 +203,36 @@ pub(crate) fn drop_record(tofu_id: &str, subdir: &str, file: &str) {
     let before = records.len();
     records.retain(|record| !(record.subdir == subdir && record.file == file));
     if records.len() != before { let _ = save_records(&root, tofu_id, records); }
+}
+
+/// The content folder a file path sits in ("" for the main folder), judged by the folder's name.
+pub(crate) fn subdir_of(path: &Path) -> String {
+    path.parent().and_then(|dir| dir.file_name()).and_then(|n| n.to_str()).filter(|n| CONTENT_SUBDIRS.contains(n)).unwrap_or("").to_string()
+}
+
+/// `path` as it is on disk right now: the list may still hold the name from before the file was enabled or disabled.
+pub(crate) fn existing_variant(path: &Path) -> Option<PathBuf> {
+    if fs::symlink_metadata(path).is_ok() { return Some(path.to_path_buf()); }
+    let name = path.file_name()?.to_str()?;
+    let other = match name.strip_suffix(".disabled") { Some(base) => path.with_file_name(base), None => path.with_file_name(format!("{name}.disabled")) };
+    fs::symlink_metadata(&other).is_ok().then_some(other)
+}
+
+/// Deletes a content file and, once no copy of it is left, the Tofu's record of it (so it no longer counts as installed).
+pub(crate) fn delete_content_in(root: Option<&Path>, tofu_id: &str, path: &Path) -> Result<(), String> {
+    // symlink_metadata so a dangling symlink can still be removed (`exists()` follows it and says "no").
+    if fs::symlink_metadata(path).is_ok() { fs::remove_file(path).map_err(|e| format!("Unable to delete content: {e}"))?; }
+    let (Some(root), Some(name)) = (root, path.file_name().and_then(|n| n.to_str())) else { return Ok(()) };
+    if !valid_id(tofu_id, 120) { return Ok(()); }
+    let base = base_name(name);
+    if path.with_file_name(base).exists() || path.with_file_name(format!("{base}.disabled")).exists() { return Ok(()); }
+    let _guard = lock();
+    let subdir = subdir_of(path);
+    let mut records = load_records(root, tofu_id);
+    let before = records.len();
+    records.retain(|record| !(record.subdir == subdir && record.file == base));
+    if records.len() != before { save_records(root, tofu_id, records)?; }
+    Ok(())
 }
 
 pub fn content_dir(root: &Path, subdir: &str) -> Result<PathBuf, String> {
@@ -287,7 +330,7 @@ pub(crate) fn set_enabled_many(root: &Path, tofu_id: &str, paths: &[String], ena
             let name = p.file_name().and_then(|n| n.to_str()).unwrap_or_default().to_string();
             let already = name.ends_with(".disabled") != enabled;
             crate::modrinth::rename_enabled(&p, enabled)?;
-            let subdir = p.parent().and_then(|dir| dir.file_name()).and_then(|n| n.to_str()).filter(|n| CONTENT_SUBDIRS.contains(n)).unwrap_or("").to_string();
+            let subdir = subdir_of(&p);
             Ok((already, subdir, base_name(&name).to_string()))
         });
         match outcome {
@@ -326,19 +369,38 @@ pub fn set_instance_mods_enabled(tofu_id: String, paths: Vec<String>, enabled: b
 
 pub(crate) fn rollback_dir(dir: &Path) -> PathBuf { dir.join(ROLLBACK_DIR) }
 
-/// Keeps the file an update is about to replace so the update can be undone. Returns the saved name.
-pub(crate) fn save_rollback_copy(old: &Path) -> Result<String, String> {
+/// A rollback copy that is not visible to `rollback_in` until `commit`: an update that fails must not disturb the copy an
+/// earlier update saved under the same name. Dropping it without committing removes it again.
+pub(crate) struct StagedRollback { staged: PathBuf, saved: PathBuf, name: String }
+
+impl StagedRollback {
+    /// Puts the copy in place (replacing an older one of the same name) and returns the saved name.
+    pub(crate) fn commit(self) -> String {
+        let _ = fs::rename(&self.staged, &self.saved);
+        if let Some(store) = self.saved.parent() { prune_rollbacks(store); }
+        self.name.clone()
+    }
+}
+
+impl Drop for StagedRollback {
+    fn drop(&mut self) { let _ = fs::remove_file(&self.staged); }
+}
+
+/// Keeps the file an update is about to replace so the update can be undone (see `StagedRollback`).
+pub(crate) fn stage_rollback_copy(old: &Path) -> Result<StagedRollback, String> {
     let dir = old.parent().ok_or("Invalid content path.")?;
     let name = base_name(old.file_name().and_then(|n| n.to_str()).ok_or("Invalid content filename.")?).to_string();
     let store = rollback_dir(dir);
     fs::create_dir_all(&store).map_err(|e| format!("Unable to keep a rollback copy: {e}"))?;
-    let saved = store.join(&name);
-    let _ = fs::remove_file(&saved);
+    let staged = store.join(format!("{name}.mochi-pending"));
+    let _ = fs::remove_file(&staged);
     // A hard link is enough: the old file is removed by name afterwards and its data lives on here.
-    if fs::hard_link(old, &saved).is_err() { fs::copy(old, &saved).map_err(|e| format!("Unable to keep a rollback copy: {e}"))?; }
-    prune_rollbacks(&store);
-    Ok(name)
+    if fs::hard_link(old, &staged).is_err() { fs::copy(old, &staged).map_err(|e| format!("Unable to keep a rollback copy: {e}"))?; }
+    Ok(StagedRollback { saved: store.join(&name), staged, name })
 }
+
+/// Keeps the file an update is about to replace so the update can be undone. Returns the saved name.
+pub(crate) fn save_rollback_copy(old: &Path) -> Result<String, String> { Ok(stage_rollback_copy(old)?.commit()) }
 
 fn prune_rollbacks(store: &Path) {
     let Ok(read) = fs::read_dir(store) else { return };
@@ -838,6 +900,94 @@ mod tests {
         assert_eq!(import_mods_from_folder(from.to_string_lossy().into(), to.to_string_lossy().into()).unwrap(), 1);
         assert_eq!(fs::read(to.join("b.jar")).unwrap(), b"keep");
         assert!(!to.join("notes.txt").exists());
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn deleting_a_file_forgets_its_record() {
+        let base = temp("delete");
+        let (data, dir) = (base.join("data"), base.join("mods"));
+        fs::create_dir_all(dir.join("resourcepacks")).unwrap();
+        fs::write(dir.join("a.jar.disabled"), b"a").unwrap();
+        fs::write(dir.join("keep.jar"), b"k").unwrap();
+        fs::write(dir.join("resourcepacks/a.jar"), b"same name, other folder").unwrap();
+        for (file, subdir) in [("a.jar", ""), ("keep.jar", ""), ("a.jar", "resourcepacks")] {
+            upsert_record_in(&data, "t", RecordInput { source: "modrinth".into(), project_id: format!("p-{file}-{subdir}"), ..Default::default() }.into_record(file, subdir, None)).unwrap();
+        }
+        // Deleting the disabled copy removes the record of that folder only.
+        delete_content_in(Some(&data), "t", &dir.join("a.jar.disabled")).unwrap();
+        assert!(!dir.join("a.jar.disabled").exists());
+        let left: Vec<(String, String)> = load_records(&data, "t").into_iter().map(|r| (r.file, r.subdir)).collect();
+        assert_eq!(left.len(), 2);
+        assert!(left.contains(&("keep.jar".into(), "".into())) && left.contains(&("a.jar".into(), "resourcepacks".into())));
+        // Deleting something already gone is fine, and without a Tofu id the records stay.
+        delete_content_in(Some(&data), "t", &dir.join("a.jar.disabled")).unwrap();
+        fs::write(dir.join("other.jar"), b"o").unwrap();
+        delete_content_in(None, "", &dir.join("other.jar")).unwrap();
+        assert_eq!(load_records(&data, "t").len(), 2);
+        // The record stays while the other on/off copy of the file is still there.
+        fs::write(dir.join("keep.jar.disabled"), b"twin").unwrap();
+        delete_content_in(Some(&data), "t", &dir.join("keep.jar")).unwrap();
+        assert!(!dir.join("keep.jar").exists());
+        assert_eq!(load_records(&data, "t").len(), 2);
+        delete_content_in(Some(&data), "t", &dir.join("keep.jar.disabled")).unwrap();
+        assert_eq!(load_records(&data, "t").len(), 1);
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn a_failed_update_keeps_the_earlier_rollback_copy() {
+        let base = temp("staged");
+        let dir = base.join("mods");
+        fs::create_dir_all(&dir).unwrap();
+        // v1 was replaced by v2 under the same name; the rollback copy holds v1.
+        fs::write(dir.join("m.jar"), b"v1").unwrap();
+        save_rollback_copy(&dir.join("m.jar")).unwrap();
+        // Downloads arrive as a new file renamed into place, never as an in-place rewrite of the hard-linked data.
+        fs::remove_file(dir.join("m.jar")).unwrap();
+        fs::write(dir.join("m.jar"), b"v2").unwrap();
+        {
+            // The next update (v3) starts and then fails: the staged copy is dropped without being committed.
+            let _staged = stage_rollback_copy(&dir.join("m.jar")).unwrap();
+        }
+        assert_eq!(fs::read(rollback_dir(&dir).join("m.jar")).unwrap(), b"v1");
+        assert_eq!(fs::read_dir(rollback_dir(&dir)).unwrap().count(), 1, "no staging file left behind");
+        // When the update succeeds the copy of v2 takes over.
+        stage_rollback_copy(&dir.join("m.jar")).unwrap().commit();
+        assert_eq!(fs::read(rollback_dir(&dir).join("m.jar")).unwrap(), b"v2");
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn a_list_entry_from_before_a_toggle_still_finds_its_file() {
+        let base = temp("variant");
+        fs::write(base.join("a.jar.disabled"), b"a").unwrap();
+        fs::write(base.join("b.jar"), b"b").unwrap();
+        assert_eq!(existing_variant(&base.join("a.jar")), Some(base.join("a.jar.disabled")));
+        assert_eq!(existing_variant(&base.join("b.jar.disabled")), Some(base.join("b.jar")));
+        assert_eq!(existing_variant(&base.join("b.jar")), Some(base.join("b.jar")));
+        assert_eq!(existing_variant(&base.join("gone.jar")), None);
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn redownloading_a_disabled_mod_does_not_leave_two_copies() {
+        let base = temp("twin");
+        let (data, dir) = (base.join("data"), base.join("mods"));
+        fs::create_dir_all(&dir).unwrap();
+        let input = |file_id: &str| RecordInput { source: "modrinth".into(), project_id: "P".into(), file_id: file_id.into(), version: file_id.into(), ..Default::default() };
+        let mut old = input("1").into_record("m.jar", "", None);
+        old.enabled = false;
+        upsert_record_in(&data, "t", old).unwrap();
+        fs::write(dir.join("m.jar.disabled"), b"old build").unwrap();
+        fs::write(dir.join("m.jar"), b"fresh build").unwrap();
+        let mut next = input("2").into_record("m.jar", "", None);
+        retire_superseded_in(&data, "t", &dir, &mut next);
+        assert!(!next.enabled, "the user's choice to keep it off is kept");
+        assert!(!dir.join("m.jar").exists());
+        assert_eq!(fs::read(dir.join("m.jar.disabled")).unwrap(), b"fresh build");
+        assert_eq!(fs::read(rollback_dir(&dir).join("m.jar")).unwrap(), b"old build");
+        assert_eq!(next.rollback.as_ref().map(|r| r.version.as_str()), Some("1"));
         let _ = fs::remove_dir_all(&base);
     }
 }

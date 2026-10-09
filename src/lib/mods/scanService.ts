@@ -7,7 +7,7 @@ import { modSupportOf } from "./gameSupport";
 import { identifyFiles, titleFromFile, type IdentifyDeps } from "./identify";
 import { hashModFiles, listInstanceMods, modrinthIdentify, recordInstanceMods, type InstanceMod, type RecordEntry } from "./instances";
 import type { ModSourceSettings } from "./resolveSources";
-import type { Subdir } from "./targets";
+import { contentFolder, type Subdir } from "./targets";
 
 export type ScanResult = { files: number; /** Files in the main mods folder (the Tofu's mod count). */ modFiles: number; identified: number; unidentified: number; notes: string[]; /** False when the sites could not be asked (offline). */ online: boolean };
 
@@ -39,7 +39,8 @@ export async function scanTofuMods(piko: Piko, tofu: Tofu, sources: ModSourceSet
   const lanes: Array<Subdir | undefined> = [undefined, ...(tofu.contentRoot ? (["resourcepacks", "shaderpacks"] as Subdir[]) : [])];
   const pending: Array<{ file: InstanceMod; subdir: string }> = [];
   for (const subdir of lanes) {
-    const base = subdir && tofu.contentRoot && tofu.path === tofu.gameDir ? tofu.contentRoot : tofu.path;
+    // The same folder downloads go to, so a pack Mochi installed is found again (trailing slashes included).
+    const base = (subdir ? contentFolder(tofu, subdir === "resourcepacks" ? "resourcepack" : "shader")?.path : undefined) ?? tofu.path;
     const files = await listInstanceMods(tofu.id, base, subdir, siblings).catch(() => null);
     if (!files) continue;
     result.files += files.length;
