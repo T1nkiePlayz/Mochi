@@ -508,6 +508,15 @@ pub async fn get_steam_achievements(app: AppHandle, appid: u32, steam_id: Option
     }
 }
 
+/// Deletes every saved achievements file (Settings > Data & privacy). The next open fetches again.
+#[tauri::command(async)]
+pub fn clear_steam_achievements_cache(app: AppHandle) -> Result<(), String> {
+    let Ok(base) = app.path().app_data_dir() else { return Ok(()) };
+    let dir = base.join("steam-achievements");
+    if dir.exists() { fs::remove_dir_all(&dir).map_err(|error| format!("Unable to clear saved Steam achievements: {error}"))?; }
+    Ok(())
+}
+
 /// Per-game unlocked/total counts from everything cached so far (no network).
 #[tauri::command]
 pub fn get_steam_achievement_totals(app: AppHandle) -> Vec<AchievementSummary> {

@@ -35,8 +35,8 @@ export class ProviderCache {
   }
 }
 
-export function clearProviderCaches(userId?: string) {
-  for (const provider of ["igdb", "steamgriddb", "steam"] as const) {
+export function clearProviderCaches(userId?: string, only?: ProviderId) {
+  for (const provider of only ? [only] : (["igdb", "steamgriddb", "steam"] as const)) {
     try { window.localStorage.removeItem(storageKey(provider, userId)); } catch { /* storage unavailable */ }
   }
 }
