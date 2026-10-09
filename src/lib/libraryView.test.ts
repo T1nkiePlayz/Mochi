@@ -4,7 +4,7 @@ import { cycleViewMode, normalizeViewMode, viewModes, type LibraryViewMode } fro
 describe("library view modes", () => {
   it("cycles forwards and backwards through every mode and wraps", () => {
     let mode: LibraryViewMode = viewModes[0].id;
-    const seen = [mode];
+    const seen: LibraryViewMode[] = [mode];
     for (let i = 0; i < viewModes.length; i += 1) { mode = cycleViewMode(mode); seen.push(mode); }
     expect(seen.slice(0, -1)).toEqual(viewModes.map((entry) => entry.id));
     expect(seen[seen.length - 1]).toBe(viewModes[0].id);
