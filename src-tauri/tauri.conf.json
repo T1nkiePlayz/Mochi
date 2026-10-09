@@ -75,7 +75,9 @@
         "media-src": [
           "'self'",
           "data:",
-          "blob:"
+          "blob:",
+          "https://video.akamai.steamstatic.com",
+          "https://video.cloudflare.steamstatic.com"
         ],
         "connect-src": [
           "'self'",
@@ -150,7 +152,9 @@
         "media-src": [
           "'self'",
           "data:",
-          "blob:"
+          "blob:",
+          "https://video.akamai.steamstatic.com",
+          "https://video.cloudflare.steamstatic.com"
         ],
         "connect-src": [
           "'self'",

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Piko } from "../../models";
+import type { Piko, TrailerVideo } from "../../models";
 
 export type ProviderId = "igdb" | "steamgriddb" | "steam";
 export type ArtworkSource = ProviderId;
@@ -12,6 +12,8 @@ export type TextMeta = {
   screenshots?: string[];
   /** YouTube video id; only IGDB provides one. */
   trailerId?: string;
+  /** Direct-file Steam trailers (first couple only). */
+  trailerVideos?: TrailerVideo[];
   /** Unix seconds. */
   firstReleaseDate?: number;
   igdbId?: number;

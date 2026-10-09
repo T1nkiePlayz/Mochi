@@ -18,6 +18,11 @@ pub struct SteamMovie {
     pub name: String,
     pub thumbnail: Option<String>,
     pub hls_url: Option<String>,
+    /// Direct files a plain `<video>` can play. Steam's current API only sends HLS/DASH, so these are usually `None`.
+    #[serde(default)]
+    pub mp4_url: Option<String>,
+    #[serde(default)]
+    pub webm_url: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -126,6 +131,14 @@ fn string_list(value: Option<&Value>, key: &str) -> Vec<String> {
     }).unwrap_or_default()
 }
 
+/// A direct video file from a movie's `mp4`/`webm` object (`{"480": url, "max": url}`): the small one, over https on a Steam CDN only.
+fn movie_file(value: Option<&Value>) -> Option<String> {
+    let value = value?;
+    let url = value.get("480").or_else(|| value.get("max")).and_then(Value::as_str).map(strip_query)?;
+    let host = url.strip_prefix("https://")?.split('/').next()?;
+    if host == "steamstatic.com" || host.ends_with(".steamstatic.com") { Some(url) } else { None }
+}
+
 /// Parses an `appdetails` response body. `Ok(None)` means the store has no such app.
 pub fn parse_app_details(appid: u32, body: &str) -> Result<Option<SteamStoreDetails>, String> {
     let root: Value = serde_json::from_str(body).map_err(|error| format!("Steam returned unreadable data: {error}"))?;
@@ -145,6 +158,8 @@ pub fn parse_app_details(appid: u32, body: &str) -> Result<Option<SteamStoreDeta
             name: m.get("name").and_then(Value::as_str).unwrap_or("Trailer").to_string(),
             thumbnail: m.get("thumbnail").and_then(Value::as_str).map(strip_query).filter(|u| u.starts_with("https://")),
             hls_url: m.get("hls_h264").and_then(Value::as_str).map(str::to_string).filter(|u| u.starts_with("https://")),
+            mp4_url: movie_file(m.get("mp4")),
+            webm_url: movie_file(m.get("webm")),
         }).collect()
     }).unwrap_or_default();
     Ok(Some(SteamStoreDetails {
@@ -251,6 +266,20 @@ pub async fn get_steam_store_details(app: AppHandle, appid: u32) -> SteamStoreRe
 mod tests {
     use super::*;
     const FIXTURE: &str = include_str!("../fixtures/steam_appdetails_220.json");
+
+    #[test]
+    fn parses_direct_and_hls_movies() {
+        let body = r#"{"9":{"success":true,"data":{"name":"G","movies":[
+            {"name":"A","thumbnail":"https://shared.akamai.steamstatic.com/t.jpg?t=1","mp4":{"480":"https://video.akamai.steamstatic.com/a_480.mp4?t=1","max":"https://video.akamai.steamstatic.com/a_max.mp4"},"webm":{"max":"https://video.akamai.steamstatic.com/a_max.webm"}},
+            {"name":"B","hls_h264":"https://video.akamai.steamstatic.com/b.m3u8?t=1"},
+            {"name":"C","mp4":{"480":"https://evil.example/c.mp4"},"webm":{"480":"http://video.akamai.steamstatic.com/c.webm"}}]}}}"#;
+        let movies = parse_app_details(9, body).unwrap().unwrap().movies;
+        assert_eq!(movies[0].mp4_url.as_deref(), Some("https://video.akamai.steamstatic.com/a_480.mp4"));
+        assert_eq!(movies[0].webm_url.as_deref(), Some("https://video.akamai.steamstatic.com/a_max.webm"));
+        assert_eq!(movies[0].thumbnail.as_deref(), Some("https://shared.akamai.steamstatic.com/t.jpg"));
+        assert!(movies[1].mp4_url.is_none() && movies[1].webm_url.is_none() && movies[1].hls_url.is_some());
+        assert!(movies[2].mp4_url.is_none() && movies[2].webm_url.is_none());
+    }
 
     #[test]
     fn parses_recorded_response() {

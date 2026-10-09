@@ -1,9 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { TrailerVideo } from "../../models";
 import { steamAppIdOf } from "./merge";
 import { ProviderError, type MetadataProvider, type ProviderResult } from "./types";
 
 export type SteamStoreDetails = {
   appid: number; name: string; description: string; genres: string[]; screenshots: string[];
+  movies?: Array<{ name: string; thumbnail?: string | null; mp4Url?: string | null; webmUrl?: string | null }>;
   releaseDate?: number | null; coverUrl: string; headerUrl: string; heroUrl: string;
 };
 export type SteamStoreResult = { status: "ok" | "not-found" | "offline" | "error"; details?: SteamStoreDetails | null; stale: boolean; message?: string | null };
@@ -13,9 +15,15 @@ export async function getSteamStoreDetails(appid: number): Promise<SteamStoreRes
   catch (error) { return { status: "error", stale: false, message: error instanceof Error ? error.message : String(error) }; }
 }
 
+/** The first two Steam movies that have a direct mp4/webm file; HLS-only movies are skipped. */
+export function steamTrailerVideos(details: Pick<SteamStoreDetails, "movies">): TrailerVideo[] {
+  return (details.movies ?? []).filter((movie) => movie.mp4Url || movie.webmUrl).slice(0, 2)
+    .map((movie) => ({ name: movie.name, thumbnail: movie.thumbnail ?? undefined, mp4: movie.mp4Url ?? undefined, webm: movie.webmUrl ?? undefined }));
+}
+
 export function steamToResult(details: SteamStoreDetails): ProviderResult {
   return {
-    text: { description: details.description, categories: details.genres, screenshots: details.screenshots, firstReleaseDate: details.releaseDate ?? undefined },
+    text: { description: details.description, categories: details.genres, screenshots: details.screenshots, trailerVideos: steamTrailerVideos(details), firstReleaseDate: details.releaseDate ?? undefined },
     art: [details.coverUrl, details.headerUrl].filter(Boolean).map((url) => ({ source: "steam" as const, url })),
   };
 }
