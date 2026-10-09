@@ -8,7 +8,7 @@ pkgdesc="Local-first game launcher for Steam, Heroic, Lutris, Bottles, itch.io a
 arch=('x86_64' 'aarch64')
 url="https://github.com/T1nkiePlayz/Mochi"
 license=('custom')
-depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'openssl' 'systemd-libs' 'xdg-utils')
+depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'openssl' 'systemd-libs' 'xdg-utils' 'gst-plugins-base' 'gst-plugins-good')
 makedepends=('rust' 'cargo' 'nodejs' 'npm' 'patchelf')
 optdepends=('steam: Steam library import and launching'
             'flatpak: Flatpak game discovery'

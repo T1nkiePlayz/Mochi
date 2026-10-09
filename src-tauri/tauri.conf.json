@@ -202,7 +202,9 @@
         "section": "games",
         "depends": [
           "libudev1",
-          "xdg-utils"
+          "xdg-utils",
+          "gstreamer1.0-plugins-base",
+          "gstreamer1.0-plugins-good"
         ],
         "recommends": [
           "libnotify-bin"
@@ -211,8 +213,13 @@
       "rpm": {
         "release": "1",
         "depends": [
-          "libudev.so.1()(64bit)"
+          "libudev.so.1()(64bit)",
+          "gstreamer1-plugins-base",
+          "gstreamer1-plugins-good"
         ]
+      },
+      "appimage": {
+        "bundleMediaFramework": true
       }
     },
     "createUpdaterArtifacts": false
