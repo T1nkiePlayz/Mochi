@@ -3,6 +3,7 @@ use tauri::{Emitter, Manager, WindowEvent};
 
 mod fonts;
 mod bigpicture;
+mod cli;
 mod dirsize;
 mod game_artwork;
 mod icon_cover;
@@ -190,7 +191,17 @@ fn startup_mark(since: std::time::Instant, step: &str) {
     if std::env::var_os("MOCHI_STARTUP_TRACE").is_some() { eprintln!("[mochi startup] {step}: {:.1} ms", since.elapsed().as_secs_f64() * 1000.0); }
 }
 
+/// Mirrors the library's ids and names for `mochi list` and `mochi launch` (see cli.rs).
+#[tauri::command(async)]
+async fn write_library_index(app: tauri::AppHandle, entries: Vec<cli::IndexEntry>) -> Result<(), String> {
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    tauri::async_runtime::spawn_blocking(move || cli::save_index(&dir, entries)).await.map_err(|e| e.to_string())?
+}
+
 fn main() {
+    // `mochi list`, `mochi --help` and unknown games answer on the terminal without starting the app.
+    let argv: Vec<String> = std::env::args().collect();
+    if let Some(code) = cli::run_early(&argv) { std::process::exit(code); }
     #[cfg(target_os = "linux")]
     platform::prepare_linux_webview_environment();
     // A build that will offer to install itself runs beside any running copy: no single-instance
@@ -199,7 +210,7 @@ fn main() {
     let installing = candidate.is_some();
     let mut builder = tauri::Builder::default()
         // Tells the frontend how it was started before the first paint.
-        .plugin(tauri::plugin::Builder::<tauri::Wry, ()>::new("mochi-boot").js_init_script(bigpicture::boot_script(bigpicture::parse_flags(std::env::args()))).build())
+        .plugin(tauri::plugin::Builder::<tauri::Wry, ()>::new("mochi-boot").js_init_script(bigpicture::boot_script(bigpicture::parse_flags(&argv)) + &cli::boot_script(&argv)).build())
         .manage(std::sync::Mutex::new(candidate));
     if !installing {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
@@ -208,6 +219,9 @@ fn main() {
             tray::show_mochi(app);
             // `mochi --big-picture` from a Steam shortcut switches the running instance over.
             if bigpicture::parse_flags(&argv).big_picture { let _ = app.emit("mochi-bigpicture", true); }
+            // `mochi launch <game>` / `mochi open <game>` from a terminal; the app resolves the game in the live library.
+            // (mochi:// links reach the frontend through the deep-link plugin instead.)
+            if let Some((kind, query)) = cli::frontend_intent(&argv) { let _ = app.emit("cli-intent", serde_json::json!({ "kind": kind, "query": query })); }
         }));
     }
     builder
@@ -265,7 +279,7 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            send_system_notification, open_external_url, open_path_in_file_manager, set_launch_on_startup,
+            write_library_index, send_system_notification, open_external_url, open_path_in_file_manager, set_launch_on_startup,
             launch_game_tracked, stop_game, get_active_sessions, get_playtime, get_playtime_history, get_dir_size, get_downloads,
             list_flatpaks, list_runtimes, get_platform_capabilities, create_game_shortcut, remove_game_shortcut,
             detect_import_sources, scan_import_games, copy_minecraft_instance, read_minecraft_pack,
