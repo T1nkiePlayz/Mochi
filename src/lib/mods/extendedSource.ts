@@ -25,7 +25,7 @@ const optionsKey = (options: ModSearchOptions) => JSON.stringify([options.query,
 export function createExtendedSource(primary: ModSource, extras: ModSource[], below: number, onInfo?: (info: ExtendInfo) => void): ModSource {
   const sources = new Map<string, ModSource>([[primary.id, primary], ...extras.map((source) => [source.id, source] as [string, ModSource])]);
   const pick = (item: ModItem) => sources.get(item.source) ?? primary;
-  let decided: boolean | null = extras.length === 0 || below <= 0 ? false : null;
+  let decided: boolean | null = null;
   let cursor: Cursor | null = null;
   const failed = new Set<string>();
   let primaryTotal = 0;
@@ -49,7 +49,7 @@ export function createExtendedSource(primary: ModSource, extras: ModSource[], be
       let first: ModPage | null = null;
       if (decided === null) {
         first = await primary.search(options);
-        decided = shouldAutoExtend(first.total, below);
+        decided = extras.length > 0 && shouldAutoExtend(first.total, below);
         primaryTotal = first.total;
         emit();
         if (!decided) return first;

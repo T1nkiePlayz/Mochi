@@ -17,7 +17,7 @@ export function modrinthItem(project: ModrinthProject): ModItem {
   };
 }
 
-function modrinthFile(version: ModrinthVersion): ModFile | null {
+export function modrinthFile(version: ModrinthVersion): ModFile | null {
   const file = version.files.find((candidate) => candidate.primary) ?? version.files[0];
   if (!file) return null;
   return {

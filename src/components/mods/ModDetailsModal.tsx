@@ -50,7 +50,7 @@ export function ModDetailsModal({ source, item, filter, installLabel, busy, noti
 
   const file = useMemo(() => files?.find((candidate) => candidate.id === fileId), [files, fileId]);
   const fit = useMemo(() => (file && narrowed ? compatibility(metaFromModFile(file), { loader: parseLoader(filter?.loader), gameVersion: filter?.gameVersion }) : null), [file, narrowed, filter?.loader, filter?.gameVersion]);
-  const blocked = source.id === "curseforge" && (item.native as { allowModDistribution?: boolean | null }).allowModDistribution === false;
+  const blocked = item.source === "curseforge" && (item.native as { allowModDistribution?: boolean | null }).allowModDistribution === false;
   const site = sourceLabels[item.source];
 
   return <ModalShell label={`${item.name} details`} className="project-details-window mod-details" onClose={onClose}>
@@ -71,7 +71,7 @@ export function ModDetailsModal({ source, item, filter, installLabel, busy, noti
         <div className="mod-download-actions">
           {!blocked && <button type="button" className="play-button" disabled={!file || busy} onClick={() => file && onInstall(file)}>{busy ? <RefreshCw size={14} className="spin" /> : <Download size={14} />} {installLabel}</button>}
           <ViewOnSite url={item.pageUrl} label={`View on ${site}`} />
-          {source.id === "curseforge" && <CurseforgeCredit />}
+          {item.source === "curseforge" && <CurseforgeCredit />}
         </div>
       </section>
       {details?.facts.length ? <div className="project-info-grid">{details.facts.map((fact) => <span key={fact.label}><strong>{fact.label}</strong>{fact.value}</span>)}</div> : null}

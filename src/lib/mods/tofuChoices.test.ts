@@ -41,3 +41,14 @@ describe("metasOfItem", () => {
     expect(metasOfItem({ source: "nexus", native: {} })).toEqual([]);
   });
 });
+
+import { minecraftFilterFor, releaseOf } from "./gameVersion";
+describe("minecraftFilterFor", () => {
+  it("uses the release and the loader for mods only", () => {
+    const fabric = tofu("x", "F", "1.21.1", "fabric");
+    expect(minecraftFilterFor(fabric, true)).toEqual({ gameVersion: "1.21.1", loader: "fabric" });
+    expect(minecraftFilterFor(fabric, false)).toEqual({ gameVersion: "1.21.1", loader: undefined });
+    expect(minecraftFilterFor(tofu("y", "V", "1.20.1", "vanilla"), true).loader).toBeUndefined();
+    expect(releaseOf({ version: "Local" })).toBeUndefined();
+  });
+});

@@ -1,3 +1,5 @@
+import type { EcosystemRef } from "./gameSupport";
+
 export type ModSourceId = "modrinth" | "curseforge" | "nexus";
 
 export const sourceLabels: Record<ModSourceId, string> = { modrinth: "Modrinth", curseforge: "CurseForge", nexus: "Nexus Mods" };
@@ -15,6 +17,10 @@ export type ModItem = {
   pageUrl: string;
   /** Provider label such as "Mods" or "Shaders". */
   kind?: string;
+  /** The game the mod belongs to, set in lists that mix several games (Discover > All). */
+  game?: string;
+  /** Which Tofus fit this item when it differs from the list's own game (mixed lists). */
+  ecosystem?: EcosystemRef;
   native: unknown;
 };
 
