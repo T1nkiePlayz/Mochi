@@ -12,3 +12,8 @@
 .danger-solid { background: var(--mochi-danger-background); border-color: var(--mochi-danger); font-weight: 700; }
 .danger-solid:hover:not(:disabled) { background: color-mix(in srgb, var(--mochi-danger) 26%, transparent); }
 @media (max-width: 420px) { .confirm-actions > button { flex: 1 1 auto; } }
+
+/* Settings → Achievements */
+.achievement-cloud-status.is-synced { color: var(--mochi-success); }
+.achievement-cloud-status.is-error { color: var(--mochi-danger-color); }
+.achievement-cloud-status.is-offline { color: var(--mochi-warning); }
