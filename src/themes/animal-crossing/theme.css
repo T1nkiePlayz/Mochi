@@ -3,8 +3,16 @@
 
 @keyframes ac-bob { 50% { transform: translateY(-3px); } }
 .sidebar, .main-content { position: relative; z-index: 1; }
-.sidebar { margin: 14px auto 0; width: min(760px, calc(100% - 28px)); border-radius: 999px; padding: 6px 12px 6px 18px; min-height: 0; justify-content: space-between;
+.sidebar { margin: 14px auto 0; width: min(760px, calc(100% - 28px)); border-radius: 999px; padding: 6px 16px; min-height: 0;
   background: #fffdf2; border: 3px solid #fff; box-shadow: 0 5px 0 #cfe6b2, 0 12px 24px rgba(106, 87, 68, .18); gap: 8px; }
+/* Bar layout: brand left, nav truly centred, Settings + account as a right cluster. The brand (plus a margin as wide as the account
+ * trigger and the gap) and the Settings slot share the free space equally, so the nav sits on the pill's centre line. */
+html:not([data-nav-mode="drawer"]) .sidebar { --ac-account-w: 80px; }
+html:not([data-nav-mode="drawer"])[data-mochi-shell="top"] .sidebar .brand { order: 0; flex: 1 1 0; min-width: 34px; margin-right: calc(var(--ac-account-w) + 8px); }
+html:not([data-nav-mode="drawer"])[data-mochi-shell="top"] .sidebar .primary-nav { order: 1; margin: 0; }
+html:not([data-nav-mode="drawer"])[data-mochi-shell="top"] .sidebar .sidebar-bottom { order: 2; flex: 1 1 0; min-width: 44px; display: flex; justify-content: flex-end; margin: 0; }
+html:not([data-nav-mode="drawer"])[data-mochi-shell="top"] .sidebar .sidebar-account-wrap { order: 3; margin: 0; }
+html:not([data-nav-mode="drawer"])[data-mochi-shell="top"] .sidebar .sidebar-account { margin: 0; }
 .brand-mark { border-radius: 50%; background: #d9f0c4; border: 3px solid #a9d17f; box-shadow: none; animation: ac-bob 3s ease-in-out infinite; }
 .brand strong { font-size: 20px; color: #2fae8a; }
 .brand span { display: none; }
