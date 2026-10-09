@@ -18,7 +18,7 @@ Frontend (`npm test`, 152 total): compatibility, update picking and scheduling, 
 
 ## Numbers
 
-Entry chunk 354 kB (update logic is a lazy 3 kB chunk, the manager chunk grew from about 24 kB to 33 kB). Launch overhead of a sync with nothing changed: one directory listing and one small JSON read per lane.
+Entry chunk 354 kB (update logic is a lazy 3 kB chunk; the mod manager chunk is 33 kB). Launch overhead of a sync with nothing changed: one directory listing and one small JSON read per lane.
 
 ## Not verified here
 
