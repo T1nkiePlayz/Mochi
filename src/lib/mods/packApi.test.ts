@@ -14,11 +14,12 @@ vi.mock("../curseforge", async (original) => ({
 
 import { loadLinkedPack } from "./packApi";
 
-afterEach(() => { vi.restoreAllMocks(); });
+afterEach(() => { vi.unstubAllGlobals(); });
 
 describe("CurseForge pack data is never persisted", () => {
   it("shows the name, icon and update live but writes nothing to storage or disk caches", async () => {
-    const set = vi.spyOn(Storage.prototype, "setItem");
+    const set = vi.fn();
+    vi.stubGlobal("localStorage", { setItem: set, getItem: vi.fn(() => null), removeItem: vi.fn(), clear: vi.fn(), key: vi.fn(), length: 0 });
     const tofu = { name: "ATM9", version: "1.21.1", runtime: "prism", loader: "neoforge" as const };
     const info = await loadLinkedPack(tofu, { source: "curseforge", projectId: "715572", versionId: "1", matchedBy: "managed" });
     expect(info).toMatchObject({ name: "All the Mods 9", iconUrl: "https://media.forgecdn.net/logo.png", update: { versionId: "2" } });
