@@ -189,6 +189,8 @@ progress { accent-color: var(--mochi-accent-strong); }
 /* ---- Library --------------------------------------------------------------- */
 .library-category { display: grid; gap: 14px; }
 .library-category .section-heading { align-items: center; }
+.library-extras { display: grid; gap: 14px; margin-top: 26px; }
+.library-extras-toggle { justify-self: start; display: inline-flex; align-items: center; gap: 6px; }
 .game-card-grid { grid-template-columns: repeat(auto-fill, minmax(var(--mochi-cover-min, 168px), 1fr)) !important; gap: var(--mochi-card-gap); }
 .game-card { position: relative; padding: 0; text-align: left; cursor: pointer; }
 .game-card-art { aspect-ratio: var(--mochi-cover-aspect, 3 / 4); transition: transform .35s ease; }

@@ -225,6 +225,7 @@ function mergeInto(live: Piko, fresh: Piko): Piko {
     ...(keep.has("artwork") || live.artworkSource === "custom" ? {} : {
       artwork: fresh.artwork, artworkUrl: fresh.artworkUrl, artworkCacheKey: fresh.artworkCacheKey, artworkSource: fresh.artworkSource,
     }),
+    ...(live.contentTypeLocked || !fresh.contentType ? {} : { contentType: fresh.contentType }),
     igdbId: fresh.igdbId, screenshots: fresh.screenshots, trailerId: fresh.trailerId, trailerVideos: fresh.trailerVideos, firstReleaseDate: fresh.firstReleaseDate,
   };
 }

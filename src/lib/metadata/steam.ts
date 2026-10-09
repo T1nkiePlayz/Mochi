@@ -1,12 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { TrailerVideo } from "../../models";
+import type { ContentType, TrailerVideo } from "../../models";
 import { steamAppIdOf } from "./merge";
 import { ProviderError, type MetadataProvider, type ProviderResult } from "./types";
 
 export type SteamStoreDetails = {
   appid: number; name: string; description: string; genres: string[]; screenshots: string[];
   movies?: Array<{ name: string; thumbnail?: string | null; mp4Url?: string | null; webmUrl?: string | null; hlsUrl?: string | null }>;
-  releaseDate?: number | null; coverUrl: string; headerUrl: string; heroUrl: string;
+  releaseDate?: number | null; contentType?: ContentType; coverUrl: string; headerUrl: string; heroUrl: string;
 };
 export type SteamStoreResult = { status: "ok" | "not-found" | "offline" | "error"; details?: SteamStoreDetails | null; stale: boolean; message?: string | null };
 
@@ -23,7 +23,7 @@ export function steamTrailerVideos(details: Pick<SteamStoreDetails, "movies">): 
 
 export function steamToResult(details: SteamStoreDetails): ProviderResult {
   return {
-    text: { description: details.description, categories: details.genres, screenshots: details.screenshots, trailerVideos: steamTrailerVideos(details), firstReleaseDate: details.releaseDate ?? undefined },
+    text: { description: details.description, categories: details.genres, screenshots: details.screenshots, trailerVideos: steamTrailerVideos(details), firstReleaseDate: details.releaseDate ?? undefined, contentType: details.contentType },
     art: [details.coverUrl, details.headerUrl].filter(Boolean).map((url) => ({ source: "steam" as const, url })),
   };
 }

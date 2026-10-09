@@ -25,6 +25,8 @@ export const RECENT_DAYS = 30;
 export const MOST_PLAYED_LIMIT = 12;
 
 export const isLauncher = (piko: Piko) => piko.kind === "launcher";
+/** Soundtracks, artbooks and other non-game entries: kept out of the main library and shown in their own section. */
+export const isExtra = (piko: Piko) => piko.contentType === "soundtrack" || piko.contentType === "extra";
 export const sourceOf = (piko: Piko) => piko.sourceId || (piko.platformCategory ? piko.platformCategory.toLowerCase() : "other");
 export const sourceLabel = (piko: Piko) => piko.platformCategory || piko.sourceId || "Other";
 
@@ -59,6 +61,7 @@ export function mostPlayedIds(library: Piko[], playtime: Map<string, PlaytimeEnt
 }
 
 export function matchesFilter(piko: Piko, filter: LibraryFilter, context: FilterContext, mostPlayed?: Set<string>): boolean {
+  if (isExtra(piko)) return false;
   if (filter.kind === "smart") return matchesSmartFilter(piko, filter.id, context, mostPlayed);
   if (filter.kind === "source") return sourceOf(piko) === filter.id;
   return Boolean(piko.collectionIds?.includes(filter.id));

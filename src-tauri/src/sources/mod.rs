@@ -75,6 +75,8 @@ pub struct ImportedGame {
     pub icon_path: Option<String>,
     /// Minecraft instances (Prism and friends): version, loader and game folder for the default Tofu.
     pub minecraft: Option<prism::MinecraftInstance>,
+    /// "soundtrack" or "extra" for entries that are not games (guessed from the name); `None` otherwise.
+    pub content_type: Option<&'static str>,
 }
 
 pub struct SourceDef {
@@ -87,11 +89,21 @@ pub struct SourceDef {
 const SCAN_TIMEOUT: Duration = Duration::from_secs(20);
 
 fn make(id: String, name: String, source: &str, target: String, path: Option<String>) -> ImportedGame {
-    ImportedGame { id, name, source: source.into(), launch_target: target, install_path: path, kind: ImportKind::Game, launcher_id: None, icon_path: None, minecraft: None }
+    ImportedGame { id, name, source: source.into(), launch_target: target, install_path: path, kind: ImportKind::Game, launcher_id: None, icon_path: None, minecraft: None, content_type: None }
 }
 
 fn make_launcher(id: String, name: String, source: &str, target: String, launcher: &str) -> ImportedGame {
-    ImportedGame { id, name, source: source.into(), launch_target: target, install_path: None, kind: ImportKind::Launcher, launcher_id: Some(launcher.into()), icon_path: None, minecraft: None }
+    ImportedGame { id, name, source: source.into(), launch_target: target, install_path: None, kind: ImportKind::Launcher, launcher_id: Some(launcher.into()), icon_path: None, minecraft: None, content_type: None }
+}
+
+/// Guesses from a title that an entry is a soundtrack ("soundtrack") or an artbook ("extra") rather than a game.
+pub fn content_type_from_name(name: &str) -> Option<&'static str> {
+    let lower = name.to_lowercase();
+    let words: Vec<&str> = lower.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty()).collect();
+    let pair = |a: &str, b: &str| words.windows(2).any(|w| w[0] == a && w[1] == b);
+    if words.iter().any(|w| matches!(*w, "soundtrack" | "soundtracks" | "ost")) || pair("sound", "track") { return Some("soundtrack"); }
+    if words.iter().any(|w| matches!(*w, "artbook" | "artbooks")) || pair("art", "book") { return Some("extra"); }
+    None
 }
 
 fn sort_games(mut games: Vec<ImportedGame>) -> Vec<ImportedGame> {
@@ -185,7 +197,8 @@ fn scan_steam_library(apps: &Path, seen: &mut HashSet<String>, out: &mut Vec<Imp
         if !id.bytes().all(|b| b.is_ascii_digit()) || title.starts_with("Proton ") || title.starts_with("Steam Linux Runtime") || title.starts_with("Steamworks Common") { continue; }
         let install = apps.join("common").join(&dir);
         if !dir.contains("..") && install.is_dir() && seen.insert(id.clone()) {
-            out.push(make(format!("steam:{id}"), title, "steam", format!("steam://rungameid/{id}"), Some(install.to_string_lossy().into())));
+            let content_type = content_type_from_name(&title);
+            out.push(ImportedGame { content_type, ..make(format!("steam:{id}"), title, "steam", format!("steam://rungameid/{id}"), Some(install.to_string_lossy().into())) });
         }
     }
 }
@@ -549,6 +562,18 @@ mod tests {
     fn write(path: &Path, text: &str) {
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(path, text).unwrap();
+    }
+
+    #[test]
+    fn soundtracks_and_artbooks_are_recognised_by_name() {
+        for name in ["RuneScape: Dragonwilds Early Adopter Soundtrack", "Hades - Original Soundtrack", "Celeste OST", "Game Sound Track", "Hollow Knight Digital Art Book", "Foo Artbook"] {
+            assert!(content_type_from_name(name).is_some(), "{name}");
+        }
+        assert_eq!(content_type_from_name("Hades OST"), Some("soundtrack"));
+        assert_eq!(content_type_from_name("Digital Artbook"), Some("extra"));
+        for name in ["Portal 2", "Ghostrunner", "Cost of Living", "Art of Rally", "Soundshapes"] {
+            assert_eq!(content_type_from_name(name), None, "{name}");
+        }
     }
 
     #[test]

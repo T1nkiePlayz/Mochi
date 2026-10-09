@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchesSmartFilter, sanitizeFilter, sanitizeLibrary, withTag, toggleInList, mostPlayedIds } from "./library";
+import { isExtra, matchesFilter, matchesSmartFilter, sanitizeFilter, sanitizeLibrary, withTag, toggleInList, mostPlayedIds } from "./library";
 
 describe("sanitizeLibrary", () => {
   it("drops junk, dedupes ids and guarantees a tofu", () => {
@@ -31,5 +31,20 @@ describe("list helpers", () => {
   it("mostPlayedIds ignores unplayed", () => {
     const m = new Map([["a", { gameId: "a", name: "", seconds: 5, lastPlayed: 1 }]]);
     expect([...mostPlayedIds([{ id: "a" }, { id: "b" }] as never, m)]).toEqual(["a"]);
+  });
+});
+
+describe("soundtracks and extras", () => {
+  const ctx = { playtime: new Map(), installed: new Map(), isRunning: () => false };
+  const soundtrack = { id: "s", name: "OST", contentType: "soundtrack", favorite: true } as never;
+  const game = { id: "g", name: "Game" } as never;
+  it("are hidden from every filter, games are not", () => {
+    expect(isExtra(soundtrack)).toBe(true);
+    expect(isExtra({ id: "x", contentType: "extra" } as never)).toBe(true);
+    expect(isExtra(game)).toBe(false);
+    for (const id of ["all", "favorites", "unplayed"] as const) {
+      expect(matchesFilter(soundtrack, { kind: "smart", id }, ctx)).toBe(false);
+    }
+    expect(matchesFilter(game, { kind: "smart", id: "unplayed" }, ctx)).toBe(true);
   });
 });
