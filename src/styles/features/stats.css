@@ -94,8 +94,9 @@ i.stat-cell { display: inline-block; width: 11px; height: 11px; border-radius: 3
 .ach-badge.rarity-epic { --rarity: var(--mochi-accent-strong); }
 .ach-badge.rarity-legendary { --rarity: var(--mochi-warning); }
 .ach-badge.locked { opacity: .82; }
-.ach-badge.locked .ach-icon { filter: grayscale(.7); }
-.ach-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--mochi-radius-md, 13px); color: var(--mochi-text-strong); background: color-mix(in oklab, var(--rarity) 22%, var(--mochi-surface-raised)); }
+/* Locked badges are muted with colours, not `filter: grayscale()`: a CSS filter on dozens of nodes makes WebKitGTK repaint each through an offscreen surface (about 0.6-1.5 s for the grid). */
+.ach-badge.locked { --ach-tint: 7%; --ach-fg: color-mix(in oklab, var(--mochi-text-strong) 40%, var(--mochi-text-muted)); }
+.ach-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--mochi-radius-md, 13px); color: var(--ach-fg, var(--mochi-text-strong)); background: color-mix(in oklab, var(--rarity) var(--ach-tint, 22%), var(--mochi-surface-raised)); }
 .ach-icon-locked { position: relative; display: grid; place-items: center; }
 .ach-icon-locked svg:last-child { position: absolute; right: -8px; bottom: -6px; }
 .ach-body { display: grid; gap: 4px; min-width: 0; }
