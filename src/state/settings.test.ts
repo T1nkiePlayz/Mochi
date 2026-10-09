@@ -12,4 +12,9 @@ describe("normalizeBehavior (settings written by older versions)", () => {
     expect(out).toMatchObject({ confirmLaunch: false, metadataProvider: "igdb", experimental: [] });
     expect(out.modSources).toEqual({ modrinth: true, curseforge: true, nexus: false });
   });
+  it("automatic mod updates are off unless the user turned them on", () => {
+    expect(defaultBehavior.autoUpdateMods).toBe(false);
+    expect(normalizeBehavior({ autoUpdateMods: true }).autoUpdateMods).toBe(true);
+    expect(normalizeBehavior({ autoUpdateMods: "yes" }).autoUpdateMods).toBe(false);
+  });
 });

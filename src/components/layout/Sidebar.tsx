@@ -5,6 +5,7 @@ import { MochiIcon } from "../MochiIcon";
 import { useApp, type NavId } from "../../state/AppContext";
 import { usernameOf } from "../../state/useAccount";
 import { useExperimentalStatus } from "../../state/useExperimental";
+import { navLabel } from "../../lib/nav";
 
 export const navItems: Array<{ id: NavId; icon: typeof Library; iconName: string }> = [
   { id: "Library", icon: Library, iconName: "library" },
@@ -33,7 +34,7 @@ export function Sidebar() {
       {navItems.map(({ id, icon: Icon, iconName }) => (
         <button className={`nav-item ${activeNav === id ? "active" : ""}`} key={id} aria-current={activeNav === id ? "page" : undefined} onClick={() => setActiveNav(id)}>
           <MochiIcon name={iconName} fallback={Icon} size={17} strokeWidth={1.8} />
-          <span>{id}</span>
+          <span>{navLabel(id)}</span>
         </button>
       ))}
     </nav>

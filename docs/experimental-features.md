@@ -42,7 +42,7 @@ When the feature is ready:
 2. Delete its entry from `experimentalFeatures`. Saved flags are cleaned up automatically on the next load.
 3. If it was the last entry, the Experimental section and nav dot disappear by themselves.
 
-Already part of the main app (not experimental): the Installed tab and Nexus Mods search.
+Already part of the main app (not experimental): the Mods & Content tab and Nexus Mods search.
 
 ## Dropping a feature
 

@@ -1,7 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Piko } from "../models";
 import { createGameShortcut, launchGame as startGame, openPath, removeGameShortcut, stopGame } from "../lib/platform";
+import { describeModSync, subscribeNative, type ModSyncResult } from "../lib/nativeEvents";
 import type { Behavior } from "./settings";
+import { updateBeforeLaunch } from "./modUpdates";
 import type { LibraryState } from "./useLibrary";
 
 type Params = {
@@ -19,6 +21,17 @@ export function useGameActions({ lib, behavior, refreshPlaytime, refreshSessions
   // Double clicks, Enter-repeat and deep links must not start the same game twice.
   const launching = useRef(new Set<string>());
 
+  // The native side copies a Tofu's own mods into the game folder right before the game starts and reports what it did.
+  const libraryRef = useRef(lib.library);
+  libraryRef.current = lib.library;
+  const notifyRef = useRef(notify);
+  notifyRef.current = notify;
+  useEffect(() => subscribeNative<ModSyncResult>("mod-sync-result", (result) => {
+    const name = libraryRef.current.flatMap((piko) => piko.tofus).find((tofu) => tofu.id === result.tofuId)?.name ?? "Tofu";
+    const summary = describeModSync(result, name);
+    if (summary) notifyRef.current(summary.title, summary.message);
+  }), []);
+
   const shortError = (error: unknown) => {
     const text = error instanceof Error ? error.message : String(error);
     // No regex look-behind: older macOS WebKit rejects it at parse time and the whole app fails to load.
@@ -34,6 +47,8 @@ export function useGameActions({ lib, behavior, refreshPlaytime, refreshSessions
     setIsLaunching(true);
     try {
       const tofu = piko.id === lib.selectedPiko.id ? lib.selectedTofu : piko.tofus[0];
+      // Optional and off by default: bring the Tofu's mods up to date first (bounded wait; launching always continues).
+      if (behavior.autoUpdateMods && tofu) await updateBeforeLaunch(tofu, piko, behavior.modSources, notify);
       await startGame(piko, tofu);
       await Promise.all([refreshPlaytime(), refreshSessions()]);
     } catch (error) {

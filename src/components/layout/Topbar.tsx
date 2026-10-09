@@ -3,6 +3,7 @@ import { Bell, Menu, Search, X } from "lucide-react";
 import { MochiIcon } from "../MochiIcon";
 import { useApp } from "../../state/AppContext";
 import { BigPictureButton } from "../../bigpicture/EntryButton";
+import { navLabel } from "../../lib/nav";
 
 export function Topbar() {
   const { activeNav, lib, behavior, platformCapabilities, notifications: n } = useApp();
@@ -23,7 +24,7 @@ export function Topbar() {
   useEffect(() => () => { document.documentElement.dataset.navOpen = "false"; }, []);
   return <header className="topbar">
     <button type="button" className="mobile-menu icon-button" aria-label="Open menu" aria-expanded={navOpen} onClick={() => setNavOpen((value) => !value)}><MochiIcon name="menu" fallback={Menu} size={18} /></button>
-    <div className="breadcrumb"><span>Mochi</span><span className="breadcrumb-slash">/</span><strong>{activeNav === "Library" ? lib.selectedPiko.name : activeNav}</strong></div>
+    <div className="breadcrumb"><span>Mochi</span><span className="breadcrumb-slash">/</span><strong>{activeNav === "Library" ? lib.selectedPiko.name : navLabel(activeNav)}</strong></div>
     <div className="topbar-actions">
       <label className="search-box">
         <MochiIcon name="search" fallback={Search} size={16} />

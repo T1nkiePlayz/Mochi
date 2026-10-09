@@ -21,6 +21,8 @@ export type Behavior = {
   experimentalSeen: string[];
   /** Which mod sites Mochi may contact and list. Nexus Mods additionally needs a saved key. */
   modSources: ModSourceSettings;
+  /** Update installed mods (SHA-1 verified, with a rollback copy) when a game is launched. Off by default. */
+  autoUpdateMods: boolean;
 };
 
 export const defaultBehavior: Behavior = {
@@ -37,6 +39,7 @@ export const defaultBehavior: Behavior = {
   experimental: [],
   experimentalSeen: [],
   modSources: { ...allSourcesOn },
+  autoUpdateMods: false,
 };
 
 const bool = (value: unknown, fallback: boolean) => (typeof value === "boolean" ? value : fallback);
@@ -66,5 +69,6 @@ export function normalizeBehavior(raw: unknown): Behavior {
       curseforge: bool(modSources.curseforge, true),
       nexus: bool(modSources.nexus, true),
     },
+    autoUpdateMods: bool(stored.autoUpdateMods, defaultBehavior.autoUpdateMods),
   };
 }

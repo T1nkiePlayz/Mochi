@@ -55,7 +55,7 @@ export function InstalledView() {
   return (
     <div className="inst-view">
       <div className="page-heading inst-heading">
-        <div><p className="eyebrow">Mod control centre</p><h1>Installed</h1></div>
+        <div><p className="eyebrow">Mod control centre</p><h1>Mods &amp; Content</h1></div>
         <div className="inst-summary" aria-live="polite">{rows.length} Tofu{rows.length === 1 ? "" : "s"} · {totalMods} mods · {formatBytes(totalBytes)}{pending ? ` · ${pending} updates` : ""}</div>
       </div>
       <div className="inst-toolbar">

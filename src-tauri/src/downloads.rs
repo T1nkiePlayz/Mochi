@@ -352,7 +352,10 @@ pub fn cancel(id: &str) -> Result<(), String> {
 }
 
 /// Drops finished entries from the list (files stay where they are).
-pub fn clear_finished() { lock_downloads().retain(|_, entry| entry.finished_at.is_none()); }
+pub fn clear_finished() {
+    lock_downloads().retain(|_, entry| entry.finished_at.is_none());
+    announce("");
+}
 
 #[tauri::command(async)]
 pub fn start_mod_download(request: ModDownloadRequest) -> Result<String, String> { start(request) }
