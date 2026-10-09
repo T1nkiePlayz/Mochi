@@ -8,7 +8,7 @@ body:
         Please read the [Code of Conduct](../blob/main/CODE_OF_CONDUCT.md). **Never paste API keys or tokens**, and no piracy-related requests.
   - type: textarea
     id: what
-    attributes: { label: What happened?, description: What did you expect instead? }
+    attributes: { label: "What happened?", description: "What did you expect instead?" }
     validations: { required: true }
   - type: textarea
     id: steps
