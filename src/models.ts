@@ -153,6 +153,8 @@ export type Piko = {
     minecraft?: boolean;
     source: "auto" | "user";
   };
+  /** Save-backup settings of this device (folder paths never leave it). `auto` unset means the default: on for Minecraft, off otherwise. */
+  saveBackup?: { auto?: boolean; folders?: string[] };
   tofus: Tofu[];
 };
 

@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { supabase } from "../lib/supabase";
 import { useGameSessions } from "../hooks";
+import { useSaveBackupOnExit } from "./useSaveBackupOnExit";
 import { useThemeEngine } from "../lib/theme";
 import { getPlatformCapabilities, listRuntimes, type PlatformCapabilities, type RuntimeInfo } from "../lib/platform";
 import type { ImportedGame, ImportSourceId } from "../lib/sources";
@@ -52,6 +53,7 @@ function useAppController() {
   const sessions = useGameSessions();
   const { playtime, refreshPlaytime } = usePlaytime(sessions.sessions.length);
   const lib = useLibrary(playtime, sessions.isRunning);
+  useSaveBackupOnExit(sessions.running, lib.library, notify);
   const themeEngine = useThemeEngine();
   const actions = useGameActions({ lib, behavior, refreshPlaytime, refreshSessions: sessions.refresh, notify });
   const metadata = useMetadata({

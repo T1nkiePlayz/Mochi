@@ -22,6 +22,7 @@ mod platform;
 mod selfinstall;
 mod playtime;
 mod process;
+mod savebackup;
 mod sources;
 mod soundpacks;
 mod steam_achievements;
@@ -336,6 +337,7 @@ fn main() {
             modprofiles::read_tofu_manifest, modprofiles::write_tofu_manifest, modprofiles::restore_instance_records, modprofiles::apply_tofu_mods, nxm::get_nxm_handler, nxm::set_nxm_handler,
             modsnapshot::create_tofu_snapshot, modsnapshot::list_tofu_snapshots, modsnapshot::restore_tofu_snapshot, modsnapshot::delete_tofu_snapshot,
             gamelogs::list_game_logs, gamelogs::read_game_log, gamelogs::clear_game_logs,
+            savebackup::list_save_locations, savebackup::create_save_backup, savebackup::list_save_backups, savebackup::restore_save_backup, savebackup::delete_save_backup, savebackup::auto_backup_saves, savebackup::get_save_backup_settings, savebackup::set_save_backup_settings,
             selfinstall::self_install_status, selfinstall::self_install_verify, selfinstall::self_install_apply, selfinstall::self_install_skip,
         ])
         .build(tauri::generate_context!())
