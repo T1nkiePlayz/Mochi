@@ -1,0 +1,69 @@
+/* Hades — the House of Hades. Obsidian halls, blood-red trim, gilded double borders and a subtle
+ * Greek-key band under headings. Cheap: gradients and one tiny SVG tile; the only animation is a slow
+ * ember glow on the Play button, disabled under prefers-reduced-motion. */
+
+@keyframes hades-ember { 0%, 100% { box-shadow: inset 0 1px 0 rgba(255, 200, 170, .35), 0 2px 0 #000, 0 0 14px rgba(212, 32, 44, .4); } 50% { box-shadow: inset 0 1px 0 rgba(255, 200, 170, .35), 0 2px 0 #000, 0 0 28px rgba(255, 74, 58, .65); } }
+
+.sidebar { border-right: 2px solid #b8893a; box-shadow: inset -1px 0 0 #000, 4px 0 30px rgba(0, 0, 0, .65); }
+.brand strong { font-size: 22px; letter-spacing: .14em; text-transform: uppercase; color: #f2c96b; }
+.brand span { font-family: var(--mochi-font-display); letter-spacing: .12em; }
+.brand-mark { border-radius: 3px; background: #24100f; border: 2px solid #b8893a; box-shadow: inset 0 0 0 1px #000, 0 0 16px rgba(212, 32, 44, .4); }
+.nav-item { font-family: var(--mochi-font-display); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; border-radius: 2px; min-height: 42px; }
+.nav-item.active { border-color: rgba(184, 137, 58, .55); color: #f2c96b; }
+.sidebar-account { border: 1px solid #4a3018; background: rgba(0, 0, 0, .28); border-radius: 3px; }
+.account-avatar { border-radius: 3px; border: 2px solid #b8893a; }
+
+.topbar { background: linear-gradient(180deg, rgba(0, 0, 0, .45), transparent); border-bottom: 1px solid #4a3018; box-shadow: 0 1px 0 rgba(242, 201, 107, .08); }
+.breadcrumb strong { font-family: var(--mochi-font-display); letter-spacing: .08em; color: #f2c96b; }
+.page-heading h1 { font-size: 34px; position: relative; padding-bottom: 18px; }
+.page-heading h1::after, .section-heading::after { content: ""; position: absolute; left: 0; bottom: 0; width: 192px; height: 10px; opacity: .8;
+  background: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='10' viewBox='0 0 24 10'%3E%3Cpath d='M0 9.5H5.5V1.5H17.5V7H11.5V4.5H14.5' fill='none' stroke='%23b8893a' stroke-width='1.2'/%3E%3Cpath d='M17.5 9.5H24' fill='none' stroke='%23b8893a' stroke-width='1.2'/%3E%3C/svg%3E") repeat-x left center / 24px 10px; }
+.eyebrow { color: #c9a24f; }
+.section-heading h3, .settings-group-heading strong { font-family: var(--mochi-font-display); letter-spacing: .1em; text-transform: uppercase; font-size: 15px; color: #f2c96b; }
+.section-heading { border-bottom: 1px solid #4a3018; padding-bottom: 14px; position: relative; }
+.section-heading::after { width: 96px; bottom: -5px; opacity: .55; }
+
+/* Gilded double borders: thin gold line inset inside the surface border (no extra DOM) */
+.settings-group, .game-details-section, .modrinth-manager, .continue-card, .setup-panel, .notification-popover, .account-menu { border-radius: 3px; box-shadow: inset 0 0 0 3px #150a0c, inset 0 0 0 4px rgba(184, 137, 58, .45); }
+.modal { border-radius: 4px; }
+.game-card { border-radius: 3px; }
+.game-card .game-card-art { border: 1px solid #000; box-shadow: 0 0 0 1px #4a3018; }
+.game-card:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 3px #1a0c0e, inset 0 0 0 4px rgba(242, 201, 107, .6), 0 12px 28px rgba(0, 0, 0, .65), 0 0 22px rgba(212, 32, 44, .25); }
+.game-card-copy { background: transparent; }
+.game-card-copy strong { font-family: var(--mochi-font-display); letter-spacing: .04em; }
+.game-card-play, .continue-play { border-radius: 2px; }
+.continue-art, .game-details-cover { border-radius: 2px; border: 1px solid #b8893a; }
+.hero-card h2, .game-details-title h2 { text-transform: uppercase; letter-spacing: .08em; }
+.category-count, .game-details-badges span { border-radius: 2px; background: rgba(0, 0, 0, .35); border-color: #7a5a2c; color: #efe3cf; }
+.running-badge { color: #3fc48a; border-color: #3fc48a !important; }
+.library-toolbar { border-bottom-color: #4a3018; }
+.workspace-tabs button { font-family: var(--mochi-font-display); text-transform: uppercase; letter-spacing: .1em; font-size: 11px; border: 1px solid transparent; border-radius: 2px; }
+.workspace-tabs button.active { border-color: #b8893a; box-shadow: none; color: #f2c96b; background: rgba(212, 32, 44, .2); }
+
+.toggle { appearance: none; position: relative; width: 44px; height: 22px; border: 1px solid #7a5a2c; background: #0d0708; border-radius: 2px; box-shadow: inset 0 2px 6px #000; }
+.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; background: #a8927a; border-radius: 1px; transition: transform 140ms ease; }
+.toggle:checked { border-color: #f2c96b; background: rgba(212, 32, 44, .4); }
+.toggle:checked::after { transform: translateX(22px); background: #f2c96b; box-shadow: 0 0 10px rgba(242, 201, 107, .7); }
+.setup-shell { background: var(--mochi-app-background); }
+.setup-orbit { border-color: rgba(212, 32, 44, .14); }
+.setup-progress span.active, .download-progress > span { background: linear-gradient(90deg, #d4202c, #ff4a3a); }
+.danger-outline, .stop-button { color: #ff6a6a; border-color: #ff4a4a; }
+.danger-outline:hover:not(:disabled), .stop-button:hover:not(:disabled) { background: #a31520; color: #fff5ea; }
+::selection { background: #d4202c; color: #fff5ea; }
+
+/* Slow ember glow on the primary action (Play) */
+.play-button:not(:disabled), .bp-root .bp-play:not(:disabled):not(.bp-stop) { animation: hades-ember 4.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .play-button, .bp-root .bp-play { animation: none !important; }
+}
+
+/* Big Picture */
+.bp-root .bp-play { border-radius: 3px; text-transform: uppercase; letter-spacing: .14em; font-family: var(--mochi-font-display); }
+.bp-root .bp-secondary { border-color: #8a6428; color: #f2c96b; }
+.bp-root .bp-card:focus-visible, .bp-root .bp-card:hover { outline: 2px solid #f2c96b; outline-offset: 2px; }
+
+/* Form select and component dressing */
+[data-mochi-theme="hades"] .mochi-select-trigger { box-shadow: var(--mochi-input-shadow), inset 0 0 0 1px rgba(184, 137, 58, .35); }
+[data-mochi-theme="hades"] .mochi-select-popover { border-color: #b8893a; box-shadow: inset 0 0 0 3px #140a0b, inset 0 0 0 4px rgba(184, 137, 58, .45), 0 18px 40px rgba(0, 0, 0, .8); }
+[data-mochi-theme="hades"] .mochi-select-option.active { background: rgba(212, 32, 44, .26); color: #fff5e2; }
+[data-mochi-theme="hades"] .mochi-select-option.selected { color: #f2c96b; }
