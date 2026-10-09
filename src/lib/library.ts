@@ -2,10 +2,11 @@ import type { Piko, Tofu } from "../models";
 import type { PlaytimeEntry } from "./platform";
 import { migrateMinecraftPikos } from "./minecraftPiko";
 import { launcherArt } from "./launcherArt";
+import { isInBacklog } from "./backlog";
 import { launcherForPiko } from "./launchers";
 import { applyPikoKindOverride, overrideKeyForPiko, readOverrides, type KindOverrides } from "./launcherOverrides";
 
-export type SmartFilterId = "all" | "favorites" | "installed" | "recent" | "unplayed" | "most-played" | "launchers" | "running";
+export type SmartFilterId = "all" | "favorites" | "installed" | "recent" | "unplayed" | "most-played" | "launchers" | "running" | "backlog";
 /** The one "primary" filter applied to the library: a smart filter, a source or a user collection. */
 export type LibraryFilter = { kind: "smart"; id: SmartFilterId } | { kind: "source"; id: string } | { kind: "collection"; id: string };
 
@@ -18,6 +19,7 @@ export const smartFilters: Array<{ id: SmartFilterId; label: string }> = [
   { id: "most-played", label: "Most played" },
   { id: "launchers", label: "Game launchers" },
   { id: "running", label: "Running" },
+  { id: "backlog", label: "Backlog" },
 ];
 
 export const defaultFilter: LibraryFilter = { kind: "smart", id: "all" };
@@ -50,6 +52,7 @@ export function matchesSmartFilter(piko: Piko, id: SmartFilterId, context: Filte
     case "most-played": return mostPlayed ? mostPlayed.has(piko.id) : (entry?.seconds ?? 0) > 0;
     case "launchers": return isLauncher(piko);
     case "running": return context.isRunning(piko.id);
+    case "backlog": return isInBacklog(piko);
     default: return true;
   }
 }

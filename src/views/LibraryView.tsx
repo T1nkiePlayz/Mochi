@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { CheckSquare, ChevronDown, ChevronRight, Gamepad2, LayoutGrid, List, Maximize2, Play, Plus, Rows3, SlidersHorizontal, Settings, Grid3x3, X } from "lucide-react";
+import { CheckSquare, ChevronDown, ChevronRight, Gamepad2, LayoutGrid, List, Maximize2, Play, Dices, Plus, Rows3, SlidersHorizontal, Settings, Grid3x3, X } from "lucide-react";
 import { BulkActionBar } from "../components/library/BulkActionBar";
 import { ConfirmDialog } from "../components/library/ConfirmDialog";
 import { CollectionManager } from "../components/library/CollectionManager";
@@ -11,6 +11,9 @@ import { cloudStatusFor } from "../lib/cloudStatus";
 import { removeGameShortcut } from "../lib/platform";
 import { cycleViewMode, readViewMode, viewModeLabel, viewModes, writeViewMode, type LibraryViewMode } from "../lib/libraryView";
 import { tagCounts } from "../lib/library";
+import { useWishlist } from "../lib/wishlist";
+import { WishlistPanel } from "../components/library/WishlistPanel";
+import { PickerDialog } from "../components/library/PickerDialog";
 import type { Piko } from "../models";
 import { GameArtwork } from "../components/GameArtwork";
 import { GameDetails } from "../components/GameDetails";
@@ -38,6 +41,9 @@ export function LibraryView() {
   const [selecting, setSelecting] = useState(false);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [showCollections, setShowCollections] = useState(false);
+  const [showWishlist, setShowWishlist] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const wishlist = useWishlist();
   const [view, setView] = useState<LibraryViewMode>(readViewMode);
   const changeView = (step: number) => setView((current) => { const next = cycleViewMode(current, step); writeViewMode(next); return next; });
   const ViewIcon = viewIcons[view];
@@ -100,6 +106,7 @@ export function LibraryView() {
       onToggleCollection={(collectionId, on) => lib.setCollectionMembership([details.id], collectionId, on)}
       onCreateCollection={(name) => collections.createCollection(name)}
       onTagsChange={(tags) => lib.updateGame(details.id, { tags })}
+      onBacklogChange={(backlog) => lib.updateGame(details.id, { backlog })}
       onOpenFolder={() => actions.openGameFolder(details)}
       onShortcut={() => void actions.addShortcut(details)}
       workspace={<>
@@ -153,7 +160,9 @@ export function LibraryView() {
       </article>)}</div>
       {actions.launchError && <p className="metadata-note">{actions.launchError}</p>}
     </section>}
-    <LibraryFilterBar lib={lib} collections={collections.collections} tags={allTags} onManageCollections={() => setShowCollections(true)} />
+    <LibraryFilterBar lib={lib} collections={collections.collections} tags={allTags} onManageCollections={() => setShowCollections(true)}
+      wishlist={{ active: showWishlist, count: wishlist.items.length, onToggle: () => setShowWishlist((on) => !on) }} />
+    {showWishlist ? <WishlistPanel /> : <>
     <section className="library-toolbar">
       <span className="library-count">{lib.visiblePikos.length} game{lib.visiblePikos.length === 1 ? "" : "s"}{search.trim() ? ` matching “${search.trim()}”` : ""}</span>
       <div className="library-toolbar-actions">
@@ -165,6 +174,7 @@ export function LibraryView() {
           <span className="view-switcher-dots" aria-hidden="true">{viewModes.map((mode) => <i key={mode.id} className={mode.id === view ? "on" : ""} />)}</span>
         </button>
         <span className="library-view-announce" role="status" aria-live="polite">{`${viewModeLabel(view)} view`}</span>
+        <button type="button" className="secondary-button" onClick={() => setShowPicker(true)}><Dices size={14} /> What should I play?</button>
         <button type="button" className={`secondary-button ${selecting ? "active" : ""}`} aria-pressed={selecting} onClick={() => (selecting ? endSelecting() : setSelecting(true))}><CheckSquare size={14} /> {selecting ? "Done selecting" : "Select"}</button>
         <div className="library-sort"><span>Sort by</span><Select<LibrarySort> label="Sort by" value={lib.librarySort} onChange={lib.setLibrarySort} align="end" options={[{ value: "category", label: "Category" }, { value: "name", label: "Name" }, { value: "recent", label: "Recently played" }, { value: "playtime", label: "Most played" }]} /></div>
       </div>
@@ -193,15 +203,19 @@ export function LibraryView() {
         selecting={selecting} checked={checked.has(piko.id)}
         onOpen={openGame} onToggleFavorite={toggleFavorite} onToggleChecked={toggleChecked} onMenu={openMenu} />)}</div>}
     </section>}
+    </>}
     {menu && menuGame && <GameContextMenu game={menuGame} x={menu.x} y={menu.y} collections={collections.collections} canOpenFolder={hasFolder(menuGame)}
       onClose={() => setMenu(null)}
       onPlay={() => { lib.selectPiko(menuGame); void actions.launchGame(menuGame); }}
       onFavorite={() => lib.toggleFavorite(menuGame.id)}
       onToggleCollection={(collectionId, on) => lib.setCollectionMembership([menuGame.id], collectionId, on)}
       onCreateCollection={(name) => collections.createCollection(name)}
+      onBacklog={(backlog) => lib.updateGame(menuGame.id, { backlog })}
       onEdit={() => app.setEditingGameId(menuGame.id)}
       onOpenFolder={() => actions.openGameFolder(menuGame)}
       onRemove={() => setRemoval([menuGame])} />}
+    {showPicker && <PickerDialog library={lib.library} context={{ playtime: lib.playtimeById, isInstalled: (piko) => Boolean(piko.executablePath) && lib.installed.get(piko.executablePath ?? "") !== false }}
+      onPlay={(piko) => { lib.selectPiko(piko); void actions.launchGame(piko); }} onClose={() => setShowPicker(false)} />}
     {showCollections && <CollectionManager state={collections} counts={collectionCounts} onClose={() => setShowCollections(false)} />}
     {removal && <ConfirmDialog title={removal.length === 1 ? `Remove ${removal[0].name}?` : `Remove ${removal.length} games?`} message="They are removed from your Mochi library only, with their Tofus, tags and collection memberships. Nothing is uninstalled and no game files are deleted." items={removal.map((game) => game.name)} confirmLabel={removal.length === 1 ? "Remove" : `Remove ${removal.length} games`} danger
       onCancel={() => setRemoval(null)}

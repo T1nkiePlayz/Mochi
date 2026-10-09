@@ -1,6 +1,7 @@
 import { normalizeTag } from "../../../lib/library";
 import { CollectionPicker } from "../CollectionPicker";
 import { TagEditor } from "../TagEditor";
+import { BacklogControl } from "../BacklogControl";
 import { applyPikoKindOverride, overrideKeyForPiko, setOverride, type KindOverride } from "../../../lib/launcherOverrides";
 import type { EditorContext } from "./types";
 
@@ -42,6 +43,9 @@ export function GeneralTab({ ctx }: { ctx: EditorContext }) {
       <input value={draft.platformCategory ?? ""} onChange={(event) => patch({ platformCategory: event.target.value || undefined })} placeholder="e.g. Steam, Heroic, Custom" maxLength={40} />
     </label>
     <div className="editor-suggestions" role="group" aria-label="Common categories">{COMMON_CATEGORIES.map((category) => <button type="button" key={category} className={`filter-chip ${draft.platformCategory === category ? "active" : ""}`} aria-pressed={draft.platformCategory === category} onClick={() => patch({ platformCategory: category })}>{category}</button>)}</div>
+    <div className="editor-field"><span className="editor-field-label">Backlog</span>
+      <BacklogControl value={draft.backlog} commit="change" onChange={(backlog) => patch({ backlog })} />
+    </div>
     <div className="editor-field"><span className="editor-field-label">Tags</span>
       <TagEditor tags={draft.tags ?? []} suggestions={ctx.tagSuggestions} onChange={(tags) => patch({ tags: tags.map(normalizeTag).filter(Boolean) })} />
     </div>

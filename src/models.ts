@@ -140,6 +140,8 @@ export type Piko = {
   favorite?: boolean;
   /** Ids of the user's collections this game belongs to. */
   collectionIds?: string[];
+  /** Backlog tracking ("Want to play", playing, finished, dropped). Local to this device (not part of the cloud schema). */
+  backlog?: { status: "want" | "playing" | "finished" | "dropped"; note?: string; addedAt: number };
   /** Where the artwork came from, so a refresh does not overwrite a user's own image. */
   artworkSource?: "igdb" | "steamgriddb" | "steam" | "custom" | "icon";
   /** Metadata the user edited by hand; automatic refreshes leave these alone. */

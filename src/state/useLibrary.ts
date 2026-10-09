@@ -184,7 +184,7 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
     library, setLibrary, selectedPikoId, setSelectedPikoId, selectedTofuId, setSelectedTofuId, gameDetailsId, setGameDetailsId,
     search, setSearch, librarySort, setLibrarySort, selectedPiko, selectedTofu, visiblePikos, extraPikos, groupedPikos, instancesByPiko, continuePlaying,
     selectPiko, updateGame, updateSelectedTofu, createTofu,
-    filter, setFilter, tagFilters, setTagFilters, toggleTagFilter, filterCounts, installed, searchedPikos,
+    filter, setFilter, tagFilters, setTagFilters, toggleTagFilter, filterCounts, installed, playtimeById, searchedPikos,
     toggleFavorite, setFavorites, setCollectionMembership, addTagToGames, removeGames,
   };
 }
