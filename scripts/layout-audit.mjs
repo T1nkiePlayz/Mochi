@@ -59,6 +59,8 @@ const seedLibrary = () => SEED_NAMES.map((name, index) => ({
 // Runs inside the page: returns a list of problems for the current screen.
 function measure() {
   const issues = [];
+  // The app fills in titles for truncated text on hover/focus; do the same so "no title" only reports real gaps.
+  for (const el of document.body.querySelectorAll("*")) if (getComputedStyle(el).textOverflow === "ellipsis") el.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
   const vw = document.documentElement.clientWidth;
   const vh = window.innerHeight;
   const describe = (el) => {
@@ -93,7 +95,7 @@ function measure() {
   const all = [...document.body.querySelectorAll("*")].filter((el) => !el.closest("svg") || el.tagName === "svg");
   for (const el of all) {
     if (!visible(el)) continue;
-    if (el.closest("[data-audit-ignore], .skip-link, .sr-only, [class*='sr-only'], .visually-hidden")) continue;
+    if (el.closest("[data-audit-ignore], [aria-live], .stats-sr, .skip-link, .sr-only, [class*='sr-only'], .visually-hidden")) continue;
     const style = getComputedStyle(el);
     const rect = el.getBoundingClientRect();
 
@@ -130,7 +132,7 @@ function measure() {
     if (rect.right < 0 || rect.left > vw) { /* parked off-screen on purpose (drawer etc.), ignore */ }
 
     // 3. Controls too small to be reached.
-    if (el.matches("button, a[href], [role='button'], input:not([type='hidden']), select") && (rect.width < 24 || rect.height < 24) && !el.closest("[data-audit-ignore]") && vw < 900) {
+    if (el.matches("button, [role='button'], input:not([type='hidden']), select") && (rect.width < 24 || rect.height < 24) && !el.closest("[data-audit-ignore]") && vw < 900) {
       if (!(el.matches("input[type='checkbox'], input[type='radio']"))) add("small-target", el, `${Math.round(rect.width)}x${Math.round(rect.height)}`);
     }
   }

@@ -1,0 +1,11 @@
+{
+  "src/components/setup/ThemeStep.tsx": 5,
+  "src/index.css": 99,
+  "src/styles/bridge.css": 1,
+  "src/styles/components.css": 3,
+  "src/styles/features/accessibility.css": 100,
+  "src/styles/features/bigpicture.css": 1,
+  "src/styles/features/editor.css": 8,
+  "src/styles/features/generated-art.css": 10,
+  "src/styles/features/select.css": 27
+}

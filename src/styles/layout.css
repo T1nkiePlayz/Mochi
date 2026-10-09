@@ -122,6 +122,34 @@
   .search-box input { min-width: 0 !important; width: 100%; }
   .notification-popover, .account-menu { max-width: calc(100vw - 16px); }
 
+  /* ---- Text and grids: wrap instead of widening the page ------------------------------------------------ */
+  body { overflow-wrap: anywhere; }
+  pre, code, kbd { overflow-wrap: anywhere; }
+  .theme-grid { grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr)) !important; }
+  .theme-card, .theme-card > *, .setting-row > *, .provider-credential-card, .provider-credential-card > * { min-width: 0; }
+  .breadcrumb { display: flex; align-items: center; }
+  .breadcrumb > span:first-child, .breadcrumb > .breadcrumb-slash { flex: 0 0 auto; }
+  .breadcrumb > strong { flex: 0 1 auto; min-width: 0; }
+  @media (max-width: 560px) {
+    .breadcrumb > span:first-child, .breadcrumb > .breadcrumb-slash { display: none; }
+  }
+  .game-card-copy, .game-card-copy > * { min-width: 0; }
+  .game-card-copy small, .game-card-tags { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .game-card-tags > span { display: inline; }
+  /* Small pointer targets: at least 24px tall (WCAG 2.5.8) whatever the theme's padding. */
+  .text-button, .stats-link, .clear-search { min-height: 24px; }
+  input[type="range"] { min-height: 24px; }
+
+  /* ---- Narrow windows: spend the width on content ------------------------------------------------------- */
+  @media (max-width: 900px) {
+    .content { padding-inline: clamp(12px, 3.5vw, 28px) !important; }
+    .topbar { padding-inline: clamp(10px, 3vw, 24px) !important; }
+  }
+  @media (max-width: 560px) {
+    .settings-group { padding: 14px 14px; }
+    .setting-row { padding-inline: 12px; flex-wrap: wrap; }
+  }
+
   /* ---- Dialogs: always inside the window, scroll inside ------------------------------------------------- */
   .modal-backdrop { padding: max(12px, var(--mochi-safe-top)) max(12px, var(--mochi-safe-right)) max(12px, var(--mochi-safe-bottom)) max(12px, var(--mochi-safe-left)) !important; box-sizing: border-box; overflow: hidden; }
   .modal-backdrop > .modal, .modal-backdrop > [role="dialog"], .modal-backdrop > section {
