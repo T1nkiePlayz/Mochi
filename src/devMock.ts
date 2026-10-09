@@ -139,7 +139,12 @@ const handlers: Record<string, Handler> = {
       return apiResult({ hits: all.slice(offset, offset + limit), offset, limit, total_hits: all.length });
     }
     if (/\/members$/.test(url.pathname)) return apiResult([]);
-    if (/\/version$/.test(url.pathname)) return apiResult([]);
+    if (/\/version$/.test(url.pathname)) {
+      const project = url.pathname.split("/").slice(-2)[0] ?? "";
+      // One real-looking Sodium version so the modpack import preview shows a ready mod next to unavailable ones.
+      return apiResult(project === "AANobbMI" ? [{ id: "v1", project_id: project, name: "Sodium 0.6.0", version_number: "0.6.0", game_versions: ["1.21.1"], loaders: ["fabric"], featured: true, date_published: "2025-01-01T00:00:00Z", dependencies: [],
+        files: [{ hashes: { sha1: "a".repeat(40) }, url: "https://cdn.modrinth.com/data/AANobbMI/versions/v1/sodium-0.6.0.jar", filename: "sodium-0.6.0.jar", primary: true, size: 912_000 }] }] : []);
+    }
     const id = decodeURIComponent(url.pathname.split("/").pop() || "");
     return apiResult({ ...fakeProjects("mod")[0], project_id: id, title: id, body: "Generated project description.", followers: 1200 });
   },

@@ -14,6 +14,7 @@ import { Checkbox, Field, Switch } from "./ui/Checkbox";
 import { ModFolderEditor } from "./mods/ModFolderEditor";
 import { LinkedPackSection } from "./mods/LinkedPackSection";
 import { TofuSnapshotsSection } from "./mods/TofuSnapshotsSection";
+import { TofuShareSection } from "./mods/TofuShareSection";
 
 type Props = {
   piko: Piko;
@@ -60,6 +61,15 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
       ...(selected.gameDir ? { path: selected.gameDir, gameDir: selected.gameDir, contentRoot: selected.contentRoot, loader: selected.loader } : {}) };
     onChange([...tofus, tofu]);
     onSelect(tofu.id);
+  };
+  /** A new Tofu on the current game folder for an imported modpack; null without a folder (nothing to install into). */
+  const createImported = (name: string, version?: string, loader?: Tofu["loader"]): Tofu | null => {
+    if (!selected.gameDir) return null;
+    const tofu: Tofu = { id: newId(name), name: name.slice(0, 60), version: version || selected.version, runtime: "Native", mods: 0, status: "Ready", launch: defaultLaunchConfig(),
+      path: selected.gameDir, gameDir: selected.gameDir, contentRoot: selected.contentRoot, loader: loader ?? selected.loader };
+    onChange([...tofus, tofu]);
+    onSelect(tofu.id);
+    return tofu;
   };
   const duplicate = () => {
     const copy: Tofu = { ...selected, id: newId(selected.name), name: `${selected.name} copy`, activeProfileId: undefined, profiles: (selected.profiles ?? []).map((profile) => ({ ...profile })), launch: { ...launch, wrappers: [...launch.wrappers] } };
@@ -122,6 +132,10 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
           {checked?.tofuId === selected.id && checked.issues.length > 0 && <ConflictIssues issues={checked.issues} tofu={selected} onFixed={runCheck} />}
           <Checkbox checked={selected.skipModCheck !== true} onChange={(on) => patch({ skipModCheck: on ? undefined : true })} label="Check mods before launching" description="Shows a warning with fixes first. You can always launch anyway." />
         </Section>}
+
+        <Section title="Share" description="Export this Tofu's mod list as a small .mochipack file or code (ids and hashes only), or import one.">
+          <TofuShareSection piko={piko} tofu={selected} onCreateTofu={createImported} />
+        </Section>
 
         <Section title="Launch settings">
           {compat.length > 0 && <Field label="Compatibility runtime" hint="Used for Windows programs (.exe). Native games ignore it."><Select value={launch.runtime ?? ""} onChange={(value) => patchLaunch({ runtime: value || undefined })} label="Compatibility runtime" searchable={false} options={[{ value: "", label: "Automatic" }, ...compat.map((runtime) => ({ value: runtime.id, label: runtime.name }))]} /></Field>}

@@ -28,6 +28,8 @@ export const instanceHandlers: Record<string, Handler> = {
   restore_tofu_snapshot: () => ({ restored: 4, removed: 1, unchanged: 36, safetySnapshotId: "s3" }),
   delete_tofu_snapshot: (args) => { snapshots = snapshots.filter((snapshot) => snapshot.id !== args.snapshotId); return null; },
   list_instance_mods: (args) => mods.map((mod) => ({ ...mod, modifiedMs: 1_700_000_000_000, foreign: Array.isArray(args.siblings) && mod.filename.startsWith("other-tofu") })),
+  write_mochipack_file: (args) => String(args.path),
+  read_mochipack_file: () => { throw new Error("Dev mock: paste a code instead."); },
   list_instance_records: () => mods.filter((mod) => mod.record).map((mod) => mod.record),
   hash_mod_files: (args) => (args.paths as string[]).map((path, index) => ({ path, filename: path.split("/").pop(), size: 1000, sha1: `${index}`.padStart(40, "a"), md5: `${index}`.padStart(32, "b"), fingerprint: 1000 + index })),
   modrinth_identify: () => ({}),
