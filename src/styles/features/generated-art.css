@@ -26,9 +26,7 @@
 .bp-art.generated-art { --art-mark-size: 30cqw; }
 .bp-art.generated-art .generated-art-source { width: 1.6rem; height: 1.6rem; right: .8rem; bottom: 3.2rem; }
 
-/* Library cards without artwork: a compact banner instead of a tall empty cover. */
-.game-card.no-art { align-self: start; }
-.game-card.no-art .game-card-art { aspect-ratio: 16 / 7; --art-mark-size: 22cqw; }
+/* Library cards without artwork keep the normal cover box so they match their neighbours in every view. */
 
 /* Game details without artwork: a small square badge beside the title instead of a tall empty cover. */
 .game-details-hero.no-art { grid-template-columns: 112px minmax(0, 1fr); }

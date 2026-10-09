@@ -4,6 +4,7 @@ import { readJson, storageKeys, writeJson, writeString, readString } from "../li
 import { pikoSearchMatcher } from "../lib/search";
 import type { PlaytimeEntry } from "../lib/platform";
 import { sanitizeFilter, sanitizeLibrary, matchesFilter, mostPlayedIds, smartFilters, sourceLabel, sourceOf, toggleInList, withTag, type FilterContext, type LibraryFilter, type SmartFilterId } from "../lib/library";
+import { placeholdersLast } from "../lib/fallbackArt";
 import { useInstalledStatus } from "./useInstalledStatus";
 
 export type LibrarySort = "category" | "name" | "recent" | "playtime";
@@ -81,7 +82,7 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
         librarySort === "name" ? a.name.localeCompare(b.name)
           : librarySort === "recent" ? (byId.get(b.id)?.lastPlayed ?? 0) - (byId.get(a.id)?.lastPlayed ?? 0)
           : (byId.get(b.id)?.seconds ?? 0) - (byId.get(a.id)?.seconds ?? 0));
-      return [[librarySort === "name" ? "All games" : librarySort === "recent" ? "Recently played" : "Most played", sorted] as [string, Piko[]]];
+      return [[librarySort === "name" ? "All games" : librarySort === "recent" ? "Recently played" : "Most played", placeholdersLast(sorted)] as [string, Piko[]]];
     }
     const groups = new Map<string, Piko[]>();
     visiblePikos.forEach((piko) => {
@@ -89,9 +90,9 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
       const group = groups.get(category);
       if (group) group.push(piko); else groups.set(category, [piko]);
     });
-    // Favourites are pinned to the top of their category (the sort is stable).
+    // Favourites are pinned to the top of their category, then games with metadata before placeholder-art games (both stable).
     return [...groups.entries()].sort(([x], [y]) => x.localeCompare(y))
-      .map(([category, games]) => [category, [...games].sort((a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite)))] as [string, Piko[]]);
+      .map(([category, games]) => [category, [...placeholdersLast(games.filter((game) => game.favorite)), ...placeholdersLast(games.filter((game) => !game.favorite))]] as [string, Piko[]]);
   }, [visiblePikos, librarySort, playtimeById]);
 
   const continuePlaying = useMemo(() => {

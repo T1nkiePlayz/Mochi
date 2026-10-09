@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { artworkBackground, hasArtwork, hueOf, initialsOf } from "./fallbackArt";
+import { artworkBackground, hasArtwork, hasMetadata, hueOf, initialsOf, placeholdersLast } from "./fallbackArt";
 
 describe("initialsOf", () => {
   it("takes the first letters of significant words", () => {
@@ -43,5 +43,20 @@ describe("hasArtwork", () => {
     expect(hasArtwork({ artwork: "", artworkUrl: "https://x/y.jpg" })).toBe(true);
     expect(hasArtwork({ artwork: "", artworkSource: "custom" })).toBe(true);
     expect(hasArtwork({ artwork: "/a/b.svg" })).toBe(true);
+  });
+});
+
+describe("placeholdersLast", () => {
+  const art = { artwork: "", artworkUrl: "https://x/y.jpg" };
+  const bare = { artwork: "" };
+  it("treats art or an IGDB match as metadata", () => {
+    expect(hasMetadata(art)).toBe(true);
+    expect(hasMetadata({ ...bare, igdbId: 5 })).toBe(true);
+    expect(hasMetadata(bare)).toBe(false);
+  });
+  it("moves placeholders after games with metadata and keeps each side's order", () => {
+    const list = [{ ...bare, n: "a" }, { ...art, n: "b" }, { ...bare, n: "c" }, { ...art, n: "d" }, { ...bare, n: "e" }];
+    expect(placeholdersLast(list).map((g) => g.n)).toEqual(["b", "d", "a", "c", "e"]);
+    expect(list.map((g) => g.n)).toEqual(["a", "b", "c", "d", "e"]);
   });
 });

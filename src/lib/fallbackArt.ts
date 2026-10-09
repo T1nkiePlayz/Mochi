@@ -21,6 +21,16 @@ export function hasArtwork(piko: Pick<Piko, "artwork" | "artworkUrl" | "artworkS
   return Boolean(piko.artworkUrl || piko.artworkSource || artworkBackground(piko.artwork));
 }
 
+/** True when the game has real metadata (cover art or an IGDB match); false means the card shows generated placeholder art. */
+export function hasMetadata(piko: Pick<Piko, "artwork" | "artworkUrl" | "artworkSource" | "igdbId">): boolean {
+  return hasArtwork(piko) || Boolean(piko.igdbId);
+}
+
+/** Stable partition: games with metadata first, placeholder-art games after, each keeping their existing relative order. */
+export function placeholdersLast<T extends Parameters<typeof hasMetadata>[0]>(games: readonly T[]): T[] {
+  return [...games.filter(hasMetadata), ...games.filter((game) => !hasMetadata(game))];
+}
+
 const SKIP = new Set(["the", "a", "an", "of", "and"]);
 
 /** One or two capital letters for a game name: "Half-Life 2" gives "H2", "The Witcher 3" gives "W3". */
