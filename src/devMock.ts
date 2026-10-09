@@ -153,6 +153,27 @@ const handlers: Record<string, Handler> = {
   delete_game_artwork: (args) => { const store = mockArtwork(); delete store[String(args.cacheKey)]; localStorage.setItem("mochi:dev-artwork", JSON.stringify(store)); return null; },
   get_cached_game_artwork: (args) => mockArtwork()[String(args.cacheKey)] ?? null,
   cache_game_artwork: () => null,
+  // Paths answer with SVG markup (as real .svg icons do); the PNG the page rasterised becomes a 600x800 cover.
+  cache_icon_cover: async (args) => {
+    const key = String(args.cacheKey);
+    const source = String(args.source);
+    if (!args.replace && mockArtwork()[key]) return { cover: mockArtwork()[key], svg: null };
+    if (source.startsWith("/")) {
+      const letter = (source.split("/").pop() ?? "?").charAt(0).toUpperCase();
+      return { cover: null, svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="#4a90d9"/><text x="32" y="42" font-size="28" text-anchor="middle" fill="#fff" font-family="sans-serif">${letter}</text></svg>` };
+    }
+    const image = await loadMockImage(source);
+    const canvas = document.createElement("canvas");
+    canvas.width = 600; canvas.height = 800;
+    const context = canvas.getContext("2d")!;
+    const gradient = context.createLinearGradient(0, 0, 0, 800);
+    gradient.addColorStop(0, "#2a3f57"); gradient.addColorStop(1, "#0c1219");
+    context.fillStyle = gradient; context.fillRect(0, 0, 600, 800);
+    context.drawImage(image, 150, 220, 300, 300);
+    const url = canvas.toDataURL("image/jpeg", 0.9);
+    const store = mockArtwork(); store[key] = url; localStorage.setItem("mochi:dev-artwork", JSON.stringify(store));
+    return { cover: url, svg: null };
+  },
   "plugin:dialog|open": (args) => {
     const options = (args.options ?? {}) as { filters?: Array<{ name: string }>; directory?: boolean };
     if (options.directory) return "/home/dev/Games";
@@ -181,8 +202,8 @@ const handlers: Record<string, Handler> = {
     ];
     if (args.source === "heroic") return ["Hades", "Celeste", "Control", "Dishonored 2", "Fez", "Inside"].map((name) => ({ id: `heroic:${name}`, name, source: "heroic", launchTarget: `heroic://launch?appName=${name}`, installPath: `/games/heroic/${name}`, kind: "game", launcherId: null }));
     if (args.source === "apps") return [
-      { id: "apps:supertux", name: "SuperTux", source: "apps", launchTarget: "supertux2", installPath: null, kind: "game", launcherId: null },
-      { id: "apps:xonotic", name: "Xonotic", source: "apps", launchTarget: "xonotic", installPath: null, kind: "game", launcherId: null },
+      { id: "apps:supertux", name: "SuperTux", source: "apps", launchTarget: "supertux2", installPath: null, kind: "game", launcherId: null, iconPath: "/usr/share/icons/hicolor/scalable/apps/supertux.svg" },
+      { id: "apps:xonotic", name: "Xonotic", source: "apps", launchTarget: "xonotic", installPath: null, kind: "game", launcherId: null, iconPath: "/usr/share/icons/hicolor/256x256/apps/xonotic.png" },
       { id: "apps:prism", name: "Prism Launcher", source: "apps", launchTarget: "prismlauncher", installPath: null, kind: "launcher", launcherId: "prism" },
       { id: "apps:jagex", name: "Jagex Launcher", source: "apps", launchTarget: "jagex-launcher", installPath: null, kind: "launcher", launcherId: "jagex" },
       { id: "apps:mcpe", name: "Minecraft Bedrock Launcher", source: "apps", launchTarget: "mcpelauncher-ui-qt", installPath: null, kind: "launcher", launcherId: "minecraft-bedrock" },

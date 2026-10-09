@@ -24,6 +24,8 @@ export type ImportedGame = {
   kind?: "game" | "launcher";
   /** Which known launcher a launcher entry is, for its artwork. */
   launcherId?: string | null;
+  /** The entry's own icon file (desktop entry `Icon=`, app bundle `.icns`), drawn as a fallback cover. */
+  iconPath?: string | null;
 };
 
 export const detectImportSources = () => invoke<DetectedImportSource[]>("detect_import_sources");

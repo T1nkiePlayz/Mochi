@@ -11,6 +11,7 @@ import {
   type ArtChoice, type MetadataChoice, type ProviderId, type ProviderResult,
 } from "../lib/metadata/index";
 import type { Piko } from "../models";
+import { applyLauncherLogos } from "../lib/iconCover";
 
 type Params = {
   user: User | null;
@@ -162,6 +163,7 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
       const candidates = library.filter((piko) => piko.kind !== "launcher" && anyProvider(piko, only));
       notify(`${only ? label : "Metadata"} refresh started`, `Refreshing ${label === "metadata" ? "metadata" : `${label} data`} for ${candidates.length} library games.`);
       await enrich(candidates, { force: true, only });
+      if ((!only || only === "igdb") && ready.igdb) await refreshLauncherLogos(library);
       notify(`${only ? label : "Metadata"} refresh finished`, `Updated ${label === "metadata" ? "metadata" : `${label} data`} for ${candidates.length} library games.`);
     } catch (error) {
       notify("Metadata refresh failed", error instanceof Error ? error.message : "Could not refresh game metadata.");
@@ -171,8 +173,22 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
   /** How many library games each provider could refresh right now (0 means its button stays disabled). */
   const refreshableCount = (library: Piko[], only: ProviderId) => library.filter((piko) => piko.kind !== "launcher" && anyProvider(piko, only)).length;
 
+  /** Launchers are not games: instead of a game lookup (which would bring a trailer and a wrong name) they get their company's IGDB logo. */
+  const refreshLauncherLogos = async (pikos: Piko[]): Promise<number> => {
+    if (!supabase || !ready.igdb) return 0;
+    const done = await applyLauncherLogos(supabase, pikos);
+    if (done.size) setLibrary((current) => current.map((piko) => (done.has(piko.id) && piko.artworkSource !== "custom" ? { ...piko, artworkSource: "igdb", artworkUrl: undefined, trailerId: undefined } : piko)));
+    return done.size;
+  };
+
   /** Re-fetches one game, ignoring cached lookups. Never rejects. */
   const refreshGame = async (piko: Piko): Promise<void> => {
+    if (piko.kind === "launcher") {
+      if (!ready.igdb) { notify("IGDB not ready", "Save your IGDB keys in Settings to fetch launcher logos."); return; }
+      const count = await refreshLauncherLogos([piko]);
+      notify(count ? "Logo updated" : "No logo found", count ? `${piko.name} now shows its company logo from IGDB.` : `IGDB has no company logo for ${piko.name}.`);
+      return;
+    }
     if (!anyProvider(piko)) { notify("No metadata source ready", "Save an IGDB or SteamGridDB key in Settings, or pick a Steam game."); return; }
     try {
       const updated = await run([piko], { force: true });

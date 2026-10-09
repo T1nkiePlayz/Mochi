@@ -5,6 +5,7 @@ import { lookupIgdbGames, type IgdbGame } from "../lib/igdb";
 import { importedGameToPiko } from "../lib/importMapping";
 import { applyIgdbMetadata, sanitizeKey } from "../lib/metadata";
 import { cacheArtwork } from "./useMetadata";
+import { applyIconCovers, applyLauncherLogos } from "../lib/iconCover";
 import { saveCustomArtwork } from "../lib/artwork";
 import type { ArtworkSelection } from "../components/artwork/ArtworkPicker";
 import { listInstalledFlatpaks, normalizeLaunchTarget, chooseGameAppBundle, chooseGameTarget, type FlatpakApp, type LaunchMethodId } from "../lib/platform";
@@ -134,12 +135,27 @@ export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: 
   const importGames = (games: ImportedGame[]) => {
     const now = Date.now();
     const known = new Set(lib.library.map((piko) => piko.name.trim().toLowerCase()));
-    const created = games.filter((game) => !known.has(game.name.trim().toLowerCase())).map((game) => importedGameToPiko(game, now));
+    const fresh = games.filter((game) => !known.has(game.name.trim().toLowerCase()));
+    const created = fresh.map((game) => importedGameToPiko(game, now));
     lib.setLibrary((current) => [...current, ...created.filter((piko) => !current.some((item) => item.id === piko.id))]);
-    if (created.length) void metadata.enrich(created.filter((piko) => piko.kind !== "launcher"));
+    if (created.length) void finishImport(created, new Map(created.flatMap((piko, index) => (fresh[index].iconPath && piko.kind !== "launcher" ? [[piko.id, fresh[index].iconPath!]] : []))));
     if (created[0]) { lib.setSelectedPikoId(created[0].id); lib.setSelectedTofuId("default"); }
     setShowAddPiko(false);
     setShowImportPicker(false);
+  };
+
+  /**
+   * After an import: games get a cover drawn from their own icon first (so they never look blank,
+   * even offline), launchers their company's IGDB logo, then metadata lookups may replace the icons.
+   */
+  const finishImport = async (created: Piko[], icons: Map<string, string>) => {
+    const withIcons = await applyIconCovers(created, icons);
+    const logos = supabase && metadata.ready.igdb ? await applyLauncherLogos(supabase, created) : new Set<string>();
+    const sourceOf = (piko: Piko): Piko["artworkSource"] => (logos.has(piko.id) ? "igdb" : withIcons.has(piko.id) ? "icon" : piko.artworkSource);
+    if (withIcons.size || logos.size) {
+      lib.setLibrary((current) => current.map((piko) => ((withIcons.has(piko.id) || logos.has(piko.id)) && !piko.artworkSource ? { ...piko, artworkSource: sourceOf(piko) } : piko)));
+    }
+    await metadata.enrich(created.filter((piko) => piko.kind !== "launcher").map((piko) => (withIcons.has(piko.id) ? { ...piko, artworkSource: "icon" as const } : piko)));
   };
 
   const loadFlatpaks = async () => {
