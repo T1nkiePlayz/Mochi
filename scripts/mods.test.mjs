@@ -100,7 +100,8 @@ test("resolveSources applies source priority", async () => {
   assert.deepEqual(resolveSources(both, allSourcesOn), ["curseforge"]);
   assert.deepEqual(resolveSources(both, { ...allSourcesOn, curseforge: false }), ["nexus"]);
   assert.deepEqual(resolveSources({ nexus: true, nexusKey: true }, allSourcesOn), ["nexus"]);
-  assert.deepEqual(resolveSources({ nexus: true, nexusKey: false }, allSourcesOn), []);
+  // Browsing Nexus needs no key (public GraphQL catalog), so a game on Nexus resolves to it either way.
+  assert.deepEqual(resolveSources({ nexus: true, nexusKey: false }, allSourcesOn), ["nexus"]);
   assert.deepEqual(resolveSources({ nexus: true, nexusKey: true }, { ...allSourcesOn, nexus: false }), []);
   assert.deepEqual(resolveSources({ curseforge: true }, { ...allSourcesOn, curseforge: false, nexus: false }), []);
   assert.deepEqual(resolveSources({ minecraft: true }, allSourcesOn), ["modrinth", "curseforge"]);
