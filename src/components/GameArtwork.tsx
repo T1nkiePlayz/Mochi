@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { ARTWORK_CHANGED_EVENT } from "../lib/artwork";
 import { loadArtwork, peekArtwork } from "../lib/artworkCache";
 import { cssUrl } from "../lib/metadata/merge";
+import { artworkBackground, generatedArt } from "../lib/fallbackArt";
+import type { Piko } from "../models";
+import { GeneratedMarks, generatedStyle } from "./GeneratedArt";
 
 /** Resolves true once the element is (nearly) on screen, so off-screen covers in a long library are not loaded. */
 function useNearViewport(ref: React.RefObject<HTMLElement>, skip: boolean) {
@@ -15,7 +18,8 @@ function useNearViewport(ref: React.RefObject<HTMLElement>, skip: boolean) {
   return near;
 }
 
-export function GameArtwork({ className, cacheKey, fallback }: { className: string; cacheKey?: string; fallback: string }) {
+/** The game's cover, or a generated local cover (its initials on a colour taken from its name) when there is none. Never an empty box. */
+export function GameArtwork({ className, cacheKey, fallback, name, kind, sourceId }: { className: string; cacheKey?: string; fallback: string; name?: string } & Pick<Piko, "kind" | "sourceId">) {
   const ref = useRef<HTMLDivElement>(null);
   const [cached, setCached] = useState(() => (cacheKey ? peekArtwork(cacheKey) ?? "" : ""));
   const [revision, setRevision] = useState(0);
@@ -36,7 +40,8 @@ export function GameArtwork({ className, cacheKey, fallback }: { className: stri
     void loadArtwork(cacheKey).then((value) => { if (!cancelled && value) setCached(value); });
     return () => { cancelled = true; };
   }, [cacheKey, revision, near]);
-  // Older libraries stored a hard-coded purple gradient as "no artwork"; let the theme's placeholder show instead.
-  const custom = fallback && !fallback.includes("rgba(73,57,103") ? fallback : undefined;
-  return <div ref={ref} className={className} style={{ backgroundImage: cached ? `linear-gradient(145deg, rgba(10,15,20,.12), rgba(11,15,20,.88)), ${cssUrl(cached)}` : custom }} />;
+  const background = cached ? `linear-gradient(145deg, rgba(10,15,20,.12), rgba(11,15,20,.88)), ${cssUrl(cached)}` : artworkBackground(fallback);
+  if (background || !name) return <div ref={ref} className={className} style={{ backgroundImage: background }} />;
+  const art = generatedArt({ name, kind, sourceId });
+  return <div ref={ref} className={`${className} generated-art${art.launcher ? " is-launcher" : ""}`} style={generatedStyle(art)} data-generated-art=""><GeneratedMarks art={art} /></div>;
 }

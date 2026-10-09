@@ -11,3 +11,6 @@
 .setup-panel { background: #ffffff; border-color: var(--mochi-border); box-shadow: 0 30px 90px rgba(30, 55, 43, .18); }
 .setup-footer { background: #f7faf8; border-top-color: var(--mochi-border); }
 .setup-orbit { border-color: rgba(79, 146, 113, .14); }
+
+/* Generated covers: soft pastels with dark lettering */
+:root { --mochi-art-saturation: 50%; --mochi-art-lightness: 76%; --mochi-art-text: #2b2740; }

@@ -1,0 +1,10 @@
+/* Settings > Data & privacy: one row per data source. */
+.data-source-list { display: grid; gap: 8px; margin-top: 4px; }
+.data-source-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; padding: 12px 14px; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-radius-md); background: var(--mochi-surface); }
+.data-source-row strong { display: block; color: var(--mochi-text-strong); font-size: 13px; }
+.data-source-row small { display: block; margin-top: 2px; color: var(--mochi-text-muted); font-size: 11px; line-height: 1.45; }
+.data-source-state { grid-column: 1 / -1; margin: 0; color: var(--mochi-text-muted); font-size: 11px; }
+.data-source-state.ready { color: var(--mochi-success); }
+.data-source-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.data-source-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+@media (max-width: 700px) { .data-source-row { grid-template-columns: minmax(0, 1fr); } .data-source-actions { justify-content: flex-start; } }

@@ -1,0 +1,35 @@
+/* Generated covers: games without artwork get a colour taken from their name, big initials and their launcher's icon.
+ * Themes restyle them with --mochi-art-saturation, --mochi-art-lightness, --mochi-art-text, --mochi-art-font and may pin --mochi-art-hue. */
+.generated-art.generated-art {
+  --art-h: var(--mochi-art-hue, var(--art-hue, 260));
+  --art-s: var(--mochi-art-saturation, 46%);
+  --art-l: var(--mochi-art-lightness, 32%);
+  position: relative; display: grid; place-items: center; overflow: hidden; container-type: inline-size;
+  background-color: hsl(var(--art-h) var(--art-s) var(--art-l));
+  background-image:
+    radial-gradient(circle at 22% 16%, hsl(var(--art-h) var(--art-s) calc(var(--art-l) + 20%) / .55), transparent 58%),
+    radial-gradient(circle at 90% 100%, hsl(calc(var(--art-h) + 48) var(--art-s) calc(var(--art-l) - 8%) / .75), transparent 62%),
+    linear-gradient(150deg, hsl(var(--art-h) var(--art-s) calc(var(--art-l) + 4%)), hsl(calc(var(--art-h) + 28) var(--art-s) calc(var(--art-l) - 10%)));
+  background-size: cover; background-position: center;
+}
+.generated-art-mark {
+  font-family: var(--mochi-art-font); font-weight: 800; font-size: 2rem; font-size: var(--art-mark-size, 34cqw); line-height: 1; letter-spacing: .02em;
+  color: var(--mochi-art-text, #fff); text-shadow: 0 2px 0 rgba(0, 0, 0, .22), 0 6px 18px rgba(0, 0, 0, .28); user-select: none;
+}
+.generated-art-source { position: absolute; right: 8px; bottom: 8px; width: 20px; height: 20px; border-radius: 5px; opacity: .92; box-shadow: 0 1px 4px rgba(0, 0, 0, .4); background: rgba(255, 255, 255, .9); padding: 2px; }
+.generated-art.is-launcher .generated-art-mark { opacity: .55; }
+/* Small thumbnails: the mark alone, no badge. */
+.stat-thumb .generated-art-source, .inst-thumb .generated-art-source, .continue-art .generated-art-source, .artwork-current-cover .generated-art-source { display: none; }
+.stat-thumb, .inst-thumb, .continue-art { --art-mark-size: 40cqw; }
+/* The full-screen Big Picture backdrop only wants the colour. */
+.generated-art.is-backdrop .generated-art-mark { display: none; }
+.bp-art.generated-art { --art-mark-size: 30cqw; }
+.bp-art.generated-art .generated-art-source { width: 1.6rem; height: 1.6rem; right: .8rem; bottom: 3.2rem; }
+
+/* Library cards without artwork: a compact banner instead of a tall empty cover. */
+.game-card.no-art { align-self: start; }
+.game-card.no-art .game-card-art { aspect-ratio: 16 / 7; --art-mark-size: 22cqw; }
+
+/* Game details without artwork: a small square badge beside the title instead of a tall empty cover. */
+.game-details-hero.no-art { grid-template-columns: 112px minmax(0, 1fr); }
+.game-details-hero.no-art .game-details-cover { aspect-ratio: 1 / 1; --art-mark-size: 38cqw; }

@@ -170,6 +170,15 @@ fn cache_file(app: &AppHandle, appid: u32) -> Option<PathBuf> {
     Some(dir.join(format!("{appid}.json")))
 }
 
+/// Deletes every saved Steam store lookup (Settings > Data & privacy).
+#[tauri::command(async)]
+pub fn clear_steam_store_cache(app: AppHandle) -> Result<(), String> {
+    let Ok(base) = app.path().app_data_dir() else { return Ok(()) };
+    let dir = base.join("steam-store");
+    if dir.exists() { fs::remove_dir_all(&dir).map_err(|error| format!("Unable to clear saved Steam store data: {error}"))?; }
+    Ok(())
+}
+
 fn read_cache(path: &Option<PathBuf>) -> Option<CacheEntry> {
     serde_json::from_slice(&fs::read(path.as_ref()?).ok()?).ok()
 }

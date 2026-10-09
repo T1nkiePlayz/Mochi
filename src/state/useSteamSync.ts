@@ -25,7 +25,7 @@ export function useSteamSync(library: Piko[]) {
     for (let index = 0; index < ids.length && alive.current; index += 1) {
       const result = await getSteamAchievements(ids[index]);
       if (result.status === "ok") withData += 1;
-      else if (result.status === "private" || result.status === "no-steam-user" || result.status === "offline") { message = result.message || "Steam is unavailable."; break; }
+      else if (result.status === "private" || result.status === "no-steam-user" || result.status === "offline" || result.status === "rate-limited") { message = result.status === "rate-limited" ? "Steam is busy. Showing saved data; Mochi will try the rest later." : result.message || "Steam is unavailable."; break; }
       if (alive.current) setState({ running: true, done: index + 1, total: ids.length, message: "" });
       await new Promise((resolve) => window.setTimeout(resolve, GAP_MS));
     }

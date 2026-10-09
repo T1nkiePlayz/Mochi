@@ -12,7 +12,7 @@ const TRUSTED_HOSTS: &[&str] = &[
     "github.com", "githubusercontent.com", "github.io", "modrinth.com", "curseforge.com", "nexusmods.com",
     "steampowered.com", "steamcommunity.com", "youtube.com", "youtu.be", "youtube-nocookie.com",
     "igdb.com", "steamgriddb.com", "supabase.co", "discord.gg", "discord.com", "ko-fi.com", "patreon.com",
-    "twitter.com", "x.com", "reddit.com", "wikipedia.org", "gitlab.com", "itch.io",
+    "twitter.com", "x.com", "reddit.com", "wikipedia.org", "gitlab.com", "itch.io", "ashtontink.com", "mochi.ashtontink.com",
 ];
 
 #[derive(Debug, PartialEq, Eq)]
@@ -51,6 +51,13 @@ mod tests {
         assert!(matches!(evaluate("https://modrinth.com/mod/sodium"), Ok(UrlDecision::Open(_))));
         assert!(matches!(evaluate("https://www.curseforge.com/minecraft"), Ok(UrlDecision::Open(_))));
         assert!(matches!(evaluate("https://t1nkieplayz.github.io/Mochi-Website/#/signin"), Ok(UrlDecision::Open(_))));
+    }
+
+    #[test]
+    fn website_dashboard_opens_without_asking() {
+        assert!(matches!(evaluate("https://mochi.ashtontink.com/#/dashboard"), Ok(UrlDecision::Open(_))));
+        assert!(matches!(evaluate("https://ashtontink.com/"), Ok(UrlDecision::Open(_))));
+        assert!(!matches!(evaluate("https://evilashtontink.com/"), Ok(UrlDecision::Open(_))));
     }
 
     #[test]

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { CheckSquare, Gamepad2, Play, Plus, SlidersHorizontal, Settings, X } from "lucide-react";
+import { CheckSquare, Gamepad2, LayoutGrid, List, Maximize2, Play, Plus, Rows3, SlidersHorizontal, Settings, Grid3x3, X } from "lucide-react";
 import { BulkActionBar } from "../components/library/BulkActionBar";
 import { ConfirmDialog } from "../components/library/ConfirmDialog";
 import { CollectionManager } from "../components/library/CollectionManager";
@@ -7,6 +7,7 @@ import { GameCard } from "../components/library/GameCard";
 import { GameContextMenu } from "../components/library/GameContextMenu";
 import { LibraryFilterBar } from "../components/library/LibraryFilterBar";
 import { removeGameShortcut } from "../lib/platform";
+import { cycleViewMode, readViewMode, viewModeLabel, viewModes, writeViewMode, type LibraryViewMode } from "../lib/libraryView";
 import { tagCounts } from "../lib/library";
 import type { Piko } from "../models";
 import { GameArtwork } from "../components/GameArtwork";
@@ -21,6 +22,8 @@ import { useApp } from "../state/AppContext";
 import { usernameOf } from "../state/useAccount";
 import type { LibrarySort } from "../state/useLibrary";
 
+const viewIcons: Record<LibraryViewMode, typeof LayoutGrid> = { grid: LayoutGrid, compact: Grid3x3, list: List, shelves: Rows3, large: Maximize2 };
+
 const greeting = () => { const hour = new Date().getHours(); return hour < 5 || hour >= 18 ? "Good evening" : hour < 12 ? "Good morning" : "Good afternoon"; };
 
 export function LibraryView() {
@@ -32,6 +35,9 @@ export function LibraryView() {
   const [selecting, setSelecting] = useState(false);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [showCollections, setShowCollections] = useState(false);
+  const [view, setView] = useState<LibraryViewMode>(readViewMode);
+  const changeView = (step: number) => setView((current) => { const next = cycleViewMode(current, step); writeViewMode(next); return next; });
+  const ViewIcon = viewIcons[view];
   const [removal, setRemoval] = useState<Piko[] | null>(null);
   const allTags = useMemo(() => tagCounts(lib.library), [lib.library]);
   const menuGame = menu ? lib.library.find((piko) => piko.id === menu.gameId) : undefined;
@@ -116,7 +122,7 @@ export function LibraryView() {
       <div className="section-heading"><div><p className="eyebrow">Jump back in</p><h3>Continue playing</h3></div></div>
       <div className="continue-grid">{lib.continuePlaying.map(({ piko, entry }) => <article className="continue-card" key={piko.id}>
         <button type="button" className="continue-main" onClick={() => { lib.selectPiko(piko); lib.setGameDetailsId(piko.id); }}>
-          <GameArtwork className="continue-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} />
+          <GameArtwork className="continue-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} name={piko.name} kind={piko.kind} sourceId={piko.sourceId} />
           <span className="continue-copy"><strong>{piko.name}</strong><small>{sessions.isRunning(piko.id) ? "Running now" : `Last played ${formatRelativeTime(entry.lastPlayed)}`} · {formatPlaytime(entry.seconds)} played</small></span>
         </button>
         {sessions.isRunning(piko.id)
@@ -129,6 +135,14 @@ export function LibraryView() {
     <section className="library-toolbar">
       <span className="library-count">{lib.visiblePikos.length} game{lib.visiblePikos.length === 1 ? "" : "s"}{search.trim() ? ` matching “${search.trim()}”` : ""}</span>
       <div className="library-toolbar-actions">
+        <button type="button" className="secondary-button view-switcher" title={`View: ${viewModeLabel(view)}. Click for the next view, Shift+click for the previous.`}
+          aria-label={`Library view: ${viewModeLabel(view)}. Activate to switch to ${viewModeLabel(cycleViewMode(view))}.`}
+          onClick={(event) => changeView(event.shiftKey ? -1 : 1)}
+          onKeyDown={(event) => { if (event.key === "ArrowLeft" || event.key === "ArrowUp") { event.preventDefault(); changeView(-1); } else if (event.key === "ArrowRight" || event.key === "ArrowDown") { event.preventDefault(); changeView(1); } }}>
+          <span className="view-switcher-icon" key={view}><ViewIcon size={14} /></span> <span className="view-switcher-label">{viewModeLabel(view)}</span>
+          <span className="view-switcher-dots" aria-hidden="true">{viewModes.map((mode) => <i key={mode.id} className={mode.id === view ? "on" : ""} />)}</span>
+        </button>
+        <span className="library-view-announce" role="status" aria-live="polite">{`${viewModeLabel(view)} view`}</span>
         <button type="button" className={`secondary-button ${selecting ? "active" : ""}`} aria-pressed={selecting} onClick={() => (selecting ? endSelecting() : setSelecting(true))}><CheckSquare size={14} /> {selecting ? "Done selecting" : "Select"}</button>
         <div className="library-sort"><span>Sort by</span><Select<LibrarySort> label="Sort by" value={lib.librarySort} onChange={lib.setLibrarySort} align="end" options={[{ value: "category", label: "Category" }, { value: "name", label: "Name" }, { value: "recent", label: "Recently played" }, { value: "playtime", label: "Most played" }]} /></div>
       </div>
@@ -142,7 +156,7 @@ export function LibraryView() {
       onSelectAll={() => setChecked(new Set(lib.visiblePikos.map((piko) => piko.id)))}
       onDone={endSelecting} />}
     {!lib.visiblePikos.length && <div className="empty-state library-no-match"><h2>No games match.</h2><p>Try another filter or clear the search.</p><button type="button" className="secondary-button" onClick={() => { lib.setFilter({ kind: "smart", id: "all" }); lib.setTagFilters([]); lib.setSearch(""); }}>Show everything</button></div>}
-    <section className="library-grid-view">
+    <section className="library-grid-view" data-view={view} data-groups={lib.groupedPikos.length} key={view}>
       {lib.groupedPikos.map(([category, games]) => <div className="library-category" key={category}>
         <div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div>
         <div className="game-card-grid">{games.map((piko) => <GameCard key={piko.id} piko={piko}

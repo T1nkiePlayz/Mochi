@@ -55,5 +55,5 @@
 .download-progress { border-radius: 0; background: #161a26; }
 .download-progress > span { background: repeating-linear-gradient(-45deg, #fcee09 0 8px, #d9cc00 8px 16px); }
 .danger-outline, .stop-button { color: #ff003c; border-color: #ff003c; }
-.danger-outline:hover:not(:disabled), .stop-button:hover:not(:disabled) { background: #ff003c; color: #fff; }
+.danger-outline:hover:not(:disabled), .stop-button:hover:not(:disabled) { background: #c40030; color: #fff; }
 ::selection { background: #fcee09; color: #050505; }

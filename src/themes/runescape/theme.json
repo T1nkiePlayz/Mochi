@@ -37,6 +37,7 @@
     "fontDisplay": "\"MedievalSharp\", serif",
     "radiusSm": "2px",
     "radiusMd": "3px",
+    "pillRadius": "3px",
     "radiusLg": "4px",
     "heroRadius": "3px",
     "sidebarWidth": "250px",
@@ -56,6 +57,7 @@
     "transition": "90ms linear"
   },
   "components": {
+    "dangerColor": "#ff9a8c",
     "buttonHeight": "36px",
     "borderWidth": "2px",
     "buttonWeight": "700",

@@ -16,8 +16,9 @@ export type Plan = { text: ProviderId[]; art: ProviderId[] };
  * Which providers to ask, in priority order. "auto" uses IGDB for text, then the best artwork
  * available; an explicit choice restricts the lookup to that provider.
  */
-export function planProviders(choice: MetadataChoice, ready: Readiness, steamAppId: number | null): Plan {
+export function planProviders(choice: MetadataChoice | "steam", ready: Readiness, steamAppId: number | null): Plan {
   const steam = steamAppId !== null;
+  if (choice === "steam") return { text: steam ? ["steam"] : [], art: steam ? ["steam"] : [] };
   if (choice === "igdb") return { text: ready.igdb ? ["igdb"] : [], art: ready.igdb ? ["igdb"] : [] };
   if (choice === "steamgriddb") return { text: [], art: ready.steamgriddb ? ["steamgriddb"] : [] };
   return {

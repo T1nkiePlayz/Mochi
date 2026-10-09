@@ -37,6 +37,7 @@
     "fontDisplay": "\"VT323\", ui-monospace, monospace",
     "radiusSm": "0px",
     "radiusMd": "0px",
+    "pillRadius": "0px",
     "radiusLg": "0px",
     "heroRadius": "0px",
     "contentMaxWidth": "1240px",
