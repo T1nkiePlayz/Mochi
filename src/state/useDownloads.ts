@@ -4,7 +4,7 @@ import { getDownloads, type DownloadEntry } from "../lib/modrinth";
 import { subscribeNative } from "../lib/nativeEvents";
 
 /** The native side owns download state; poll it while the Downloads page is open or anything is in flight. */
-export function useDownloads(active: boolean, notify: (title: string, message: string) => void) {
+export function useDownloads(active: boolean, notify: (title: string, message: string, opts?: { group?: string; item?: string }) => void) {
   const [downloads, setDownloads] = useState<DownloadEntry[]>([]);
   const statuses = useRef(new Map<string, string>());
   const notifyRef = useRef(notify);
@@ -23,7 +23,8 @@ export function useDownloads(active: boolean, notify: (title: string, message: s
           if (statuses.current.get(download.id) === "downloading" && download.status !== "downloading" && download.status !== "cancelled") {
             notifyRef.current(
               download.status === "completed" ? "Download finished" : "Download failed",
-              download.status === "completed" ? `${download.itemName} was added to ${download.tofuName}.` : `${download.itemName}: ${download.error ?? "unknown error"}`);
+              download.status === "completed" ? `${download.itemName} was added to ${download.tofuName}.` : `${download.itemName}: ${download.error ?? "unknown error"}`,
+              download.status === "completed" ? { group: "downloads", item: download.itemName } : undefined);
           }
           statuses.current.set(download.id, download.status);
         }

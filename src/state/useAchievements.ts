@@ -16,8 +16,6 @@ const CHANGED = ACHIEVEMENTS_CHANGED;
 
 /** Bump when achievements are added: ones already earned are then unlocked silently once, not announced as a flood. */
 const CATALOG_VERSION = 2;
-/** More new unlocks than this in one go are announced as a single summary. */
-const MAX_TOASTS = 3;
 /** Evaluations triggered only by playtime refreshes run at most this often. */
 const PLAYTIME_THROTTLE_MS = 30_000;
 
@@ -133,8 +131,8 @@ export function useAchievementWatcher() {
       if (!changed) return;
       writeAchievements({ unlocked, flags, seeded: true, catalog: CATALOG_VERSION });
       if (stored.seeded && stored.catalog === CATALOG_VERSION) {
-        if (fresh.length > MAX_TOASTS) notify("Achievements unlocked", `${fresh.length} new achievements, including ${fresh[0].title}.`);
-        else fresh.forEach((def) => notify("Achievement unlocked", `${def.title}: ${def.description}`));
+        // Grouped: unlocks arriving over several quick passes still become one notification.
+        fresh.forEach((def) => notify("Achievement unlocked", `${def.title}: ${def.description}`, { group: "achievements", item: def.title }));
       }
     }, delay);
     return () => { cancelled = true; window.clearTimeout(timer); };
