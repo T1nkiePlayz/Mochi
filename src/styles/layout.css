@@ -188,8 +188,7 @@
     .topbar { padding-inline: clamp(10px, 3vw, 24px) !important; }
   }
   @media (max-width: 560px) {
-    .settings-group { padding: 14px 14px; }
-    .setting-row { padding-inline: 12px; flex-wrap: wrap; }
+    .settings-page { --settings-pad-x: 14px; }
   }
 
   /* ---- Dialogs: always inside the window, scroll inside ------------------------------------------------- */

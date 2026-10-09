@@ -242,16 +242,12 @@ progress { accent-color: var(--mochi-accent-strong); }
 
 
 /* ---- Settings and theme picker ---------------------------------------------- */
-.settings-page { max-width: 880px; width: 100%; margin: 0; padding-top: 6px; }
 .settings-intro { padding-bottom: 22px; }
 .settings-intro h2 { font-size: 30px; margin: 0 0 8px; }
 .theme-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
 .theme-card { align-content: start; }
 .theme-swatches { grid-column: 1 / -1; display: flex; height: 16px; margin: 0 0 8px; overflow: hidden; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: calc(var(--mochi-radius-sm) / 2); }
 .theme-swatches i { flex: 1; }
-.provider-grid { max-width: 100%; }
-.setting-row { padding: 14px 18px; }
 
 .game-card-art, .continue-art, .game-details-cover, .game-trailer-poster { background-image: var(--mochi-cover-placeholder); background-size: cover; background-position: center; }
-.settings-note { display: block; padding: 0 18px 14px; }
 .download-progress.failed > span, .download-progress.failed > span { background: var(--mochi-danger); box-shadow: none; }
