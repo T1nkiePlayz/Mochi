@@ -71,8 +71,10 @@ export function FirstLaunchSetup(props: SetupProps) {
         <div className="setup-footer">
           <button type="button" className="setup-nav setup-prev" onClick={() => hop(-1)} disabled={step === "welcome"}><ArrowLeft size={16} /> Back</button>
           <span className="setup-step-label">{stepLabels[step]} · {index + 1}/{steps.length}</span>
-          {step !== "welcome" && !last && <button type="button" className="setup-skip text-button" onClick={() => hop(1)} disabled={props.credentialBusy !== null}>Skip</button>}
-          <button type="button" className="setup-nav setup-next" onClick={last ? finish : () => hop(1)} disabled={props.credentialBusy !== null}>{nextLabel} <ArrowRight size={16} /></button>
+          <div className="setup-footer-actions">
+            {step !== "welcome" && step !== "account" && !last && <button type="button" className="setup-skip text-button" onClick={() => hop(1)} disabled={props.credentialBusy !== null}>Skip</button>}
+            <button type="button" className="setup-nav setup-next" onClick={last ? finish : () => hop(1)} disabled={props.credentialBusy !== null}>{nextLabel} <ArrowRight size={16} /></button>
+          </div>
         </div>
       </div>
     </div>
