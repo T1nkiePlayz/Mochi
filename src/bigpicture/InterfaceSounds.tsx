@@ -73,7 +73,7 @@ export function InterfaceSounds() {
         lastConfirm.current = performance.now();
         const focused = document.activeElement;
         const target = focused?.closest(CLICKABLE);
-        if (target && !(target as HTMLButtonElement).disabled) playSound(clickSound(target));
+        if (target && !(target as HTMLButtonElement).disabled && !target.closest("[data-sound=none]")) playSound(clickSound(target));
         break;
       }
       default: break;
@@ -87,7 +87,8 @@ export function InterfaceSounds() {
     const onClick = (event: MouseEvent) => {
       if (performance.now() - lastConfirm.current < 150) return;
       const target = (event.target as Element | null)?.closest?.(CLICKABLE);
-      if (!target || (target as HTMLButtonElement).disabled || target.getAttribute("aria-disabled") === "true") return;
+      // data-sound="none" opts out, for controls that play their own sound (Settings previews).
+      if (!target || target.closest("[data-sound=none]") || (target as HTMLButtonElement).disabled || target.getAttribute("aria-disabled") === "true") return;
       playSound(clickSound(target));
     };
     document.addEventListener("click", onClick, true);

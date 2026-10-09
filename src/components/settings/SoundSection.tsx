@@ -93,7 +93,7 @@ export function SoundSection() {
       <div className="setting-row"><span><strong>Sound pack</strong><small>Now playing: {resolvedName}. Themes can suggest a pack; “Match theme” follows it.</small></span>
         <Select<string> label="Sound pack" value={settings.pack} options={packOptions} onChange={(pack) => update({ pack })} align="end" /></div>
       <div className="setting-row sound-preview-row"><span><strong>Preview</strong><small>Hear each sound of {resolvedName}.</small></span>
-        <div className="sound-preview" role="group" aria-label="Preview sounds">
+        <div className="sound-preview" role="group" aria-label="Preview sounds" data-sound="none">
           {SOUND_EVENTS.map((event) => <button type="button" key={event} className="secondary-button sound-preview-button" onClick={() => void preview(event)}><Play size={13} aria-hidden="true" /> {SOUND_LABELS[event]}</button>)}
         </div>
       </div>
