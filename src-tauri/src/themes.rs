@@ -68,6 +68,9 @@ pub struct ThemeManifest {
     pub scheme: Option<String>,
     #[serde(default)]
     pub shell: Option<String>,
+    /// Interface sound pack this theme suggests (a built-in or installed pack id).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sound_pack: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -206,6 +209,9 @@ fn validate_manifest(manifest: &ThemeManifest) -> Result<(), String> {
     }
     if manifest.shell.as_deref().is_some_and(|shell| !["left", "right", "top", "bottom", "rail"].contains(&shell)) {
         return Err("A theme's shell must be left, right, top, bottom or rail.".into());
+    }
+    if manifest.sound_pack.as_deref().is_some_and(|pack| !crate::soundpacks::valid_pack_id(pack)) {
+        return Err("A theme's soundPack must be a sound pack id.".into());
     }
     if manifest.scheme.as_deref().is_some_and(|scheme| scheme != "light" && scheme != "dark") {
         return Err("A theme's scheme must be \"light\" or \"dark\".".into());

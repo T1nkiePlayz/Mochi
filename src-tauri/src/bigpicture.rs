@@ -2,7 +2,7 @@
 //! battery status, and power actions. Everything here is read-only, cheap, and
 //! degrades to "unknown" rather than failing.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{
     sync::{Mutex, OnceLock},
     time::{Duration, Instant},
@@ -163,20 +163,129 @@ pub fn get_system_status() -> SystemStatus {
 // Power actions and launch flags commands
 // ---------------------------------------------------------------------------
 
-#[tauri::command(async)]
-pub fn suspend_system() -> Result<(), String> {
-    #[cfg(target_os = "linux")]
-    {
-        if !crate::platform::command_exists("systemctl") { return Err("Suspend is not available on this system.".into()); }
-        let status = std::process::Command::new("systemctl").arg("suspend").status().map_err(|error| format!("Unable to suspend: {error}"))?;
-        if status.success() { Ok(()) } else { Err("The system refused to suspend.".into()) }
-    }
-    #[cfg(target_os = "macos")]
-    {
-        let status = std::process::Command::new("/usr/bin/pmset").arg("sleepnow").status().map_err(|error| format!("Unable to sleep: {error}"))?;
-        if status.success() { Ok(()) } else { Err("macOS refused to sleep.".into()) }
+/// A system power action offered by the Big Picture menu.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PowerAction { Suspend, Restart, Shutdown }
+
+impl PowerAction {
+    fn verb(self) -> &'static str {
+        match self { PowerAction::Suspend => "suspend", PowerAction::Restart => "restart", PowerAction::Shutdown => "shut down" }
     }
 }
+
+#[cfg_attr(not(any(target_os = "linux", target_os = "macos")), allow(dead_code))]
+/// The program and arguments that perform a power action.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PowerCommand { pub program: &'static str, pub args: Vec<&'static str> }
+
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+/// What a Linux machine offers for power management. `can` is logind's answer to CanSuspend/CanReboot/CanPowerOff
+/// (`None` when it could not be asked).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct LinuxPower { pub systemctl: bool, pub loginctl: bool }
+
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+/// Linux: systemd-logind through `systemctl` (falls back to `loginctl`, which elogind systems also ship).
+pub fn linux_power_command(action: PowerAction, env: LinuxPower) -> Option<PowerCommand> {
+    let verb = match action { PowerAction::Suspend => "suspend", PowerAction::Restart => "reboot", PowerAction::Shutdown => "poweroff" };
+    let program = if env.systemctl { "systemctl" } else if env.loginctl { "loginctl" } else { return None };
+    Some(PowerCommand { program, args: vec![verb] })
+}
+
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+/// macOS: `pmset sleepnow` sleeps without any permission; restart and shut down go through System Events,
+/// which macOS gates behind the Automation privacy permission (asked once).
+pub fn macos_power_command(action: PowerAction) -> PowerCommand {
+    match action {
+        PowerAction::Suspend => PowerCommand { program: "/usr/bin/pmset", args: vec!["sleepnow"] },
+        PowerAction::Restart => PowerCommand { program: "/usr/bin/osascript", args: vec!["-e", "tell application \"System Events\" to restart"] },
+        PowerAction::Shutdown => PowerCommand { program: "/usr/bin/osascript", args: vec!["-e", "tell application \"System Events\" to shut down"] },
+    }
+}
+
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+/// Reads `busctl call ... CanSuspend` output (`s "yes"`); "na" and "no" mean the action is unavailable here.
+pub fn parse_login1_can(text: &str) -> Option<bool> {
+    let value = text.trim().strip_prefix("s ")?.trim().trim_matches('"');
+    match value { "yes" | "challenge" => Some(true), "no" | "na" => Some(false), _ => None }
+}
+
+/// Turns a failed power command's output into something a person can act on.
+pub fn describe_power_error(action: PowerAction, macos: bool, output: &str) -> String {
+    let verb = action.verb();
+    let lower = output.to_ascii_lowercase();
+    if macos {
+        if lower.contains("-1743") || lower.contains("not authorized to send apple events") || lower.contains("not allowed to send") {
+            return format!("macOS blocked Mochi from asking to {verb}. Allow Mochi to control System Events in System Settings > Privacy & Security > Automation, then try again.");
+        }
+        if lower.contains("-128") || lower.contains("user canceled") || lower.contains("user cancelled") { return format!("The request to {verb} was cancelled."); }
+    } else {
+        if lower.contains("interactive authentication required") || lower.contains("access denied") || lower.contains("not authorized") || lower.contains("permission denied") {
+            return format!("Your system needs administrator permission to {verb} (polkit refused the request). Use your desktop's power menu, or allow it in your polkit rules.");
+        }
+        if lower.contains("inhibit") { return format!("Another program is preventing the system from trying to {verb} right now. Close it and try again."); }
+    }
+    let detail = output.lines().map(str::trim).find(|line| !line.is_empty()).unwrap_or("");
+    if detail.is_empty() { format!("The system refused to {verb}.") } else { format!("The system refused to {verb}: {}", detail.chars().take(200).collect::<String>()) }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PowerCapabilities { pub suspend: bool, pub restart: bool, pub shutdown: bool }
+
+#[cfg(target_os = "linux")]
+fn linux_env() -> LinuxPower {
+    LinuxPower {
+        systemctl: crate::platform::command_exists("systemctl") && std::path::Path::new("/run/systemd/system").exists(),
+        loginctl: crate::platform::command_exists("loginctl"),
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn login1_can(method: &str) -> Option<bool> {
+    if !crate::platform::command_exists("busctl") { return None; }
+    let mut command = std::process::Command::new("busctl");
+    command.args(["--system", "call", "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", method]);
+    crate::platform::run_capture(command, Duration::from_secs(2)).and_then(|bytes| parse_login1_can(&String::from_utf8_lossy(&bytes)))
+}
+
+fn power_command(action: PowerAction) -> Option<PowerCommand> {
+    #[cfg(target_os = "linux")]
+    { linux_power_command(action, linux_env()) }
+    #[cfg(target_os = "macos")]
+    { Some(macos_power_command(action)) }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    { let _ = action; None }
+}
+
+#[tauri::command(async)]
+pub fn get_power_capabilities() -> PowerCapabilities {
+    #[cfg(target_os = "linux")]
+    {
+        let env = linux_env();
+        let usable = |method: &str| (env.systemctl || env.loginctl) && login1_can(method).unwrap_or(true);
+        PowerCapabilities { suspend: usable("CanSuspend"), restart: usable("CanReboot"), shutdown: usable("CanPowerOff") }
+    }
+    #[cfg(target_os = "macos")]
+    { PowerCapabilities { suspend: true, restart: true, shutdown: true } }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    { PowerCapabilities { suspend: false, restart: false, shutdown: false } }
+}
+
+#[tauri::command(async)]
+pub fn power_action(action: PowerAction) -> Result<(), String> {
+    let Some(command) = power_command(action) else { return Err(format!("This system cannot {} from Mochi.", action.verb())) };
+    let output = std::process::Command::new(command.program).args(&command.args).output()
+        .map_err(|error| format!("Unable to {}: {error}", action.verb()))?;
+    if output.status.success() { return Ok(()); }
+    let text = format!("{}\n{}", String::from_utf8_lossy(&output.stderr), String::from_utf8_lossy(&output.stdout));
+    Err(describe_power_error(action, cfg!(target_os = "macos"), &text))
+}
+
+/// Kept for older frontends; same as `power_action("suspend")`.
+#[tauri::command(async)]
+pub fn suspend_system() -> Result<(), String> { power_action(PowerAction::Suspend) }
 
 #[tauri::command]
 pub fn quit_mochi(app: tauri::AppHandle) { app.exit(0); }
@@ -242,5 +351,43 @@ mod tests {
         assert_eq!(parse_power_supply("Battery\n", "System\n", "73\n", "Charging\n"), Some(SystemStatus { has_battery: true, battery_percent: Some(73), charging: Some(true) }));
         assert_eq!(parse_power_supply("Mains", "", "", ""), None);
         assert_eq!(parse_power_supply("Battery", "Device", "50", "Discharging"), None);
+    }
+
+    #[test]
+    fn picks_linux_power_commands() {
+        let both = LinuxPower { systemctl: true, loginctl: true };
+        assert_eq!(linux_power_command(PowerAction::Suspend, both), Some(PowerCommand { program: "systemctl", args: vec!["suspend"] }));
+        assert_eq!(linux_power_command(PowerAction::Restart, both).unwrap().args, vec!["reboot"]);
+        assert_eq!(linux_power_command(PowerAction::Shutdown, both).unwrap().args, vec!["poweroff"]);
+        let elogind = LinuxPower { systemctl: false, loginctl: true };
+        assert_eq!(linux_power_command(PowerAction::Shutdown, elogind), Some(PowerCommand { program: "loginctl", args: vec!["poweroff"] }));
+        assert_eq!(linux_power_command(PowerAction::Suspend, LinuxPower::default()), None);
+    }
+
+    #[test]
+    fn picks_macos_power_commands() {
+        assert_eq!(macos_power_command(PowerAction::Suspend), PowerCommand { program: "/usr/bin/pmset", args: vec!["sleepnow"] });
+        let restart = macos_power_command(PowerAction::Restart);
+        assert_eq!(restart.program, "/usr/bin/osascript");
+        assert!(restart.args[1].ends_with("to restart"));
+        assert!(macos_power_command(PowerAction::Shutdown).args[1].ends_with("to shut down"));
+    }
+
+    #[test]
+    fn reads_login1_answers() {
+        assert_eq!(parse_login1_can("s \"yes\"\n"), Some(true));
+        assert_eq!(parse_login1_can("s \"challenge\""), Some(true));
+        assert_eq!(parse_login1_can("s \"na\""), Some(false));
+        assert_eq!(parse_login1_can("s \"no\""), Some(false));
+        assert_eq!(parse_login1_can("garbage"), None);
+    }
+
+    #[test]
+    fn explains_power_errors() {
+        assert!(describe_power_error(PowerAction::Suspend, false, "Failed to suspend system via logind: Interactive authentication required.").contains("polkit"));
+        assert!(describe_power_error(PowerAction::Shutdown, false, "Operation inhibited by \"Steam\"").contains("preventing"));
+        assert!(describe_power_error(PowerAction::Restart, true, "execution error: Not authorized to send Apple events to System Events. (-1743)").contains("Automation"));
+        assert!(describe_power_error(PowerAction::Restart, true, "execution error: User canceled. (-128)").contains("cancelled"));
+        assert_eq!(describe_power_error(PowerAction::Suspend, false, ""), "The system refused to suspend.");
     }
 }
