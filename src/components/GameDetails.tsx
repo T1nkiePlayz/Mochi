@@ -12,6 +12,7 @@ import { CollectionPicker } from "./library/CollectionPicker";
 import { TagEditor } from "./library/TagEditor";
 import { useDismiss } from "./library/useDismiss";
 import { SteamAchievements } from "./SteamAchievements";
+import { GameLogsButton } from "./GameLogs";
 import { steamAppIdOf } from "../lib/metadata/merge";
 
 type Props = {
@@ -59,6 +60,7 @@ export function GameDetails({ game, synced, running, playtime, launchError, laun
           {showCollections && <div className="library-popover"><CollectionPicker collections={collections} games={[game]} onToggle={onToggleCollection} onCreate={onCreateCollection} /></div>}
         </div>
         <button type="button" className="secondary-button" onClick={onEdit}><Pencil size={14}/> Edit</button>
+        <GameLogsButton game={game} />
         {folder && <button type="button" className="secondary-button" onClick={onOpenFolder}><FolderOpen size={14}/> Open folder</button>}
         {capabilities?.supportsShortcuts && <button type="button" className="secondary-button" onClick={onShortcut}>Add to app menu</button>}
         <button type="button" className="secondary-button danger-outline" onClick={onRemove}><Trash2 size={14}/> Remove</button>

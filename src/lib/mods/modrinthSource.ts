@@ -22,7 +22,7 @@ function modrinthFile(version: ModrinthVersion): ModFile | null {
   if (!file) return null;
   return {
     id: version.id, name: version.name || version.version_number, fileName: file.filename, version: version.version_number, channel: version.version_type,
-    size: file.size, date: version.date_published, gameVersions: version.game_versions, primary: version.featured,
+    size: file.size, date: version.date_published, gameVersions: version.game_versions, loaders: version.loaders, primary: version.featured,
     dependencies: version.dependencies.filter((dependency) => dependency.dependency_type === "required" && dependency.project_id)
       .map((dependency) => ({ id: dependency.project_id!, url: `https://modrinth.com/project/${dependency.project_id}`, required: true })),
     native: { url: file.url, sha1: file.hashes.sha1, size: file.size },

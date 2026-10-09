@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { keepIfEqual } from "../lib/equal";
 import { getDownloads, type DownloadEntry } from "../lib/modrinth";
+import { subscribeNative } from "../lib/nativeEvents";
 
 /** The native side owns download state; poll it while the Downloads page is open or anything is in flight. */
 export function useDownloads(active: boolean, notify: (title: string, message: string) => void) {
@@ -19,7 +20,7 @@ export function useDownloads(active: boolean, notify: (title: string, message: s
         const next = await getDownloads();
         if (cancelled || mine !== seq.current) return;
         for (const download of next) {
-          if (statuses.current.get(download.id) === "downloading" && download.status !== "downloading") {
+          if (statuses.current.get(download.id) === "downloading" && download.status !== "downloading" && download.status !== "cancelled") {
             notifyRef.current(
               download.status === "completed" ? "Download finished" : "Download failed",
               download.status === "completed" ? `${download.itemName} was added to ${download.tofuName}.` : `${download.itemName}: ${download.error ?? "unknown error"}`);
@@ -35,7 +36,9 @@ export function useDownloads(active: boolean, notify: (title: string, message: s
     const tick = () => { if (!document.hidden) void poll(); };
     const timer = window.setInterval(tick, active || hasActive ? 1500 : 4000);
     document.addEventListener("visibilitychange", tick);
-    return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener("visibilitychange", tick); };
+    // The native side announces every start, finish and cancel, so the list reacts at once instead of on the next tick.
+    const unsubscribe = subscribeNative("mod-download-changed", () => void poll());
+    return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener("visibilitychange", tick); unsubscribe(); };
   }, [active, hasActive]);
 
   return downloads;

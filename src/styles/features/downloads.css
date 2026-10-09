@@ -1,0 +1,6 @@
+/* Downloads view additions: per-row actions and the clear button. Tokens only. */
+.download-toolbar { display: flex; justify-content: flex-end; }
+.download-list .download-row { grid-template-columns: minmax(160px, .45fr) minmax(240px, 1fr) auto; }
+.download-row-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; min-width: 36px; }
+.download-row.is-cancelled .download-row-copy strong { color: var(--mochi-text-muted); }
+@media (max-width: 900px) { .download-list .download-row { grid-template-columns: 1fr; } .download-row-actions { justify-content: flex-start; } }

@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { Piko, Tofu } from "../models";
+import { modSyncFor } from "./mods/targets";
 import { buildLaunchConfig } from "./launch";
 
 export type PlatformId = "linux" | "macos";
@@ -58,6 +59,8 @@ export function launchGame(piko: Piko, tofu: Tofu | undefined): Promise<void> {
       installPath: piko.installPath ?? null,
       tofuId: tofu?.id ?? null,
       config: buildLaunchConfig(tofu?.launch),
+      // Only a Tofu that keeps its own mods needs them copied into the game's folder; the native side does it right before starting.
+      modSync: modSyncFor(tofu) ?? null,
     },
   });
 }

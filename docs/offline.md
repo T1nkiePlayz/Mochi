@@ -24,7 +24,8 @@ calls `markNetworkFailure()` and the next success calls `markNetworkOk()`.
 | Cloud sync | Degraded | Shows "Cloud sync unavailable" instead of an error for connectivity failures; local edits keep working and sync resumes when the account reloads. |
 | Provider credentials (IGDB, Nexus) | Needs network | Stored server-side; status check failures are logged quietly. |
 | Modrinth / Nexus Discover and mod search | Needs network | Result icons are hidden if they cannot load. Discover's own offline cache is handled separately. |
-| Installed mod management (enable/disable/delete) | Works | Local files. |
+| Installed mod management (enable/disable/delete, launch sync, rollback, game logs) | Works | Local files. |
+| Mod update checks | Needs internet | Shows "You are offline"; nothing is cached on disk. |
 | Mod downloads | Needs network | Fail with a message in the Downloads list. |
 | First-launch setup | Mostly works | Launcher icons load remotely until bundled separately. |
 | Opening external links (GitHub, Modrinth, YouTube) | Needs network | Opens the system browser. |

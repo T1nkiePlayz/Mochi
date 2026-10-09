@@ -5,6 +5,7 @@ import { defaultLaunchConfig } from "../lib/launch";
 import type { RuntimeInfo } from "../lib/platform";
 import type { Piko, Tofu } from "../models";
 import { Select } from "./ui/Select";
+import { ModFolderEditor } from "./mods/ModFolderEditor";
 
 type Props = {
   piko: Piko;
@@ -63,7 +64,8 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
       <div className="tofu-manager-form form-fields">
         <label>Name<input value={draftName} maxLength={60} onChange={(e) => setDraftName(e.target.value)} onBlur={commitName} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} /></label>
         <div className="form-row"><label>Game version<input value={selected.version} maxLength={40} onChange={(e) => patch({ version: e.target.value })} /></label><label>Runtime label<input value={selected.runtime} maxLength={40} onChange={(e) => patch({ runtime: e.target.value })} /></label></div>
-        <label>Content folder<div className="flatpak-input-row"><input readOnly value={selected.path ?? ""} placeholder="No folder chosen" /><button type="button" className="secondary-button" onClick={() => void chooseFolder((path) => patch({ path }), "Choose Tofu folder")}><FolderOpen size={14}/></button></div></label>
+        <p className="eyebrow">Mod folders</p>
+        <ModFolderEditor key={selected.id} piko={piko} tofu={selected} onUpdate={patch} showVersion={false} />
 
         <label className="check-row"><input type="checkbox" checked={selected.extractArchives === true} onChange={(e) => patch({ extractArchives: e.target.checked })} /> Extract .zip downloads into the folder</label>
         <small className="metadata-note">For games whose mods are archives. When on, a downloaded .zip is unpacked into the content folder and the archive is removed.</small>

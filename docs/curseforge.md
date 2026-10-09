@@ -35,6 +35,7 @@ From the CurseForge 3rd Party API terms and REST docs:
   It only exists as the `CURSEFORGE_API_KEY` function secret.
 - API data must not be saved or cached: the proxy keeps nothing (it only de-duplicates identical in-flight
   requests), and the app must hold CurseForge responses in memory only. The Modrinth disk cache is not used for CurseForge.
+  The per-Tofu install record (`mods.json`) keeps only what identifies a file the user installed (project id, file id, file name, version, title, SHA-1, file date), never icons or descriptions; update-check results are in memory only.
 - Authors can disable third-party distribution (`allowModDistribution === false`, or a null `downloadUrl`). Mochi never
   builds forgecdn URLs by hand; in that case it links to the mod's CurseForge page instead.
 - Show "Powered by CurseForge" and a link back to each mod.

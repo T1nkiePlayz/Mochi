@@ -72,6 +72,9 @@ pub struct LaunchConfig {
     pub working_dir: Option<String>,
     #[serde(skip)]
     pub prefix_dir: Option<PathBuf>,
+    /// Where this game's session logs go; output is captured when set.
+    #[serde(skip)]
+    pub log_dir: Option<PathBuf>,
 }
 
 /// What `launch_game` started.
@@ -196,14 +199,34 @@ pub fn run_capture(mut command: Command, timeout: Duration) -> Option<Vec<u8>> {
 
 /// Spawns `command` as the leader of a new process group, detached from our
 /// stdio, and reaps it in the background so it never lingers as a zombie.
-pub fn spawn_detached(mut command: Command) -> Result<u32, String> {
+/// With a `log`, the child's stdout and stderr are appended to that file (and kept under the size cap).
+pub fn spawn_detached_logged(mut command: Command, log: Option<(std::fs::File, PathBuf)>) -> Result<u32, String> {
     use std::os::unix::process::CommandExt;
-    command.process_group(0).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
+    command.process_group(0).stdin(Stdio::null());
+    let log_path = match log {
+        Some((file, path)) => match file.try_clone() {
+            Ok(second) => { command.stdout(Stdio::from(file)).stderr(Stdio::from(second)); Some(path) }
+            Err(_) => { command.stdout(Stdio::null()).stderr(Stdio::null()); None }
+        },
+        None => { command.stdout(Stdio::null()).stderr(Stdio::null()); None }
+    };
     let mut child = command.spawn().map_err(|error| error.to_string())?;
     let pid = child.id();
-    std::thread::spawn(move || { let _ = child.wait(); });
+    std::thread::spawn(move || {
+        let Some(path) = log_path else { let _ = child.wait(); return };
+        loop {
+            match child.try_wait() {
+                Ok(Some(_)) | Err(_) => break,
+                Ok(None) => {}
+            }
+            let _ = crate::gamelogs::trim_log(&path, crate::gamelogs::MAX_BYTES, crate::gamelogs::KEEP_BYTES);
+            std::thread::sleep(Duration::from_secs(2));
+        }
+    });
     Ok(pid)
 }
+
+pub fn spawn_detached(command: Command) -> Result<u32, String> { spawn_detached_logged(command, None) }
 
 pub fn launch_game(target: &str, config: &LaunchConfig) -> Result<Launched, String> {
     let target = target.trim();
@@ -216,7 +239,9 @@ pub fn launch_game(target: &str, config: &LaunchConfig) -> Result<Launched, Stri
     if let Some(dir) = config.working_dir.as_deref().filter(|dir| Path::new(dir).is_dir()) {
         command.current_dir(dir);
     }
-    let pid = spawn_detached(command).map_err(|error| format!("Failed to launch: {error}"))?;
+    // A log that cannot be created must never stop the game from starting.
+    let log = config.log_dir.as_deref().and_then(|dir| crate::gamelogs::begin_session(dir, direct, &format!("Mochi launched {target}{}", if direct { "" } else { " (through another launcher: its output is not captured)" })).ok());
+    let pid = spawn_detached_logged(command, log).map_err(|error| format!("Failed to launch: {error}"))?;
     Ok(Launched { direct_pid: direct.then_some(pid) })
 }
 

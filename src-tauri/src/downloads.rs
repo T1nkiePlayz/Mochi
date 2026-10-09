@@ -68,9 +68,19 @@ pub struct ModDownloadRequest {
     pub extract: Option<bool>,
     #[serde(default)]
     pub keep_archive: Option<bool>,
+    /// "resourcepacks" or "shaderpacks": lands in that folder inside `path` instead of `path` itself.
+    #[serde(default)]
+    pub subdir: Option<String>,
+    /// Where the file came from, saved with the Tofu's mod list once the download verified.
+    #[serde(default)]
+    pub record: Option<crate::modinstance::RecordInput>,
 }
 
 impl Provider {
+    fn id(self) -> &'static str {
+        match self { Provider::Modrinth => "modrinth", Provider::Curseforge => "curseforge", Provider::Nexus => "nexus" }
+    }
+
     fn label(self) -> &'static str {
         match self { Provider::Modrinth => "Modrinth", Provider::Curseforge => "CurseForge", Provider::Nexus => "Nexus Mods" }
     }
@@ -129,11 +139,18 @@ fn check_sha1(actual: &str, expected: &str) -> Result<(), String> {
     if actual.eq_ignore_ascii_case(expected) { Ok(()) } else { Err("Downloaded file failed its SHA-1 check and was discarded.".into()) }
 }
 
+/// Removes the temp file when the download ends for any reason, including the task being aborted (cancel).
+struct TempFile(PathBuf);
+
+impl Drop for TempFile {
+    fn drop(&mut self) { let _ = fs::remove_file(&self.0); }
+}
+
 /// Streams `url` into `destination` through a temp file, enforcing the size cap and the optional SHA-1.
-/// Nothing is left at `destination` unless every check passed.
+/// Nothing is left at `destination` unless every check passed. Returns the SHA-1 of what was written.
 pub(crate) async fn fetch_to_file(
     provider: Provider, url: reqwest::Url, destination: &Path, expected_sha1: Option<&str>, progress: impl Fn(u64, Option<u64>),
-) -> Result<(), String> {
+) -> Result<String, String> {
     let label = provider.label();
     let _guard = DestinationGuard::acquire(destination)?;
     let mut response = client_for(provider)?.get(url).send().await.map_err(|e| format!("{label} download failed: {e}"))?;
@@ -144,7 +161,8 @@ pub(crate) async fn fetch_to_file(
 
     let name = destination.file_name().and_then(|n| n.to_str()).unwrap_or("download");
     let temp = destination.with_file_name(format!("{name}{TEMP_MARKER}{}", NEXT_DOWNLOAD_ID.fetch_add(1, Ordering::Relaxed)));
-    let result: Result<(), String> = async {
+    let _temp = TempFile(temp.clone());
+    let result: Result<String, String> = async {
         // Chunks arrive in ~16 KiB pieces; buffering turns thousands of tiny writes into a few large ones.
         let mut file = std::io::BufWriter::with_capacity(256 * 1024, fs::File::create(&temp).map_err(|e| format!("Unable to create temporary download: {e}"))?);
         let mut hasher = Sha1::new();
@@ -160,12 +178,11 @@ pub(crate) async fn fetch_to_file(
         // Make sure a power cut right after the rename cannot leave an empty "completed" file.
         file.get_ref().sync_all().map_err(|e| format!("Unable to finalize downloaded file: {e}"))?;
         drop(file);
-        if let Some(expected) = expected_sha1 {
-            check_sha1(&hex(&hasher.finalize()), expected)?;
-        }
-        fs::rename(&temp, destination).map_err(|e| format!("Unable to finalize downloaded file: {e}"))
+        let actual = hex(&hasher.finalize());
+        if let Some(expected) = expected_sha1 { check_sha1(&actual, expected)?; }
+        fs::rename(&temp, destination).map_err(|e| format!("Unable to finalize downloaded file: {e}"))?;
+        Ok(actual)
     }.await;
-    if result.is_err() { let _ = fs::remove_file(&temp); }
     result
 }
 
@@ -247,11 +264,26 @@ fn ensure_inside(path: &Path, canonical_root: &Path) -> Result<(), String> {
     if resolved.starts_with(canonical_root) { Ok(()) } else { Err("Archive entry resolves outside the target folder.".into()) }
 }
 
+/// Running download tasks, so one can be cancelled.
+fn tasks() -> &'static Mutex<std::collections::HashMap<String, tauri::async_runtime::JoinHandle<()>>> {
+    static TASKS: OnceLock<Mutex<std::collections::HashMap<String, tauri::async_runtime::JoinHandle<()>>>> = OnceLock::new();
+    TASKS.get_or_init(Default::default)
+}
+
+fn announce(id: &str) { crate::modinstance::emit("mod-download-changed", id.to_string()); }
+
+/// The folder a download lands in: the Tofu folder, or one of its content subfolders.
+fn target_dir(root: &Path, subdir: Option<&str>) -> Result<PathBuf, String> {
+    crate::modinstance::content_dir(root, subdir.map(str::trim).unwrap_or(""))
+}
+
 /// Validates the request and starts the download in the background. Returns the download id.
 pub fn start(request: ModDownloadRequest) -> Result<String, String> {
     let provider = request.provider;
     let parsed = parse_download_url(provider, &request.url)?;
-    let root = validate_path(&request.path)?;
+    let tofu_root = validate_path(&request.path)?;
+    let root = target_dir(&tofu_root, request.subdir.as_deref())?;
+    let subdir = request.subdir.as_deref().map(str::trim).unwrap_or("").to_string();
     let filename = validate_download_filename(&request.filename)?.to_string();
     let expected_sha1 = request.sha1.as_deref().filter(|v| !v.trim().is_empty()).map(normalize_sha1).transpose()?;
     let extract = request.extract.unwrap_or(false);
@@ -263,40 +295,76 @@ pub fn start(request: ModDownloadRequest) -> Result<String, String> {
     cleanup_downloads();
     if active_download_count() >= MAX_ACTIVE_DOWNLOADS { return Err("Too many downloads are running. Wait for one to finish.".into()); }
     let id = format!("download-{}-{}", now_ms(), NEXT_DOWNLOAD_ID.fetch_add(1, Ordering::Relaxed));
+    let tofu_id = request.tofu_id.clone();
+    let record = request.record;
     let entry = DownloadEntry {
         id: id.clone(), tofu_id: request.tofu_id, tofu_name: request.tofu_name, item_name: request.item_name, filename: filename.clone(),
         downloaded: 0, total: None, status: "downloading".into(), error: None, created_at: now_ms(), finished_at: None,
+        provider: provider.id().into(), dir: root.to_string_lossy().into_owned(),
     };
     lock_downloads().insert(id.clone(), entry);
+    announce(&id);
 
     let destination = root.join(&filename);
     let task_id = id.clone();
-    tauri::async_runtime::spawn(async move {
+    let handle = tauri::async_runtime::spawn(async move {
         let progress_id = task_id.clone();
         let mut result = fetch_to_file(provider, parsed, &destination, expected_sha1.as_deref(), move |downloaded, total| {
             update_download(&progress_id, |entry| { entry.downloaded = downloaded; entry.total = total; })
         }).await;
+        let mut sha1 = result.as_ref().ok().cloned();
+        let mut extracted = false;
         if result.is_ok() && extract {
+            extracted = true;
             let (archive, dest) = (destination.clone(), root.clone());
             result = tauri::async_runtime::spawn_blocking(move || {
-                let outcome = extract_zip(&archive, &dest, EXTRACT_LIMITS).map(|_| ());
+                let outcome = extract_zip(&archive, &dest, EXTRACT_LIMITS).map(|_| String::new());
                 if outcome.is_ok() && !keep_archive { let _ = fs::remove_file(&archive); }
                 outcome
             }).await.map_err(|e| e.to_string()).and_then(|inner| inner);
         }
+        // Extracted archives have no single file to track; everything else is remembered with its origin.
+        if result.is_ok() && !extracted {
+            if let Some(input) = record { crate::modinstance::record_install(&tofu_id, input.into_record(&filename, &subdir, sha1.take())); }
+        }
         update_download(&task_id, |entry| {
             entry.finished_at = Some(now_ms());
             match result {
-                Ok(()) => { entry.status = "completed".into(); entry.error = None; }
+                Ok(_) => { entry.status = "completed".into(); entry.error = None; }
                 Err(error) => { entry.status = "failed".into(); entry.error = Some(error); }
             }
         });
+        tasks().lock_recover().remove(&task_id);
+        announce(&task_id);
     });
+    tasks().lock_recover().insert(id.clone(), handle);
     Ok(id)
+}
+
+/// Stops a running download and removes its partial file. Finished downloads are left alone.
+pub fn cancel(id: &str) -> Result<(), String> {
+    let running = lock_downloads().get(id).is_some_and(|entry| entry.status == "downloading");
+    if !running { return Ok(()); }
+    if let Some(handle) = tasks().lock_recover().remove(id) { handle.abort(); }
+    update_download(id, |entry| { entry.status = "cancelled".into(); entry.error = None; entry.finished_at = Some(now_ms()); });
+    announce(id);
+    Ok(())
+}
+
+/// Drops finished entries from the list (files stay where they are).
+pub fn clear_finished() {
+    lock_downloads().retain(|_, entry| entry.finished_at.is_none());
+    announce("");
 }
 
 #[tauri::command(async)]
 pub fn start_mod_download(request: ModDownloadRequest) -> Result<String, String> { start(request) }
+
+#[tauri::command]
+pub fn cancel_mod_download(id: String) -> Result<(), String> { cancel(&id) }
+
+#[tauri::command]
+pub fn clear_finished_downloads() { clear_finished() }
 
 #[cfg(test)]
 mod tests {
@@ -508,5 +576,39 @@ mod tests {
         remove_stale_temp_files(&dir);
         assert!(fresh.exists() && dir.join("keep.jar").exists());
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn other_games_content_types_are_accepted() {
+        for name in ["Cool.tmod", "Machine.smod", "plugin.dll", "Patch.esp", "pack.7z"] { assert!(validate_download_filename(name).is_ok(), "{name}"); }
+        for name in ["run.sh", "setup.exe", "x.app", "a.jar.disabled"] { assert!(validate_download_filename(name).is_err(), "{name}"); }
+    }
+
+    #[test]
+    fn subfolders_are_limited_to_known_content_folders() {
+        let root = Path::new("/tmp/tofu");
+        assert_eq!(target_dir(root, None).unwrap(), root);
+        assert_eq!(target_dir(root, Some("resourcepacks")).unwrap(), root.join("resourcepacks"));
+        assert!(target_dir(root, Some("../x")).is_err());
+        assert!(target_dir(root, Some("mods/evil")).is_err());
+    }
+
+    #[test]
+    fn cancel_marks_only_running_downloads_and_clear_keeps_them() {
+        let entry = |id: &str, status: &str, finished: Option<u64>| DownloadEntry {
+            id: id.into(), tofu_id: "t".into(), tofu_name: "T".into(), item_name: "I".into(), filename: "a.jar".into(), downloaded: 0, total: None,
+            status: status.into(), error: None, created_at: 1, finished_at: finished, provider: "modrinth".into(), dir: "/tmp".into(),
+        };
+        lock_downloads().insert("test-run".into(), entry("test-run", "downloading", None));
+        lock_downloads().insert("test-done".into(), entry("test-done", "completed", Some(now_ms())));
+        cancel("test-run").unwrap();
+        cancel("test-done").unwrap();
+        assert_eq!(lock_downloads().get("test-run").unwrap().status, "cancelled");
+        assert_eq!(lock_downloads().get("test-done").unwrap().status, "completed");
+        lock_downloads().insert("test-run2".into(), entry("test-run2", "downloading", None));
+        clear_finished();
+        assert!(lock_downloads().get("test-run").is_none() && lock_downloads().get("test-done").is_none());
+        assert!(lock_downloads().get("test-run2").is_some());
+        lock_downloads().remove("test-run2");
     }
 }

@@ -159,10 +159,13 @@ export type DownloadEntry = {
   filename: string;
   downloaded: number;
   total?: number;
-  status: "downloading" | "completed" | "failed";
+  status: "downloading" | "completed" | "failed" | "cancelled";
   error?: string;
   createdAt: number;
   finishedAt?: number;
+  provider: "modrinth" | "curseforge" | "nexus";
+  /** Folder the file lands in. */
+  dir: string;
 };
 
 export async function getDownloads(): Promise<DownloadEntry[]> {
@@ -187,6 +190,8 @@ export type ModAnalysis = {
 export async function analyzeModFiles(path: string, gameVersion?: string, loader?: string): Promise<ModAnalysis[]> {
   return invoke<ModAnalysis[]>("analyze_mod_files", { path, gameVersion: gameVersion || null, loader: loader || null });
 }
-export async function updateModFile(path: string, update: ModUpdate): Promise<void> {
-  await invoke("update_mod_file", { path, url: update.url, filename: update.filename, sha1: update.sha1 ?? null });
+export type UpdateExtras = { provider?: "modrinth" | "curseforge" | "nexus"; tofuId?: string; record?: import("./downloads").ModRecordInput };
+/** Downloads the new file (SHA-1 checked), keeps the old one as a rollback copy, then replaces it. */
+export async function updateModFile(path: string, update: Pick<ModUpdate, "url" | "filename" | "sha1"> & Partial<ModUpdate>, extras: UpdateExtras = {}): Promise<void> {
+  await invoke("update_mod_file", { path, url: update.url, filename: update.filename, sha1: update.sha1 ?? null, provider: extras.provider ?? null, tofuId: extras.tofuId ?? null, record: extras.record ?? null });
 }

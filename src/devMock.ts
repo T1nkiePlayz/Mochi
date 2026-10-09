@@ -3,6 +3,7 @@
  * developed with plain `npm run dev`. Loaded only in dev builds outside Tauri.
  */
 import { installModsMock } from "./devModsMock";
+import { instanceHandlers } from "./devInstancesMock";
 type Handler = (args: Record<string, unknown>) => unknown;
 
 
@@ -60,6 +61,7 @@ function mockSteamAchievements(appid: number) {
   return { status: "ok", stale: false, source: "community", steamId: "76561197960287930", fetchedAt: now, data: { appid, gameName: `Steam app ${appid}`, achievements, unlocked: 4, total: names.length } };
 }
 const handlers: Record<string, Handler> = {
+  ...instanceHandlers,
   get_steam_achievements: ({ appid }) => mockSteamAchievements(Number(appid)),
   clear_steam_achievements_cache: () => undefined,
   clear_steam_store_cache: () => undefined,
@@ -126,9 +128,9 @@ const handlers: Record<string, Handler> = {
     { id: "mangohud", name: "MangoHud", kind: "wrapper", path: "/usr/bin/mangohud" },
   ],
   get_downloads: () => [
-    { id: "d1", tofuId: "default", tofuName: "Default", itemName: "Sodium", filename: "sodium-0.6.jar", downloaded: 3_200_000, total: 8_000_000, status: "downloading", createdAt: Date.now() },
-    { id: "d2", tofuId: "default", tofuName: "Default", itemName: "Iris Shaders", filename: "iris-1.8.jar", downloaded: 2_000_000, total: 2_000_000, status: "completed", createdAt: Date.now() - 1000, finishedAt: Date.now() },
-    { id: "d3", tofuId: "modded", tofuName: "Modded", itemName: "Lithium", filename: "lithium.jar", downloaded: 0, status: "failed", error: "Modrinth download failed (404).", createdAt: Date.now() - 2000, finishedAt: Date.now() },
+    { id: "d1", tofuId: "default", tofuName: "Default", itemName: "Sodium", filename: "sodium-0.6.jar", downloaded: 3_200_000, total: 8_000_000, status: "downloading", createdAt: Date.now(), provider: "modrinth", dir: "/mods" },
+    { id: "d2", tofuId: "default", tofuName: "Default", itemName: "Iris Shaders", filename: "iris-1.8.jar", downloaded: 2_000_000, total: 2_000_000, status: "completed", createdAt: Date.now() - 1000, finishedAt: Date.now(), provider: "curseforge", dir: "/mods" },
+    { id: "d3", tofuId: "modded", tofuName: "Modded", itemName: "Lithium", filename: "lithium.jar", downloaded: 0, status: "failed", error: "Modrinth download failed (404).", createdAt: Date.now() - 2000, finishedAt: Date.now(), provider: "nexus", dir: "/mods" },
   ],
   list_mod_files: () => [
     { filename: "sodium-0.6.jar", path: "/mods/sodium-0.6.jar", enabled: true, size: 912_000 },
