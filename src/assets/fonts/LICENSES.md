@@ -8,9 +8,9 @@ Google's subsetting and woff2 packaging.
 
 | Family | Used by | Source |
 | --- | --- | --- |
-| Alegreya Sans | Dungeons, RuneScape | https://fonts.google.com/specimen/Alegreya+Sans |
+| Alegreya Sans | Dungeons, Hades, RuneScape | https://fonts.google.com/specimen/Alegreya+Sans |
 | Baloo 2 | Animal Crossing | https://fonts.google.com/specimen/Baloo+2 |
-| Cinzel | Dungeons | https://fonts.google.com/specimen/Cinzel |
+| Cinzel | Dungeons, Hades | https://fonts.google.com/specimen/Cinzel |
 | DM Sans | Base UI | https://fonts.google.com/specimen/DM+Sans |
 | Exo 2 | Subnautica | https://fonts.google.com/specimen/Exo+2 |
 | Fredoka | Stardew Valley | https://fonts.google.com/specimen/Fredoka |
