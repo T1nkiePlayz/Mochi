@@ -60,4 +60,4 @@
 .notification-popover, .account-menu { border-radius: 3px; border-width: 2px; }
 .download-progress { border-radius: 2px; background: #28211a; border: 2px solid #1c1812; }
 .download-progress > span { background: #43d943; }
-.danger-outline, .stop-button { color: #ff4a3a; border-color: #1c1812; background: linear-gradient(180deg, #5a3a33, #43271f); }
+.danger-outline, .stop-button { color: #ffb0a2; border-color: #1c1812; background: linear-gradient(180deg, #5a3a33, #43271f); }

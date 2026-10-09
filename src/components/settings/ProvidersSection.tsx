@@ -77,6 +77,7 @@ export function ProvidersSection() {
     </div>
     <small className="metadata-note settings-note" role="status">
       Ready: {[user && c.status.igdb ? "IGDB" : null, user && c.status.steamgriddb ? "SteamGridDB" : null, "Steam Store (Steam games, no key needed)"].filter(Boolean).join(", ")}.
+      {" IGDB and SteamGridDB keys are kept on your Mochi account (never on this device), so those two need you to be signed in. The Steam Store and CurseForge work signed out, and each source works without the others."}
       {!online && " You are offline: Mochi keeps showing saved details and artwork and will refresh when you reconnect."}
     </small>
     <div className="provider-grid">

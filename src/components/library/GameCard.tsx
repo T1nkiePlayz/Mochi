@@ -2,6 +2,7 @@ import { memo, useRef, type KeyboardEvent, type PointerEvent } from "react";
 import { Check, Heart, Play } from "lucide-react";
 import type { Piko } from "../../models";
 import { GameArtwork } from "../GameArtwork";
+import { hasArtwork } from "../../lib/fallbackArt";
 import { MochiIcon } from "../MochiIcon";
 
 type Props = {
@@ -39,12 +40,12 @@ export const GameCard = memo(function GameCard({ piko, selected, running, synced
     }
   };
 
-  return <article className={`game-card ${selected ? "selected" : ""} ${checked ? "multi-selected" : ""} ${running ? "is-running" : ""}`}
+  return <article className={`game-card ${hasArtwork(piko) ? "" : "no-art"} ${selected ? "selected" : ""} ${checked ? "multi-selected" : ""} ${running ? "is-running" : ""}`}
     onContextMenu={(event) => { event.preventDefault(); onMenu(piko.id, event.clientX, event.clientY); }}
     onPointerDown={onPointerDown} onPointerUp={cancel} onPointerLeave={cancel} onPointerCancel={cancel} onKeyDown={onKeyDown}>
     <button type="button" className="game-card-main" aria-pressed={selecting ? checked : undefined}
       onClick={() => { if (fired.current) { fired.current = false; return; } if (selecting) onToggleChecked(piko.id); else onOpen(piko); }}>
-      <GameArtwork className="game-card-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} />
+      <GameArtwork className="game-card-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} name={piko.name} kind={piko.kind} sourceId={piko.sourceId} />
       <div className="game-card-copy">
         <strong><span className="game-card-name">{piko.name}</span><span className={`game-cloud-status ${synced ? "is-synced" : "not-synced"}`} title={synced ? "Synced to Mochi Cloud" : "Not synced to Mochi Cloud"}>{synced ? "✓" : "!"}</span></strong>
         <small>{running ? "Running now" : piko.categories?.join(" · ") || piko.platformCategory || "Other"}</small>

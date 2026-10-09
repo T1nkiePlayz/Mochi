@@ -86,3 +86,40 @@
 .download-progress > span { background: #2E6BE6; }
 .game-card, .tofu-card, .new-tofu-card, .theme-card, .settings-group, .modal, .hero-card, .search-box { border-radius: 0; }
 .game-cloud-status.is-synced { color: #9CD78C; }
+
+/* Top bar action buttons (Big Picture, notifications): full-size Ore toolbar buttons with a large pixel glyph. */
+.topbar-actions .icon-button { width: 40px; height: 40px; border: 2px solid #0E0E0F; border-radius: 0; background: #39393B; color: #fff;
+  box-shadow: inset 0 0 0 2px #47484A, inset 0 -4px 0 0 #2A2B2C; }
+.topbar-actions .icon-button:hover { background: #47484A; color: #fff; box-shadow: inset 0 0 0 2px #565758, inset 0 -4px 0 0 #2A2B2C; }
+.topbar-actions .icon-button:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px #2A2B2C; }
+.topbar-actions .icon-button[aria-expanded="true"] { background: #1855D1; box-shadow: inset 0 0 0 2px #2E6BE6, inset 0 -4px 0 0 #001F5C; }
+.topbar-actions .icon-button .mochi-icon-wrap { width: 26px !important; height: 26px !important; min-width: 26px !important; min-height: 26px !important; flex-basis: 26px !important; }
+.topbar-actions .icon-button > svg { width: 22px; height: 22px; }
+.notification-dot { top: 3px; right: 3px; width: 11px; height: 11px; border: 2px solid #0E0E0F; border-radius: 0; background: #EF7C7C; box-shadow: inset -2px -2px 0 #B62323; }
+
+/* Stats: the same bevelled panels, flat square controls and 2px outlines as every other Ore screen. */
+.stats-card, .stat-kpi, .stats-note, .ach-steam-note { border: 2px solid #0E0E0F; border-radius: 0; background: #2A2B2C; box-shadow: inset 0 0 0 2px #39393B; }
+.stats-card { padding: 18px 20px; }
+.stats-card-head h2, .stat-kpi strong { font-family: var(--mochi-font-display); font-weight: 600; letter-spacing: 0; text-shadow: 2px 2px 0 #0E0E0F; }
+.stat-kpi span, .ach-rarity { letter-spacing: .06em; }
+.stats-segmented { padding: 0; gap: 4px; border: 0; background: transparent; }
+.stats-segmented button, .ach-chip { min-height: 34px; padding: 0 14px; border: 2px solid #0E0E0F; border-radius: 0; background: #39393B; color: #fff;
+  box-shadow: inset 0 0 0 2px #47484A, inset 0 -4px 0 0 #2A2B2C; transition: none; }
+.stats-segmented button:hover, .ach-chip:hover { background: #47484A; box-shadow: inset 0 0 0 2px #565758, inset 0 -4px 0 0 #2A2B2C; color: #fff; }
+.stats-segmented button.active, .ach-chip[aria-pressed="true"] { background: #1855D1; border-color: #0E0E0F; color: #fff; box-shadow: inset 0 0 0 2px #2E6BE6, inset 0 -4px 0 0 #001F5C; }
+.stats-segmented button:focus-visible, .ach-chip:focus-visible, .stats-link:focus-visible { outline: 2px solid #2E6BE6; outline-offset: 2px; box-shadow: none; }
+.stat-meter, .stat-stack { border: 2px solid #0E0E0F; border-radius: 0; background: #131314; }
+.stat-meter { height: 12px; }
+.stat-meter.wide { height: 16px; }
+.stat-meter i { border-radius: 0; background: #2E6BE6; box-shadow: inset 0 2px 0 #6290ed; }
+.stat-stack { height: 18px; gap: 0; }
+.stat-comp-list i, .stat-legend i, .stat-tip-row i { border-radius: 0; }
+i.stat-cell { border-radius: 0; }
+.stat-bar { stroke: #0E0E0F; stroke-width: 1; }
+.stat-thumb { border: 2px solid #0E0E0F; border-radius: 0; image-rendering: pixelated; }
+.stat-tip { border: 2px solid #0E0E0F; border-radius: 0; background: #2A2B2C; box-shadow: inset 0 0 0 2px #39393B, 0 6px 0 rgba(0, 0, 0, .35); }
+.stats-skeleton { border-radius: 0; border: 2px solid #0E0E0F; }
+.ach-badge { border: 2px solid #0E0E0F; border-radius: 0; background: #2A2B2C; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--rarity) 45%, #39393B); }
+.ach-icon { width: 46px; height: 46px; border: 2px solid #0E0E0F; border-radius: 0; background: #1C1D1D; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--rarity) 55%, #39393B); color: var(--rarity); }
+.stats-link { border-radius: 0; }
+.steam-ach-row, .steam-ach-icon { border-radius: 0; }

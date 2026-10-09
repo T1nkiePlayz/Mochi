@@ -63,6 +63,8 @@ function mockSteamAchievements(appid: number) {
 const handlers: Record<string, Handler> = {
   ...instanceHandlers,
   get_steam_achievements: ({ appid }) => mockSteamAchievements(Number(appid)),
+  clear_steam_achievements_cache: () => undefined,
+  clear_steam_store_cache: () => undefined,
   get_steam_achievement_totals: () => [{ appid: 220, steamId: "76561197960287930", unlocked: 18, total: 33, fetchedAt: now }],
   get_steam_store_details: ({ appid }) => ({
     status: "ok", stale: false, fetchedAt: now, message: null,

@@ -25,7 +25,7 @@ export function TofuCard({ row, busy, onCheck, onUpdate, onUpdateAll, onOpen, on
   return (
     <li className="inst-card">
       <div className="inst-main">
-        <GameArtwork className="inst-thumb" cacheKey={row.piko.artworkCacheKey} fallback={row.piko.artwork} />
+        <GameArtwork className="inst-thumb" cacheKey={row.piko.artworkCacheKey} fallback={row.piko.artwork} name={row.piko.name} kind={row.piko.kind} sourceId={row.piko.sourceId} />
         <div className="inst-title">
           <h3>{row.piko.name}</h3>
           <p>{row.tofu.name}{gameVersion ? ` · ${gameVersion}` : row.tofu.version ? ` · ${row.tofu.version}` : ""}{loader ? ` · ${loaderLabels[loader]}` : ""}</p>

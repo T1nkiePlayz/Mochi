@@ -94,6 +94,11 @@
   --mochi-nav-hover-background: var(--mochi-surface-hover);
   --mochi-cover-placeholder: linear-gradient(145deg, color-mix(in srgb, var(--mochi-accent-strong) 28%, var(--mochi-surface-raised)), var(--mochi-surface));
   --mochi-selection-background: var(--mochi-accent-soft);
+  /* Generated covers for games without artwork: the hue comes from the game's name; themes tune the rest. */
+  --mochi-art-saturation: 46%;
+  --mochi-art-lightness: 32%;
+  --mochi-art-text: #fff;
+  --mochi-art-font: var(--mochi-font-display, var(--mochi-font-body));
 
   /* Buttons */
   --mochi-button-height: 38px;

@@ -7,6 +7,10 @@
 //! The SteamID64 comes from the local Steam install (`config/loginusers.vdf`, falling back to the
 //! `userdata/<accountid>` folders). Results are cached on disk and served stale when offline.
 //! Every request is size and time capped and limited to an allow-list of Steam hosts.
+//!
+//! Steam rate limits aggressively, so all requests go through one gate: one request at a time, a
+//! minimum gap (plus jitter) between them, and after an HTTP 429 a growing back-off during which no
+//! request is sent at all. Cached data is then served as "saved data" instead of an error.
 use crate::{platform, sources, steam_store::decode_entities};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -19,7 +23,15 @@ use std::{
 };
 use tauri::{AppHandle, Manager};
 
-const FRESH_SECS: u64 = 20 * 60;
+/// A cached result is reused for this long even when a game is opened again and again.
+const FRESH_SECS: u64 = 6 * 60 * 60;
+/// A manual refresh of one game is ignored when its data is newer than this.
+const MANUAL_REFRESH_MIN_SECS: u64 = 60;
+/// Smallest gap between two requests to Steam, before jitter.
+const MIN_GAP_MS: u64 = 1_500;
+const JITTER_MS: u64 = 700;
+const BACKOFF_BASE_SECS: u64 = 30;
+const BACKOFF_MAX_SECS: u64 = 15 * 60;
 const MAX_BYTES: usize = 4 * 1024 * 1024;
 const MAX_ACHIEVEMENTS: usize = 1000;
 const ID64_BASE: u64 = 76_561_197_960_265_728;
@@ -56,7 +68,7 @@ pub struct SteamAchievementSet {
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct SteamAchievementsResult {
-    /// "ok", "private", "no-achievements", "no-steam-user", "offline" or "error". The command never rejects.
+    /// "ok", "private", "no-achievements", "no-steam-user", "offline", "rate-limited" or "error". The command never rejects.
     pub status: &'static str,
     pub data: Option<SteamAchievementSet>,
     /// True when `data` is an older cached copy because the network failed.
@@ -66,6 +78,8 @@ pub struct SteamAchievementsResult {
     pub steam_id: Option<String>,
     /// "webapi", "community" or "cache".
     pub source: &'static str,
+    /// Seconds until Mochi will ask Steam again, set while Steam is rate limiting.
+    pub retry_after_secs: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -97,7 +111,53 @@ enum FetchError {
     Offline(String),
     /// 401/403: a private profile or a rejected API key.
     Denied,
+    /// HTTP 429, or a request skipped because we are still backing off; carries the seconds left.
+    RateLimited(u64),
     Other(String),
+}
+
+/// The single gate every Steam request passes through. Pure state (times are unix milliseconds passed
+/// in) so the policy is unit tested without a network or a clock.
+#[derive(Debug, Default)]
+struct Limiter {
+    next_slot_ms: u64,
+    blocked_until_ms: u64,
+    strikes: u32,
+}
+
+impl Limiter {
+    const fn new() -> Self { Limiter { next_slot_ms: 0, blocked_until_ms: 0, strikes: 0 } }
+
+    /// Milliseconds left of a back-off, if one is active.
+    fn blocked_for(&self, now: u64) -> Option<u64> { (self.blocked_until_ms > now).then(|| self.blocked_until_ms - now) }
+
+    /// Milliseconds to wait before the next request may start.
+    fn wait_ms(&self, now: u64) -> u64 { self.next_slot_ms.saturating_sub(now) }
+
+    /// Call when a request finished (any outcome): the next one starts after the gap.
+    fn finished(&mut self, now: u64, jitter: u64) { self.next_slot_ms = now + MIN_GAP_MS + jitter % (JITTER_MS + 1); }
+
+    fn succeeded(&mut self) { self.strikes = 0; }
+
+    /// Registers an HTTP 429. Honours `Retry-After` (capped); otherwise doubles from 30 s up to 15 min. Returns the seconds blocked.
+    fn rate_limited(&mut self, now: u64, retry_after: Option<u64>, jitter: u64) -> u64 {
+        self.strikes = self.strikes.saturating_add(1);
+        let exponential = BACKOFF_BASE_SECS.saturating_mul(1u64 << (self.strikes - 1).min(10));
+        let secs = retry_after.filter(|secs| *secs > 0).map_or(exponential, |secs| secs.max(BACKOFF_BASE_SECS.min(exponential))).min(BACKOFF_MAX_SECS);
+        let extra_ms = jitter % (secs * 100 + 1); // up to 10 % jitter
+        self.blocked_until_ms = now + secs * 1000 + extra_ms;
+        secs
+    }
+}
+
+static LIMITER: tokio::sync::Mutex<Limiter> = tokio::sync::Mutex::const_new(Limiter::new());
+
+fn now_ms() -> u64 { SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0) }
+
+/// Cheap jitter without a randomness dependency: sub-second clock noise mixed with the process id.
+fn jitter() -> u64 {
+    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| u64::from(d.subsec_nanos())).unwrap_or(0);
+    (nanos ^ (u64::from(std::process::id()) << 7)).wrapping_mul(0x9E37_79B9_7F4A_7C15) >> 40
 }
 
 fn now_secs() -> u64 {
@@ -271,6 +331,24 @@ pub fn host_allowed(url: &reqwest::Url) -> bool {
 }
 
 async fn fetch_text(url: &str) -> Result<String, FetchError> {
+    // Holding the gate for the whole request keeps Steam traffic strictly one at a time.
+    let mut gate = LIMITER.lock().await;
+    if let Some(left) = gate.blocked_for(now_ms()) { return Err(FetchError::RateLimited(left.div_ceil(1000))); }
+    let wait = gate.wait_ms(now_ms());
+    if wait > 0 { tokio::time::sleep(Duration::from_millis(wait)).await; }
+    let outcome = request_text(url).await;
+    let now = now_ms();
+    let outcome = match outcome {
+        // A 429 carries the server's Retry-After (0 when absent); report how long Mochi will actually back off.
+        Err(FetchError::RateLimited(retry_after)) => Err(FetchError::RateLimited(gate.rate_limited(now, (retry_after > 0).then_some(retry_after), jitter()))),
+        Ok(text) => { gate.succeeded(); Ok(text) }
+        other => other,
+    };
+    gate.finished(now, jitter());
+    outcome
+}
+
+async fn request_text(url: &str) -> Result<String, FetchError> {
     let client = reqwest::Client::builder().user_agent(USER_AGENT)
         .redirect(reqwest::redirect::Policy::custom(|attempt| {
             if attempt.previous().len() < 3 && host_allowed(attempt.url()) { attempt.follow() } else { attempt.stop() }
@@ -283,7 +361,10 @@ async fn fetch_text(url: &str) -> Result<String, FetchError> {
     })?;
     let status = response.status().as_u16();
     if status == 401 || status == 403 { return Err(FetchError::Denied); }
-    if status == 429 { return Err(FetchError::Other("Steam is rate limiting requests (HTTP 429). Try again later.".into())); }
+    if status == 429 || status == 503 {
+        let retry_after = response.headers().get(reqwest::header::RETRY_AFTER).and_then(|value| value.to_str().ok()).and_then(|value| value.trim().parse::<u64>().ok()).unwrap_or(0);
+        return Err(FetchError::RateLimited(retry_after));
+    }
     if !response.status().is_success() { return Err(FetchError::Other(format!("Steam returned HTTP {status}."))); }
     if response.content_length().is_some_and(|length| length as usize > MAX_BYTES) { return Err(FetchError::Other("Steam response is too large.".into())); }
     let mut body = Vec::new();
@@ -355,7 +436,13 @@ fn find_any_entry(dir: &Path, appid: u32) -> Option<CacheEntry> {
 // ---------------------------------------------------------------------------
 
 fn reply(status: &'static str, data: Option<SteamAchievementSet>, stale: bool, fetched_at: Option<u64>, message: Option<String>, steam_id: Option<String>, source: &'static str) -> SteamAchievementsResult {
-    SteamAchievementsResult { status, data, stale, fetched_at, message, steam_id, source }
+    SteamAchievementsResult { status, data, stale, fetched_at, message, steam_id, source, retry_after_secs: None }
+}
+
+/// Friendly text for a rate-limited Steam, with or without saved data to show.
+fn busy_message(secs: u64, have_data: bool) -> String {
+    let when = if secs >= 90 { format!("in about {} minutes", secs.div_ceil(60)) } else { "shortly".to_string() };
+    if have_data { format!("Showing saved data. Steam is busy, so Mochi will try again {when}.") } else { format!("Steam is busy right now, so achievements could not be loaded. Mochi will try again {when}.") }
 }
 
 fn valid_key(key: &str) -> bool { key.len() == 32 && key.bytes().all(|b| b.is_ascii_hexdigit()) }
@@ -379,7 +466,8 @@ pub async fn get_steam_achievements(app: AppHandle, appid: u32, steam_id: Option
     let cached = dir.as_deref().and_then(|d| read_entry(&entry_path(d, &id, appid)));
     let now = now_secs();
     if let Some(entry) = &cached {
-        if refresh != Some(true) && now.saturating_sub(entry.fetched_at) < FRESH_SECS {
+        let age = now.saturating_sub(entry.fetched_at);
+        if age < if refresh == Some(true) { MANUAL_REFRESH_MIN_SECS } else { FRESH_SECS } {
             return reply("ok", Some(entry.set.clone()), false, Some(entry.fetched_at), None, Some(id), "cache");
         }
     }
@@ -403,17 +491,30 @@ pub async fn get_steam_achievements(app: AppHandle, appid: u32, steam_id: Option
         Ok(Parsed::Private) => reply("private", None, false, None, Some("This Steam profile's game details are private, so achievements cannot be read. Set \"Game details\" to Public in Steam privacy settings, or add your own Steam Web API key in Settings.".into()), Some(id), source),
         Ok(Parsed::None(message)) => reply("no-achievements", None, false, None, Some(message), Some(id), source),
         Err(error) => {
+            let mut retry = None;
             let (status, message) = match error {
                 FetchError::Offline(message) => ("offline", message),
                 FetchError::Denied => ("private", "Steam refused the request. The profile is private or the API key was rejected.".to_string()),
+                FetchError::RateLimited(secs) => { retry = Some(secs); ("rate-limited", busy_message(secs, cached.is_some())) }
                 FetchError::Other(message) => ("error", message),
             };
-            match cached {
+            let mut result = match cached {
                 Some(entry) => reply("ok", Some(entry.set), true, Some(entry.fetched_at), Some(message), Some(id), "cache"),
                 None => reply(status, None, false, None, Some(message), Some(id), source),
-            }
+            };
+            result.retry_after_secs = retry;
+            result
         }
     }
+}
+
+/// Deletes every saved achievements file (Settings > Data & privacy). The next open fetches again.
+#[tauri::command(async)]
+pub fn clear_steam_achievements_cache(app: AppHandle) -> Result<(), String> {
+    let Ok(base) = app.path().app_data_dir() else { return Ok(()) };
+    let dir = base.join("steam-achievements");
+    if dir.exists() { fs::remove_dir_all(&dir).map_err(|error| format!("Unable to clear saved Steam achievements: {error}"))?; }
+    Ok(())
 }
 
 /// Per-game unlocked/total counts from everything cached so far (no network).
@@ -517,6 +618,43 @@ mod tests {
         assert!(safe_icon("https://cdn.steamstatic.com@evil.com/a.jpg").is_none());
         assert!(safe_icon("data:image/png;base64,AAAA").is_none());
         assert!(safe_icon("").is_none());
+    }
+
+    #[test]
+    fn limiter_spaces_requests_and_backs_off_on_429() {
+        let mut gate = Limiter::new();
+        assert_eq!((gate.blocked_for(1_000), gate.wait_ms(1_000)), (None, 0));
+        gate.finished(1_000, 0);
+        assert_eq!(gate.wait_ms(1_000), MIN_GAP_MS);
+        assert_eq!(gate.wait_ms(1_000 + MIN_GAP_MS + 5), 0);
+        // Jitter never exceeds its cap.
+        gate.finished(0, u64::MAX);
+        assert!(gate.wait_ms(0) <= MIN_GAP_MS + JITTER_MS);
+        // Exponential back-off: 30 s, 60 s, 120 s ... capped at 15 minutes.
+        let secs: Vec<u64> = (0..8).map(|_| gate.rate_limited(10_000, None, 0)).collect();
+        assert_eq!(secs, vec![30, 60, 120, 240, 480, 900, 900, 900]);
+        assert_eq!(gate.blocked_for(10_000).map(|ms| ms / 1000), Some(900));
+        assert_eq!(gate.blocked_for(10_000 + 901_000 + 90_000), None);
+        gate.succeeded();
+        assert_eq!(gate.rate_limited(0, None, 0), 30);
+    }
+
+    #[test]
+    fn retry_after_is_honoured_but_capped_and_jitter_is_small() {
+        let mut gate = Limiter::new();
+        assert_eq!(gate.rate_limited(0, Some(120), 0), 120);
+        assert_eq!(gate.rate_limited(0, Some(86_400), 0), BACKOFF_MAX_SECS);
+        let mut gate = Limiter::new();
+        gate.rate_limited(0, Some(100), u64::MAX);
+        let until = gate.blocked_until_ms;
+        assert!((100_000..=110_000).contains(&until), "{until}");
+    }
+
+    #[test]
+    fn busy_messages_are_friendly() {
+        assert!(busy_message(20, true).starts_with("Showing saved data"));
+        assert!(busy_message(600, false).contains("10 minutes"));
+        assert!(!busy_message(30, true).contains("429"));
     }
 
     #[test]
