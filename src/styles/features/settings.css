@@ -1,0 +1,31 @@
+/* Settings page: the single source of truth for settings spacing.
+ * Every direct child of a group (heading, rows, notes, grids, lists) uses the same horizontal inset so left edges align,
+ * and the same vertical padding so text never touches a divider. Theme files may override the tokens, not the paddings. */
+.settings-page {
+  --settings-pad-x: 18px;
+  --settings-pad-y: 14px;
+  --settings-gap: 12px;
+  width: min(100%, 880px); max-width: 880px; margin: 0; padding-top: 6px;
+}
+.settings-group { width: 100%; margin-top: 14px; padding: 0; }
+.settings-group > :last-child { margin-bottom: 0; }
+.settings-group-heading { gap: var(--settings-gap); padding: var(--settings-pad-y) var(--settings-pad-x); }
+.setting-row { padding: var(--settings-pad-y) var(--settings-pad-x); }
+html[data-steam-deck="true"] .setting-row { padding-block: calc(var(--settings-pad-y) + 2px); }
+.settings-group > .metadata-note, .settings-group > .settings-note { display: block; margin: 0; padding: var(--settings-pad-y) var(--settings-pad-x); line-height: 1.5; }
+.settings-group > .setting-row + .metadata-note, .settings-group > .metadata-note + .metadata-note { border-top: 0; }
+/* Cards and grids sit inside the same inset as the rows. */
+.provider-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--settings-gap); max-width: 100%; padding: var(--settings-pad-y) var(--settings-pad-x); }
+.provider-credential-card { align-content: start; min-width: 0; margin: 0; padding: var(--settings-pad-y) var(--settings-pad-x); gap: var(--settings-gap); }
+.provider-fields { display: grid; gap: 8px; margin: 0; }
+.provider-credential-card .secondary-button { margin-top: 0; }
+.theme-grid, .data-source-list { padding: var(--settings-pad-y) var(--settings-pad-x); margin: 0; }
+.theme-actions, .theme-config-path { padding-inline: var(--settings-pad-x); }
+.theme-actions { padding-block: 0 var(--settings-pad-y); }
+.theme-config-path { padding-block: var(--settings-pad-y); }
+.data-source-footer { padding: 0 var(--settings-pad-x) var(--settings-pad-y); }
+.controller-list { margin: 0; padding: 0 var(--settings-pad-x) var(--settings-pad-y); }
+.advanced-settings { gap: 0; margin: 0; }
+@media (max-width: 800px) { .provider-grid { grid-template-columns: 1fr; } }
+.settings-group > .security-signed-out { padding: var(--settings-pad-y) var(--settings-pad-x); border: 0; border-radius: 0; background: none; box-shadow: none; }
+.sound-preview-row .sound-preview { flex: 1 1 100%; justify-content: flex-start; max-width: 100%; }

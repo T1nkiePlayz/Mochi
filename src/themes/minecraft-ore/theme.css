@@ -119,7 +119,7 @@ i.stat-cell { border-radius: 0; }
 /* Form select and component dressing (moved from the launcher stylesheets so the launcher carries no per-theme rules). */
 [data-mochi-theme="minecraft-ore"] .brand-mark{background:transparent!important;box-shadow:none!important;border:0!important;}
 [data-mochi-theme="minecraft-ore"] .settings-page{width:min(100%,680px)!important;max-width:680px!important;margin:0 auto!important;padding-top:30px!important;}
-[data-mochi-theme="minecraft-ore"] .settings-group{width:100%!important;padding:22px 24px!important;margin-top:14px!important;}
+[data-mochi-theme="minecraft-ore"] .settings-group{width:100%!important;margin-top:14px!important;}
 [data-mochi-theme="minecraft-ore"] .provider-grid{max-width:900px;}
 [data-mochi-theme="minecraft-ore"] .theme-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
 [data-mochi-theme="minecraft-ore"] .theme-card{min-height:112px;align-content:start;border-color:var(--mochi-border-strong);background:var(--mochi-surface);}
