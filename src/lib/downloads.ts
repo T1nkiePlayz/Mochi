@@ -31,6 +31,11 @@ export type ModRecordInput = {
   iconUrl?: string;
   /** Publication date of the file, used to tell newer files from older ones. */
   fileDate?: string;
+  /** Install-time facts for the offline conflict check (not kept for CurseForge files). */
+  gameVersions?: string[];
+  loaders?: string[];
+  requires?: string[];
+  incompatible?: string[];
 };
 
 /** Queues a download in the native layer and returns its id; progress shows in the Downloads list. */

@@ -1,10 +1,13 @@
 import { confirmAction } from "../lib/confirm";
 import { useEffect, useState, type ReactNode } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Copy, FolderOpen, Plus, Trash2, X } from "lucide-react";
+import { Copy, FolderOpen, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { defaultLaunchConfig } from "../lib/launch";
 import type { RuntimeInfo } from "../lib/platform";
 import { copyInstanceRecords } from "../lib/mods/instances";
+import { checkTofuMods } from "../lib/mods/conflictService";
+import { summarizeIssues, type Issue } from "../lib/mods/conflicts";
+import { ConflictIssues } from "./mods/ConflictIssues";
 import type { Piko, Tofu } from "../models";
 import { Select } from "./ui/Select";
 import { Checkbox, Field, Switch } from "./ui/Checkbox";
@@ -34,6 +37,8 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
   const tofus = piko.tofus;
   const selected = tofus.find((tofu) => tofu.id === selectedTofuId) ?? tofus[0];
   const [draftName, setDraftName] = useState(selected?.name ?? "");
+  const [checked, setChecked] = useState<{ tofuId: string; issues: Issue[] } | null>(null);
+  const [checking, setChecking] = useState(false);
   useEffect(() => setDraftName(selected?.name ?? ""), [selected?.id, selected?.name]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === "Escape" && !event.defaultPrevented) onClose(); };
@@ -73,6 +78,12 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
     const path = await open({ directory: true, multiple: false, title });
     if (typeof path === "string") apply(path);
   };
+  const runCheck = async () => {
+    setChecking(true);
+    const issues = await checkTofuMods(piko, selected, 5000);
+    setChecked({ tofuId: selected.id, issues });
+    setChecking(false);
+  };
   const commitName = () => { const name = draftName.trim(); if (name && name !== selected.name) patch({ name }); else setDraftName(selected.name); };
 
   return <div className="modal-backdrop" onClick={onClose}><div className="modal tofu-manager-modal" role="dialog" aria-modal="true" aria-labelledby="tofu-manager-title" onClick={(event) => event.stopPropagation()}>
@@ -103,6 +114,13 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
 
         {selected.path && <Section title="Snapshots" description="Mochi saves the mod files and records before updates. Restore puts the Tofu back to a saved state; the current one is saved first.">
           <TofuSnapshotsSection tofu={selected} />
+        </Section>}
+
+        {selected.path && <Section title="Mod check" description="Looks for duplicates, mods for another game version or loader, and missing required mods. Works offline from what Mochi saved when the mods were installed.">
+          <div className="conflict-check-row"><button type="button" className="secondary-button" disabled={checking} onClick={() => void runCheck()}><ShieldCheck size={14}/> {checking ? "Checking…" : "Check mods"}</button>
+            {checked?.tofuId === selected.id && <span className="conflict-message" role="status" aria-live="polite">{summarizeIssues(checked.issues)}</span>}</div>
+          {checked?.tofuId === selected.id && checked.issues.length > 0 && <ConflictIssues issues={checked.issues} tofu={selected} onFixed={runCheck} />}
+          <Checkbox checked={selected.skipModCheck !== true} onChange={(on) => patch({ skipModCheck: on ? undefined : true })} label="Check mods before launching" description="Shows a warning with fixes first. You can always launch anyway." />
         </Section>}
 
         <Section title="Launch settings">

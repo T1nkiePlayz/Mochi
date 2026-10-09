@@ -1,5 +1,6 @@
 import { startModDownload } from "../downloads";
 import { rememberNxmIntent } from "../../state/nxmLinks";
+import { metaFromModFile } from "./compat";
 import { pickBestFile } from "./helpers";
 import { contentFolder, contentKindOf, type ContentKind } from "./targets";
 import type { Tofu } from "../../models";
@@ -23,6 +24,14 @@ export function defaultFile(files: ModFile[]): ModFile | undefined {
   return pickBestFile(ranked)?.file;
 }
 
+/** What the offline conflict check needs from a file, in the shape the install record stores it (nothing for CurseForge). */
+export function conflictFacts(file: ModFile): { gameVersions?: string[]; loaders?: string[]; requires?: string[]; incompatible?: string[] } {
+  const meta = metaFromModFile(file);
+  const ids = (list: ModFile["dependencies"]) => [...new Set((list ?? []).filter((entry) => !entry.external && entry.id).map((entry) => entry.id))];
+  const facts = { gameVersions: [...(meta.gameVersions ?? [])], loaders: [...(meta.loaders ?? [])], requires: ids(file.dependencies), incompatible: ids(file.incompatibles) };
+  return Object.fromEntries(Object.entries(facts).filter(([, list]) => list.length)) as ReturnType<typeof conflictFacts>;
+}
+
 /** Resolve one file and hand it to the native downloader for `tofu`. Throws a readable Error on failure. */
 export async function installFile(source: ModSource, item: ModItem, file: ModFile, tofu: Tofu, kind: ContentKind = contentKindOf(item.kind)): Promise<InstallOutcome> {
   const folder = contentFolder(tofu, kind);
@@ -39,7 +48,7 @@ export async function installFile(source: ModSource, item: ModItem, file: ModFil
   await startModDownload({
     provider: item.source, url: resolved.url, path: folder.path, subdir: folder.subdir, tofuId: tofu.id, tofuName: tofu.name, itemName: item.name,
     filename: resolved.fileName, sha1: resolved.sha1, extract: kind === "mod" && tofu.extractArchives === true,
-    record: { source: source.id, projectId: item.id, fileId: file.id, version: file.version ?? file.name, title: item.name, iconUrl: item.iconUrl, fileDate: file.date },
+    record: { source: source.id, projectId: item.id, fileId: file.id, version: file.version ?? file.name, title: item.name, iconUrl: item.iconUrl, fileDate: file.date, ...(source.id === "curseforge" ? {} : conflictFacts(file)) },
   });
   return { kind: "queued", message: `Queued ${item.name} for ${tofu.name}.` };
 }

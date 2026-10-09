@@ -28,6 +28,7 @@ import { useLibraryIndex } from "./useLibraryIndex";
 import { CliChooser } from "../components/CliChooser";
 import { AchievementWatcher } from "../components/stats/AchievementWatcher";
 import { ConfirmHost } from "../components/ui/ConfirmHost";
+import { ConflictPromptHost } from "../components/mods/ConflictPromptHost";
 import { SelfInstallPrompt } from "../components/SelfInstallPrompt";
 import { confirmAction } from "../lib/confirm";
 
@@ -172,7 +173,7 @@ export function AppStoreProvider({ controller, children }: { controller: AppCont
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const controller = useAppController();
-  return <AppStoreProvider controller={controller}><AppContext.Provider value={controller}><AchievementWatcher />{children}<ConfirmHost /><SelfInstallPrompt />{controller.cliIntents.choice && <CliChooser {...controller.cliIntents.choice} onPick={controller.cliIntents.pick} onClose={controller.cliIntents.closeChoice} />}</AppContext.Provider></AppStoreProvider>;
+  return <AppStoreProvider controller={controller}><AppContext.Provider value={controller}><AchievementWatcher />{children}<ConfirmHost /><ConflictPromptHost /><SelfInstallPrompt />{controller.cliIntents.choice && <CliChooser {...controller.cliIntents.choice} onPick={controller.cliIntents.pick} onClose={controller.cliIntents.closeChoice} />}</AppContext.Provider></AppStoreProvider>;
 }
 
 export function useApp(): AppController {

@@ -21,6 +21,12 @@ export type ModRecord = {
   rollback?: { file: string; version: string; fileId: string; sha1?: string; fileDate?: string };
   /** A .zip that was unpacked into the folder (`file` is the archive name, no longer on disk). */
   extracted?: boolean;
+  /** What the file said at install time, for the offline conflict check. Absent on older records and CurseForge files. */
+  gameVersions?: string[];
+  loaders?: string[];
+  /** Project ids (same source) the file requires / is marked incompatible with. */
+  requires?: string[];
+  incompatible?: string[];
 };
 
 /** A file in a Tofu's mod folder with its record (if Mochi installed it). */

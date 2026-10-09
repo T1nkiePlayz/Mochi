@@ -66,6 +66,8 @@ export type Tofu = {
   activeProfileId?: string;
   /** Unpack .zip downloads into the folder (for games whose mods are archives, not single files). */
   extractArchives?: boolean;
+  /** Opt-out of the problem check before launch (duplicates, wrong version, missing dependencies). The Tofu page can still run it. */
+  skipModCheck?: boolean;
   /** Minecraft: which loader this Tofu runs (the game version is `version`). */
   loader?: ModLoader;
   /**

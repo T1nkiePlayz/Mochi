@@ -5,6 +5,8 @@ type Mod = { filename: string; path: string; enabled: boolean; size: number; rec
 const mods: Mod[] = [
   { filename: "sodium-0.6.0.jar", path: "/mods/sodium-0.6.0.jar", enabled: true, size: 912_000, record: { file: "sodium-0.6.0.jar", subdir: "", enabled: true, source: "modrinth", projectId: "AANobbMI", fileId: "v1", version: "0.6.0", title: "Sodium", installedAt: 1, rollback: { file: "sodium-0.5.9.jar", version: "0.5.9", fileId: "v0" } } },
   { filename: "lithium.jar.disabled", path: "/mods/lithium.jar.disabled", enabled: false, size: 402_000, record: { file: "lithium.jar", subdir: "", enabled: false, source: "curseforge", projectId: "360438", fileId: "55", version: "0.12.0", title: "Lithium", installedAt: 1, fileDate: "2025-01-01T00:00:00Z" } },
+  { filename: "needs-api.jar", path: "/mods/needs-api.jar", enabled: true, size: 80_000, record: { file: "needs-api.jar", subdir: "", enabled: true, source: "modrinth", projectId: "NEEDSAPI", fileId: "v1", version: "1.0.0", title: "Needs API", installedAt: 2, requires: ["P7LgX9k2"], loaders: ["forge"], gameVersions: ["1.20.1"] } },
+  { filename: "sodium-0.5.9.jar", path: "/mods/sodium-0.5.9.jar", enabled: true, size: 900_000, record: { file: "sodium-0.5.9.jar", subdir: "", enabled: true, source: "modrinth", projectId: "AANobbMI", fileId: "v0", version: "0.5.9", title: "Sodium", installedAt: 0 } },
   { filename: "unknown-mod.jar", path: "/mods/unknown-mod.jar", enabled: true, size: 55_000 },
   { filename: "other-tofu-mod.jar.disabled", path: "/mods/other-tofu-mod.jar.disabled", enabled: false, size: 12_000 },
 ];
