@@ -1,7 +1,7 @@
 # Code of Conduct
 
 This Code of Conduct is taken from the Conduct of Use set out in the
-[Mochi Terms of Use](https://github.com/T1nkiePlayz/Mochi-Website/blob/main/public/terms/index.html)
+[Mochi Terms of Use](https://t1nkieplayz.github.io/Mochi-Website/terms/)
 (effective 6 October 2026), operated under the name Side Quest Games in Western Australia.
 It applies to everyone who uses Mochi, the Mochi website, the launcher, account services, this
 repository, its issues, pull requests and discussions.
@@ -46,6 +46,19 @@ You must not use Mochi to knowingly:
 - interfere with the operation of Mochi; or
 - access another user's data without authorisation.
 
+## Intellectual property
+
+Mochi, its original branding, documentation and original software belong to Side Quest Games or
+their respective rights holders, subject to any open-source or third-party licences. Third-party
+games, logos, artwork, trademarks and metadata remain the property of their owners. Do not submit
+content (themes, artwork, code) that you do not have the right to share.
+
+## Experimental software
+
+Mochi is actively developed. Features may be incomplete, changed or removed, and compatibility with
+individual games, launchers, distributions, operating systems, mods and hardware is not guaranteed.
+Keep backups of important local data; when reporting problems, be patient and share what you tried.
+
 ## Community behaviour
 
 Be respectful and constructive. Harassment, discrimination, personal attacks, doxxing, spam and
@@ -65,3 +78,12 @@ Security vulnerabilities should be reported the same way instead of in a public 
 
 This document may be updated as Mochi and its legal terms change. The current Terms of Use on the
 Mochi Website are authoritative.
+
+## Reporting
+
+Report violations, or questions about this Code or the Terms of Use, to support@ashtontink.com.
+Please include links or screenshots where possible. Reports are handled in confidence as far as is
+reasonably possible.
+
+This Code mirrors the Terms of Use and is not a substitute for them or for legal advice; if the two
+differ, the Terms of Use on the Mochi website apply.
