@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { supabase } from "../lib/supabase";
@@ -153,13 +153,68 @@ export type AppController = ReturnType<typeof useAppController>;
 
 const AppContext = createContext<AppController | null>(null);
 
+/** External store mirroring the controller, so chrome can subscribe to slices instead of re-rendering on every change. */
+type AppStore = { current: AppController; listeners: Set<() => void> };
+const AppStoreContext = createContext<AppStore | null>(null);
+
+/** Mirrors `controller` into the store and notifies selector subscribers after each commit where it changed. */
+export function AppStoreProvider({ controller, children }: { controller: AppController; children: ReactNode }) {
+  const store = useRef<AppStore | null>(null);
+  // Populated synchronously on first render so selector consumers can read it before any effect runs.
+  if (!store.current) store.current = { current: controller, listeners: new Set() };
+  useLayoutEffect(() => {
+    const current = store.current!;
+    if (current.current === controller) return;
+    current.current = controller;
+    current.listeners.forEach((listener) => listener());
+  });
+  return <AppStoreContext.Provider value={store.current}>{children}</AppStoreContext.Provider>;
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const controller = useAppController();
-  return <AppContext.Provider value={controller}><AchievementWatcher />{children}<ConfirmHost /><SelfInstallPrompt /></AppContext.Provider>;
+  return <AppStoreProvider controller={controller}><AppContext.Provider value={controller}><AchievementWatcher />{children}<ConfirmHost /><SelfInstallPrompt /></AppContext.Provider></AppStoreProvider>;
 }
 
 export function useApp(): AppController {
   const value = useContext(AppContext);
   if (!value) throw new Error("useApp must be used inside <AppProvider>");
   return value;
+}
+
+export function shallowEqual<T>(a: T, b: T): boolean {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== "object" || typeof b !== "object" || !a || !b) return false;
+  const keysA = Object.keys(a);
+  if (keysA.length !== Object.keys(b).length) return false;
+  return keysA.every((key) => Object.prototype.hasOwnProperty.call(b, key) && Object.is((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]));
+}
+
+function useAppStore(): AppStore {
+  const store = useContext(AppStoreContext);
+  if (!store) throw new Error("useAppSelector must be used inside <AppProvider>");
+  return store;
+}
+
+/** Re-renders only when the selected value changes (per `isEqual`). Select primitives or stable objects; use `shallowEqual` for small fresh objects. */
+export function useAppSelector<T>(selector: (app: AppController) => T, isEqual: (a: T, b: T) => boolean = Object.is): T {
+  const store = useAppStore();
+  const last = useRef<{ source: AppController; value: T } | null>(null);
+  const subscribe = useCallback((listener: () => void) => { store.listeners.add(listener); return () => { store.listeners.delete(listener); }; }, [store]);
+  const getSnapshot = () => {
+    const source = store.current;
+    const previous = last.current;
+    if (previous && previous.source === source) return previous.value;
+    const value = selector(source);
+    if (previous && isEqual(previous.value, value)) { last.current = { source, value: previous.value }; return previous.value; }
+    last.current = { source, value };
+    return value;
+  };
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+/** Stable accessor for the latest controller, for event handlers that need functions whose identity changes every render. */
+export function useAppGetter(): () => AppController {
+  const store = useAppStore();
+  return useCallback(() => store.current, [store]);
 }

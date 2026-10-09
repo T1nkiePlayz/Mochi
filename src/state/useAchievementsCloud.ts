@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabase";
 import { isNetworkError } from "../lib/offline";
 import { readString, writeString } from "../lib/storage";
 import { deleteCloudAchievements, mergeAchievements, pullCloudAchievements, pushCloudAchievements, toCloudAchievements } from "../lib/achievementsCloud";
-import { useApp } from "./AppContext";
+import { useAppSelector } from "./AppContext";
 import { ACHIEVEMENTS_CHANGED, clearLocalAchievements, readAchievements, writeAchievements } from "./useAchievements";
 
 const SETTING_KEY = "mochi:achievements-cloud";
@@ -30,10 +30,11 @@ export const useAchievementCloudSetting = () => useSyncExternalStore(subscribeSe
 
 /** Cloud saving needs a signed-in account with Mochi cloud sync on, plus the setting. */
 export function useAchievementCloudAvailability() {
-  const { account, cloud } = useApp();
+  const signedIn = useAppSelector((app) => Boolean(app.account.user));
+  const cloudSyncEnabled = useAppSelector((app) => app.cloud.cloudSyncEnabled);
   const enabled = useAchievementCloudSetting();
-  const available = Boolean(supabase && account.user && cloud.cloudSyncEnabled);
-  return { available, enabled, active: available && enabled, signedIn: Boolean(account.user) };
+  const available = Boolean(supabase && signedIn && cloudSyncEnabled);
+  return { available, enabled, active: available && enabled, signedIn };
 }
 
 const describe = (error: unknown) => (error instanceof Error ? error.message : typeof error === "object" && error && "message" in error ? String((error as { message: unknown }).message) : "Unknown error");
@@ -43,9 +44,8 @@ const describe = (error: unknown) => (error instanceof Error ? error.message : t
  * (union of unlocks, earliest time wins), then pushes local changes, debounced, while Mochi runs.
  */
 export function useAchievementsCloudSync() {
-  const { account } = useApp();
+  const userId = useAppSelector((app) => app.account.user?.id);
   const { active, available } = useAchievementCloudAvailability();
-  const userId = account.user?.id;
   useEffect(() => {
     if (!active || !supabase || !userId) { setStatus({ state: available ? "off" : "unavailable" }); return; }
     const client = supabase;

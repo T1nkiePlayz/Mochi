@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useApp } from "./AppContext";
+import { useAppSelector } from "./AppContext";
 import { achievements, buildFacts, countCollections, emptyFlags, evaluate, newlyMet, type AchievementFlags } from "../lib/achievements";
 import { getSteamAchievementTotals, STEAM_ACHIEVEMENTS_CHANGED, summariseTotals } from "../lib/steamAchievements";
 import { useControllerState } from "../controller/manager";
@@ -66,8 +66,12 @@ export function useStoredAchievements() {
  * The first run unlocks everything already earned silently so an existing library does not flood with toasts.
  */
 export function useAchievementWatcher() {
-  const { lib, themeEngine, activeNav, playtime, notifications, storage } = useApp();
-  const { notify } = notifications;
+  const library = useAppSelector((app) => app.lib.library);
+  const theme = useAppSelector((app) => app.themeEngine.theme);
+  const activeNav = useAppSelector((app) => app.activeNav);
+  const playtime = useAppSelector((app) => app.playtime);
+  const notify = useAppSelector((app) => app.notifications.notify);
+  const ownerKey = useAppSelector((app) => app.storage.ownerKey);
   const controller = useControllerState();
   const bigPicture = useBigPictureActive();
   const controllerSeen = controller.pads.length > 0 || controller.device === "controller";
@@ -85,19 +89,19 @@ export function useAchievementWatcher() {
     const timer = window.setTimeout(async () => {
       const stored = readAchievements();
       const flags = { ...stored.flags, themes: [...stored.flags.themes] };
-      if (themeEngine.theme && !flags.themes.includes(themeEngine.theme)) flags.themes.push(themeEngine.theme);
+      if (theme && !flags.themes.includes(theme)) flags.themes.push(theme);
       if (activeNav === "Discover") flags.usedDiscover = true;
       if (!flags.views.includes(activeNav)) flags.views = [...flags.views, activeNav];
       if (controllerSeen) flags.controllerUsed = true;
       if (bigPicture) flags.bigPictureUsed = true;
-      if (lib.library.some((piko) => piko.tofus.some((tofu) => tofu.mods > 0))) flags.installedMod = true;
+      if (library.some((piko) => piko.tofus.some((tofu) => tofu.mods > 0))) flags.installedMod = true;
       let records: SessionRecord[];
       try { records = await getPlaytimeHistory(); } catch { records = []; }
       const steam = summariseTotals(await getSteamAchievementTotals());
       if (cancelled) return;
       if (steam.known) flags.steam = steam;
-      const collections = readJson<unknown>(collectionsKeyFor(storage.ownerKey), []);
-      const progress = evaluate(buildFacts(records, lib.library, flags, countCollections(collections, lib.library)));
+      const collections = readJson<unknown>(collectionsKeyFor(ownerKey), []);
+      const progress = evaluate(buildFacts(records, library, flags, countCollections(collections, library)));
       const fresh = newlyMet(progress, stored.unlocked);
       const unlocked = { ...stored.unlocked };
       const at = Date.now();
@@ -111,7 +115,7 @@ export function useAchievementWatcher() {
       }
     }, 800);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [tick, lib.library, themeEngine.theme, activeNav, playtime, notify, storage.ownerKey, controllerSeen, bigPicture]);
+  }, [tick, library, theme, activeNav, playtime, notify, ownerKey, controllerSeen, bigPicture]);
 
   return { recompute, total: achievements.length };
 }
