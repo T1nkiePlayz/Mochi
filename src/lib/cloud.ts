@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Piko, Tofu } from "../models";
 
+/**
+ * Source ids the `pikos_source_id_check` constraint accepts (see 20261009150000_more_import_sources.sql).
+ * Others are synced as null and the source filter falls back to the platform label.
+ */
+const CLOUD_SOURCE_IDS = new Set<string>(["flatpak", "heroic", "steam", "lutris", "bottles", "itch", "apps", "epic", "whisky", "battlenet", "gog", "prism"]);
+
 const PIKO_COLUMNS = "local_id, name, description, accent, artwork, artwork_url, executable_path, source, source_id, platform_category, igdb_id, categories, screenshots, trailer_id, first_release_date, favorite, tags, artwork_source, kind";
 
 type PikoRow = {
@@ -78,7 +84,7 @@ export async function pushLibrary(client: SupabaseClient, library: Piko[]) {
     artwork_url: piko.artworkUrl ?? null,
     executable_path: clamp(piko.executablePath, 4096) ?? null,
     source: piko.source ?? "built-in",
-    source_id: piko.sourceId ?? null,
+    source_id: piko.sourceId && CLOUD_SOURCE_IDS.has(piko.sourceId) ? piko.sourceId : null,
     platform_category: piko.platformCategory ?? null,
     igdb_id: piko.igdbId ?? null,
     categories: (piko.categories ?? []).slice(0, 60),
@@ -87,7 +93,8 @@ export async function pushLibrary(client: SupabaseClient, library: Piko[]) {
     first_release_date: piko.firstReleaseDate ?? null,
     favorite: piko.favorite ?? false,
     tags: (piko.tags ?? []).slice(0, 60).map((tag) => tag.slice(0, 60)),
-    artwork_source: piko.artworkSource ?? null,
+    // "icon" covers are drawn from a file on this device and the column does not allow the value.
+    artwork_source: piko.artworkSource === "icon" ? null : piko.artworkSource ?? null,
     kind: piko.kind ?? null,
     tofus: (piko.tofus ?? []).map((tofu) => ({
       local_id: tofu.id, name: clamp(tofu.name, 200), version: clamp(tofu.version, 100), runtime: clamp(tofu.runtime, 100),

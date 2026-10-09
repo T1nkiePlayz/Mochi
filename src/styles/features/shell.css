@@ -1,0 +1,53 @@
+/* Shared confirm dialog (lib/confirm + components/ui/ConfirmDialog). */
+.confirm-backdrop { z-index: 400; }
+.confirm-dialog { width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; }
+.confirm-heading { display: flex; align-items: center; gap: 10px; }
+.confirm-dialog h2 { margin: 0; font-size: 18px; color: var(--mochi-text-strong); overflow-wrap: anywhere; }
+.confirm-icon { display: grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%; color: var(--mochi-danger-color); background: var(--mochi-danger-background); }
+.confirm-dialog .modal-description { margin: 12px 0 0; color: var(--mochi-text-muted); line-height: 1.55; }
+.confirm-items { display: grid; gap: 4px; max-height: 180px; margin: 12px 0 0; padding: 10px 12px 10px 28px; overflow: auto; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-input-radius, var(--mochi-radius-sm)); background: var(--mochi-surface-raised); color: var(--mochi-text); font-size: 12px; }
+.confirm-items li { overflow-wrap: anywhere; }
+.confirm-items-more { list-style: none; margin-left: -16px; color: var(--mochi-text-muted); }
+.confirm-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.danger-solid { background: var(--mochi-danger-background); border-color: var(--mochi-danger); font-weight: 700; }
+.danger-solid:hover:not(:disabled) { background: color-mix(in srgb, var(--mochi-danger) 26%, transparent); }
+@media (max-width: 420px) { .confirm-actions > button { flex: 1 1 auto; } }
+
+/* Settings → Achievements */
+.achievement-cloud-status.is-synced { color: var(--mochi-success); }
+.achievement-cloud-status.is-error { color: var(--mochi-danger-color); }
+.achievement-cloud-status.is-offline { color: var(--mochi-warning); }
+
+/* Game details: screenshots as justified rows (no holes), lazy-loaded, with a keyboard lightbox. */
+.game-details-primary { gap: 14px; }
+.shot-gallery-sets { display: grid; gap: 14px; }
+.shot-set { margin: 0; display: grid; gap: 8px; }
+.shot-set-credit { color: var(--mochi-text-muted); font-size: 11px; }
+.shot-gallery, .game-screenshot-grid.shot-gallery { --shot-row-height: 150px; display: flex; flex-wrap: wrap; gap: 8px; }
+/* The filler soaks up the last row so it keeps natural sizes instead of blowing up one leftover image. */
+.shot-gallery::after { content: ""; flex: 10000 1 0; }
+.shot-tile {
+  position: relative; display: block; flex: var(--shot-ratio) 1 calc(var(--shot-row-height) * var(--shot-ratio));
+  aspect-ratio: var(--shot-ratio); min-width: 0; max-height: calc(var(--shot-row-height) * 2.2); padding: 0; overflow: hidden; cursor: zoom-in;
+  border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-radius-sm); background: var(--mochi-surface-raised);
+  transition: border-color var(--mochi-transition), transform var(--mochi-transition);
+}
+.shot-tile img, .game-screenshot-grid .shot-tile img { display: block; width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; border-radius: 0; }
+.shot-tile:hover { border-color: var(--mochi-accent); }
+.shot-tile:focus-visible { outline: 2px solid var(--mochi-focus-ring, var(--mochi-accent)); outline-offset: 2px; }
+@media (max-width: 700px) { .shot-gallery, .game-screenshot-grid.shot-gallery { --shot-row-height: 104px; gap: 6px; } }
+@media (prefers-reduced-motion: no-preference) { .shot-tile:hover { transform: translateY(-1px); } }
+
+.shot-lightbox-backdrop { z-index: 300; padding: 16px; }
+.shot-lightbox {
+  display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; width: min(1200px, 100%); max-height: calc(100vh - 32px);
+  padding: 10px; border: var(--mochi-border-width) solid var(--mochi-modal-border, var(--mochi-border)); border-radius: var(--mochi-modal-radius, var(--mochi-radius-lg));
+  background: var(--mochi-modal-background, var(--mochi-surface)); box-shadow: var(--mochi-modal-shadow, none); color: var(--mochi-text);
+}
+.shot-lightbox-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.shot-lightbox-count { color: var(--mochi-text-muted); font-size: 12px; }
+.shot-lightbox-stage { position: relative; display: grid; place-items: center; min-height: 0; }
+.shot-lightbox-stage img { max-width: 100%; max-height: calc(100vh - 110px); object-fit: contain; border-radius: var(--mochi-radius-sm); background: var(--mochi-background); }
+.shot-lightbox-nav { position: absolute; top: 50%; translate: 0 -50%; width: 40px; height: 40px; border-radius: 50%; background: color-mix(in srgb, var(--mochi-surface) 80%, transparent); color: var(--mochi-text-strong); }
+.shot-lightbox-nav.prev { left: 6px; }
+.shot-lightbox-nav.next { right: 6px; }

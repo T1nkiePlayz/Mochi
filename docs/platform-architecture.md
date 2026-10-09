@@ -30,7 +30,12 @@ Linux and macOS provide read-only discovery/import adapters for their supported 
 - Lutris
 - Bottles
 - itch.io
+- Battle.net (`product.db` in Wine prefixes on Linux, the native agent on macOS)
+- GOG (`goggame-*.info` in `~/GOG Games` installs on Linux and Galaxy `.app` bundles on macOS; Galaxy itself is not available on Linux, GOG games managed by Heroic come through the Heroic source)
+- Minecraft instances of Prism Launcher, Fjord Launcher, PolyMC and MultiMC (each instance becomes a Minecraft game whose default Tofu is the instance folder)
 - Desktop applications (Linux `.desktop` entries and macOS `.app` bundles categorised as games)
+
+Known launchers (Steam, Heroic, Lutris, Bottles, itch, Epic, GOG Galaxy, Battle.net, EA, Ubisoft, Prism-family, Modrinth App, CurseForge, Hytale, Jagex, ...) are classified by `sources/classify.rs` and land in the "Game launchers" smart category; `src/lib/launchers.ts` mirrors that table (a test keeps them identical) and re-classifies older library entries when the library loads. Desktop-entry `Icon=` values are resolved through the XDG icon themes (hicolor first, other themes, pixmaps, Flatpak and Snap exports) by `sources/icons.rs`; `icon_cover.rs` draws the icon on a 600x800 cover in the artwork cache.
 
 Shared scanners live in `sources/mod.rs`; `sources/linux.rs` and `sources/macos.rs` only say where each launcher keeps its data and which extra sources exist. Sources are scanned in parallel with timeouts, and Steam, Lutris, Bottles and itch data is read directly (no shelling out to `gzip` or `sh`).
 
@@ -44,6 +49,8 @@ Launch targets are handed back to the owning source where appropriate:
 - Bottles → bottles:run/...
 - itch.io → itch-setup --run-game ...
 - Flatpak → flatpak run ...
+- Minecraft instance → `mc-instance://<launcher>/<instance>` → `prismlauncher --launch <instance>` (or its Flatpak / `open -b` on macOS)
+- Battle.net → `battlenet://<code>` on macOS; on Linux `battlenet-wine://<prefix>/<code>` runs `Battle.net.exe --exec="launch <code>"` with the system `wine` in that prefix
 
 The platform-specific implementations live under src-tauri/src/sources/, while src/lib/sources.ts provides the frontend boundary. The import picker can detect sources, scan them, select individual games, and perform manual library-path scans when automatic detection is unavailable.
 

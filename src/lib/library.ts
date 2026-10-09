@@ -1,5 +1,7 @@
 import type { Piko, Tofu } from "../models";
 import type { PlaytimeEntry } from "./platform";
+import { launcherArt } from "./launcherArt";
+import { launcherForPiko } from "./launchers";
 
 export type SmartFilterId = "all" | "favorites" | "installed" | "recent" | "unplayed" | "most-played" | "launchers" | "running";
 /** The one "primary" filter applied to the library: a smart filter, a source or a user collection. */
@@ -97,16 +99,38 @@ export function sanitizeLibrary(value: unknown): Piko[] {
     if (!isRecord(item) || typeof item.id !== "string" || !item.id || seen.has(item.id)) continue;
     seen.add(item.id);
     const tofus = (Array.isArray(item.tofus) ? item.tofus : []).filter((tofu): tofu is Tofu => isRecord(tofu) && typeof tofu.id === "string");
-    result.push({
+    result.push(classifyLauncherEntry({
       ...(item as unknown as Piko),
       name: typeof item.name === "string" ? item.name : "Untitled",
       description: typeof item.description === "string" ? item.description : "",
       accent: typeof item.accent === "string" ? item.accent : "#a99ad6",
       artwork: typeof item.artwork === "string" ? item.artwork : "",
       tofus: tofus.length ? tofus.map((tofu) => ({ ...tofu, name: typeof tofu.name === "string" ? tofu.name : "Default", mods: Number.isFinite(tofu.mods) ? tofu.mods : 0 })) : [defaultTofuOf()],
-    });
+    }));
   }
   return result;
+}
+
+/**
+ * Load-time migration: entries that are known launchers (imported before Mochi knew them, or before
+ * `kind` existed) become launchers so they land in "Game launchers". Launchers never keep a trailer.
+ * Returns the same object when nothing changes.
+ */
+export function classifyLauncherEntry(piko: Piko): Piko {
+  const def = piko.kind === "launcher" && piko.launcherId ? undefined : launcherForPiko(piko);
+  if (!def) {
+    return piko.kind === "launcher" && piko.trailerId ? { ...piko, trailerId: undefined } : piko;
+  }
+  const wasGame = piko.kind !== "launcher";
+  const ownArt = Boolean(piko.artworkSource || piko.artworkUrl || (piko.lockedFields ?? []).includes("artwork"));
+  return {
+    ...piko,
+    kind: "launcher",
+    launcherId: def.id,
+    trailerId: undefined,
+    ...(wasGame ? { platformCategory: "Launchers", categories: piko.categories?.length ? piko.categories : ["Launcher"] } : {}),
+    ...(!ownArt && !piko.artwork ? { artwork: launcherArt(def.id) } : {}),
+  };
 }
 
 /** A stored filter is only usable when its kind and (for smart filters) its id are still known. */

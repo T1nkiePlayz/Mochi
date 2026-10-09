@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
+import { useDismiss } from "../ui/useDismiss";
 import { ArrowDown, ArrowUp, Trash2, X } from "lucide-react";
 import type { Collection } from "../../models";
 import type { CollectionsState } from "../../state/useCollections";
@@ -38,14 +39,16 @@ export function CollectionManager({ state, counts, onClose }: Props) {
         {!collections.length && <li className="metadata-note">No collections yet. Collections group games however you like, such as "Co-op" or "Finish this year".</li>}
       </ul>
     </div>
-    {deleting && <ConfirmDialog title={`Delete “${deleting.name}”?`} message="The games stay in your library; only the collection is removed." confirmLabel="Delete collection" danger
+    {deleting && <ConfirmDialog title={`Delete “${deleting.name}”?`} message="Only the collection is removed. The games in it stay in your library." items={[deleting.name]} confirmLabel="Delete collection" danger
       onCancel={() => setDeleting(null)} onConfirm={() => { deleteCollection(deleting.id); setDeleting(null); }} />}
   </div>;
 }
 
 function EmojiField({ value, onChange, label }: { value: string; onChange: (value: string) => void; label: string }) {
   const [open, setOpen] = useState(false);
-  return <div className="emoji-field">
+  const root = useRef<HTMLDivElement>(null);
+  useDismiss(root, open, () => setOpen(false));
+  return <div className="emoji-field" ref={root}>
     <button type="button" className="emoji-trigger" aria-label={`${label}: ${value || "none"}`} aria-expanded={open} onClick={() => setOpen(!open)}>{value || "☆"}</button>
     {open && <div className="emoji-popover" role="group" aria-label="Choose an emoji">
       {EMOJI.map((emoji) => <button type="button" key={emoji} aria-label={emoji} onClick={() => { onChange(emoji); setOpen(false); }}>{emoji}</button>)}

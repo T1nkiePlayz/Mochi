@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { usePopoverPlacement } from "./usePopoverPlacement";
+import { useDismiss } from "./useDismiss";
 
 export type SelectOption<T extends string = string> = {
   value: T;
@@ -47,12 +48,7 @@ export function Select<T extends string>({ value, onChange, options, label, plac
     return needle ? options.filter((option) => `${option.label} ${option.description ?? ""} ${option.group ?? ""}`.toLowerCase().includes(needle)) : options;
   }, [options, query]);
 
-  useEffect(() => {
-    if (!open) return;
-    const close = (event: MouseEvent) => { if (!root.current?.contains(event.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [open]);
+  useDismiss(root, open, () => setOpen(false));
 
   useEffect(() => {
     if (!open) return;

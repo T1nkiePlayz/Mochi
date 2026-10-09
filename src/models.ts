@@ -1,4 +1,4 @@
-export type ImportSourceId = "flatpak" | "heroic" | "steam" | "lutris" | "bottles" | "itch" | "apps";
+export type ImportSourceId = "flatpak" | "heroic" | "steam" | "lutris" | "bottles" | "itch" | "apps" | "epic" | "whisky" | "battlenet" | "gog" | "prism";
 
 /** How a Tofu starts its Piko. Passed to the native launcher on every launch. */
 export type TofuLaunchConfig = {
@@ -62,6 +62,8 @@ export type Piko = {
   artworkCacheKey?: string;
   /** A game, or a launcher (Steam, Lutris, ...) kept in the library as a shortcut. */
   kind?: "game" | "launcher";
+  /** Which known launcher a launcher entry is (`src/lib/launchers.ts`), for its artwork and company logo. */
+  launcherId?: string;
   igdbId?: number;
   screenshots?: string[];
   trailerId?: string;
@@ -80,7 +82,7 @@ export type Piko = {
   /** Ids of the user's collections this game belongs to. */
   collectionIds?: string[];
   /** Where the artwork came from, so a refresh does not overwrite a user's own image. */
-  artworkSource?: "igdb" | "steamgriddb" | "steam" | "custom";
+  artworkSource?: "igdb" | "steamgriddb" | "steam" | "custom" | "icon";
   /** Metadata the user edited by hand; automatic refreshes leave these alone. */
   lockedFields?: Array<"name" | "description" | "artwork" | "categories">;
   /** Which mod sites this game is linked to (ids and slugs only; user data, not cached site content). */

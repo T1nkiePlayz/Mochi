@@ -37,9 +37,12 @@ Testing: build (`npm run tauri build -- --bundles app`), run `open -a Mochi`, th
 | Epic Games Launcher | `.../Epic/EpicGamesLauncher/Data/Manifests/*.item` | `open com.epicgames.launcher://apps/<AppName>?action=launch&silent=true` |
 | itch.io | receipts under `~/Library/Application Support/itch` | the game's own `.app` when it is unique, otherwise `itch://games/<id>` |
 | Whisky | `~/Library/Containers/com.isaacmarovitz.Whisky/Bottles/*/Metadata.plist` pins (format inferred from Whisky's source, not verified on a real machine) | `open -a Whisky.app <exe>` |
+| Battle.net | `/Users/Shared/Battle.net/Agent/product.db` (the agent's protobuf database: installed products and their folders) | `open battlenet://<code>` (WoW, D3, Pro, WTCG, ...) |
+| GOG Galaxy | `.app` bundles with a `goggame-<id>.info` file in /Applications, ~/Applications and the library folder from `/Users/Shared/GOG.com/Galaxy/Configuration/config.json` (no SQLite needed) | `open <bundle>` |
+| Minecraft instances | `~/Library/Application Support/{PrismLauncher,FjordLauncher,PolyMC,multimc}/instances` (or `InstanceDir` from the launcher's `.cfg`); version and loader from `mmc-pack.json` | `open -b <launcher bundle id> --args --launch <instance>` |
 | Applications | `.app` bundles in /Applications and ~/Applications (two levels, symlinked bundles followed) whose `Info.plist` says `LSApplicationCategoryType` games, CrossOver program launchers, and known launchers (Battle.net, GOG Galaxy, Epic, Prism, CrossOver, ...) | `open <bundle>` |
 
-Not imported: Battle.net / GOG Galaxy libraries (no readable format without SQLite), Prism/MultiMC instances (the launchers themselves are listed), CrossOver bottle contents.
+Not imported: CrossOver bottle contents. Bundle icons (`CFBundleIconFile`, the largest PNG inside the `.icns`) become the cover of games that have no artwork yet. Not verified on a real Mac: the Battle.net launch codes for newer products, the Fjord/PolyMC bundle identifiers, and Galaxy's `config.json` key names (several spellings are read).
 
 ## Playtime
 
@@ -51,4 +54,4 @@ Games started with `open` are children of launchd, not Mochi. Mochi matches proc
 
 ## Other notes
 
-Minimum macOS is 12.0. Notifications use `osascript` (they appear under "Script Editor"); text is escaped and length-limited. The default Tauri menu supplies the Edit menu (Cmd+C/V/A), Cmd+W hides to the menu bar, Cmd+Q quits and credits running games, clicking the Dock icon reopens the window. The tray icon is the colour app icon (not a template image).
+Minimum macOS is 12.0. Notifications go through the notification centre (`mac-notification-sys`) with Mochi's bundle identifier, so they show Mochi's name and icon; outside a `.app` bundle (dev builds) or if the centre refuses, Mochi falls back to `osascript` (shown under "Script Editor"). Text is escaped and length-limited. The default Tauri menu supplies the Edit menu (Cmd+C/V/A), Cmd+W hides to the menu bar, Cmd+Q quits and credits running games, clicking the Dock icon reopens the window. The tray icon is the colour app icon (not a template image).

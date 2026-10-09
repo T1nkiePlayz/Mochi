@@ -71,7 +71,9 @@ const handlers: Record<string, Handler> = {
     status: "ok", stale: false, fetchedAt: now, message: null,
     details: {
       appid, name: `Steam app ${appid}`, description: "Sample description from the Steam Store (development mock).", genres: ["Action", "Adventure"],
-      screenshots: [], movies: [], developers: ["Mock Studio"], publishers: ["Mock Publisher"], releaseDate: 1_100_563_200, releaseDateText: "16 Nov, 2004",
+      // Mixed sizes on purpose so the justified screenshot gallery can be checked in the browser.
+      screenshots: ["header.jpg", "library_hero.jpg", "capsule_616x353.jpg", "library_600x900.jpg", "capsule_231x87.jpg"].map((file) => `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/${file}`),
+      movies: [], developers: ["Mock Studio"], publishers: ["Mock Publisher"], releaseDate: 1_100_563_200, releaseDateText: "16 Nov, 2004",
       coverUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/library_600x900.jpg`,
       headerUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`,
       heroUrl: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/library_hero.jpg`,
@@ -168,6 +170,27 @@ const handlers: Record<string, Handler> = {
   get_cached_game_artwork: (args) => mockArtwork()[String(args.cacheKey)] ?? null,
   cache_game_artwork: () => null,
   "plugin:dialog|save": () => "/home/dev/sound-pack.zip",
+  // Paths answer with SVG markup (as real .svg icons do); the PNG the page rasterised becomes a 600x800 cover.
+  cache_icon_cover: async (args) => {
+    const key = String(args.cacheKey);
+    const source = String(args.source);
+    if (!args.replace && mockArtwork()[key]) return { cover: mockArtwork()[key], svg: null };
+    if (source.startsWith("/")) {
+      const letter = (source.split("/").pop() ?? "?").charAt(0).toUpperCase();
+      return { cover: null, svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="#4a90d9"/><text x="32" y="42" font-size="28" text-anchor="middle" fill="#fff" font-family="sans-serif">${letter}</text></svg>` };
+    }
+    const image = await loadMockImage(source);
+    const canvas = document.createElement("canvas");
+    canvas.width = 600; canvas.height = 800;
+    const context = canvas.getContext("2d")!;
+    const gradient = context.createLinearGradient(0, 0, 0, 800);
+    gradient.addColorStop(0, "#2a3f57"); gradient.addColorStop(1, "#0c1219");
+    context.fillStyle = gradient; context.fillRect(0, 0, 600, 800);
+    context.drawImage(image, 150, 220, 300, 300);
+    const url = canvas.toDataURL("image/jpeg", 0.9);
+    const store = mockArtwork(); store[key] = url; localStorage.setItem("mochi:dev-artwork", JSON.stringify(store));
+    return { cover: url, svg: null };
+  },
   "plugin:dialog|open": (args) => {
     const options = (args.options ?? {}) as { filters?: Array<{ name: string }>; directory?: boolean };
     if (options.directory) return "/home/dev/Games";
@@ -187,6 +210,9 @@ const handlers: Record<string, Handler> = {
     { id: "steam", name: "Steam", description: "Games installed through Steam and its libraries.", detected: true, installed: true, gameCount: 240, launcherCount: 1 },
     { id: "heroic", name: "Heroic Games Launcher", description: "Epic, GOG and Amazon games managed by Heroic.", detected: true, installed: true, gameCount: 6, launcherCount: 0 },
     { id: "lutris", name: "Lutris", description: "Existing Lutris games and launch configurations.", detected: false, installed: true, gameCount: 0, launcherCount: 0 },
+    { id: "prism", name: "Minecraft instances", description: "Instances from Prism Launcher, PolyMC, MultiMC and Fjord Launcher.", detected: true, installed: true, gameCount: 2, launcherCount: 0 },
+    { id: "battlenet", name: "Battle.net", description: "Blizzard games installed in Wine prefixes (Lutris, Bottles, Heroic).", detected: true, installed: true, gameCount: 2, launcherCount: 0 },
+    { id: "gog", name: "GOG", description: "GOG games from the offline installers or Minigalaxy (~/GOG Games).", detected: false, installed: false, gameCount: 0, launcherCount: 0 },
     { id: "apps", name: "Desktop applications", description: "Games registered in your application menu.", detected: true, installed: true, gameCount: 2, launcherCount: 3 },
   ],
   scan_import_games: (args) => {
@@ -196,11 +222,19 @@ const handlers: Record<string, Handler> = {
     ];
     if (args.source === "heroic") return ["Hades", "Celeste", "Control", "Dishonored 2", "Fez", "Inside"].map((name) => ({ id: `heroic:${name}`, name, source: "heroic", launchTarget: `heroic://launch?appName=${name}`, installPath: `/games/heroic/${name}`, kind: "game", launcherId: null }));
     if (args.source === "apps") return [
-      { id: "apps:supertux", name: "SuperTux", source: "apps", launchTarget: "supertux2", installPath: null, kind: "game", launcherId: null },
-      { id: "apps:xonotic", name: "Xonotic", source: "apps", launchTarget: "xonotic", installPath: null, kind: "game", launcherId: null },
+      { id: "apps:supertux", name: "SuperTux", source: "apps", launchTarget: "supertux2", installPath: null, kind: "game", launcherId: null, iconPath: "/usr/share/icons/hicolor/scalable/apps/supertux.svg" },
+      { id: "apps:xonotic", name: "Xonotic", source: "apps", launchTarget: "xonotic", installPath: null, kind: "game", launcherId: null, iconPath: "/usr/share/icons/hicolor/256x256/apps/xonotic.png" },
       { id: "apps:prism", name: "Prism Launcher", source: "apps", launchTarget: "prismlauncher", installPath: null, kind: "launcher", launcherId: "prism" },
       { id: "apps:jagex", name: "Jagex Launcher", source: "apps", launchTarget: "jagex-launcher", installPath: null, kind: "launcher", launcherId: "jagex" },
       { id: "apps:mcpe", name: "Minecraft Bedrock Launcher", source: "apps", launchTarget: "mcpelauncher-ui-qt", installPath: null, kind: "launcher", launcherId: "minecraft-bedrock" },
+    ];
+    if (args.source === "prism") return [
+      { id: "prism:Fabric 1.21", name: "Fabric Fun", source: "prism", launchTarget: "mc-instance://prism/Fabric%201.21", installPath: "/home/dev/.local/share/PrismLauncher/instances/Fabric 1.21", kind: "game", launcherId: null, iconPath: null, minecraft: { version: "1.21.1", loader: "fabric", gameDir: "/home/dev/.local/share/PrismLauncher/instances/Fabric 1.21/minecraft" } },
+      { id: "prism:Vanilla", name: "Vanilla 1.20", source: "prism", launchTarget: "mc-instance://prism/Vanilla", installPath: "/home/dev/.local/share/PrismLauncher/instances/Vanilla", kind: "game", launcherId: null, iconPath: null, minecraft: { version: "1.20.4", loader: "vanilla", gameDir: "/home/dev/.local/share/PrismLauncher/instances/Vanilla/.minecraft" } },
+    ];
+    if (args.source === "battlenet") return [
+      { id: "battlenet:wow", name: "World of Warcraft", source: "battlenet", launchTarget: "battlenet-wine://%2Fhome%2Fdev%2FGames%2Fbattlenet/WoW", installPath: "/home/dev/Games/battlenet/drive_c/Program Files (x86)/World of Warcraft", kind: "game", launcherId: null },
+      { id: "battlenet:hs_beta", name: "Hearthstone", source: "battlenet", launchTarget: "battlenet-wine://%2Fhome%2Fdev%2FGames%2Fbattlenet/WTCG", installPath: "/home/dev/Games/battlenet/drive_c/Program Files (x86)/Hearthstone", kind: "game", launcherId: null },
     ];
     return [];
   },

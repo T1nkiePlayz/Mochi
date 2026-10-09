@@ -1,3 +1,4 @@
+import { confirmAction } from "../lib/confirm";
 import { useEffect, useRef, useState } from "react";
 import type { Piko } from "../models";
 import { createGameShortcut, launchGame as startGame, openPath, removeGameShortcut, stopGame } from "../lib/platform";
@@ -41,7 +42,7 @@ export function useGameActions({ lib, behavior, refreshPlaytime, refreshSessions
   const launchGame = async (piko: Piko = lib.selectedPiko, options: { skipConfirm?: boolean } = {}) => {
     if (piko.id === "__empty" || !piko.executablePath) { setLaunchError("This game does not have a launch target. Edit the game to set one."); return; }
     if (launching.current.has(piko.id)) return;
-    if (behavior.confirmLaunch && !options.skipConfirm && !window.confirm(`Launch ${piko.name}?`)) return;
+    if (behavior.confirmLaunch && !options.skipConfirm && !await confirmAction({ title: `Launch ${piko.name}?`, message: "You can turn this question off under Settings → Data & privacy → Advanced settings.", confirmLabel: "Launch" })) return;
     setLaunchError("");
     launching.current.add(piko.id);
     setIsLaunching(true);
@@ -60,8 +61,8 @@ export function useGameActions({ lib, behavior, refreshPlaytime, refreshSessions
     try { await stopGame(piko.id); } catch (error) { setLaunchError(shortError(error)); }
   };
 
-  const removeGame = (game: Piko) => {
-    if (!window.confirm(`Remove ${game.name} from your Mochi library? The game itself is not uninstalled.`)) return;
+  const removeGame = async (game: Piko) => {
+    if (!await confirmAction({ title: `Remove ${game.name}?`, danger: true, confirmLabel: "Remove", message: "It is removed from your Mochi library only, with its Tofus, tags and collection memberships. Nothing is uninstalled and no game files are deleted.", items: [game.name] })) return;
     void removeGameShortcut(game.id).catch(() => {});
     lib.setLibrary((current) => current.filter((piko) => piko.id !== game.id));
     lib.setGameDetailsId("");

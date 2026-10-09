@@ -1,3 +1,4 @@
+import { confirmAction } from "../lib/confirm";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
@@ -35,7 +36,8 @@ export function useCredentials(user: User | null, requireSignIn: () => void) {
   }, [user?.id]);
 
   const remove = async (provider: ProviderCredential) => {
-    if (!supabase || !user || !window.confirm(`Remove your saved ${providerLabels[provider]} credentials from Mochi Vault?`)) return;
+    if (!supabase || !user) return;
+    if (!await confirmAction({ title: `Remove your ${providerLabels[provider]} credentials?`, danger: true, confirmLabel: "Remove credentials", message: `They are deleted from Mochi Vault for this account. ${providerLabels[provider]} lookups stop until you save them again; data already downloaded is kept.`, items: [`${providerLabels[provider]} credentials`] })) return;
     setBusy(provider);
     try {
       await deleteProviderCredential(supabase, provider);

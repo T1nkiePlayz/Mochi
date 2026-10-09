@@ -24,6 +24,10 @@ export type ImportedGame = {
   kind?: "game" | "launcher";
   /** Which known launcher a launcher entry is, for its artwork. */
   launcherId?: string | null;
+  /** The entry's own icon file (desktop entry `Icon=`, app bundle `.icns`), drawn as a fallback cover. */
+  iconPath?: string | null;
+  /** Minecraft instances (Prism, MultiMC, PolyMC, Fjord): version, loader and game folder for the default Tofu. */
+  minecraft?: { version?: string | null; loader: string; gameDir: string } | null;
 };
 
 export const detectImportSources = () => invoke<DetectedImportSource[]>("detect_import_sources");
