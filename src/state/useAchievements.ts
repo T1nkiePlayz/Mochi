@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppSelector } from "./AppContext";
 import { achievements, buildFacts, countCollections, emptyFlags, evaluate, newlyMet, type AchievementFlags } from "../lib/achievements";
 import { getSteamAchievementTotals, STEAM_ACHIEVEMENTS_CHANGED, summariseTotals } from "../lib/steamAchievements";
@@ -6,6 +6,7 @@ import { useControllerState } from "../controller/manager";
 import { useBigPictureActive } from "../bigpicture/mode";
 import { getPlaytimeHistory, type SessionRecord } from "../lib/stats";
 import { readJson, writeJson } from "../lib/storage";
+import { librarySignature, playtimeSignature } from "../lib/achievementSignature";
 import { collectionsKeyFor } from "./useCollections";
 
 const KEY = "mochi:achievements";
@@ -17,6 +18,8 @@ const CHANGED = ACHIEVEMENTS_CHANGED;
 const CATALOG_VERSION = 2;
 /** More new unlocks than this in one go are announced as a single summary. */
 const MAX_TOASTS = 3;
+/** Evaluations triggered only by playtime refreshes run at most this often. */
+const PLAYTIME_THROTTLE_MS = 30_000;
 
 export type StoredAchievements = { unlocked: Record<string, number>; flags: AchievementFlags; seeded: boolean; catalog: number };
 
@@ -84,9 +87,28 @@ export function useAchievementWatcher() {
     return () => { window.removeEventListener(STEAM_ACHIEVEMENTS_CHANGED, recompute); window.removeEventListener(CLEARED, recompute); };
   }, [recompute]);
 
+  // Re-evaluate on these derived values rather than on the library/playtime objects, which change on unrelated edits.
+  const libSig = useMemo(() => librarySignature(library), [library]);
+  const playSig = useMemo(() => playtimeSignature(playtime), [playtime]);
+  const latest = useRef({ library, theme, activeNav, ownerKey });
+  latest.current = { library, theme, activeNav, ownerKey };
+  const done = useRef({ key: "", tick: -1, at: 0, skipped: false });
+  const structKey = `${libSig}|${theme}|${activeNav}|${ownerKey}|${controllerSeen}|${bigPicture}`;
+  // Evaluation is skipped while hidden; one run catches up when the window is visible again.
+  useEffect(() => {
+    const onVisible = () => { if (!document.hidden && done.current.skipped) { done.current.skipped = false; recompute(); } };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [recompute]);
+
   useEffect(() => {
     let cancelled = false;
+    // Only a playtime change since the last run is throttled; anything else keeps the short debounce.
+    const immediate = structKey !== done.current.key || tick !== done.current.tick;
+    const delay = immediate ? 800 : Math.max(800, done.current.at + PLAYTIME_THROTTLE_MS - Date.now());
     const timer = window.setTimeout(async () => {
+      if (document.hidden) { done.current.skipped = true; return; }
+      const { library, theme, activeNav, ownerKey } = latest.current;
       const stored = readAchievements();
       const flags = { ...stored.flags, themes: [...stored.flags.themes] };
       if (theme && !flags.themes.includes(theme)) flags.themes.push(theme);
@@ -99,6 +121,7 @@ export function useAchievementWatcher() {
       try { records = await getPlaytimeHistory(); } catch { records = []; }
       const steam = summariseTotals(await getSteamAchievementTotals());
       if (cancelled) return;
+      done.current = { key: structKey, tick, at: Date.now(), skipped: false };
       if (steam.known) flags.steam = steam;
       const collections = readJson<unknown>(collectionsKeyFor(ownerKey), []);
       const progress = evaluate(buildFacts(records, library, flags, countCollections(collections, library)));
@@ -113,9 +136,9 @@ export function useAchievementWatcher() {
         if (fresh.length > MAX_TOASTS) notify("Achievements unlocked", `${fresh.length} new achievements, including ${fresh[0].title}.`);
         else fresh.forEach((def) => notify("Achievement unlocked", `${def.title}: ${def.description}`));
       }
-    }, 800);
+    }, delay);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [tick, library, theme, activeNav, playtime, notify, ownerKey, controllerSeen, bigPicture]);
+  }, [tick, structKey, playSig, notify, controllerSeen, bigPicture]);
 
   return { recompute, total: achievements.length };
 }

@@ -349,11 +349,12 @@ async fn fetch_text(url: &str) -> Result<String, FetchError> {
 }
 
 async fn request_text(url: &str) -> Result<String, FetchError> {
-    let client = reqwest::Client::builder().user_agent(USER_AGENT)
+    static CLIENT: crate::util::http::SharedClient = crate::util::http::SharedClient::new();
+    let client = CLIENT.get(|| crate::util::http::builder().user_agent(USER_AGENT)
         .redirect(reqwest::redirect::Policy::custom(|attempt| {
             if attempt.previous().len() < 3 && host_allowed(attempt.url()) { attempt.follow() } else { attempt.stop() }
         }))
-        .connect_timeout(Duration::from_secs(8)).timeout(Duration::from_secs(20)).build()
+        .connect_timeout(Duration::from_secs(8)).timeout(Duration::from_secs(20)).build(), "Unable to prepare the Steam request")
         .map_err(|_| FetchError::Other("Unable to prepare the Steam request.".into()))?;
     // Errors are mapped without their URL: a Web API request carries the user's key.
     let mut response = client.get(url).send().await.map_err(|error| {
@@ -518,7 +519,7 @@ pub fn clear_steam_achievements_cache(app: AppHandle) -> Result<(), String> {
 }
 
 /// Per-game unlocked/total counts from everything cached so far (no network).
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_steam_achievement_totals(app: AppHandle) -> Vec<AchievementSummary> {
     let Some(dir) = cache_dir(&app) else { return Vec::new() };
     let mut best: HashMap<u32, AchievementSummary> = HashMap::new();
