@@ -4,7 +4,7 @@
 use sha1::{Digest, Sha1};
 use std::{fs, io::Read, path::Path};
 
-const BUFFER: usize = 64 * 1024;
+const BUFFER: usize = 256 * 1024;
 
 // ---------------------------------------------------------------------------
 // MD5 (RFC 1321)
@@ -82,18 +82,30 @@ const MURMUR_M: u32 = 0x5bd1_e995;
 impl Murmur2 {
     pub fn new(length: u32) -> Self { Self { hash: 1 ^ length, chunk: [0; 4], filled: 0 } }
 
+    #[inline(always)]
+    fn mix(&mut self, word: u32) {
+        let mut k = word.wrapping_mul(MURMUR_M);
+        k ^= k >> 24;
+        k = k.wrapping_mul(MURMUR_M);
+        self.hash = self.hash.wrapping_mul(MURMUR_M) ^ k;
+    }
+
     pub fn update(&mut self, data: &[u8]) {
-        for &byte in data {
-            if is_cf_whitespace(byte) { continue; }
-            self.chunk[self.filled] = byte;
-            self.filled += 1;
-            if self.filled == 4 {
-                let mut k = u32::from_le_bytes(self.chunk).wrapping_mul(MURMUR_M);
-                k ^= k >> 24;
-                k = k.wrapping_mul(MURMUR_M);
-                self.hash = self.hash.wrapping_mul(MURMUR_M) ^ k;
-                self.filled = 0;
+        // Compact the non-whitespace bytes into a stack buffer with a branchless write, then hash whole words from it.
+        // Most of a jar is compressed data with almost no whitespace, so this keeps the hot loop branch-free.
+        let mut stage = [0u8; 4096 + 4];
+        for piece in data.chunks(4096) {
+            let mut n = self.filled;
+            stage[..n].copy_from_slice(&self.chunk[..n]);
+            for &byte in piece {
+                stage[n] = byte;
+                n += usize::from(!is_cf_whitespace(byte));
             }
+            let words = n / 4;
+            for word in stage[..words * 4].as_chunks::<4>().0 { self.mix(u32::from_le_bytes(*word)); }
+            let rest = n - words * 4;
+            self.chunk[..rest].copy_from_slice(&stage[words * 4..n]);
+            self.filled = rest;
         }
     }
 
@@ -127,11 +139,33 @@ pub fn cf_fingerprint(data: &[u8]) -> u32 {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FileHashes { pub size: u64, pub sha1: String, pub md5: String, pub fingerprint: u32 }
 
+/// Files up to this size are read once and hashed on three threads; bigger ones stream (two sequential reads).
+const IN_MEMORY_MAX: u64 = 64 * 1024 * 1024;
+
+fn hash_in_memory(path: &Path, len: u64) -> Result<FileHashes, String> {
+    let mut data = Vec::with_capacity(len as usize);
+    fs::File::open(path).and_then(|mut f| f.read_to_end(&mut data)).map_err(|e| e.to_string())?;
+    let data = data.as_slice();
+    let (sha1, md5, fingerprint) = std::thread::scope(|scope| {
+        let sha1 = scope.spawn(|| { let mut h = Sha1::new(); h.update(data); crate::util::hex(&h.finalize()) });
+        let md5 = scope.spawn(|| { let mut h = Md5::default(); h.update(data); crate::util::hex(&h.finish()) });
+        let stripped = data.iter().map(|&b| u64::from(!is_cf_whitespace(b))).sum::<u64>();
+        let mut murmur = Murmur2::new(stripped as u32);
+        murmur.update(data);
+        (sha1.join(), md5.join(), murmur.finish())
+    });
+    Ok(FileHashes { size: data.len() as u64, sha1: sha1.map_err(|_| "Hashing failed.")?, md5: md5.map_err(|_| "Hashing failed.")?, fingerprint })
+}
+
 /// All three identifiers of one file in two sequential reads (the fingerprint needs the stripped length first).
 pub fn hash_file(path: &Path, max_bytes: u64) -> Result<FileHashes, String> {
     let meta = fs::metadata(path).map_err(|e| e.to_string())?;
     if !meta.is_file() { return Err("Not a file.".into()); }
     if meta.len() > max_bytes { return Err("The file is too large to identify.".into()); }
+    if meta.len() <= IN_MEMORY_MAX { hash_in_memory(path, meta.len()) } else { hash_streaming(path) }
+}
+
+fn hash_streaming(path: &Path) -> Result<FileHashes, String> {
     let mut buffer = vec![0u8; BUFFER];
     let (mut sha1, mut md5, mut stripped, mut size) = (Sha1::new(), Md5::default(), 0u64, 0u64);
     let mut file = fs::File::open(path).map_err(|e| e.to_string())?;
@@ -141,7 +175,7 @@ pub fn hash_file(path: &Path, max_bytes: u64) -> Result<FileHashes, String> {
         let chunk = &buffer[..read];
         sha1.update(chunk);
         md5.update(chunk);
-        stripped += chunk.iter().filter(|b| !is_cf_whitespace(**b)).count() as u64;
+        stripped += chunk.iter().map(|&b| u64::from(!is_cf_whitespace(b))).sum::<u64>();
         size += read as u64;
     }
     let mut murmur = Murmur2::new(stripped as u32);
@@ -188,6 +222,21 @@ mod tests {
     }
 
     #[test]
+    fn streaming_and_in_memory_paths_agree() {
+        let dir = std::env::temp_dir().join(format!("mochi-modhash-paths-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("b.jar");
+        // Larger than the read buffer, with whitespace sprinkled in and an odd length.
+        let data: Vec<u8> = (0..(BUFFER as u32 * 2 + 12_345)).map(|i| if i % 11 == 0 { b' ' } else { (i.wrapping_mul(2_654_435_761) >> 13) as u8 }).collect();
+        fs::write(&path, &data).unwrap();
+        let fast = hash_in_memory(&path, data.len() as u64).unwrap();
+        assert_eq!(fast, hash_streaming(&path).unwrap());
+        assert_eq!(fast.fingerprint, cf_fingerprint(&data));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn hashes_a_file() {
         let dir = std::env::temp_dir().join(format!("mochi-modhash-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
@@ -200,6 +249,29 @@ mod tests {
         assert_eq!(hashes.fingerprint, cf_fingerprint(b"abc"));
         assert_eq!(hashes.size, 3);
         assert!(hash_file(&path, 2).is_err());
+        let _ = fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod bench {
+    use super::*;
+
+    /// `cargo test --release bench_hash_file -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn bench_hash_file() {
+        let dir = std::env::temp_dir().join(format!("mochi-modhash-bench-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("big.jar");
+        let data: Vec<u8> = (0..64u64 * 1024 * 1024).map(|i| (i.wrapping_mul(2654435761) >> 7) as u8).collect();
+        fs::write(&path, &data).unwrap();
+        let start = std::time::Instant::now();
+        let hashes = hash_file(&path, u64::MAX).unwrap();
+        eprintln!("64 MiB in {:?} (fingerprint {})", start.elapsed(), hashes.fingerprint);
+        let t = std::time::Instant::now(); let mut h = Sha1::new(); for c in data.chunks(BUFFER) { h.update(c); } let _ = h.finalize(); eprintln!("sha1 {:?}", t.elapsed());
+        let t = std::time::Instant::now(); let mut h = Md5::default(); for c in data.chunks(BUFFER) { h.update(c); } let _ = h.finish(); eprintln!("md5 {:?}", t.elapsed());
+        let t = std::time::Instant::now(); let mut h = Murmur2::new(1); for c in data.chunks(BUFFER) { h.update(c); } let _ = h.finish(); eprintln!("murmur {:?}", t.elapsed());
         let _ = fs::remove_dir_all(&dir);
     }
 }
