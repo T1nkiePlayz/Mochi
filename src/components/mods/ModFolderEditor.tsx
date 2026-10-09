@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { FolderOpen, RefreshCw } from "lucide-react";
 import { loaderLabels, ALL_LOADERS } from "../../lib/mods/compat";
-import { applyLocation, applyManualFolder, describeFolders, setSeparateStore } from "../../lib/mods/folders";
+import { applyLocation, applyManualFolder, bestPick, describeFolders, setSeparateStore } from "../../lib/mods/folders";
 import { detectModLocations, getInstanceStoreDir, importModsFromFolder, type ModLocation } from "../../lib/mods/instances";
 import { isMinecraftJava } from "../../lib/mods/gameSupport";
 import { hasSeparateStore } from "../../lib/mods/targets";
 import type { ModLoader, Piko, Tofu } from "../../models";
 import { Select } from "../ui/Select";
+import { Checkbox, Field } from "../ui/Checkbox";
 
 type Props = { piko: Piko; tofu: Tofu; onUpdate: (patch: Partial<Tofu>) => void; /** The Tofu settings form already has its own game version field. */ showVersion?: boolean };
 
@@ -26,8 +27,12 @@ export function ModFolderEditor({ piko, tofu, onUpdate, showVersion = true }: Pr
 
   const detect = async () => {
     setLocations(null);
-    try { setLocations(await detectModLocations({ name: piko.name, installPath: piko.installPath, executablePath: piko.executablePath, minecraft })); }
-    catch { setLocations([]); }
+    let found: ModLocation[] = [];
+    try { found = await detectModLocations({ name: piko.name, installPath: piko.installPath, executablePath: piko.executablePath, minecraft }); } catch { /* none */ }
+    setLocations(found);
+    // A Tofu without a folder takes the best detected one at once, so it is selected (and saved) instead of only listed.
+    const best = !tofu.path && !tofu.gameDir ? bestPick(found, minecraft) : undefined;
+    if (best) onUpdate(applyLocation(tofu, best));
   };
   useEffect(() => { void detect(); }, [piko.id, minecraft]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -70,13 +75,13 @@ export function ModFolderEditor({ piko, tofu, onUpdate, showVersion = true }: Pr
       <button type="button" className="secondary-button" onClick={() => void detect()} disabled={locations === null}><RefreshCw size={14} /> Detect again</button>
     </div>
     {minecraft && <div className="form-row">
-      <label>Loader<Select value={tofu.loader ?? ""} onChange={(value) => onUpdate({ loader: (value || undefined) as ModLoader | undefined })} label="Mod loader" searchable={false}
-        options={[{ value: "", label: "Not set" }, ...ALL_LOADERS.map((loader) => ({ value: loader, label: loaderLabels[loader] }))]} /></label>
-      {showVersion && <label>Game version<input value={tofu.version === "Local" ? "" : tofu.version} placeholder="1.21.1" maxLength={40} onChange={(event) => onUpdate({ version: event.target.value.trim() || "Local" })} /></label>}
+      <Field label="Loader"><Select value={tofu.loader ?? ""} onChange={(value) => onUpdate({ loader: (value || undefined) as ModLoader | undefined })} label="Mod loader" searchable={false}
+        options={[{ value: "", label: "Not set" }, ...ALL_LOADERS.map((loader) => ({ value: loader, label: loaderLabels[loader] }))]} /></Field>
+      {showVersion && <Field label="Game version"><input value={tofu.version === "Local" ? "" : tofu.version} placeholder="1.21.1" maxLength={40} onChange={(event) => onUpdate({ version: event.target.value.trim() || "Local" })} /></Field>}
     </div>}
-    <label className="check-row"><input type="checkbox" checked={separate} disabled={busy || !tofu.gameDir} onChange={(event) => void toggleSeparate(event.target.checked)} /> Keep this Tofu's mods separate</label>
-    <small className="metadata-note">Recommended when you have several Tofus for one game. Each Tofu keeps its own mods and Mochi copies them into the game folder only when you launch, replacing only files it put there itself.</small>
-    {separate && <label className="check-row"><input type="checkbox" checked={tofu.syncReplaceExisting === true} onChange={(event) => onUpdate({ syncReplaceExisting: event.target.checked })} /> Replace same-named files in the game folder that Mochi did not add</label>}
+    <Checkbox checked={separate} disabled={busy || !tofu.gameDir} onChange={(checked) => void toggleSeparate(checked)} label="Keep this Tofu's mods separate"
+      description="Each Tofu keeps its own copy of its mods and Mochi places them in the game folder when you launch or switch Tofu, replacing only files it put there itself. Off: Tofus share the game folder and switching Tofu enables that Tofu's mods and disables the others'." />
+    {separate && <Checkbox checked={tofu.syncReplaceExisting === true} onChange={(checked) => onUpdate({ syncReplaceExisting: checked })} label="Replace same-named files in the game folder that Mochi did not add" />}
     {message && <p className="metadata-note" role="status">{message}</p>}
   </div>;
 }

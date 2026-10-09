@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Tofu } from "../../models";
-import { applyLocation, applyManualFolder, autoPick, describeFolders, setSeparateStore } from "./folders";
+import { applyLocation, applyManualFolder, bestPick, describeFolders, setSeparateStore } from "./folders";
 
 const tofu = (over: Partial<Tofu> = {}): Tofu => ({ id: "t", name: "T", version: "Local", runtime: "Native", mods: 0, status: "Ready", ...over });
 const location = { modsDir: "/pm/inst/.minecraft/mods", contentRoot: "/pm/inst/.minecraft", loader: "fabric" as const, gameVersion: "1.20.1" };
@@ -32,8 +32,17 @@ describe("folder choices", () => {
     expect(describeFolders(tofu())).toBe("No folder chosen yet.");
     expect(describeFolders(tofu({ path: "/g", gameDir: "/g" }))).toContain("directly");
     expect(describeFolders(tofu({ path: "/s", gameDir: "/g" }))).toContain("copied to /g");
-    expect(autoPick([{ exists: true, id: 1 }, { exists: false, id: 2 }])?.id).toBe(1);
-    expect(autoPick([{ exists: true }, { exists: true }])).toBeUndefined();
-    expect(autoPick([])).toBeUndefined();
+  });
+  it("picks the best detected location", () => {
+    expect(bestPick([{ exists: true, id: 1 }, { exists: false, id: 2 }])?.id).toBe(1);
+    expect(bestPick([])).toBeUndefined();
+    expect(bestPick([{ exists: false }])).toBeUndefined();
+    // Several folders: the one with mods in it, else the first (table order).
+    expect(bestPick([{ exists: true, id: "Mods", fileCount: 0 }, { exists: true, id: "BepInEx", fileCount: 4 }])?.id).toBe("BepInEx");
+    expect(bestPick([{ exists: true, id: "a" }, { exists: true, id: "b" }])?.id).toBe("a");
+    // Minecraft: the instance changed last among those with mods.
+    const instances = [{ exists: true, id: "old", fileCount: 3, modifiedMs: 10 }, { exists: true, id: "new", fileCount: 9, modifiedMs: 99 }, { exists: true, id: "empty", fileCount: 0, modifiedMs: 500 }];
+    expect(bestPick(instances, true)?.id).toBe("new");
+    expect(bestPick(instances, false)?.id).toBe("old");
   });
 });

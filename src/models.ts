@@ -48,6 +48,8 @@ export type Tofu = {
   contentRoot?: string;
   /** Opt-in: at launch, replace same-named files in the game folder that Mochi did not put there (off: they are left alone). */
   syncReplaceExisting?: boolean;
+  /** When Mochi last read this Tofu's mod folder after an import; `identified` is false when the sites could not be asked (offline). */
+  modScan?: { at: number; identified: boolean };
 };
 
 export type Piko = {

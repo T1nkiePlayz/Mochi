@@ -14,6 +14,7 @@ import { InstallNoticeBar } from "./InstallNoticeBar";
 import { ModalShell } from "./ModalShell";
 import { SafeHtml } from "./SafeHtml";
 import type { InstallNotice } from "./useModInstall";
+import { Checkbox } from "../ui/Checkbox";
 
 type Props = {
   source: ModSource;
@@ -61,7 +62,7 @@ export function ModDetailsModal({ source, item, filter, installLabel, busy, noti
     <div className="project-overview">
       <InstallNoticeBar notice={notice} onDismiss={onDismissNotice} />
       <section className="mod-download-panel" aria-label="Download">
-        {narrowed && <label className="check-row"><input type="checkbox" checked={showAll} onChange={(event) => setShowAll(event.target.checked)} /> Show files for other game versions and loaders (install anyway)</label>}
+        {narrowed && <Checkbox checked={showAll} onChange={setShowAll} label="Show files for other game versions and loaders (install anyway)" />}
         {files === null ? <p className="muted"><RefreshCw size={13} className="spin" /> Loading files...</p> : files.length === 0 ? <p className="muted">No files are listed for this mod{filter?.gameVersion ? ` for ${filter.gameVersion}` : ""}.</p> : <>
           <label className="mod-file-picker"><span>File</span><Select value={fileId} onChange={setFileId} label="File to download" searchable={files.length > 12} options={files.map((candidate) => ({ value: candidate.id, label: fileLabel(candidate), description: candidate.gameVersions?.slice(0, 4).join(", ") }))} /></label>
           {file?.dependencies?.length ? <p className="mod-dependencies" role="note">Requires: {file.dependencies.map((dependency, index) => <span key={dependency.id}>{index ? ", " : ""}<a href={dependency.url} onClick={(event) => { event.preventDefault(); void openExternalUrl(dependency.url).catch(() => undefined); }}>{dependency.name ?? `mod ${dependency.id}`}</a></span>)}. Mochi does not install dependencies for you.</p> : null}

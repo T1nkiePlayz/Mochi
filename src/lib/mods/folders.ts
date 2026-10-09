@@ -39,8 +39,19 @@ export function describeFolders(tofu: Pick<Tofu, "path" | "gameDir">): string {
   return tofu.gameDir && samePath(tofu.path, tofu.gameDir) ? `Working directly in ${tofu.gameDir}.` : tofu.path ?? "";
 }
 
-/** The location to apply without asking: exactly one folder that exists. */
-export function autoPick<T extends { exists: boolean }>(locations: readonly T[]): T | undefined {
+/** What ranking needs from a detected location (`ModLocation` satisfies it). */
+export type RankedLocation = { exists: boolean; fileCount?: number; modifiedMs?: number };
+
+/**
+ * The location to apply without asking, or undefined when none exists. One existing folder wins; among several, the
+ * ones that already hold mod files win; a tie goes to the most recently changed folder for Minecraft (the instance the
+ * user played last) and to detection order otherwise (the per-game table comes before generic guesses).
+ */
+export function bestPick<T extends RankedLocation>(locations: readonly T[], minecraft = false): T | undefined {
   const present = locations.filter((location) => location.exists);
-  return present.length === 1 ? present[0] : undefined;
+  if (present.length <= 1) return present[0];
+  const withFiles = present.filter((location) => (location.fileCount ?? 0) > 0);
+  const pool = withFiles.length ? withFiles : present;
+  if (pool.length === 1 || !minecraft) return pool[0];
+  return pool.reduce((best, location) => ((location.modifiedMs ?? 0) > (best.modifiedMs ?? 0) ? location : best), pool[0]);
 }

@@ -3,7 +3,7 @@ import { installBest, installFile, NoCompatibleFileError, type InstallOutcome } 
 import type { Tofu } from "../../models";
 import type { ModFile, ModItem, ModSource } from "../../lib/mods/types";
 
-export type InstallNotice = { tone: "ok" | "info" | "error"; message: string; pageUrl?: string; pageLabel?: string; /** Installs the newest file regardless of game version and loader. */ force?: () => void };
+export type InstallNotice = { tone: "ok" | "info" | "error"; message: string; pageUrl?: string; pageLabel?: string; /** Installs the newest file regardless of game version and loader. */ force?: () => void; /** A free Nexus account: explain "Mod Manager Download" (nxm://). */ nexusManager?: boolean };
 
 const siteName = { modrinth: "Modrinth", curseforge: "CurseForge", nexus: "Nexus Mods" } as const;
 const pageLabel = (item: ModItem, reason: "restricted" | "premium") => reason === "premium" ? "Download on Nexus" : `Open on ${siteName[item.source]}`;
@@ -15,7 +15,7 @@ export function useModInstall() {
 
   const apply = useCallback((item: ModItem, outcome: InstallOutcome) => {
     if (outcome.kind === "queued") { setNotice({ tone: "ok", message: outcome.message }); return; }
-    setNotice({ tone: "info", message: outcome.message, pageUrl: outcome.pageUrl, pageLabel: pageLabel(item, outcome.reason) });
+    setNotice({ tone: "info", message: outcome.message, pageUrl: outcome.pageUrl, pageLabel: pageLabel(item, outcome.reason), nexusManager: item.source === "nexus" && outcome.reason === "premium" });
   }, []);
 
   const run = useCallback(async (item: ModItem, job: () => Promise<InstallOutcome>, onNoMatch?: () => void) => {
