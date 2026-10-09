@@ -3,13 +3,15 @@ import { Check, Heart, Play } from "lucide-react";
 import type { Piko } from "../../models";
 import { GameArtwork } from "../GameArtwork";
 import { hasArtwork } from "../../lib/fallbackArt";
+import { CloudBadge } from "./CloudBadge";
+import type { CloudStatus } from "../../lib/cloudStatus";
 import { MochiIcon } from "../MochiIcon";
 
 type Props = {
   piko: Piko;
   selected: boolean;
   running: boolean;
-  synced: boolean;
+  cloudStatus: CloudStatus;
   selecting: boolean;
   checked: boolean;
   // Handlers receive the game so one stable function serves every card (lets memo skip untouched cards).
@@ -21,7 +23,7 @@ type Props = {
 
 const LONG_PRESS_MS = 550;
 
-export const GameCard = memo(function GameCard({ piko, selected, running, synced, selecting, checked, onOpen, onToggleFavorite, onToggleChecked, onMenu }: Props) {
+export const GameCard = memo(function GameCard({ piko, selected, running, cloudStatus, selecting, checked, onOpen, onToggleFavorite, onToggleChecked, onMenu }: Props) {
   const timer = useRef<number>();
   const fired = useRef(false);
   const cancel = () => window.clearTimeout(timer.current);
@@ -47,7 +49,7 @@ export const GameCard = memo(function GameCard({ piko, selected, running, synced
       onClick={() => { if (fired.current) { fired.current = false; return; } if (selecting) onToggleChecked(piko.id); else onOpen(piko); }}>
       <GameArtwork className="game-card-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} name={piko.name} kind={piko.kind} sourceId={piko.sourceId} />
       <div className="game-card-copy">
-        <strong><span className="game-card-name" title={piko.name}>{piko.name}</span><span className={`game-cloud-status ${synced ? "is-synced" : "not-synced"}`} title={synced ? "Synced to Mochi Cloud" : "Not synced to Mochi Cloud"}>{synced ? "✓" : "!"}</span></strong>
+        <strong><span className="game-card-name" title={piko.name}>{piko.name}</span><CloudBadge status={cloudStatus} /></strong>
         <small>{running ? "Running now" : piko.categories?.join(" · ") || piko.platformCategory || "Other"}</small>
         {piko.tags?.length ? <span className="game-card-tags">{piko.tags.slice(0, 3).map((tag) => <span key={tag}>#{tag}</span>)}</span> : null}
       </div>

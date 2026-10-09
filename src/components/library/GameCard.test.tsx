@@ -17,7 +17,7 @@ function Grid() {
   const [selected, setSelected] = useState("a");
   return <>
     <button onClick={() => setSelected("b")}>select b</button>
-    {games.map((piko) => <GameCard key={piko.id} piko={piko} selected={selected === piko.id} running={false} synced selecting={false} checked={false} {...handlers} />)}
+    {games.map((piko) => <GameCard key={piko.id} piko={piko} selected={selected === piko.id} running={false} cloudStatus="synced" selecting={false} checked={false} {...handlers} />)}
   </>;
 }
 

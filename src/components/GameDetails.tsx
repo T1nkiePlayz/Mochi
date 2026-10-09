@@ -7,6 +7,8 @@ import type { PlaytimeEntry } from "../lib/platform";
 import { GameArtwork } from "./GameArtwork";
 import { hasArtwork } from "../lib/fallbackArt";
 import { useOnline } from "../lib/offline";
+import { CloudBadge } from "./library/CloudBadge";
+import type { CloudStatus } from "../lib/cloudStatus";
 import { CollectionPicker } from "./library/CollectionPicker";
 import { TagEditor } from "./library/TagEditor";
 import { useDismiss } from "./library/useDismiss";
@@ -18,7 +20,7 @@ import { imageSourceLabels } from "../lib/imageSource";
 
 type Props = {
   game: Piko;
-  synced: boolean;
+  cloudStatus: CloudStatus;
   running: boolean;
   playtime?: PlaytimeEntry;
   launchError: string;
@@ -43,7 +45,7 @@ type Props = {
   onTagsChange: (tags: string[]) => void;
 };
 
-export function GameDetails({ game, synced, running, playtime, launchError, launching, workspace, mods, canStop, capabilities, onBack, onPlay, onStop, onEdit, onRemove, onOpenFolder, onShortcut, collections, tagSuggestions, onToggleFavorite, onToggleCollection, onCreateCollection, onTagsChange }: Props) {
+export function GameDetails({ game, cloudStatus, running, playtime, launchError, launching, workspace, mods, canStop, capabilities, onBack, onPlay, onStop, onEdit, onRemove, onOpenFolder, onShortcut, collections, tagSuggestions, onToggleFavorite, onToggleCollection, onCreateCollection, onTagsChange }: Props) {
   const [playTrailer, setPlayTrailer] = useState(false);
   const online = useOnline();
   const [showCollections, setShowCollections] = useState(false);
@@ -61,7 +63,7 @@ export function GameDetails({ game, synced, running, playtime, launchError, laun
   const folder = game.installPath || (game.executablePath?.startsWith("/") ? game.executablePath : "");
   return <section className="game-details-page">
     <button type="button" className="text-button game-details-back" onClick={onBack}><ArrowLeft size={15}/> Back to library</button>
-    <div className={`game-details-hero${hasArtwork(game) ? "" : " no-art"}`}><GameArtwork className="game-details-cover" cacheKey={game.artworkCacheKey} fallback={game.artwork} name={game.name} kind={game.kind} sourceId={game.sourceId} /><div className="game-details-title"><p className="eyebrow">{game.platformCategory || "Game"}{game.sourceId ? ` · ${game.sourceId}` : ""}</p><h2>{game.name}<button type="button" className={`details-heart ${game.favorite ? "on" : ""}`} aria-pressed={Boolean(game.favorite)} aria-label={game.favorite ? "Remove from favourites" : "Add to favourites"} onClick={onToggleFavorite}><Heart size={18} fill={game.favorite ? "currentColor" : "none"} /></button></h2><div className="game-details-badges">{game.categories?.map((category) => <span key={category}>{category}</span>)}{running && <span className="running-badge">Running</span>}<span className={`game-cloud-status ${synced ? "is-synced" : "not-synced"}`} title={synced ? "Synced to Mochi Cloud" : "Not synced to Mochi Cloud"}>{synced ? "✓" : "!"} {synced ? "Synced" : "Not synced"}</span></div><p>{game.description || "No description is available yet."}</p>
+    <div className={`game-details-hero${hasArtwork(game) ? "" : " no-art"}`}><GameArtwork className="game-details-cover" cacheKey={game.artworkCacheKey} fallback={game.artwork} name={game.name} kind={game.kind} sourceId={game.sourceId} /><div className="game-details-title"><p className="eyebrow">{game.platformCategory || "Game"}{game.sourceId ? ` · ${game.sourceId}` : ""}</p><h2>{game.name}<button type="button" className={`details-heart ${game.favorite ? "on" : ""}`} aria-pressed={Boolean(game.favorite)} aria-label={game.favorite ? "Remove from favourites" : "Add to favourites"} onClick={onToggleFavorite}><Heart size={18} fill={game.favorite ? "currentColor" : "none"} /></button></h2><div className="game-details-badges">{game.categories?.map((category) => <span key={category}>{category}</span>)}{running && <span className="running-badge">Running</span>}<CloudBadge status={cloudStatus} label /></div><p>{game.description || "No description is available yet."}</p>
       <div className="game-details-actions">
         {running ? <button type="button" className="play-button stop-button" onClick={onStop} disabled={!canStop} title={canStop ? "Quit this game" : "Close it from its own launcher"}><Square size={14} fill="currentColor"/> Stop</button> : <button type="button" className="play-button" onClick={onPlay} disabled={launching}><Play size={15} fill="currentColor"/> {launching ? "Launching…" : "Play"}</button>}
         <div className="details-popover-anchor" ref={collectionAnchor}>
