@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { CheckSquare, Gamepad2, Play, Plus, SlidersHorizontal, Settings, X } from "lucide-react";
 import { BulkActionBar } from "../components/library/BulkActionBar";
 import { ConfirmDialog } from "../components/library/ConfirmDialog";
@@ -43,6 +43,11 @@ export function LibraryView() {
     lib.library.forEach((piko) => piko.collectionIds?.forEach((id) => counts.set(id, (counts.get(id) ?? 0) + 1)));
     return counts;
   }, [lib.library]);
+
+  const { selectPiko, setGameDetailsId, toggleFavorite } = lib;
+  const openGame = useCallback((piko: Piko) => { selectPiko(piko); setGameDetailsId(piko.id); }, [selectPiko, setGameDetailsId]);
+  const toggleChecked = useCallback((gameId: string) => setChecked((current) => { const next = new Set(current); if (!next.delete(gameId)) next.add(gameId); return next; }), []);
+  const openMenu = useCallback((gameId: string, x: number, y: number) => setMenu({ gameId, x, y }), []);
 
   const addButton = <button className="secondary-button" onClick={() => add.setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> Add Piko</button>;
 
@@ -143,10 +148,7 @@ export function LibraryView() {
         <div className="game-card-grid">{games.map((piko) => <GameCard key={piko.id} piko={piko}
           selected={selectedPiko.id === piko.id} running={sessions.isRunning(piko.id)} synced={cloud.syncState === "synced"}
           selecting={selecting} checked={checked.has(piko.id)}
-          onOpen={() => { lib.selectPiko(piko); lib.setGameDetailsId(piko.id); }}
-          onToggleFavorite={() => lib.toggleFavorite(piko.id)}
-          onToggleChecked={() => setChecked((current) => { const next = new Set(current); if (!next.delete(piko.id)) next.add(piko.id); return next; })}
-          onMenu={(x, y) => setMenu({ gameId: piko.id, x, y })} />)}</div>
+          onOpen={openGame} onToggleFavorite={toggleFavorite} onToggleChecked={toggleChecked} onMenu={openMenu} />)}</div>
       </div>)}
     </section>
     {menu && menuGame && <GameContextMenu game={menuGame} x={menu.x} y={menu.y} collections={collections.collections} canOpenFolder={hasFolder(menuGame)}

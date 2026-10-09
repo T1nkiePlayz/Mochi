@@ -3,26 +3,26 @@
 body { background: var(--mochi-background); color: var(--mochi-text); }
 .app-shell { background: var(--mochi-background); }
 .sidebar { width: var(--mochi-sidebar-width); flex-basis: var(--mochi-sidebar-width); background: var(--mochi-background-elevated); border-color: var(--mochi-border); }
-.brand strong, .page-heading h1, .hero-card h2, .settings-intro h2, .setup-page h1, .section-heading h3 { color: var(--mochi-text-strong); font-family: var(--mochi-font-display); }
-.brand span, .breadcrumb, .eyebrow, .text-button, .detail-label, .section-label { color: var(--mochi-text-muted); }
+.brand strong, .page-heading h1, .settings-intro h2, .setup-page h1, .section-heading h3 { color: var(--mochi-text-strong); font-family: var(--mochi-font-display); }
+.brand span, .breadcrumb, .eyebrow, .text-button, .detail-label { color: var(--mochi-text-muted); }
 .topbar { border-color: var(--mochi-border); }
-.nav-item, .piko-nav-item { color: var(--mochi-text-muted); }
-.nav-item:hover, .piko-nav-item:hover, .nav-item.active, .piko-nav-item.selected { background: var(--mochi-surface-hover); color: var(--mochi-text-strong); }
+.nav-item { color: var(--mochi-text-muted); }
+.nav-item:hover, .nav-item.active { background: var(--mochi-surface-hover); color: var(--mochi-text-strong); }
 .nav-item.active { box-shadow: inset 2px 0 var(--mochi-accent); }
 .icon-button { color: var(--mochi-text-muted); }
 .icon-button:hover { background: var(--mochi-surface-hover); color: var(--mochi-text-strong); }
-.search-box, .form-fields input, .form-fields select, .igdb-form input, .setup-fields input { border-color: var(--mochi-border); background: var(--mochi-background); color: var(--mochi-text); }
-.search-box:focus-within, .form-fields input:focus, .form-fields select:focus, .igdb-form input:focus { border-color: var(--mochi-accent-strong); }
+.search-box, .form-fields input, .form-fields select { border-color: var(--mochi-border); background: var(--mochi-background); color: var(--mochi-text); }
+.search-box:focus-within, .form-fields input:focus, .form-fields select:focus { border-color: var(--mochi-accent-strong); }
 .secondary-button, .play-button { border-radius: var(--mochi-radius-sm); }
 .secondary-button { background: var(--mochi-surface-raised); color: var(--mochi-text-strong); }
 .secondary-button:hover { background: var(--mochi-surface-hover); }
 .play-button { color: var(--mochi-accent-text); background: var(--mochi-accent); }
 .play-button:hover { background: var(--mochi-accent-strong); }
-.hero-card, .tofu-card, .new-tofu-card, .settings-group, .modal, .theme-card, .game-card { border-color: var(--mochi-border); background-color: var(--mochi-surface); }
+.tofu-card, .new-tofu-card, .settings-group, .modal, .theme-card, .game-card { border-color: var(--mochi-border); background-color: var(--mochi-surface); }
 .tofu-card:hover, .tofu-card.active, .game-card:hover, .game-card.selected, .theme-card:hover, .theme-card.selected { border-color: var(--mochi-accent-strong); background: var(--mochi-surface-raised); }
 .tofu-details, .tofu-mods, .game-card-copy small, .setting-row small, .theme-card small, .modal-description, .settings-intro > p:last-child { color: var(--mochi-text-muted); }
 .details-strip { border-color: var(--mochi-border); }
-.details-strip strong, .setting-row, .theme-card, .add-options button, .flatpak-item, .import-game-row { color: var(--mochi-text); }
+.details-strip strong, .setting-row, .theme-card, .add-options button, .flatpak-item { color: var(--mochi-text); }
 .setting-row { border-color: var(--mochi-border); }
 .setting-row:hover { background: var(--mochi-surface-hover); }
 .toggle:checked { background: var(--mochi-accent-strong); }
@@ -39,8 +39,8 @@ body { background: var(--mochi-background); color: var(--mochi-text); }
 .setup-progress span { background: var(--mochi-border); }
 .setup-progress span.active { background: var(--mochi-accent); }
 .setup-icon { color: var(--mochi-accent-strong); border-color: var(--mochi-border); background: var(--mochi-accent-soft); }
-.setup-choice, .setup-source, .import-source-row { background: var(--mochi-surface); border-color: var(--mochi-border); }
-.setup-choice-icon, .setup-source-logo, .import-source-icon { color: var(--mochi-accent-strong); background: var(--mochi-accent-soft); }
+.setup-choice { background: var(--mochi-surface); border-color: var(--mochi-border); }
+.setup-choice-icon { color: var(--mochi-accent-strong); background: var(--mochi-accent-soft); }
 .setup-next { color: var(--mochi-accent-text); border-color: var(--mochi-accent); background: var(--mochi-accent); }
 .setup-next:hover { background: var(--mochi-accent-strong); }
 footer { color: var(--mochi-text-faint); }
@@ -65,7 +65,7 @@ footer { color: var(--mochi-text-faint); }
 .notification-item span, .notification-empty { color: var(--mochi-text-muted); }
 .notification-dot { background: var(--mochi-danger); }
 .section-heading h3 { color: var(--mochi-text-strong); }
-.hero-card p, .hero-kicker, .hero-meta { color: var(--mochi-text-muted); }
+.hero-meta { color: var(--mochi-text-muted); }
 .hero-meta strong { color: var(--mochi-text); }
 .details-strip strong { color: var(--mochi-text); }
 .muted { color: var(--mochi-text-muted); }
@@ -82,8 +82,8 @@ footer { color: var(--mochi-text-faint); }
 .add-options button, .flatpak-item, .igdb-candidate { border-color: var(--mochi-border); color: var(--mochi-text); background: var(--mochi-surface-raised); }
 .add-options button:hover, .flatpak-item:hover, .igdb-candidate:hover { border-color: var(--mochi-accent-strong); background: var(--mochi-surface-hover); }
 .add-options small, .flatpak-item small, .igdb-candidate-copy p { color: var(--mochi-text-muted); }
-.form-fields label, .igdb-form label { color: var(--mochi-text-muted); }
-.form-fields input, .form-fields select, .igdb-form input, .setup-fields input { border-color: var(--mochi-border); background: var(--mochi-background); color: var(--mochi-text); }
+.form-fields label { color: var(--mochi-text-muted); }
+.form-fields input, .form-fields select { border-color: var(--mochi-border); background: var(--mochi-background); color: var(--mochi-text); }
 .settings-group-heading { border-bottom-color: var(--mochi-border); }
 .settings-group-heading strong { color: var(--mochi-text-strong); }
 .settings-group-heading span { color: var(--mochi-text-muted); }
@@ -94,15 +94,12 @@ footer { color: var(--mochi-text-faint); }
 .setup-shell { color: var(--mochi-text); background: var(--mochi-background); }
 .setup-panel { background: var(--mochi-background-elevated); border-color: var(--mochi-border); box-shadow: 0 35px 120px var(--mochi-shadow); }
 .setup-page h1, .setup-welcome-line { color: var(--mochi-text-strong); }
-.setup-description, .setup-footnote, .setup-subtitle, .setup-to { color: var(--mochi-text-muted); }
+.setup-description, .setup-subtitle, .setup-to { color: var(--mochi-text-muted); }
 .setup-progress span { background: var(--mochi-border); }
 .setup-progress span.active { background: var(--mochi-accent); }
-.setup-choice, .setup-source, .import-source-row, .setup-provider-card { border-color: var(--mochi-border); background: var(--mochi-surface); color: var(--mochi-text); }
-.setup-choice-icon, .setup-source-logo, .import-source-icon, .setup-icon { color: var(--mochi-accent-strong); background: var(--mochi-accent-soft); border-color: var(--mochi-border); }
-.setup-source:hover, .setup-source.selected, .import-source-row:hover { border-color: var(--mochi-accent-strong); background: var(--mochi-surface-hover); }
-.setup-source-check { border-color: var(--mochi-border-strong); background: var(--mochi-background); }
-.setup-source.selected .setup-source-check { border-color: var(--mochi-accent); background: var(--mochi-accent); }
-.setup-source-copy small, .setup-source>svg, .setup-scan-state, .setup-no-sources { color: var(--mochi-text-muted); }
+.setup-choice, .setup-provider-card { border-color: var(--mochi-border); background: var(--mochi-surface); color: var(--mochi-text); }
+.setup-choice-icon, .setup-icon { color: var(--mochi-accent-strong); background: var(--mochi-accent-soft); border-color: var(--mochi-border); }
+.setup-scan-state, .setup-no-sources { color: var(--mochi-text-muted); }
 .setup-footer { border-top-color: var(--mochi-border); background: color-mix(in srgb, var(--mochi-background-elevated) 88%, transparent); }
 .setup-nav { border-color: var(--mochi-border); color: var(--mochi-text); background: var(--mochi-surface-raised); }
 .setup-nav:hover { border-color: var(--mochi-border-strong); background: var(--mochi-surface-hover); }
@@ -152,9 +149,9 @@ footer { color: var(--mochi-text-faint); }
 .mfa-challenge .form-submit { margin-top: 2px; }
 .mfa-challenge .switch-auth { margin-top: 0; }
 .setup-page h1, .setup-page p, .setup-page span, .setup-page small, .setup-page label { text-shadow: none; }
-.setup-page .setup-description, .setup-page .setup-footnote, .setup-page .setup-subtitle, .setup-page .setup-to { color: var(--mochi-text-muted); }
-.setup-provider-card > div span, .setup-provider-card label, .setup-source-main, .setup-source-copy small, .setup-source-empty, .setup-found-game small { color: var(--mochi-text-muted); }
-.setup-provider-card > div strong, .setup-found-game strong, .setup-source-main .setup-source-copy strong { color: var(--mochi-text-strong); }
+.setup-page .setup-description, .setup-page .setup-subtitle, .setup-page .setup-to { color: var(--mochi-text-muted); }
+.setup-provider-card > div span, .setup-provider-card label { color: var(--mochi-text-muted); }
+.setup-provider-card > div strong { color: var(--mochi-text-strong); }
 .setup-provider-card input { color: var(--mochi-text); background: var(--mochi-background); border-color: var(--mochi-border); }
 .setup-platform-logo { background: var(--mochi-surface-raised); border-color: var(--mochi-border); }
 .setup-footer { color: var(--mochi-text); }

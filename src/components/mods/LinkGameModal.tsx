@@ -69,9 +69,9 @@ export function LinkGameModal({ piko, curseforgeEnabled, nexusEnabled, onSave, o
     {error && <p className="metadata-note" role="alert">{error}</p>}
     {loading ? <div className="discover-loading"><RefreshCw size={18} className="spin" /><span>Loading games...</span></div> : <div className="nexus-game-picker-list">
       {site === "curseforge" ? cfVisible.map((game) => <button key={game.id} type="button" className="nexus-game-picker-row" onClick={() => save({ curseforge: { gameId: game.id, slug: game.slug, name: game.name } })}>
-        {game.assets?.iconUrl ? <img src={game.assets.iconUrl} alt="" /> : <span>{game.name.slice(0, 1)}</span>}<div><strong>{game.name}</strong><small>{game.slug}</small></div><Plus size={15} /></button>)
+        {game.assets?.iconUrl ? <img src={game.assets.iconUrl} alt="" loading="lazy" decoding="async" /> : <span>{game.name.slice(0, 1)}</span>}<div><strong>{game.name}</strong><small>{game.slug}</small></div><Plus size={15} /></button>)
         : nexusGames.slice(0, 40).map((game) => <button key={game.domainName} type="button" className="nexus-game-picker-row" onClick={() => save({ nexus: { domain: game.domainName, name: game.name } })}>
-          {game.iconUrl ? <img src={game.iconUrl} alt="" /> : <span>{game.name.slice(0, 1)}</span>}<div><strong>{game.name}</strong><small>{game.domainName}</small></div><Plus size={15} /></button>)}
+          {game.iconUrl ? <img src={game.iconUrl} alt="" loading="lazy" decoding="async" /> : <span>{game.name.slice(0, 1)}</span>}<div><strong>{game.name}</strong><small>{game.domainName}</small></div><Plus size={15} /></button>)}
       {!error && ((site === "curseforge" ? cfVisible.length : nexusGames.length) === 0) && <div className="discover-empty">No games match your search.</div>}
     </div>}
     {site === "curseforge" && <CurseforgeCredit />}

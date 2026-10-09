@@ -6,7 +6,7 @@ import { useGameSessions } from "../hooks";
 import { useThemeEngine } from "../lib/theme";
 import { getPlatformCapabilities, listRuntimes, type PlatformCapabilities, type RuntimeInfo } from "../lib/platform";
 import type { ImportedGame, ImportSourceId } from "../lib/sources";
-import { readJson, readString, storageKeys, writeJson, writeString } from "../lib/storage";
+import { discardPendingWrites, readJson, readString, storageKeys, writeJson, writeString } from "../lib/storage";
 import { normalizeBehavior, type Behavior } from "./settings";
 import { useNotifications } from "./useNotifications";
 import { useAccount } from "./useAccount";
@@ -125,6 +125,7 @@ function useAppController() {
 
   const resetLocalData = async () => {
     if (!window.confirm("Clear all Mochi app data and return to the welcome screen? Your Mochi account will not be deleted.")) return;
+    discardPendingWrites();
     try { window.localStorage.clear(); } catch { /* storage unavailable */ }
     try {
       if (supabase) await supabase.auth.signOut({ scope: "local" });

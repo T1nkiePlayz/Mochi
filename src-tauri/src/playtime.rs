@@ -4,6 +4,7 @@ use crate::{
     platform::Launched,
     process,
     tracking::Matcher,
+    util::{epoch_secs, fsio, now_secs as now_seconds, MutexExt},
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -13,7 +14,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{atomic::{AtomicU64, Ordering}, Arc, Mutex, OnceLock},
     thread,
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime},
 };
 use tauri::{AppHandle, Emitter};
 
@@ -120,9 +121,13 @@ impl Watcher {
 
     /// Pids currently belonging to the game. One process-table snapshot; environments are read
     /// only for new processes that the command line did not already settle.
-    fn pids(&self) -> Vec<u32> {
-        let table = process::snapshot();
-        let Ok(mut cache) = self.environment.lock() else { return Vec::new() };
+    fn pids(&self) -> Vec<u32> { self.pids_within(Duration::from_millis(500)) }
+
+    /// Like `pids`, from a process table at most `max_age` old. Several watchers (one per launched
+    /// game) share one scan when they poll at about the same time.
+    fn pids_within(&self, max_age: Duration) -> Vec<u32> {
+        let table = process::shared_snapshot(max_age);
+        let mut cache = self.environment.lock_recover();
         cache.retain(|(pid, start), _| table.get(pid).is_some_and(|info| info.start_time == *start));
         let matcher = &self.matcher;
         let found = matcher.select(&table, std::process::id(), &|info| !self.before.contains(&info.pid), &mut |info| {
@@ -171,12 +176,10 @@ fn state() -> Arc<Mutex<TrackerState>> {
     STATE.get_or_init(|| Arc::new(Mutex::new(TrackerState::default()))).clone()
 }
 
+/// Runs `f` on the tracker state. A panic in some other holder must not end session tracking for good,
+/// so a poisoned lock is recovered instead of reported (the `Result` is kept for the callers' `?`).
 fn lock<T>(shared: &Arc<Mutex<TrackerState>>, f: impl FnOnce(&mut TrackerState) -> T) -> Result<T, String> {
-    shared.lock().map(|mut guard| f(&mut guard)).map_err(|_| "Playtime tracker lock is poisoned.".to_string())
-}
-
-fn now_seconds() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
+    Ok(f(&mut shared.lock_recover()))
 }
 
 fn seconds_since(time: SystemTime) -> u64 {
@@ -270,10 +273,7 @@ fn migrate_totals(entries: &[PlaytimeEntry], now: u64) -> Vec<Session> {
 
 /// Writes `contents` to `path` through a synced temporary file so a crash never leaves a half-written file.
 fn write_atomic(path: &Path, contents: &[u8]) -> Result<(), String> {
-    let temp = path.with_extension("tmp");
-    let mut file = fs::File::create(&temp).map_err(|e| format!("Unable to save {}: {e}", path.display()))?;
-    file.write_all(contents).and_then(|_| file.sync_all()).map_err(|e| format!("Unable to save {}: {e}", path.display()))?;
-    fs::rename(&temp, path).map_err(|e| format!("Unable to save {}: {e}", path.display()))
+    fsio::write_atomic_durable(path, contents).map_err(|e| format!("Unable to save {}: {e}", path.display()))
 }
 
 fn serialize_history(history: &[Session]) -> String {
@@ -311,17 +311,20 @@ pub fn initialize(directory: PathBuf) -> Result<(), String> {
         Err(error) => return Err(format!("Unable to read playtime data: {error}")),
     };
     let now = now_seconds();
+    let mut stored_history = None;
     let mut history = match fs::read_to_string(&history_path) {
-        Ok(contents) => parse_history(&contents),
+        Ok(contents) => { let parsed = parse_history(&contents); stored_history = Some(contents); parsed }
         // First run with history: existing totals become one "historic" entry per game.
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => migrate_totals(&games, now),
         Err(error) => return Err(format!("Unable to read session history: {error}")),
     };
     // Sessions that never closed (crash, power loss): credit them up to their last heartbeat.
+    let mut recovered = false;
     if let Ok(contents) = fs::read_to_string(&active_path) {
         for record in serde_json::from_str::<Vec<ActiveRecord>>(&contents).unwrap_or_default() {
             let seconds = record.seen.saturating_sub(record.start);
             if seconds < MIN_RECORDED_SECONDS { continue; }
+            recovered = true;
             history.push(Session { game_id: record.game_id.clone(), name: record.name.clone(), start: record.start, seconds, kind: SessionKind::Session, count: 1 });
             let entry = games.iter_mut().find(|entry| entry.game_id == record.game_id);
             match entry {
@@ -332,16 +335,19 @@ pub fn initialize(directory: PathBuf) -> Result<(), String> {
         let _ = fs::remove_file(&active_path);
     }
     let history = compact(history, now, &local_offset);
-    // Rewriting on every start also drops any torn trailing line before new appends.
-    write_atomic(&history_path, serialize_history(&history).as_bytes())?;
+    // Rewriting also drops any torn trailing line before new appends; an already clean file is left alone
+    // (no fsync on the startup path).
+    let serialized = serialize_history(&history);
+    if stored_history.as_deref() != Some(serialized.as_str()) { write_atomic(&history_path, serialized.as_bytes())?; }
+    let needs_persist = recovered || !file.exists();
     lock(&state(), |guard| {
         guard.path = Some(file);
         guard.history_path = Some(history_path);
         guard.active_path = Some(active_path);
         guard.history = history;
         guard.games = games.into_iter().map(|entry| (entry.game_id.clone(), entry)).collect();
-        // Persist totals now in case crash recovery changed them.
-        if let Err(error) = persist(guard) { eprintln!("{error}"); }
+        // Persist totals when crash recovery changed them (or none exist yet).
+        if needs_persist { if let Err(error) = persist(guard) { eprintln!("{error}"); } }
     })
 }
 
@@ -352,7 +358,7 @@ fn persist_active(guard: &TrackerState) {
     let records: Vec<ActiveRecord> = guard.active.iter().map(|(game_id, session)| ActiveRecord {
         game_id: game_id.clone(),
         name: session.name.clone(),
-        start: session.started_at.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs(),
+        start: epoch_secs(session.started_at),
         seen: now,
     }).collect();
     if let Ok(contents) = serde_json::to_vec(&records) { let _ = write_atomic(path, &contents); }
@@ -374,7 +380,7 @@ pub fn history(since_epoch: Option<u64>) -> Result<Vec<Session>, String> {
         let since = since_epoch.unwrap_or(0);
         let mut out: Vec<Session> = guard.history.iter().filter(|s| s.kind == SessionKind::Historic || s.start.saturating_add(s.seconds) >= since).cloned().collect();
         for (game_id, session) in &guard.active {
-            let start = session.started_at.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
+            let start = epoch_secs(session.started_at);
             let seconds = seconds_since(session.started_at);
             if seconds >= MIN_RECORDED_SECONDS && start.saturating_add(seconds) >= since {
                 out.push(Session { game_id: game_id.clone(), name: session.name.clone(), start, seconds, kind: SessionKind::Session, count: 1 });
@@ -409,7 +415,7 @@ pub fn active() -> Result<Vec<ActiveSessionInfo>, String> {
     lock(&state(), |guard| {
         guard.active.iter().map(|(game_id, session)| ActiveSessionInfo {
             game_id: game_id.clone(),
-            started_at: session.started_at.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs(),
+            started_at: epoch_secs(session.started_at),
             // A game that has not been detected yet can still be cancelled.
             can_stop: true,
         }).collect()
@@ -539,7 +545,7 @@ fn finish(game_id: &str, token: Option<u64>, credit: bool, idle_tail: u64) -> Re
             entry.seconds = entry.seconds.saturating_add(elapsed);
             entry.last_played = now_seconds();
             if elapsed >= MIN_RECORDED_SECONDS {
-                let start = session.started_at.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
+                let start = epoch_secs(session.started_at);
                 let record = Session { game_id: game_id.to_string(), name: entry.name.clone(), start, seconds: elapsed, kind: SessionKind::Session, count: 1 };
                 if let Some(path) = &guard.history_path {
                     if let Err(error) = append_history(path, &record) { eprintln!("{error}"); }
@@ -698,14 +704,14 @@ mod tests {
     fn watcher_finds_a_real_process_by_environment_and_by_path() {
         let mut child = std::process::Command::new("sleep").arg("30").env("SteamAppId", "424242").spawn().expect("sleep");
         let watcher = Watcher::new(Matcher::new("steam://rungameid/424242", None).unwrap(), HashSet::new());
-        assert!(watcher.pids().contains(&child.id()));
+        assert!(watcher.pids_within(Duration::ZERO).contains(&child.id()));
         // A process that existed before the launch is not inspected through its environment.
         let before = Watcher::new(Matcher::new("steam://rungameid/424242", None).unwrap(), HashSet::from([child.id()]));
-        assert!(!before.pids().contains(&child.id()));
+        assert!(!before.pids_within(Duration::ZERO).contains(&child.id()));
         let other = Watcher::new(Matcher::new("steam://rungameid/424243", None).unwrap(), HashSet::new());
-        assert!(!other.pids().contains(&child.id()));
+        assert!(!other.pids_within(Duration::ZERO).contains(&child.id()));
         let _ = child.kill();
         let _ = child.wait();
-        assert!(!watcher.pids().contains(&child.id()));
+        assert!(!watcher.pids_within(Duration::ZERO).contains(&child.id()));
     }
 }

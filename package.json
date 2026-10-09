@@ -13,6 +13,7 @@
     "test:mods": "node --test scripts/mods.test.mjs",
     "build:launcher-art": "node scripts/build-launcher-art.mjs",
     "lint": "eslint src",
+    "typecheck:tests": "tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run && npm run test:metadata && npm run test:mods"
   },
   "dependencies": {

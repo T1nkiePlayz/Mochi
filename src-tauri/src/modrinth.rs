@@ -7,8 +7,9 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
     sync::{atomic::AtomicU64, Mutex, OnceLock},
-    time::{SystemTime, UNIX_EPOCH},
+    time::SystemTime,
 };
+use crate::util::{hex, http, MutexExt};
 
 const API_BASE: &str = "https://api.modrinth.com/v2";
 pub(crate) const MAX_DOWNLOAD_BYTES: u64 = 250 * 1024 * 1024;
@@ -70,7 +71,7 @@ pub(crate) fn downloads() -> &'static Mutex<HashMap<String, DownloadEntry>> {
 
 /// A panic while the lock was held must not disable download tracking for the rest of the session.
 pub(crate) fn lock_downloads() -> std::sync::MutexGuard<'static, HashMap<String, DownloadEntry>> {
-    downloads().lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    downloads().lock_recover()
 }
 
 /// Downloads that have not finished yet.
@@ -78,9 +79,7 @@ pub(crate) fn active_download_count() -> usize {
     lock_downloads().values().filter(|entry| entry.finished_at.is_none()).count()
 }
 
-pub(crate) fn now_ms() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or_default()
-}
+pub(crate) use crate::util::now_ms;
 
 pub(crate) fn validate_path(path: &str) -> Result<PathBuf, String> {
     let p = PathBuf::from(path);
@@ -122,20 +121,19 @@ fn modrinth_redirect_allowed(url: &reqwest::Url) -> bool {
 /// One shared client: connection reuse, a fixed user agent, and redirects that
 /// may only land on Modrinth hosts.
 pub(crate) fn client() -> Result<&'static reqwest::Client, String> {
-    static CLIENT: OnceLock<Result<reqwest::Client, String>> = OnceLock::new();
-    CLIENT.get_or_init(|| {
+    static CLIENT: http::SharedClient = http::SharedClient::new();
+    CLIENT.get(|| {
         let policy = reqwest::redirect::Policy::custom(|attempt| {
             if attempt.previous().len() < 5 && modrinth_redirect_allowed(attempt.url()) { attempt.follow() } else { attempt.stop() }
         });
-        reqwest::Client::builder()
+        http::builder()
             .user_agent("T1nkiePlayz/Mochi/0.1.0 (https://github.com/T1nkiePlayz/Mochi)")
             .redirect(policy)
             .connect_timeout(std::time::Duration::from_secs(20))
             // A stalled transfer must fail instead of leaving a download "downloading" forever.
             .read_timeout(std::time::Duration::from_secs(45))
             .build()
-            .map_err(|e| format!("Unable to prepare Modrinth requests: {e}"))
-    }).as_ref().map_err(Clone::clone)
+    }, "Unable to prepare Modrinth requests")
 }
 
 pub(crate) fn cleanup_downloads() {
@@ -189,10 +187,7 @@ fn parse_api_url(url: &str) -> Result<reqwest::Url, String> {
 }
 
 fn cache_file(dir: &Path, url: &reqwest::Url) -> PathBuf {
-    let mut hasher = Sha1::new();
-    hasher.update(url.as_str().as_bytes());
-    let hex: String = hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect();
-    dir.join(format!("{hex}.json"))
+    dir.join(format!("{}.json", hex(&Sha1::digest(url.as_str().as_bytes()))))
 }
 
 fn read_cache(path: &Path) -> Option<(Value, u64)> {
@@ -202,10 +197,12 @@ fn read_cache(path: &Path) -> Option<(Value, u64)> {
 
 fn prune_cache(dir: &Path) {
     let Ok(read) = fs::read_dir(dir) else { return };
-    let mut entries: Vec<(SystemTime, PathBuf)> = read.flatten()
+    // Listing names is cheap; only stat every entry when the folder is actually over its limit.
+    let names: Vec<fs::DirEntry> = read.flatten().collect();
+    if names.len() <= API_CACHE_MAX_ENTRIES { return; }
+    let mut entries: Vec<(SystemTime, PathBuf)> = names.iter()
         .filter_map(|entry| Some((entry.metadata().ok()?.modified().ok()?, entry.path())))
         .collect();
-    if entries.len() <= API_CACHE_MAX_ENTRIES { return; }
     entries.sort_by_key(|(modified, _)| *modified);
     let excess = entries.len() - API_CACHE_MAX_ENTRIES;
     for (_, path) in entries.into_iter().take(excess) { let _ = fs::remove_file(path); }
@@ -215,11 +212,7 @@ fn write_cache(dir: &Path, path: &Path, data: &Value, fetched_at: u64) {
     if fs::create_dir_all(dir).is_err() { return; }
     let body = json!({ "fetchedAt": fetched_at, "data": data });
     // Write-then-rename so a crash never leaves a truncated cache entry behind.
-    let tmp = path.with_extension("tmp");
-    if serde_json::to_vec(&body).ok().and_then(|bytes| fs::write(&tmp, bytes).ok()).is_some() && fs::rename(&tmp, path).is_err() {
-        let _ = fs::remove_file(&tmp);
-    }
-    prune_cache(dir);
+    if serde_json::to_vec(&body).ok().and_then(|bytes| crate::util::fsio::write_atomic(path, &bytes).ok()).is_some() { prune_cache(dir); }
 }
 
 async fn fetch_api(url: reqwest::Url) -> Result<Value, String> {
@@ -228,14 +221,10 @@ async fn fetch_api(url: reqwest::Url) -> Result<Value, String> {
     let status = response.status();
     if status == reqwest::StatusCode::TOO_MANY_REQUESTS { return Err("Modrinth is rate limiting requests right now (429). Try again in a minute.".into()); }
     if !status.is_success() { return Err(format!("Modrinth request failed ({status}).")); }
-    if response.content_length().map(|length| length as usize > API_MAX_RESPONSE_BYTES).unwrap_or(false) {
-        return Err("Modrinth returned an unexpectedly large response.".into());
-    }
-    let mut body: Vec<u8> = Vec::new();
-    while let Some(chunk) = response.chunk().await.map_err(|error| format!("Modrinth connection dropped: {error}"))? {
-        if body.len() + chunk.len() > API_MAX_RESPONSE_BYTES { return Err("Modrinth returned an unexpectedly large response.".into()); }
-        body.extend_from_slice(&chunk);
-    }
+    let body = http::read_capped(&mut response, API_MAX_RESPONSE_BYTES).await.map_err(|error| match error {
+        http::BodyError::TooLarge => "Modrinth returned an unexpectedly large response.".to_string(),
+        http::BodyError::Network(error) => format!("Modrinth connection dropped: {error}"),
+    })?;
     serde_json::from_slice(&body).map_err(|error| format!("Modrinth returned invalid data: {error}"))
 }
 
@@ -245,7 +234,8 @@ pub async fn get_public_api(app: tauri::AppHandle, url: String) -> Result<Public
     let parsed = parse_api_url(&url)?;
     let dir = app.path().app_cache_dir().ok().map(|dir| dir.join("modrinth-api"));
     let path = dir.as_ref().map(|dir| cache_file(dir, &parsed));
-    let cached = path.as_deref().and_then(read_cache);
+    // Disk reads/writes stay off the async workers.
+    let cached = match path.clone() { Some(path) => crate::util::blocking(move || read_cache(&path)).await?, None => None };
     if let Some((data, fetched_at)) = &cached {
         if classify_cache_age(now_ms().saturating_sub(*fetched_at)) == CacheAge::Fresh {
             return Ok(PublicApiResponse { data: data.clone(), cached: true, stale: false, fetched_at: *fetched_at });
@@ -254,7 +244,11 @@ pub async fn get_public_api(app: tauri::AppHandle, url: String) -> Result<Public
     match fetch_api(parsed).await {
         Ok(data) => {
             let fetched_at = now_ms();
-            if let (Some(dir), Some(path)) = (&dir, &path) { write_cache(dir, path, &data, fetched_at); }
+            if let (Some(dir), Some(path)) = (dir, path) {
+                let to_store = data.clone();
+                // The caller does not wait for the cache write.
+                tauri::async_runtime::spawn_blocking(move || write_cache(&dir, &path, &to_store, fetched_at));
+            }
             Ok(PublicApiResponse { data, cached: false, stale: false, fetched_at })
         }
         Err(error) => match cached {
@@ -350,7 +344,7 @@ pub(crate) fn sha1_hex(path: &Path) -> Result<String, String> {
         if read == 0 { break; }
         hasher.update(&buffer[..read]);
     }
-    Ok(hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect())
+    Ok(hex(&hasher.finalize()))
 }
 
 async fn post_versions(endpoint: &str, body: Value) -> Result<HashMap<String, ApiVersion>, String> {
@@ -363,10 +357,9 @@ async fn post_versions(endpoint: &str, body: Value) -> Result<HashMap<String, Ap
 /// Identifies installed files on Modrinth and reports newer compatible versions.
 #[tauri::command]
 pub async fn analyze_mod_files(path: String, game_version: Option<String>, loader: Option<String>) -> Result<Vec<ModAnalysis>, String> {
-    let files = list_mod_files(path)?;
-    let hashed: Vec<(InstalledModFile, String)> = tauri::async_runtime::spawn_blocking(move || {
-        files.into_iter().filter_map(|file| sha1_hex(Path::new(&file.path)).ok().map(|hash| (file, hash))).collect()
-    }).await.map_err(|e| e.to_string())?;
+    let hashed: Vec<(InstalledModFile, String)> = crate::util::blocking(move || -> Result<_, String> {
+        Ok(list_mod_files(path)?.into_iter().filter_map(|file| sha1_hex(Path::new(&file.path)).ok().map(|hash| (file, hash))).collect())
+    }).await??;
     if hashed.is_empty() { return Ok(Vec::new()); }
 
     let hashes: Vec<&str> = hashed.iter().map(|(_, hash)| hash.as_str()).collect();

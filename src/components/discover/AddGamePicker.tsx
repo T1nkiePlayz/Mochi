@@ -41,9 +41,9 @@ export function AddGamePicker({ cfGames, cfEnabled, nexusEnabled, onChoose, onCl
     {error && <p className="metadata-note" role="alert">{error}</p>}
     <div className="nexus-game-picker-list">
       {cfVisible.map((game) => <button key={`cf${game.id}`} type="button" className="nexus-game-picker-row" onClick={() => onChoose({ k: "cf", id: game.id, slug: game.slug })}>
-        {game.assets?.iconUrl ? <img src={game.assets.iconUrl} alt="" /> : <span>{game.name.slice(0, 1)}</span>}<div><strong>{game.name}</strong><small>CurseForge</small></div><Plus size={15} /></button>)}
+        {game.assets?.iconUrl ? <img src={game.assets.iconUrl} alt="" loading="lazy" decoding="async" /> : <span>{game.name.slice(0, 1)}</span>}<div><strong>{game.name}</strong><small>CurseForge</small></div><Plus size={15} /></button>)}
       {nexusVisible.map((game) => <button key={`nx${game.domainName}`} type="button" className="nexus-game-picker-row" onClick={() => onChoose({ k: "nx", domain: game.domainName })}>
-        {game.iconUrl ? <img src={game.iconUrl} alt="" /> : <span>{game.name.slice(0, 1)}</span>}<div><strong>{game.name}</strong><small>Nexus Mods{game.modCount ? ` · ${game.modCount.toLocaleString()} mods` : ""}</small></div><Plus size={15} /></button>)}
+        {game.iconUrl ? <img src={game.iconUrl} alt="" loading="lazy" decoding="async" /> : <span>{game.name.slice(0, 1)}</span>}<div><strong>{game.name}</strong><small>Nexus Mods{game.modCount ? ` · ${game.modCount.toLocaleString()} mods` : ""}</small></div><Plus size={15} /></button>)}
       {loading && <div className="discover-loading"><RefreshCw size={16} className="spin" /><span>Searching...</span></div>}
       {!loading && !cfVisible.length && !nexusVisible.length && <div className="discover-empty">No games match your search.</div>}
     </div>

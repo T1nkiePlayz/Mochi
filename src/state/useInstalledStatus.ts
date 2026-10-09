@@ -24,7 +24,10 @@ export function useInstalledStatus(library: Piko[]): Map<string, boolean> {
           stale.forEach((target, index) => cache.set(target, { exists: results[index] !== false, at: Date.now() }));
         } catch { /* browser/dev mode or old backend: assume everything is present */ }
       }
-      if (!cancelled) setInstalled(new Map(unique.map((target) => [target, cache.get(target)?.exists ?? true])));
+      if (cancelled) return;
+      const next = new Map(unique.map((target) => [target, cache.get(target)?.exists ?? true] as const));
+      // Focus re-checks usually change nothing; keep the old map so the library is not recomputed.
+      setInstalled((previous) => (previous.size === next.size && [...next].every(([target, exists]) => previous.get(target) === exists) ? previous : next));
     };
     void check();
     const onFocus = () => void check();

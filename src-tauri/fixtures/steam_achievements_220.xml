@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<playerstats>
+	<privacyState>public</privacyState>
+	<visibilityState>3</visibilityState>
+	<game>
+		<gameName><![CDATA[Half-Life 2]]></gameName>
+		<gameFriendlyName>HL2</gameFriendlyName>
+		<gameLink><![CDATA[https://steamcommunity.com/app/220]]></gameLink>
+	</game>
+	<player>
+		<steamID64>76561197960287930</steamID64>
+		<steamID><![CDATA[Gordon]]></steamID>
+	</player>
+	<stats>
+		<hoursPlayed>12.5</hoursPlayed>
+	</stats>
+	<achievements>
+		<achievement closed="1">
+			<iconClosed><![CDATA[https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps/220/a1.jpg]]></iconClosed>
+			<iconOpen><![CDATA[https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps/220/a1g.jpg]]></iconOpen>
+			<name><![CDATA[Welcome to City 17 &amp; beyond]]></name>
+			<apiname><![CDATA[HL2_BEAT_CITYENTRY]]></apiname>
+			<description><![CDATA[Get off the train.]]></description>
+			<unlockTimestamp>1700000000</unlockTimestamp>
+		</achievement>
+		<achievement closed="0">
+			<iconClosed><![CDATA[https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps/220/b1.jpg]]></iconClosed>
+			<iconOpen><![CDATA[https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps/220/b1g.jpg]]></iconOpen>
+			<name><![CDATA[Lambda Locator]]></name>
+			<apiname><![CDATA[HL2_FIND_ALLLAMBDAS]]></apiname>
+			<description><![CDATA[Find all the lambdas.]]></description>
+		</achievement>
+		<achievement closed="0">
+			<iconClosed><![CDATA[http://evil.example.com/x.jpg]]></iconClosed>
+			<iconOpen><![CDATA[javascript:alert(1)]]></iconOpen>
+			<name><![CDATA[Secret]]></name>
+			<apiname><![CDATA[HL2_SECRET]]></apiname>
+			<description><![CDATA[]]></description>
+		</achievement>
+	</achievements>
+</playerstats>

@@ -1,24 +1,26 @@
 import { Suspense, lazy, useEffect } from "react";
 import { Gamepad2 } from "lucide-react";
-import { AddGameModals } from "./components/AddGameModals";
-import { AuthModal } from "./components/AuthModal";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { FirstLaunchSetup } from "./components/FirstLaunchSetup";
-import { GameEditor } from "./components/GameEditor";
 import { MochiIcon } from "./components/MochiIcon";
 import { UpdateBanner } from "./components/UpdateBanner";
-import { TofuManager } from "./components/TofuManager";
 import { Sidebar } from "./components/layout/Sidebar";
 import { Topbar } from "./components/layout/Topbar";
 import { LibraryView } from "./views/LibraryView";
 import { AppProvider, useApp } from "./state/AppContext";
 import { BigPictureGate } from "./bigpicture/BigPictureGate";
 import { ControllerRuntime } from "./controller/ControllerRuntime";
-import { AccessibilityProvider } from "./state/accessibility";
 import { ShortcutsHelp } from "./components/ShortcutsHelp";
+import { AccessibilityProvider } from "./state/accessibility";
 import { installAccessibilityEnhancer } from "./lib/dialogs";
 import { Cloud } from "lucide-react";
 import { OfflineBanner } from "./components/OfflineBanner";
+
+// Dialogs only mount when opened, so their code (and the pickers/editors behind them) stays out of the entry chunk.
+const AddGameModals = lazy(() => import("./components/AddGameModals").then((m) => ({ default: m.AddGameModals })));
+const AuthModal = lazy(() => import("./components/AuthModal").then((m) => ({ default: m.AuthModal })));
+const FirstLaunchSetup = lazy(() => import("./components/FirstLaunchSetup").then((m) => ({ default: m.FirstLaunchSetup })));
+const GameEditor = lazy(() => import("./components/GameEditor").then((m) => ({ default: m.GameEditor })));
+const TofuManager = lazy(() => import("./components/TofuManager").then((m) => ({ default: m.TofuManager })));
 
 // Everything except the library loads on demand so the launcher reaches an interactive library sooner.
 const SettingsView = lazy(() => import("./views/SettingsView").then((m) => ({ default: m.SettingsView })));
@@ -59,7 +61,7 @@ function Shell() {
   const { lib, credentials, account, themeEngine } = app;
 
   if (app.showFirstLaunchSetup) {
-    return <>
+    return <Suspense fallback={<ViewFallback />}>
       <FirstLaunchSetup
         igdbClientId={credentials.igdbClientId} setIgdbClientId={credentials.setIgdbClientId}
         igdbClientSecret={credentials.igdbClientSecret} setIgdbClientSecret={credentials.setIgdbClientSecret}
@@ -72,9 +74,11 @@ function Shell() {
         onFinish={app.finishFirstLaunchSetup}
       />
       {account.showAuth && <AuthModal />}
-    </>;
+    </Suspense>;
   }
 
+  const { add } = app;
+  const addOpen = add.showAddPiko || add.showCustomGame || add.flatpakPickerOpen || add.showImportPicker;
   const editing = lib.library.find((piko) => piko.id === app.editingGameId);
   return <div className="app-shell">
     <SkipLink />
@@ -90,10 +94,12 @@ function Shell() {
         <Footer />
       </div>
     </main>
-    <AddGameModals />
-    {app.showTofuManager && lib.library.some((piko) => piko.id === lib.selectedPiko.id) && <TofuManager piko={lib.selectedPiko} selectedTofuId={lib.selectedTofu.id} runtimes={app.runtimes} onSelect={lib.setSelectedTofuId} onChange={(tofus) => lib.updateGame(lib.selectedPiko.id, { tofus })} onClose={() => app.setShowTofuManager(false)} />}
-    {editing && <GameEditor game={editing} capabilities={app.platformCapabilities} onSave={(changes) => { lib.updateGame(editing.id, changes); app.setEditingGameId(""); }} onClose={() => app.setEditingGameId("")} />}
-    {account.showAuth && <AuthModal />}
+    <Suspense fallback={null}>
+      {addOpen && <AddGameModals />}
+      {app.showTofuManager && lib.library.some((piko) => piko.id === lib.selectedPiko.id) && <TofuManager piko={lib.selectedPiko} selectedTofuId={lib.selectedTofu.id} runtimes={app.runtimes} onSelect={lib.setSelectedTofuId} onChange={(tofus) => lib.updateGame(lib.selectedPiko.id, { tofus })} onClose={() => app.setShowTofuManager(false)} />}
+      {editing && <GameEditor game={editing} capabilities={app.platformCapabilities} onSave={(changes) => { lib.updateGame(editing.id, changes); app.setEditingGameId(""); }} onClose={() => app.setEditingGameId("")} />}
+      {account.showAuth && <AuthModal />}
+    </Suspense>
   </div>;
 }
 

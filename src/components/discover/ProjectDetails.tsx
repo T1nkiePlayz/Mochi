@@ -40,7 +40,7 @@ export function ProjectDetails({ project, gameVersion, onClose }: { project: Mod
       {project.members?.length ? <section className="project-creators">
         <div className="project-creators-heading"><div><h3>Creators & contributors</h3><p>{project.members.length} team member{project.members.length === 1 ? "" : "s"} credited on Modrinth.</p></div></div>
         <div className="project-creator-grid">{project.members.map(member => <div className="project-creator" key={member.user.id}>
-          <img src={member.user.avatar_url} alt="" />
+          <img src={member.user.avatar_url} alt="" loading="lazy" decoding="async" />
           <div><strong>{member.user.name || member.user.username}</strong><small>@{member.user.username} · {member.role}</small></div>
         </div>)}</div>
       </section> : null}

@@ -1,5 +1,6 @@
 use base64::{engine::general_purpose::STANDARD, Engine as _};
-use std::{fs, path::{Path, PathBuf}, sync::atomic::{AtomicU64, Ordering}};
+use crate::util::{fsio, http, valid_id};
+use std::{fs, path::{Path, PathBuf}};
 use image::{imageops::FilterType, metadata::Orientation, DynamicImage, ImageDecoder, ImageFormat, ImageReader, Limits};
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
@@ -7,7 +8,6 @@ use tauri::AppHandle;
 
 const MAX_IMAGE_BYTES: usize = 15 * 1024 * 1024;
 const CACHE_EXTENSIONS: [&str; 3] = ["jpg", "png", "webp"];
-static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 const ARTWORK_HOSTS: [&str; 7] = [
     "images.igdb.com", "cdn2.steamgriddb.com", "cdn.steamgriddb.com", "shared.akamai.steamstatic.com",
     "cdn.akamai.steamstatic.com", "shared.cloudflare.steamstatic.com", "cdn.cloudflare.steamstatic.com",
@@ -20,7 +20,7 @@ fn allowed_artwork_url(url: &reqwest::Url) -> bool {
 }
 
 fn valid_cache_key(key: &str) -> bool {
-    !key.is_empty() && key.len() <= 120 && key.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    valid_id(key, 120)
 }
 
 /// The key is used verbatim (no trimming): every lookup below compares against the same exact string.
@@ -63,43 +63,45 @@ fn sniff_image_extension(bytes: &[u8]) -> Option<&'static str> {
 }
 
 fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
-    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("artwork");
-    let temp = path.with_file_name(format!(".{name}.{}-{}.tmp", std::process::id(), TEMP_COUNTER.fetch_add(1, Ordering::Relaxed)));
-    let result = fs::write(&temp, bytes).and_then(|()| fs::rename(&temp, path));
-    if result.is_err() { let _ = fs::remove_file(&temp); }
-    result.map_err(|error| format!("Unable to save artwork in Mochi's config folder: {error}"))
+    fsio::write_atomic(path, bytes).map_err(|error| format!("Unable to save artwork in Mochi's config folder: {error}"))
 }
 
 #[tauri::command]
 pub async fn cache_game_artwork(app: AppHandle, url: String, cache_key: String, force: Option<bool>) -> Result<String, String> {
     let base = cache_path(&app, &cache_key)?;
-    if force == Some(true) { remove_cached(&base); }
-    if let Some(existing) = find_cached(&base) { return data_url(&existing); }
+    // Probing the cache and base64-encoding an image is disk/CPU work: off the async workers.
+    let hit = {
+        let base = base.clone();
+        crate::util::blocking(move || {
+            if force == Some(true) { remove_cached(&base); }
+            find_cached(&base).map(|existing| data_url(&existing)).transpose()
+        }).await??
+    };
+    if let Some(cached) = hit { return Ok(cached); }
 
     let parsed = reqwest::Url::parse(&url).map_err(|_| "Invalid artwork URL.".to_string())?;
     if !allowed_artwork_url(&parsed) { return Err("Only IGDB, SteamGridDB and Steam artwork URLs can be cached.".into()); }
-    let mut response = reqwest::Client::builder().connect_timeout(std::time::Duration::from_secs(10)).timeout(std::time::Duration::from_secs(30))
+    static CLIENT: http::SharedClient = http::SharedClient::new();
+    let client = CLIENT.get(|| http::builder().connect_timeout(std::time::Duration::from_secs(10)).timeout(std::time::Duration::from_secs(30))
         .redirect(reqwest::redirect::Policy::custom(|attempt| {
             if attempt.previous().len() < 3 && allowed_artwork_url(attempt.url()) { attempt.follow() } else { attempt.stop() }
         }))
-        .build()
-        .map_err(|error| format!("Unable to prepare artwork request: {error}"))?
-        .get(parsed).send().await.map_err(|error| format!("Unable to download game artwork: {error}"))?;
+        .build(), "Unable to prepare artwork request")?;
+    let mut response = client.get(parsed).send().await.map_err(|error| format!("Unable to download game artwork: {error}"))?;
     if !response.status().is_success() { return Err(format!("Artwork server returned HTTP {}.", response.status())); }
-    if response.content_length().is_some_and(|length| length as usize > MAX_IMAGE_BYTES) { return Err("Artwork is larger than the 15 MiB cache limit.".into()); }
-    // A chunked response has no Content-Length; cap while reading instead of buffering everything first.
-    let mut bytes: Vec<u8> = Vec::new();
-    while let Some(chunk) = response.chunk().await.map_err(|error| format!("Unable to read downloaded artwork: {error}"))? {
-        if bytes.len() + chunk.len() > MAX_IMAGE_BYTES { return Err("Artwork is larger than the 15 MiB cache limit.".into()); }
-        bytes.extend_from_slice(&chunk);
-    }
+    let bytes = http::read_capped(&mut response, MAX_IMAGE_BYTES).await.map_err(|error| match error {
+        http::BodyError::TooLarge => "Artwork is larger than the 15 MiB cache limit.".to_string(),
+        http::BodyError::Network(error) => format!("Unable to read downloaded artwork: {error}"),
+    })?;
     if bytes.is_empty() { return Err("Artwork has an invalid size.".into()); }
     let extension = sniff_image_extension(&bytes).ok_or("The artwork server returned an unsupported artwork format.")?;
-    // Another request for the same key may have finished first; keep whichever file is already there.
-    if let Some(existing) = find_cached(&base) { return data_url(&existing); }
-    let path = base.with_extension(extension);
-    write_atomic(&path, &bytes)?;
-    data_url(&path)
+    crate::util::blocking(move || {
+        // Another request for the same key may have finished first; keep whichever file is already there.
+        if let Some(existing) = find_cached(&base) { return data_url(&existing); }
+        let path = base.with_extension(extension);
+        write_atomic(&path, &bytes)?;
+        data_url(&path)
+    }).await?
 }
 
 #[tauri::command(async)]
@@ -263,22 +265,20 @@ async fn download_image(url: &str) -> Result<Vec<u8>, String> {
     if !matches!(parsed.scheme(), "http" | "https") || parsed.host_str().is_none_or(is_blocked_host) {
         return Err("Only public http(s) image URLs are supported.".into());
     }
-    let client = reqwest::Client::builder().connect_timeout(std::time::Duration::from_secs(10)).timeout(std::time::Duration::from_secs(60))
+    static CLIENT: http::SharedClient = http::SharedClient::new();
+    let client = CLIENT.get(|| http::builder().connect_timeout(std::time::Duration::from_secs(10)).timeout(std::time::Duration::from_secs(60))
         .dns_resolver(std::sync::Arc::new(PublicOnlyResolver))
         .redirect(reqwest::redirect::Policy::custom(|attempt| {
             let allowed = attempt.previous().len() < 4 && matches!(attempt.url().scheme(), "http" | "https") && attempt.url().host_str().is_some_and(|host| !is_blocked_host(host));
             if allowed { attempt.follow() } else { attempt.stop() }
         }))
-        .build().map_err(|error| format!("Unable to prepare the download: {error}"))?;
+        .build(), "Unable to prepare the download")?;
     let mut response = client.get(parsed).send().await.map_err(|error| format!("Unable to download the image: {error}"))?;
     if !response.status().is_success() { return Err(format!("The image server returned HTTP {}.", response.status())); }
-    if response.content_length().is_some_and(|length| length > MAX_SOURCE_BYTES) { return Err("The image is larger than 100 MB.".into()); }
-    let mut bytes = Vec::new();
-    while let Some(chunk) = response.chunk().await.map_err(|error| format!("The download was interrupted: {error}"))? {
-        if bytes.len() as u64 + chunk.len() as u64 > MAX_SOURCE_BYTES { return Err("The image is larger than 100 MB.".into()); }
-        bytes.extend_from_slice(&chunk);
-    }
-    Ok(bytes)
+    http::read_capped(&mut response, MAX_SOURCE_BYTES as usize).await.map_err(|error| match error {
+        http::BodyError::TooLarge => "The image is larger than 100 MB.".to_string(),
+        http::BodyError::Network(error) => format!("The download was interrupted: {error}"),
+    })
 }
 
 fn decode_data_url(source: &str) -> Result<Vec<u8>, String> {
@@ -331,7 +331,7 @@ fn render_cover(bytes: &[u8], crop: CropRect) -> Result<Vec<u8>, String> {
 #[tauri::command]
 pub async fn prepare_artwork_preview(source: String) -> Result<ArtworkPreview, String> {
     let bytes = load_source(&source).await?;
-    tauri::async_runtime::spawn_blocking(move || build_preview(&bytes)).await.map_err(|error| error.to_string())?
+    crate::util::blocking(move || build_preview(&bytes)).await?
 }
 
 /// Crops `source` to a 600x800 cover, stores it under `cache_key` in the artwork cache and returns it as a data URL.
@@ -340,11 +340,13 @@ pub async fn save_custom_artwork(app: AppHandle, cache_key: String, source: Stri
     let base = cache_path(&app, &cache_key)?;
     let target = base.with_extension("jpg");
     let bytes = load_source(&source).await?;
-    let cover = tauri::async_runtime::spawn_blocking(move || render_cover(&bytes, crop)).await.map_err(|error| error.to_string())??;
+    let cover = crate::util::blocking(move || render_cover(&bytes, crop)).await??;
     // Write first (atomically), then drop the other-extension leftovers, so a failed save never loses the old artwork.
-    write_atomic(&target, &cover)?;
-    for extension in ["png", "webp"] { let _ = fs::remove_file(base.with_extension(extension)); }
-    data_url(&target)
+    crate::util::blocking(move || -> Result<String, String> {
+        write_atomic(&target, &cover)?;
+        for extension in ["png", "webp"] { let _ = fs::remove_file(base.with_extension(extension)); }
+        data_url(&target)
+    }).await?
 }
 
 /// Deletes the cached image for a key (used by "Remove artwork").

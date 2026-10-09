@@ -46,6 +46,7 @@
           "https://cdn2.steamgriddb.com",
           "https://*.steamgriddb.com",
           "https://*.steamstatic.com",
+          "https://steamcdn-a.akamaihd.net",
           "https://cdn.modrinth.com",
           "https://staticdelivery.nexusmods.com",
           "https://images.nexusmods.com",
@@ -110,6 +111,7 @@
           "https://cdn2.steamgriddb.com",
           "https://*.steamgriddb.com",
           "https://*.steamstatic.com",
+          "https://steamcdn-a.akamaihd.net",
           "https://cdn.modrinth.com",
           "https://staticdelivery.nexusmods.com",
           "https://images.nexusmods.com",
@@ -191,7 +193,7 @@
         ]
       }
     },
-    "createUpdaterArtifacts": true
+    "createUpdaterArtifacts": false
   },
   "plugins": {
     "deep-link": {

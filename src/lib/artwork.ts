@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { invalidateArtwork } from "./artworkCache";
 
 /** Normalised crop rectangle: fractions (0..1) of the source image. */
 export type CropRect = { x: number; y: number; width: number; height: number };
@@ -7,7 +8,7 @@ export type ArtworkPreview = { dataUrl: string; width: number; height: number };
 
 /** Event fired after a game's cached artwork changed on disk, so mounted covers reload. */
 export const ARTWORK_CHANGED_EVENT = "mochi-artwork-changed";
-export const notifyArtworkChanged = (cacheKey: string) => window.dispatchEvent(new CustomEvent(ARTWORK_CHANGED_EVENT, { detail: cacheKey }));
+export const notifyArtworkChanged = (cacheKey: string) => { invalidateArtwork(cacheKey); window.dispatchEvent(new CustomEvent(ARTWORK_CHANGED_EVENT, { detail: cacheKey })); };
 
 /** Decodes an image (local path, http(s) URL or data URL) natively with size limits and returns a downscaled preview. */
 export const prepareArtworkPreview = (source: string) => invoke<ArtworkPreview>("prepare_artwork_preview", { source });

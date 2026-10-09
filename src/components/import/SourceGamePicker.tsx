@@ -312,7 +312,7 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
                       >
                         <span className="sgp-box" aria-hidden="true">{on ? "✓" : ""}</span>
                         <span className={"sgp-thumb" + (isLauncher ? " launcher" : "")} aria-hidden="true">
-                          {isLauncher ? <img src={launcherArt(game.launcherId)} alt="" loading="lazy" /> : <Gamepad2 size={16} />}
+                          {isLauncher ? <img src={launcherArt(game.launcherId)} alt="" loading="lazy" decoding="async" /> : <Gamepad2 size={16} />}
                         </span>
                         <span className="sgp-game-copy"><strong>{game.name}</strong><small>{isLauncher ? "Game launcher" : game.installPath || "Installed game"}</small></span>
                         {isLauncher && <Rocket size={14} aria-hidden="true" className="sgp-launcher-mark" />}

@@ -1,0 +1,3 @@
+{"game":{"gameName":"Half-Life 2","availableGameStats":{"achievements":[
+{"name":"HL2_BEAT_CITYENTRY","defaultvalue":0,"displayName":"Welcome to City 17","hidden":0,"description":"Get off the train.","icon":"https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps/220/a1.jpg","icongray":"https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps/220/a1g.jpg"},
+{"name":"HL2_SECRET","defaultvalue":0,"displayName":"Secret","hidden":1,"icon":"https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/220/s.jpg","icongray":"http://media.steampowered.com/x.jpg"}]}}}

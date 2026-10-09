@@ -1,0 +1,29 @@
+/* Steam achievements in a game's Overview. */
+.steam-ach-summary { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.steam-ach-summary .stat-meter { flex: 1; }
+.steam-ach-summary span { color: var(--mochi-text-strong); font-weight: 700; font-size: 13px; min-width: 38px; text-align: right; }
+.steam-ach-note { margin: 0 0 10px; color: var(--mochi-text-muted); font-size: 12px; }
+.steam-ach-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.steam-ach-row { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--mochi-border); border-radius: var(--mochi-radius-md); background: var(--mochi-surface); }
+.steam-ach-row.unlocked { border-color: color-mix(in oklab, var(--mochi-accent) 45%, var(--mochi-border)); }
+.steam-ach-row.locked { opacity: .78; }
+.steam-ach-row.locked .steam-ach-icon { filter: grayscale(1); }
+.steam-ach-icon, .steam-ach-fallback { width: 48px; height: 48px; border-radius: var(--mochi-radius-sm, 8px); object-fit: cover; background: var(--mochi-surface-raised); }
+.steam-ach-fallback { display: grid; place-items: center; color: var(--mochi-text-muted); }
+.steam-ach-text { min-width: 0; display: grid; gap: 2px; }
+.steam-ach-text strong { color: var(--mochi-text-strong); font-size: 13px; }
+.steam-ach-row.masked .steam-ach-text strong { font-style: italic; color: var(--mochi-text-muted); }
+.steam-ach-text p { margin: 0; color: var(--mochi-text-muted); font-size: 12px; line-height: 1.4; }
+.steam-ach-date { color: var(--mochi-text-muted); font-size: 11px; white-space: nowrap; text-align: right; }
+.steam-ach-toggle { margin-top: 10px; }
+.steam-ach-setup { margin: 8px 0 12px; font-size: 12px; color: var(--mochi-text-muted); }
+.steam-ach-setup summary { cursor: pointer; color: var(--mochi-text-strong); border-radius: 6px; }
+.steam-ach-setup summary:focus-visible { outline: none; box-shadow: var(--mochi-focus-ring); }
+.steam-ach-setup form { display: grid; gap: 8px; margin-top: 8px; max-width: 460px; }
+.steam-ach-setup label { display: grid; gap: 4px; }
+.steam-ach-setup input { padding: 7px 9px; border-radius: var(--mochi-radius-sm, 8px); border: 1px solid var(--mochi-border); background: var(--mochi-surface); color: var(--mochi-text); }
+.steam-ach-setup button { justify-self: start; }
+.steam-ach .spin { animation: steam-ach-spin 1s linear infinite; }
+@keyframes steam-ach-spin { to { transform: rotate(360deg); } }
+@media (max-width: 560px) { .steam-ach-row { grid-template-columns: 40px minmax(0, 1fr); } .steam-ach-date { grid-column: 2; text-align: left; } }
+@media (prefers-reduced-motion: reduce) { .steam-ach .spin { animation: none; } }

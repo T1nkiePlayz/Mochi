@@ -2,11 +2,8 @@
 //! Stale entries are served when the network is unavailable so game details keep working offline.
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{
-    fs,
-    path::PathBuf,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+use crate::util::{fsio, http, now_secs};
+use std::{fs, path::PathBuf, time::Duration};
 use tauri::{AppHandle, Manager};
 
 const TTL_SECS: u64 = 7 * 24 * 60 * 60;
@@ -67,10 +64,6 @@ enum FetchError {
     Other(String),
 }
 
-fn now_secs() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
-}
-
 /// Decodes `&#39;`, `&#x27;` and `&#8217;` style references (Steam descriptions use them freely).
 fn decode_numeric_entities(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
@@ -92,7 +85,7 @@ fn decode_numeric_entities(text: &str) -> String {
     out
 }
 
-fn decode_entities(text: &str) -> String {
+pub(crate) fn decode_entities(text: &str) -> String {
     decode_numeric_entities(text).replace("&quot;", "\"").replace("&#39;", "'").replace("&apos;", "'").replace("&lt;", "<").replace("&gt;", ">").replace("&nbsp;", " ").replace("&amp;", "&")
 }
 
@@ -182,30 +175,26 @@ fn read_cache(path: &Option<PathBuf>) -> Option<CacheEntry> {
 }
 
 fn write_cache(path: &Option<PathBuf>, entry: &CacheEntry) {
-    if let (Some(path), Ok(bytes)) = (path, serde_json::to_vec(entry)) {
-        let tmp = path.with_extension(format!("{}.tmp", std::process::id()));
-        if fs::write(&tmp, bytes).is_ok() { let _ = fs::rename(&tmp, path); }
-    }
+    if let (Some(path), Ok(bytes)) = (path, serde_json::to_vec(entry)) { let _ = fsio::write_atomic(path, &bytes); }
 }
 
 async fn fetch_body(appid: u32) -> Result<String, FetchError> {
-    let client = reqwest::Client::builder().user_agent(USER_AGENT)
+    static CLIENT: http::SharedClient = http::SharedClient::new();
+    let client = CLIENT.get(|| http::builder().user_agent(USER_AGENT)
         // appdetails is a single fixed endpoint; a redirect to anywhere else is not a valid answer.
         .redirect(reqwest::redirect::Policy::none())
-        .connect_timeout(Duration::from_secs(8)).timeout(Duration::from_secs(20)).build()
-        .map_err(|error| FetchError::Other(format!("Unable to prepare the Steam request: {error}")))?;
+        .connect_timeout(Duration::from_secs(8)).timeout(Duration::from_secs(20)).build(), "Unable to prepare the Steam request")
+        .map_err(FetchError::Other)?;
     let url = format!("https://store.steampowered.com/api/appdetails?appids={appid}&l=english");
     let mut response = client.get(url).send().await.map_err(|error| {
         if error.is_connect() || error.is_timeout() { FetchError::Offline("Steam could not be reached.".into()) } else { FetchError::Other(format!("Steam request failed: {error}")) }
     })?;
     if response.status().as_u16() == 429 { return Err(FetchError::Other("Steam is rate limiting requests (HTTP 429). Try again later.".into())); }
     if !response.status().is_success() { return Err(FetchError::Other(format!("Steam returned HTTP {}.", response.status()))); }
-    if response.content_length().is_some_and(|length| length as usize > MAX_BYTES) { return Err(FetchError::Other("Steam response is too large.".into())); }
-    let mut body = Vec::new();
-    while let Some(chunk) = response.chunk().await.map_err(|error| FetchError::Offline(format!("Steam connection dropped: {error}")))? {
-        if body.len() + chunk.len() > MAX_BYTES { return Err(FetchError::Other("Steam response is too large.".into())); }
-        body.extend_from_slice(&chunk);
-    }
+    let body = http::read_capped(&mut response, MAX_BYTES).await.map_err(|error| match error {
+        http::BodyError::TooLarge => FetchError::Other("Steam response is too large.".into()),
+        http::BodyError::Network(error) => FetchError::Offline(format!("Steam connection dropped: {error}")),
+    })?;
     String::from_utf8(body).map_err(|_| FetchError::Other("Steam returned non-text data.".into()))
 }
 
@@ -217,8 +206,8 @@ fn result(status: &'static str, details: Option<SteamStoreDetails>, stale: bool,
 #[tauri::command]
 pub async fn get_steam_store_details(app: AppHandle, appid: u32) -> SteamStoreResult {
     if appid == 0 { return result("error", None, false, None, Some("Invalid Steam app id.".into())); }
-    let path = cache_file(&app, appid);
-    let cached = read_cache(&path);
+    // The cache lives on disk: read it off the async workers.
+    let (path, cached) = crate::util::blocking(move || { let path = cache_file(&app, appid); let cached = read_cache(&path); (path, cached) }).await.unwrap_or_default();
     let now = now_secs();
     if let Some(entry) = &cached {
         let age = now.saturating_sub(entry.fetched_at);
@@ -231,7 +220,9 @@ pub async fn get_steam_store_details(app: AppHandle, appid: u32) -> SteamStoreRe
     let fetched = fetch_body(appid).await.and_then(|body| parse_app_details(appid, &body).map_err(FetchError::Other));
     match fetched {
         Ok(details) => {
-            write_cache(&path, &CacheEntry { fetched_at: now, details: details.clone() });
+            let entry = CacheEntry { fetched_at: now, details: details.clone() };
+            // The caller does not wait for the cache write.
+            tauri::async_runtime::spawn_blocking(move || write_cache(&path, &entry));
             match details {
                 Some(details) => result("ok", Some(details), false, Some(now), None),
                 None => result("not-found", None, false, Some(now), None),

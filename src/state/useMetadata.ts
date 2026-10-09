@@ -1,5 +1,6 @@
 import { useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { notifyArtworkChanged } from "../lib/artwork";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { removeKey, igdbCacheKey } from "../lib/storage";
@@ -30,7 +31,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Caches the artwork file on disk. Resolves true on success; offline or blocked hosts resolve false. */
 async function cacheArtworkUrl(url: string, cacheKey: string, force = false): Promise<boolean> {
-  try { await invoke("cache_game_artwork", { url, cacheKey, force }); return true; } catch { return false; }
+  try { await invoke("cache_game_artwork", { url, cacheKey, force }); notifyArtworkChanged(cacheKey); return true; } catch { return false; }
 }
 
 export async function cacheArtwork(piko: Piko): Promise<void> {

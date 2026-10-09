@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { loadArtwork } from "../lib/artworkCache";
 import type { Piko } from "../models";
 import { getSystemStatus, type SystemStatus } from "./native";
 
@@ -34,7 +34,7 @@ export function useArtworkUrl(piko: Piko | undefined): string {
     setCached("");
     if (!key) return;
     let cancelled = false;
-    void invoke<string | null>("get_cached_game_artwork", { cacheKey: key }).then((value) => { if (!cancelled && value) setCached(value); }).catch(() => {});
+    void loadArtwork(key).then((value) => { if (!cancelled && value) setCached(value); }).catch(() => {});
     return () => { cancelled = true; };
   }, [key]);
   return cached || piko?.artworkUrl || "";

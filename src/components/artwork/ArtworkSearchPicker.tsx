@@ -36,7 +36,7 @@ export function ArtworkSearchPicker({ initialQuery, onPick, onCancel }: Props) {
       <button type="button" className="text-button" onClick={onCancel}>Back</button>
     </form>
     {results?.length ? <div className="artwork-search-grid" role="list">{results.map((item) => <button type="button" role="listitem" className="artwork-search-item" key={`${item.provider}-${item.id}`} onClick={() => onPick(item)} aria-label={`Use ${item.style ?? "artwork"} from ${item.provider}, ${item.width} by ${item.height}`}>
-      <img src={item.thumbUrl} alt="" loading="lazy" />
+      <img src={item.thumbUrl} alt="" loading="lazy" decoding="async" />
       <small>{item.provider} · {item.width}×{item.height}{item.style ? ` · ${item.style}` : ""}</small>
     </button>)}</div> : null}
     {results && !results.length && !busy && <p className="metadata-note artwork-search-empty">

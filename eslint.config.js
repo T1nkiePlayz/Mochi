@@ -10,7 +10,7 @@ export default tseslint.config(
   tseslint.configs.base,
   {
     files: ["src/**/*.{ts,tsx}"],
-    languageOptions: { parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname } },
+    languageOptions: { parserOptions: { project: ["./tsconfig.test.json"], tsconfigRootDir: import.meta.dirname } },
     plugins: { "react-hooks": reactHooks },
     rules: {
       "react-hooks/rules-of-hooks": "error",
