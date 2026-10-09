@@ -22,6 +22,7 @@ mod tracking;
 mod tray;
 mod url_policy;
 mod util;
+mod window_state;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -211,7 +212,13 @@ fn main() {
             gamepad::start(app.handle().clone());
             startup_mark(startup, "gamepad");
             if let Some(window) = app.get_webview_window("main") {
+                window_state::restore(&window, (640.0, 480.0));
                 window.clone().on_window_event(move |event| {
+                    match event {
+                        WindowEvent::Resized(_) | WindowEvent::Moved(_) => window_state::schedule_save(&window),
+                        WindowEvent::CloseRequested { .. } => window_state::save_immediately(&window),
+                        _ => {}
+                    }
                     if let WindowEvent::CloseRequested { api, .. } = event {
                         // Without a tray icon there is no way back, so closing really closes.
                         if tray::close_hides_window() {
