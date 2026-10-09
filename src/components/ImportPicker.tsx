@@ -9,13 +9,15 @@ import { SourceGamePicker } from "./import/SourceGamePicker";
 type ImportPickerProps = {
   onClose: () => void;
   onImport: (games: ImportedGame[]) => void;
+  mode?: "games" | "launchers";
 };
 
 const manualSources: Array<{ id: ImportSourceId; name: string }> = [
   { id: "steam", name: "Steam" }, { id: "heroic", name: "Heroic Games Launcher" }, { id: "itch", name: "itch.io" }, { id: "prism", name: "Prism / MultiMC folder" },
 ];
 
-export function ImportPicker({ onClose, onImport }: ImportPickerProps) {
+export function ImportPicker({ onClose, onImport, mode = "games" }: ImportPickerProps) {
+  const launchers = mode === "launchers";
   const [manual, setManual] = useState<"closed" | "form" | "results">("closed");
   const [platform, setPlatform] = useState<ImportSourceId | null>(null);
   const [libraryPath, setLibraryPath] = useState("");
@@ -44,7 +46,7 @@ export function ImportPicker({ onClose, onImport }: ImportPickerProps) {
     <div className="modal-backdrop" onClick={onClose}>
       <div ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="import-title" className="modal import-picker-modal" onClick={(event) => event.stopPropagation()}>
         <div className="modal-header">
-          <div><p className="eyebrow">Game sources</p><h2 id="import-title">Import games</h2></div>
+          <div><p className="eyebrow">Game sources</p><h2 id="import-title">{launchers ? "Import game launchers" : "Import games"}</h2></div>
           <button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button>
         </div>
 
@@ -83,10 +85,11 @@ export function ImportPicker({ onClose, onImport }: ImportPickerProps) {
           </>
         ) : (
           <SourceGamePicker
-            sidebarExtra={sidebarExtra}
+            filter={launchers ? "launchers" : "all"}
+            sidebarExtra={launchers ? undefined : sidebarExtra}
             renderAction={({ games, sources }) => (
               <button type="button" className="play-button" disabled={!games.length} onClick={() => onImport(games)}>
-                Import {games.length} {games.length === 1 ? "game" : "games"} from {sources.length} {sources.length === 1 ? "source" : "sources"}
+                {launchers ? `Import ${games.length} ${games.length === 1 ? "launcher" : "launchers"}` : `Import ${games.length} ${games.length === 1 ? "game" : "games"} from ${sources.length} ${sources.length === 1 ? "source" : "sources"}`}
               </button>
             )}
           />

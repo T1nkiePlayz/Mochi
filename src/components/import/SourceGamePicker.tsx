@@ -3,6 +3,7 @@ import { AlertTriangle, Gamepad2, RefreshCw, Rocket, Search } from "lucide-react
 import { launcherArt, launcherIcon } from "../../lib/launcherArt";
 import minecraftGrassBlock from "../../assets/minecraft-grass-block.svg";
 import { ImportThumb } from "./ImportThumb";
+import { filterItems, type PickerFilter } from "./filterItems";
 import { detectImportSources, scanImportGames, type DetectedImportSource, type ImportSourceId, type ImportedGame } from "../../lib/sources";
 
 // The "Minecraft instances" source tile shows the game logo rather than the Prism launcher mark.
@@ -21,6 +22,8 @@ type Props = {
   /** Extra controls under the source list (e.g. "Platform not showing up?"). */
   sidebarExtra?: ReactNode;
   emptyHint?: ReactNode;
+  /** "launchers" lists, counts and selects only game launchers. */
+  filter?: PickerFilter;
 };
 
 type SourceState = { status: "loading" | "ready" | "error"; games: ImportedGame[] };
@@ -40,7 +43,7 @@ function TriCheckbox({ checked, indeterminate, label, onChange }: { checked: boo
   return <input ref={ref} type="checkbox" className="sgp-check" checked={checked} aria-label={label} onChange={onChange} />;
 }
 
-export function SourceGamePicker({ onSelectionChange, renderAction, sources: fixedSources, scan, sidebarExtra, emptyHint }: Props) {
+export function SourceGamePicker({ onSelectionChange, renderAction, sources: fixedSources, scan, sidebarExtra, emptyHint, filter = "all" }: Props) {
   const [detected, setDetected] = useState<DetectedImportSource[] | null>(fixedSources ?? null);
   const [detectError, setDetectError] = useState(false);
   const [data, setData] = useState<Record<string, SourceState>>({});
@@ -50,7 +53,9 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
   const [nonce, setNonce] = useState(0);
   const initialised = useRef<Set<string>>(new Set());
 
-  const scanSource = scan ?? ((id: ImportSourceId) => scanImportGames(id));
+  // The single place scanned items enter the picker: everything downstream sees only the filtered list.
+  const scanSource = (id: ImportSourceId) => (scan ? scan(id) : scanImportGames(id)).then((items) => filterItems(items, filter));
+  const launchersOnly = filter === "launchers";
 
   // Detect installed sources, hiding any with nothing to import.
   useEffect(() => {
@@ -60,13 +65,13 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
     detectImportSources()
       .then((result) => {
         if (cancelled) return;
-        const found = result.filter((source) => source.detected && (source.gameCount ?? 0) + (source.launcherCount ?? 0) > 0);
+        const found = result.filter((source) => source.detected && (launchersOnly ? 0 : source.gameCount ?? 0) + (source.launcherCount ?? 0) > 0);
         setDetected(found);
         setActive(found[0]?.id ?? null);
       })
       .catch(() => { if (!cancelled) { setDetected([]); setDetectError(true); } });
     return () => { cancelled = true; };
-  }, [fixedSources, nonce]);
+  }, [fixedSources, nonce, filter]);
 
   // Read every source's items up front so counts are exact and the footer total is right.
   const scanKey = detected?.map((source) => source.id).join(",") ?? "";
@@ -87,7 +92,7 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
     });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scanKey, nonce]);
+  }, [scanKey, nonce, filter]);
 
   const retrySource = (id: ImportSourceId) => {
     setData((current) => ({ ...current, [id]: { status: "loading", games: [] } }));
@@ -219,7 +224,7 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
   };
 
   const rescan = () => { initialised.current = new Set(); setSelected(new Set()); setData({}); setNonce((value) => value + 1); };
-  const summary = `Import ${plural(selection.games.length, "game")} from ${plural(selection.sources.length, "source")}`;
+  const summary = `Import ${plural(selection.games.length, launchersOnly ? "launcher" : "game")} from ${plural(selection.sources.length, "source")}`;
   const focusable = rows[focusRow]?.type === "game" ? focusRow : rows.findIndex((row) => row.type === "game");
 
   if (detected === null) {
@@ -237,8 +242,8 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
       <div className="sgp sgp-empty-all">
         <div className="sgp-empty" role={detectError ? "alert" : "status"}>
           {detectError ? <AlertTriangle size={22} /> : <Gamepad2 size={22} />}
-          <strong>{detectError ? "Mochi could not scan for game sources." : "No games found to import."}</strong>
-          <span>{detectError ? "Check that Mochi can read your home folder and try again." : "Mochi looked for Steam, Heroic, Lutris, Bottles, itch.io, Flatpak and desktop apps. You can add games manually at any time."}</span>
+          <strong>{detectError ? "Mochi could not scan for game sources." : launchersOnly ? "No game launchers were found." : "No games found to import."}</strong>
+          <span>{detectError ? "Check that Mochi can read your home folder and try again." : launchersOnly ? "Mochi looked for Steam, Heroic, Lutris, Bottles, Prism, Flatpak and desktop apps. You can add a launcher manually at any time." : "Mochi looked for Steam, Heroic, Lutris, Bottles, itch.io, Flatpak and desktop apps. You can add games manually at any time."}</span>
           {!fixedSources && <button type="button" className="secondary-button" onClick={rescan}><RefreshCw size={14} /> Scan again</button>}
           {emptyHint}
         </div>

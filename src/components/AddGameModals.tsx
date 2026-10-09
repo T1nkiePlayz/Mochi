@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, Gamepad2, Grid2X2, Library, Plus, RefreshCw, Search, X } from "lucide-react";
+import { ChevronDown, Gamepad2, Grid2X2, Library, Plus, RefreshCw, Rocket, Search, X } from "lucide-react";
 import { ArtworkPicker } from "./artwork/ArtworkPicker";
 import { Select } from "./ui/Select";
 import { MochiIcon } from "./MochiIcon";
@@ -20,7 +20,8 @@ export function AddGameModals() {
       <div className="modal-header"><div><p className="eyebrow">Expand your library</p><h2>Add a Piko</h2></div><button className="icon-button" aria-label="Close" onClick={() => add.setShowAddPiko(false)}><MochiIcon name="close" fallback={X} size={17} /></button></div>
       <p className="modal-description">Connect an installed game or add a custom game to start managing its Tofus in Mochi.</p>
       <div className="add-options">
-        <button onClick={() => { add.setShowImportPicker(true); add.setShowAddPiko(false); }}><MochiIcon name="library" fallback={Library} size={18} /><span><strong>Import from another platform</strong><small>Bring games in from an installed launcher</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={15} /></button>
+        <button onClick={() => add.openImportPicker("games")}><MochiIcon name="library" fallback={Library} size={18} /><span><strong>Import from another platform</strong><small>Bring games in from an installed launcher</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={15} /></button>
+        <button onClick={() => add.openImportPicker("launchers")}><MochiIcon name="rocket" fallback={Rocket} size={18} /><span><strong>Import game launchers</strong><small>Add Steam, Heroic, Prism and other launchers you have installed</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={15} /></button>
         <button onClick={add.openCustom}><MochiIcon name="plus" fallback={Plus} size={18} /><span><strong>Add a custom game</strong><small>Save a name and executable path locally</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={15} /></button>
       </div>
     </div></div>}
@@ -83,6 +84,6 @@ export function AddGameModals() {
       </div>
     </div>}
 
-    {add.showImportPicker && <ImportPicker onClose={() => add.setShowImportPicker(false)} onImport={add.importGames} />}
+    {add.showImportPicker && <ImportPicker mode={add.importMode} onClose={add.closeImportPicker} onImport={add.importGames} />}
   </>;
 }
