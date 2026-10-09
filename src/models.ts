@@ -52,6 +52,8 @@ export type Tofu = {
   modScan?: { at: number; identified: boolean };
 };
 
+export type TrailerVideo = { name: string; thumbnail?: string; mp4?: string; webm?: string; hls?: string };
+
 export type Piko = {
   id: string;
   name: string;
@@ -69,6 +71,8 @@ export type Piko = {
   igdbId?: number;
   screenshots?: string[];
   trailerId?: string;
+  /** Steam store trailers a plain `<video>` can play (direct mp4/webm, or an HLS playlist). */
+  trailerVideos?: TrailerVideo[];
   firstReleaseDate?: number;
   platformCategory?: string;
   executablePath?: string;

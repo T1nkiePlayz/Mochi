@@ -61,6 +61,7 @@ export function mergeText(results: Array<TextMeta | undefined>): TextMeta {
     if (!merged.categories?.length) merged.categories = cleanList(part.categories);
     if (!merged.screenshots?.length) merged.screenshots = cleanList(part.screenshots).slice(0, 8);
     merged.trailerId ??= part.trailerId;
+    if (!merged.trailerVideos?.length && part.trailerVideos?.length) merged.trailerVideos = part.trailerVideos;
     merged.firstReleaseDate ??= part.firstReleaseDate;
     merged.igdbId ??= part.igdbId;
   }
@@ -89,6 +90,7 @@ export function applyMetadata(piko: Piko, input: MergeInput): Piko {
     if (!isLocked(piko, "categories") && text.categories?.length) next.categories = text.categories;
     if (text.screenshots?.length) next.screenshots = text.screenshots;
     if (text.trailerId) next.trailerId = text.trailerId;
+    if (text.trailerVideos?.length) next.trailerVideos = text.trailerVideos;
     if (text.firstReleaseDate !== undefined) next.firstReleaseDate = text.firstReleaseDate;
     if (text.igdbId !== undefined) next.igdbId = text.igdbId;
   }
