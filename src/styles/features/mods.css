@@ -39,3 +39,34 @@
 
 @media (max-width: 960px) { .mods-controls { grid-template-columns: 1fr 1fr; } .mods-controls .search-box { grid-column: 1 / -1; } }
 @media (max-width: 600px) { .mods-controls { grid-template-columns: 1fr; } }
+
+/* Mod folder editor (detected locations, separate store) */
+.mod-folder-editor { display: grid; gap: 10px; }
+.mod-folder-list { display: grid; gap: 6px; max-height: 260px; overflow: auto; }
+.mod-folder-item { display: grid; gap: 2px; text-align: left; padding: 8px 10px; border: 1px solid var(--mochi-border); border-radius: var(--mochi-radius-sm); background: var(--mochi-surface); color: var(--mochi-text); cursor: pointer; }
+.mod-folder-item small { color: var(--mochi-text-muted); font-size: 11px; overflow-wrap: anywhere; }
+.mod-folder-item:hover { border-color: var(--mochi-border-strong); }
+.mod-folder-item.active { border-color: var(--mochi-accent); background: var(--mochi-accent-soft); }
+.mod-folder-item:focus-visible { outline: none; box-shadow: var(--mochi-focus-ring); }
+.mod-folder-chips { display: flex; gap: 6px; }
+.mod-folder-chips i { font-style: normal; font-size: 10px; padding: 1px 7px; border-radius: var(--mochi-pill-radius, 999px); background: var(--mochi-surface-raised); color: var(--mochi-text-muted); }
+.mod-folder-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.mod-folder-modal { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; }
+
+/* Installed mods panel (enable/disable, updates, rollback) */
+.imp { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.imp-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.imp-toolbar .search-box { flex: 1 1 140px; width: auto; min-width: 120px; }
+.imp-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.imp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--mochi-border); border-radius: var(--mochi-radius-sm); background: var(--mochi-surface-raised); }
+.imp-row.is-off .imp-name strong { color: var(--mochi-text-muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.imp-name { display: grid; gap: 2px; flex: 1 1 160px; min-width: 0; }
+.imp-name strong { color: var(--mochi-text-strong); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-name small { color: var(--mochi-text-muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-badge { padding: 2px 8px; border-radius: var(--mochi-pill-radius, 999px); background: var(--mochi-accent); color: var(--mochi-accent-text, var(--mochi-text-strong)); font-size: 11px; font-weight: 600; }
+.imp-switch { display: grid; place-items: center; width: 30px; height: 28px; border-radius: var(--mochi-radius-sm); border: 1px solid var(--mochi-border); background: var(--mochi-surface); color: var(--mochi-text-muted); cursor: pointer; }
+.imp-switch.on { color: var(--mochi-accent-strong); border-color: var(--mochi-accent); background: var(--mochi-accent-soft); }
+.imp-switch:focus-visible { outline: none; box-shadow: var(--mochi-focus-ring); }
+.imp-switch:disabled { opacity: .6; cursor: default; }
+.updates-panel { display: grid; gap: 10px; }
+.updates-notes { margin: 0; padding-left: 18px; color: var(--mochi-text-muted); font-size: 12px; }

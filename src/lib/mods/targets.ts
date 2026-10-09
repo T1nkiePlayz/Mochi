@@ -38,7 +38,7 @@ export function contentFolder(tofu: Pick<Tofu, "path" | "gameDir" | "contentRoot
 }
 
 /** The sync request sent with a launch, or undefined when the Tofu has nothing to sync. */
-export function modSyncFor(tofu: Tofu | undefined): { tofuId: string; storeDir: string; gameDir: string; contentRoot?: string } | undefined {
+export function modSyncFor(tofu: Tofu | undefined): { tofuId: string; storeDir: string; gameDir: string; contentRoot?: string; adoptUnmanaged?: boolean } | undefined {
   if (!tofu || !hasSeparateStore(tofu)) return undefined;
-  return { tofuId: tofu.id, storeDir: tofu.path as string, gameDir: tofu.gameDir as string, contentRoot: tofu.contentRoot || undefined };
+  return { tofuId: tofu.id, storeDir: tofu.path as string, gameDir: tofu.gameDir as string, contentRoot: tofu.contentRoot || undefined, adoptUnmanaged: tofu.syncReplaceExisting === true ? true : undefined };
 }

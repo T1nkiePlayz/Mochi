@@ -22,6 +22,7 @@ describe("content targets", () => {
   it("only syncs separate stores", () => {
     expect(modSyncFor(tofu({ path: "/a", gameDir: "/a" }))).toBeUndefined();
     expect(modSyncFor(tofu({ path: "/a", gameDir: "/b", contentRoot: "/c" }))).toEqual({ tofuId: "t1", storeDir: "/a", gameDir: "/b", contentRoot: "/c" });
+    expect(modSyncFor(tofu({ path: "/a", gameDir: "/b", syncReplaceExisting: true }))?.adoptUnmanaged).toBe(true);
     expect(modSyncFor(undefined)).toBeUndefined();
   });
   it("reads content kinds from labels", () => {

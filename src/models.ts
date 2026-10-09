@@ -46,6 +46,8 @@ export type Tofu = {
   gameDir?: string;
   /** Minecraft: the game folder holding `resourcepacks` and `shaderpacks`, synced like `gameDir`. */
   contentRoot?: string;
+  /** Opt-in: at launch, replace same-named files in the game folder that Mochi did not put there (off: they are left alone). */
+  syncReplaceExisting?: boolean;
 };
 
 export type Piko = {
