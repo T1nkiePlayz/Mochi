@@ -114,8 +114,9 @@ test("resolveSources applies source priority", async () => {
   assert.equal(minecraftSourceFor("mod", "modrinth", allSourcesOn), "modrinth");
   assert.equal(minecraftSourceFor("mod", "curseforge", { ...allSourcesOn, curseforge: false }), "modrinth");
   assert.equal(minecraftSourceFor("mod", "curseforge", { modrinth: false, curseforge: false, nexus: true }), null);
-  assert.equal(tabSource({ onCurseforge: true, onNexus: true }, allSourcesOn, true), "curseforge");
-  assert.equal(tabSource({ onCurseforge: false, onNexus: true }, allSourcesOn, false), null);
+  assert.equal(tabSource({ onCurseforge: true, onNexus: true }, allSourcesOn), "curseforge");
+  assert.equal(tabSource({ onCurseforge: false, onNexus: true }, allSourcesOn), "nexus");
+  assert.equal(tabSource({ onCurseforge: false, onNexus: true }, { ...allSourcesOn, nexus: false }), null);
   assert.equal(isPublicCurseforgeGame({ apiStatus: 2 }), true);
   assert.equal(isPublicCurseforgeGame({ apiStatus: 1 }), false);
   assert.equal(isPublicCurseforgeGame({}), false);
