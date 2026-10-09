@@ -35,6 +35,7 @@ export function importedGameToPiko(game: ImportedGame, now: number): Piko {
     accent: "#a99ad6",
     artwork: launcher ? launcherArt(game.launcherId) : "",
     artworkCacheKey: sanitizeKey(`${game.source}-${game.id}`),
+    importKey: game.id,
     executablePath: game.launchTarget,
     installPath: game.installPath ?? undefined,
     source: "custom",
