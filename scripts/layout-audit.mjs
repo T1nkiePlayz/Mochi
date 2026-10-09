@@ -266,8 +266,10 @@ async function prepare(page, screen) {
     await page.evaluate(() => document.querySelector("[aria-label='Open Big Picture mode']")?.click());
     await page.waitForTimeout(700);
   } else if (screen === "modal-add") {
+    await page.waitForSelector(".game-card-main, .library-row", { timeout: 8000 }).catch(() => {});
     await page.evaluate(() => [...document.querySelectorAll("button")].find((b) => /add game|add a game|add piko/i.test(b.textContent + (b.getAttribute("aria-label") || "")))?.click());
-    await page.waitForTimeout(300);
+    await page.waitForSelector(".modal, [role='dialog']", { timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(200);
   } else if (screen === "modal-edit") {
     // GameEditor: open a game, then its Edit button.
     await openDetails(page);

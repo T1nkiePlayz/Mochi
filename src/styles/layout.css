@@ -146,6 +146,15 @@
   .workspace-tabs, .editor-tabs, .provider-credential-heading, .bp-topbar, .bp-topbar-left, .bp-topbar-right { flex-wrap: wrap; }
   .provider-credential-heading > * { min-width: 0; }
   .provider-credential-heading > :first-child { flex: 1 1 160px; }
+  .ach-title { flex-wrap: wrap; }
+  /* Big Picture scales its type with the window height; cap it by the width too, so tall narrow windows
+   * (portrait monitors, 1000x1040) do not get titles too large for their cards. */
+  .bp-root { font-size: clamp(16px, min(2.15vh, 1.6vw), 26px); }
+  /* Very narrow: the game details header stacks its cover above the title. */
+  @media (max-width: 420px) {
+    .game-details-hero { grid-template-columns: minmax(0, 1fr) !important; }
+    .game-details-hero .game-details-cover { max-width: 160px; }
+  }
   .setting-location-value .secondary-button { flex: 0 0 auto; min-width: fit-content; }
   .bp-shelf-title span, .credential-status { white-space: nowrap; }
   /* Ellipsis labels clip their own overflow: give tall display fonts room for ascenders and descenders. */
