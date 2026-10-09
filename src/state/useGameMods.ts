@@ -23,8 +23,8 @@ export type GameMods = {
   resolving: boolean;
   /** The match lookup failed because Mochi could not reach the mod site. */
   offline: boolean;
-  /** The game is on Nexus Mods only and the user has no key saved (or Nexus is switched off). */
-  nexusBlocked: "key" | "disabled" | null;
+  /** The game is on Nexus Mods only and Nexus is switched off. */
+  nexusBlocked: "disabled" | null;
   setLinks: (links: Piko["modLinks"]) => void;
 };
 
@@ -33,16 +33,15 @@ export type GameMods = {
  * the result in `piko.modLinks`, and applies the user's source switches. CurseForge wins over Nexus for a game.
  */
 export function useGameMods(piko: Piko): GameMods {
-  const { lib, behavior, credentials } = useApp();
+  const { lib, behavior } = useApp();
   const settings = behavior.modSources;
-  const nexusKey = credentials.status.nexus && Boolean(supabase);
   const support = modSupportOf(piko);
   const links = piko.modLinks;
   const [resolving, setResolving] = useState(false);
   const [offline, setOffline] = useState(false);
 
   const needCf = support === "ecosystem" && settings.curseforge && !links?.curseforge && links?.source !== "user";
-  const needNexus = support === "ecosystem" && settings.nexus && nexusKey && !links?.nexus && !links?.curseforge && links?.source !== "user";
+  const needNexus = support === "ecosystem" && settings.nexus && Boolean(supabase) && !links?.nexus && !links?.curseforge && links?.source !== "user";
   const attemptKey = `${piko.id}:${needCf ? 1 : 0}${needNexus ? 1 : 0}:${piko.name}`;
 
   useEffect(() => {
@@ -73,7 +72,7 @@ export function useGameMods(piko: Piko): GameMods {
     return () => { cancelled = true; if (!finished) { attempted.delete(attemptKey); setResolving(false); } };
   }, [attemptKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const sourceId = useMemo(() => resolveSources({ minecraft: support === "minecraft", curseforge: Boolean(links?.curseforge), nexus: Boolean(links?.nexus), nexusKey }, settings)[0] ?? null, [support, links, nexusKey, settings]);
+  const sourceId = useMemo(() => resolveSources({ minecraft: support === "minecraft", curseforge: Boolean(links?.curseforge), nexus: Boolean(links?.nexus) }, settings)[0] ?? null, [support, links, settings]);
 
   const source = useMemo<ModSource | null>(() => {
     if (support === "minecraft") return null;
@@ -82,7 +81,7 @@ export function useGameMods(piko: Piko): GameMods {
     return null;
   }, [support, sourceId, links?.curseforge?.gameId, links?.nexus?.domain]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const nexusBlocked: GameMods["nexusBlocked"] = sourceId || !links?.nexus ? null : !settings.nexus ? "disabled" : !nexusKey ? "key" : null;
+  const nexusBlocked: GameMods["nexusBlocked"] = sourceId || !links?.nexus ? null : !settings.nexus ? "disabled" : null;
   const setLinks = useCallback((next: Piko["modLinks"]) => lib.updateGame(piko.id, { modLinks: next }), [lib.updateGame, piko.id]); // eslint-disable-line react-hooks/exhaustive-deps
   return { support, links, sourceId, source, resolving, offline, nexusBlocked, setLinks };
 }

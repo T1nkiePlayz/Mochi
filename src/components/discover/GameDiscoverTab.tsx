@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, PlugZap } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CF_SITE } from "../../lib/curseforge";
 import { DEFAULT_AUTO_EXTEND_BELOW, shouldAutoExtend } from "../../lib/mods/autoExtend";
@@ -19,11 +19,9 @@ type Props = {
   pikos: Piko[];
   supabase: SupabaseClient | null;
   settings: ModSourceSettings;
-  nexusKey: boolean;
   /** Settings: add other sites when the primary lists fewer mods than this (0 = never). */
   below: number;
   refreshKey: number;
-  onOpenSettings: () => void;
 };
 
 const siteLabel: Record<SourceId, string> = { modrinth: "Modrinth", curseforge: "CurseForge", nexus: "Nexus Mods" };
@@ -34,9 +32,9 @@ const choiceHint: Record<GameSourceChoice, string> = {
 };
 
 /** One game's mods: a source switcher when two sites list it, automatic extension when the first site has too few, and honest notes. */
-export function GameDiscoverTab({ game, pikos, supabase, settings, nexusKey, below, refreshKey, onOpenSettings }: Props) {
+export function GameDiscoverTab({ game, pikos, supabase, settings, below, refreshKey }: Props) {
   const [choice, setChoice] = useGameSourceChoice(game.key);
-  const sources = resolveGameSources({ onCurseforge: Boolean(game.cf), onNexus: Boolean(game.nexusDomain), nexusKey: nexusKey && Boolean(supabase), choice }, settings);
+  const sources = resolveGameSources({ onCurseforge: Boolean(game.cf), onNexus: Boolean(game.nexusDomain), choice }, settings);
   const [info, setInfo] = useState<ExtendInfo | null>(null);
   useEffect(() => setInfo(null), [game.key, sources.primary, sources.extras.join(), below, refreshKey]);
 
@@ -55,7 +53,6 @@ export function GameDiscoverTab({ game, pikos, supabase, settings, nexusKey, bel
   const ecosystem = sources.primary === "nexus" && game.nexusDomain ? { source: "nexus" as const, domain: game.nexusDomain } : game.cf ? { source: "curseforge" as const, gameId: game.cf.id } : { source: "nexus" as const, domain: game.nexusDomain ?? "" };
   const primaryLabel = sources.primary ? siteLabel[sources.primary] : "";
   const fewOnCurseforge = sources.primary === "curseforge" && info !== null && shouldAutoExtend(info.primaryTotal, Math.max(below, DEFAULT_AUTO_EXTEND_BELOW));
-  const nexusPrompt = sources.needsNexusKey && (sources.primary === null || (sources.primary === "curseforge" && info !== null && shouldAutoExtend(info.primaryTotal, Math.max(below, 1))));
   const link = (url: string) => void openExternalUrl(url).catch(() => undefined);
 
   return <section className="discover-section">
@@ -72,14 +69,8 @@ export function GameDiscoverTab({ game, pikos, supabase, settings, nexusKey, bel
       CurseForge shares only {info!.primaryTotal.toLocaleString()} {info!.primaryTotal === 1 ? "project" : "projects"} of this game with apps; browse the rest on curseforge.com.{" "}
       <button type="button" className="text-button" onClick={() => link(`${CF_SITE}/${game.cf!.slug}`)}><ExternalLink size={12} /> Open {game.name} on CurseForge</button>
     </p>}
-    {nexusPrompt && <div className="discover-connect" role="note">
-      <PlugZap size={16} aria-hidden="true" />
-      <p>{sources.primary === null ? `Connect Nexus to see ${game.name} mods.` : "Connect Nexus to see more mods."} Nexus Mods lists this game too; it needs your own Nexus key (Settings, Mod and metadata providers).</p>
-      <button type="button" className="secondary-button" onClick={onOpenSettings}>Open Settings</button>
-    </div>}
-
     {source
       ? <ModsBrowser key={`${game.key}:${choice}:${refreshKey}:${below}:${sources.extras.join()}`} source={source} target={{ kind: "choose", pikos, ecosystem, gameName: game.name }} noun="mods" />
-      : !nexusPrompt && <div className="discover-empty">This game is not available right now.</div>}
+      : <div className="discover-empty">This game is not available right now.</div>}
   </section>;
 }

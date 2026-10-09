@@ -32,15 +32,16 @@ type Props = {
   tofu: Tofu;
   pikos: Piko[];
   playtime?: Array<{ gameId: string; name: string; seconds: number; lastPlayed: number }>;
-  nexusConfigured: boolean;
   supabase: SupabaseClient | null;
+  /** The user saved a Nexus key: only then are the built-in Nexus-only seed games listed (added games are always browsable). */
+  nexusConfigured: boolean;
 };
 
 const loaderOptions = [{ value: "", label: "Any loader" }, { value: "fabric", label: "Fabric" }, { value: "forge", label: "Forge" }, { value: "neoforge", label: "NeoForge" }, { value: "quilt", label: "Quilt" }];
 const cfLabels: Record<ModrinthProjectType, string> = { mod: "mods", modpack: "modpacks", resourcepack: "resource packs", shader: "shaders" };
 const tabId = (tab: DiscoveryTab) => tab.kind === "game" ? tab.key : tab.kind;
 
-export function ModrinthDiscover({ tofu, pikos, nexusConfigured, supabase }: Props) {
+export function ModrinthDiscover({ tofu, pikos, supabase, nexusConfigured }: Props) {
   const { behavior, setActiveNav } = useApp();
   const settings = behavior.modSources;
   const discover = useDiscoverGames(settings, nexusConfigured);
@@ -58,7 +59,7 @@ export function ModrinthDiscover({ tofu, pikos, nexusConfigured, supabase }: Pro
   const install = useModInstall();
 
   const minecraftSources = resolveSources({ minecraft: true }, settings);
-  const nothingOn = !settings.modrinth && !settings.curseforge && !(settings.nexus && nexusConfigured);
+  const nothingOn = !settings.modrinth && !settings.curseforge && !settings.nexus;
   const openSettings = () => setActiveNav("Settings");
 
   const detailsRequest = useRef(0);
@@ -121,7 +122,7 @@ export function ModrinthDiscover({ tofu, pikos, nexusConfigured, supabase }: Pro
       {tab.kind === "minecraft" && effective === "modrinth" && <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />}
 
       {tab.kind === "all" && <>
-        <AllGamesFeed games={discover.games} cfGames={discover.cfGames} onSeeAll={selectTab} onAddGame={(entry) => { discover.add(entry); if (entry.k === "cf") setPendingKey(`cf:${entry.id}`); }} pikos={pikos} supabase={supabase} settings={settings} nexusKey={nexusConfigured} refreshKey={refreshKey} onOpenSettings={openSettings} />
+        <AllGamesFeed games={discover.games} cfGames={discover.cfGames} onSeeAll={selectTab} onAddGame={(entry) => { discover.add(entry); if (entry.k === "cf") setPendingKey(`cf:${entry.id}`); }} pikos={pikos} supabase={supabase} settings={settings} refreshKey={refreshKey} />
         {settings.curseforge && <CurseforgeCredit />}
       </>}
 
@@ -136,14 +137,14 @@ export function ModrinthDiscover({ tofu, pikos, nexusConfigured, supabase }: Pro
           </>}
       </>)}
 
-      {activeGame && <GameDiscoverTab game={activeGame} pikos={pikos} supabase={supabase} settings={settings} nexusKey={nexusConfigured} below={behavior.modAutoExtendBelow} refreshKey={refreshKey} onOpenSettings={openSettings} />}
+      {activeGame && <GameDiscoverTab game={activeGame} pikos={pikos} supabase={supabase} settings={settings} below={behavior.modAutoExtendBelow} refreshKey={refreshKey} />}
       </>}
     </section>
     {details && <ProjectDetails project={details} gameVersion={detailsVersion} tofu={tofu} onClose={() => setDetails(null)} onDownload={(project, file) => { setDetails(null); setPicker({ project, file }); }} />}
     {picker && <TofuPicker title={picker.project.title} pikos={pikos} ecosystem={{ source: "modrinth" }} gameName="Minecraft"
       metas={picker.file ? [metaFromModFile(picker.file)] : metasOfItem(modrinthItem(picker.project))} onClose={() => setPicker(null)}
       onInstall={(target, _piko, force) => { const { project, file } = picker; setPicker(null); installModrinth(project, file, target, force); }} />}
-    {showPicker && <AddGamePicker cfGames={discover.cfGames} nexusGames={discover.nexusCatalog} cfEnabled={settings.curseforge} nexusEnabled={settings.nexus} nexusKey={nexusConfigured}
+    {showPicker && <AddGamePicker cfGames={discover.cfGames} nexusGames={discover.nexusCatalog} cfEnabled={settings.curseforge} nexusEnabled={settings.nexus}
       onClose={() => setShowPicker(false)} onChoose={(entry) => { discover.add(entry); setShowPicker(false); setPendingKey(entry.k === "cf" ? `cf:${entry.id}` : `nx:${entry.domain}`); }} />}
   </>;
 }

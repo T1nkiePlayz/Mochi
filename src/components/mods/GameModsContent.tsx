@@ -57,7 +57,6 @@ function GameModsPanel({ piko, tofu, onUpdate }: Props) {
   let browse;
   if (mods.source) browse = <ModsBrowser key={`${mods.sourceId}:${tofu.id}`} source={mods.source} target={{ kind: "tofu", tofu, onUpdateTofu: onUpdate, piko }} noun="mods" collapsedCount={8} />;
   else if (mods.resolving) browse = <div className="discover-loading"><RefreshCw size={18} className="spin" /><span>Looking for {piko.name} on mod sites...</span></div>;
-  else if (mods.nexusBlocked === "key") browse = <p className="metadata-note" role="status">{piko.name} has mods on Nexus Mods. Add your Nexus API key in Settings to browse and download them. {settingsLink}</p>;
   else if (mods.nexusBlocked === "disabled" || (!sources.curseforge && !sources.nexus)) browse = <p className="metadata-note" role="status">The mod sources for {piko.name} are turned off. {settingsLink}</p>;
   else if (mods.offline) browse = <p className="metadata-note" role="status">Mochi could not reach the mod sites. Check your connection; this game will be matched when you are back online.</p>;
   else browse = <div className="discover-empty"><p>No mod site was found for {piko.name}.</p><button type="button" className="secondary-button" onClick={() => setLinking(true)}><Link2 size={14} /> Link this game to a mod site</button></div>;

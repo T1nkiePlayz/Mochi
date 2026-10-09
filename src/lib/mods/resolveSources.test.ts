@@ -6,10 +6,10 @@ describe("resolveSources", () => {
     expect(resolveSources({ minecraft: true }, allSourcesOn)).toEqual(["modrinth", "curseforge"]);
     expect(resolveSources({ minecraft: true }, { ...allSourcesOn, modrinth: false })).toEqual(["curseforge"]);
   });
-  it("CurseForge beats Nexus; Nexus needs a key", () => {
-    expect(resolveSources({ curseforge: true, nexus: true, nexusKey: true }, allSourcesOn)).toEqual(["curseforge"]);
-    expect(resolveSources({ nexus: true }, allSourcesOn)).toEqual([]);
-    expect(resolveSources({ curseforge: true, nexus: true, nexusKey: true }, { ...allSourcesOn, curseforge: false })).toEqual(["nexus"]);
+  it("CurseForge beats Nexus; Nexus needs no key to browse", () => {
+    expect(resolveSources({ curseforge: true, nexus: true }, allSourcesOn)).toEqual(["curseforge"]);
+    expect(resolveSources({ nexus: true }, allSourcesOn)).toEqual(["nexus"]);
+    expect(resolveSources({ curseforge: true, nexus: true }, { ...allSourcesOn, curseforge: false })).toEqual(["nexus"]);
   });
   it("shaders fall back to CurseForge when Modrinth is off, worlds never use Modrinth", () => {
     expect(minecraftSourceFor("shader", "modrinth", { ...allSourcesOn, modrinth: false })).toBe("curseforge");
@@ -17,7 +17,7 @@ describe("resolveSources", () => {
     expect(minecraftSourceFor("world", "modrinth", { ...allSourcesOn, curseforge: false })).toBeNull();
   });
   it("tabs and public games", () => {
-    expect(tabSource({ onCurseforge: false, onNexus: true }, allSourcesOn, false)).toBeNull();
+    expect(tabSource({ onCurseforge: false, onNexus: true }, allSourcesOn)).toBe("nexus");
     expect(isPublicCurseforgeGame({ apiStatus: 2 })).toBe(true);
     expect(isPublicCurseforgeGame({ apiStatus: 1 })).toBe(false);
   });

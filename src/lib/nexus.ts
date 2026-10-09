@@ -68,33 +68,83 @@ function normalizeNexusGame(value: any): NexusGame | null {
   };
 }
 
-export async function getNexusGames(client: SupabaseClient, query = ""): Promise<NexusGame[]> {
-  const data = await invokeProviderFunction<{ games?: unknown[]; data?: { games?: unknown[] } }>(client, { action: "nexus-games", query: query.trim() });
+const NEXUS_GRAPHQL = "https://api.nexusmods.com/v2/graphql";
+/** The public GraphQL API serves at most this many nodes per request. */
+const NEXUS_PAGE_MAX = 80;
+const GAMES_QUERY = "query($count: Int!, $offset: Int!, $filter: GamesSearchFilter) { games(filter: $filter, count: $count, offset: $offset, sort: [{ downloads: { direction: DESC } }]) { nodes { id name domainName modCount genre } } }";
+const MODS_QUERY = "query($domain: String!, $count: Int!, $offset: Int!) { mods(filter: { gameDomainName: { value: $domain, op: EQUALS } }, sort: [{ downloads: { direction: DESC } }], count: $count, offset: $offset) { totalCount nodes { modId name summary thumbnailUrl pictureUrl author } } }";
 
-  const values: unknown[] = Array.isArray(data.games)
-    ? data.games
-    : Array.isArray(data.data?.games)
-      ? data.data.games
-      : [];
-
-  return values
-    .map(normalizeNexusGame)
-    .filter((game): game is NexusGame => Boolean(game));
+/** Public catalog data needs no API key (and sending none avoids Nexus rejecting a stale one), so this goes straight to Nexus. */
+async function nexusGraphql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(NEXUS_GRAPHQL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Application-Name": "Mochi", "Application-Version": "0.1.0" },
+      body: JSON.stringify({ query, variables }),
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch { throw new Error("Unable to reach Nexus Mods. Try again."); }
+  if (response.status === 429) throw new Error("Nexus Mods is rate limiting requests. Try again later.");
+  if (!response.ok) throw new Error(`Nexus Mods returned HTTP ${response.status}.`);
+  const payload = await response.json().catch(() => null) as { data?: T; errors?: Array<{ message?: string }> } | null;
+  if (!payload?.data) throw new Error(payload?.errors?.map((item) => item.message).filter(Boolean).join("; ") || "Nexus Mods returned invalid data.");
+  return payload.data;
 }
 
+let gamesCache: { at: number; games: NexusGame[] } | null = null;
+const GAMES_TTL_MS = 10 * 60_000;
+const POPULAR_GAME_PAGES = 3;
+
+/** Nexus games by name, or the most downloaded games when `query` is empty. Keyless. */
+export async function getNexusGames(_client: SupabaseClient | null, query = ""): Promise<NexusGame[]> {
+  const needle = query.trim();
+  if (!needle && gamesCache && Date.now() - gamesCache.at < GAMES_TTL_MS) return gamesCache.games;
+  const pages = needle ? [0] : Array.from({ length: POPULAR_GAME_PAGES }, (_, index) => index);
+  const filter = needle ? { name: { value: needle, op: "WILDCARD" } } : undefined;
+  const results = await Promise.all(pages.map((page) => nexusGraphql<{ games?: { nodes?: unknown[] } }>(GAMES_QUERY, { count: NEXUS_PAGE_MAX, offset: page * NEXUS_PAGE_MAX, filter })));
+  const seen = new Set<string>();
+  const games = results
+    .flatMap((result) => result.games?.nodes ?? [])
+    .map(normalizeNexusGame)
+    .filter((game): game is NexusGame => Boolean(game) && !seen.has(game!.domainName) && Boolean(seen.add(game!.domainName)));
+  if (!needle) gamesCache = { at: Date.now(), games };
+  return games;
+}
+
+type RawGraphqlMod = { modId?: number | string; name?: string; summary?: string; thumbnailUrl?: string; pictureUrl?: string; author?: string };
+
+/**
+ * Mods of a Nexus game. "catalog" lists the most downloaded mods first, straight from Nexus's public GraphQL API
+ * (no key needed). "trending" needs the user's key via the edge function and falls back to the catalog without one.
+ */
 export async function getNexusMods(
-  client: SupabaseClient,
+  client: SupabaseClient | null,
   gameDomain: string,
   options: { sort?: NexusModSort; offset?: number; limit?: number } = {},
 ): Promise<NexusModPage> {
-  const limit = Math.max(8, Math.min(100, Math.floor(options.limit ?? 100)));
+  const limit = Math.max(8, Math.min(NEXUS_PAGE_MAX, Math.floor(options.limit ?? NEXUS_PAGE_MAX)));
   const offset = Math.max(0, Math.floor(options.offset ?? 0));
-  const data = await invokeProviderFunction<{ mods?: NexusMod[]; total?: number; offset?: number }>(client, { action: "nexus-mods", gameDomain, sort: options.sort ?? "catalog", offset, limit });
-  return {
-    mods: data.mods ?? [],
-    total: Number(data.total ?? data.mods?.length ?? 0),
-    offset: Number(data.offset ?? offset),
-  };
+  if (options.sort === "trending" && client) {
+    try {
+      const data = await invokeProviderFunction<{ mods?: NexusMod[]; total?: number; offset?: number }>(client, { action: "nexus-mods", gameDomain, sort: "trending", offset, limit });
+      return { mods: data.mods ?? [], total: Number(data.total ?? data.mods?.length ?? 0), offset: Number(data.offset ?? offset) };
+    } catch { /* No key or Nexus refused it: show the most downloaded mods instead of nothing. */ }
+  }
+  const domain = gameDomain.trim().replace(/[^a-z0-9_-]/gi, "");
+  if (!domain) throw new Error("Invalid Nexus game.");
+  const data = await nexusGraphql<{ mods?: { totalCount?: number; nodes?: RawGraphqlMod[] } }>(MODS_QUERY, { domain, count: limit, offset });
+  const mods = (data.mods?.nodes ?? []).flatMap((mod): NexusMod[] => {
+    const modId = Number(mod.modId);
+    if (!Number.isSafeInteger(modId) || modId < 1) return [];
+    const picture = mod.thumbnailUrl || mod.pictureUrl;
+    return [{
+      id: String(modId), modId, name: String(mod.name ?? "Untitled mod"),
+      ...(mod.author ? { author: mod.author } : {}), ...(mod.summary ? { summary: mod.summary } : {}), ...(picture ? { pictureUrl: picture } : {}),
+      modPageUrl: nexusModPageUrl(domain, modId),
+    }];
+  });
+  return { mods, total: Number(data.mods?.totalCount ?? mods.length), offset };
 }
 
 /** The numeric Nexus mod id of a listed mod (older server replies only carry it in `id`). */

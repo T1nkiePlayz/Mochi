@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { PlugZap, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CF_MINECRAFT_ID, type CfGame } from "../../lib/curseforge";
 import { planSections } from "../../lib/mods/allSections";
@@ -23,9 +23,7 @@ type Props = {
   pikos: Piko[];
   supabase: SupabaseClient | null;
   settings: ModSourceSettings;
-  nexusKey: boolean;
   refreshKey: number;
-  onOpenSettings: () => void;
   /** Switch to a game's own tab ("minecraft" or the game's key). */
   onSeeAll: (tab: string) => void;
   onAddGame: (game: StoredGame) => void;
@@ -35,17 +33,17 @@ type Props = {
  * Discover > All: one section per added game (its most popular mods, loaded only when scrolled near), then a few games
  * to add. Typing in the search box swaps the sections for one list across every game. Primary site per game only, so it stays light.
  */
-export function AllGamesFeed({ games, cfGames, pikos, supabase, settings, nexusKey, refreshKey, onOpenSettings, onSeeAll, onAddGame }: Props) {
+export function AllGamesFeed({ games, cfGames, pikos, supabase, settings, refreshKey, onSeeAll, onAddGame }: Props) {
   const [text, setText] = useState("");
   const [query, setQuery] = useState("");
   useEffect(() => { const timer = window.setTimeout(() => setQuery(text.trim()), 300); return () => window.clearTimeout(timer); }, [text]);
   const searching = text.trim() !== "" && query !== "";
 
   const minecraftIconUrl = cfGames?.find((game) => game.id === CF_MINECRAFT_ID)?.assets?.iconUrl;
-  const { sections, skipped } = useMemo(() => planSections({
+  const { sections } = useMemo(() => planSections({
     modrinth: settings.modrinth, curseforge: settings.curseforge, minecraftIconUrl,
-    games: games.map((game) => { const sources = resolveGameSources({ onCurseforge: Boolean(game.cf), onNexus: Boolean(game.nexusDomain), nexusKey: nexusKey && Boolean(supabase), choice: "auto" }, settings); return { key: game.key, name: game.name, iconUrl: game.iconUrl, cfId: game.cf?.id, nexusDomain: game.nexusDomain, primary: sources.primary === "curseforge" || sources.primary === "nexus" ? sources.primary : null, needsNexusKey: sources.needsNexusKey }; }),
-  }), [games, supabase, settings, nexusKey, minecraftIconUrl]);
+    games: games.map((game) => { const sources = resolveGameSources({ onCurseforge: Boolean(game.cf), onNexus: Boolean(game.nexusDomain), choice: "auto" }, settings); return { key: game.key, name: game.name, iconUrl: game.iconUrl, cfId: game.cf?.id, nexusDomain: game.nexusDomain, primary: sources.primary === "curseforge" || sources.primary === "nexus" ? sources.primary : null }; }),
+  }), [games, settings, minecraftIconUrl]);
 
   const makeSource = (plan: (typeof sections)[number]): ModSource | null => {
     if (plan.site === "modrinth") return createModrinthSource("mod");
@@ -62,7 +60,6 @@ export function AllGamesFeed({ games, cfGames, pikos, supabase, settings, nexusK
 
   return <section className="discover-section all-sections">
     <div className="discover-section-heading"><div><h3>All your games</h3><p>The most popular mods for Minecraft and every game tab. Search looks in all of them.</p></div></div>
-    {skipped > 0 && <div className="discover-connect" role="note"><PlugZap size={16} aria-hidden="true" /><p>{skipped} {skipped === 1 ? "game is" : "games are"} left out because {skipped === 1 ? "it is" : "they are"} on Nexus Mods only. Connect Nexus to include {skipped === 1 ? "it" : "them"}.</p><button type="button" className="secondary-button" onClick={onOpenSettings}>Open Settings</button></div>}
     {searchSource && <div className="mods-controls all-search"><label className="search-box"><Search size={15} /><input value={text} onChange={(event) => setText(event.target.value)} placeholder="Search mods in all your games..." aria-label="Search mods in all your games" /></label></div>}
     {!searchSource && <div className="discover-empty">No mod source is available for any game yet.</div>}
     {searchSource && searching && <ModsBrowser key={`all-search:${refreshKey}:${games.length}`} source={searchSource} query={query} noun="mods" target={{ kind: "choose", pikos, ecosystem: { source: "modrinth" }, tofuFilter: (tofu, item) => item.ecosystem?.source === "modrinth" || (item.ecosystem?.source === "curseforge" && item.ecosystem.gameId === CF_MINECRAFT_ID) ? minecraftFilterFor(tofu, true) : undefined }} />}

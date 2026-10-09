@@ -48,7 +48,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean)
   const [catalog, setCatalog] = useState<NexusGame[]>([]);
   const [stored, setStored] = useState<StoredGame[]>(readStored);
   const [reload, setReload] = useState(0);
-  const nexusOn = settings.nexus && nexusKey && Boolean(supabase);
+  const nexusOn = settings.nexus;
 
   useEffect(() => {
     if (!settings.curseforge) { setCfGames(null); setCfError(""); return; }
@@ -59,7 +59,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean)
   }, [settings.curseforge, reload]);
 
   useEffect(() => {
-    if (!nexusOn || !supabase) { setCatalog([]); return; }
+    if (!nexusOn) { setCatalog([]); return; }
     let cancelled = false;
     void getNexusGames(supabase).then((games) => { if (!cancelled) setCatalog(games); }).catch(() => undefined);
     return () => { cancelled = true; };
@@ -83,7 +83,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean)
       if (onCf) return cfGame(onCf, domain);
       return { key: `nx:${domain}`, name, iconUrl: info?.iconUrl, source: "nexus", nexusDomain: domain };
     };
-    for (const { seed, cf } of visibleSeedGames(SEED_GAMES, cfGames, nexusOn, settings.curseforge)) {
+    for (const { seed, cf } of visibleSeedGames(SEED_GAMES, cfGames, nexusOn && nexusKey, settings.curseforge)) {
       if (cf) put(cfGame(cf, seed.nexusDomain));
       else put(nexusOnly(seed.nexusDomain!, seed.name));
     }
@@ -94,7 +94,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean)
       } else put(nexusOnly(entry.domain, entry.name ?? entry.domain));
     }
     return [...out.values()];
-  }, [cfGames, cfError, catalog, stored, settings.curseforge, settings.nexus, nexusOn]);
+  }, [cfGames, cfError, catalog, stored, settings.curseforge, settings.nexus, nexusOn, nexusKey]);
 
   const add = useCallback((entry: StoredGame) => {
     setStored((current) => {
