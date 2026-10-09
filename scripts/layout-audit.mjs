@@ -20,7 +20,7 @@ const args = Object.fromEntries(process.argv.slice(2).map((arg, index, all) => {
   return [key, inline ?? (all[index + 1] && !all[index + 1].startsWith("--") ? all[index + 1] : true)];
 }).filter((pair) => pair.length));
 if (args.help) {
-  console.log("Options: --base URL --themes a,b|all --sizes WxH,... --screens a,b|all --zoom 1,1.5 --out DIR --shots --max N --json");
+  console.log("Options: --base URL --themes a,b|all --sizes WxH,... --screens a,b|all --zoom 1,1.5 --out DIR --shots --coverage --max N --json");
   process.exit(0);
 }
 
@@ -158,6 +158,46 @@ function measure() {
   return issues;
 }
 
+// Theme coverage (--coverage): controls that still look like browser defaults, and text with too little contrast.
+function coverage() {
+  const issues = [];
+  const describe = (el) => `${el.tagName.toLowerCase()}${typeof el.className === "string" && el.className.trim() ? "." + el.className.trim().split(/\s+/).slice(0, 2).join(".") : ""} "${(el.textContent || el.value || "").trim().replace(/\s+/g, " ").slice(0, 20)}"`;
+  const parse = (value) => { const m = value.match(/rgba?\(([^)]+)\)/); if (!m) return null; const [r, g, b, a = 1] = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); return { r, g, b, a }; };
+  const lum = ({ r, g, b }) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+  const background = (el) => {
+    let layers = [];
+    for (let node = el; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (style.backgroundImage !== "none") return null; // gradients and artwork: not measurable here
+      const c = parse(style.backgroundColor);
+      if (c && c.a > 0) { layers.push(c); if (c.a >= 1) break; }
+    }
+    let base = { r: 0, g: 0, b: 0 }; const root = parse(getComputedStyle(document.documentElement).backgroundColor); if (root && root.a > 0) base = root;
+    for (const c of layers.reverse()) base = { r: base.r * (1 - c.a) + c.r * c.a, g: base.g * (1 - c.a) + c.g * c.a, b: base.b * (1 - c.a) + c.b * c.a };
+    return base;
+  };
+  const shown = (el) => { const st = getComputedStyle(el); const r = el.getBoundingClientRect(); return st.display !== "none" && st.visibility !== "hidden" && r.width > 0 && r.height > 0; };
+  for (const el of document.body.querySelectorAll("button, input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]), select, textarea")) {
+    if (!shown(el)) continue;
+    const st = getComputedStyle(el);
+    const bg = parse(st.backgroundColor);
+    const defaultButton = el.tagName === "BUTTON" && bg && [239, 240, 233, 227].includes(bg.r) && bg.a === 1 && st.borderTopWidth !== "0px" && st.borderTopStyle === "outset";
+    const defaultField = el.tagName !== "BUTTON" && st.borderTopStyle === "inset";
+    if (defaultButton || defaultField) issues.push({ type: "unthemed-control", selector: describe(el), detail: `bg ${st.backgroundColor} border ${st.borderTopStyle}` });
+  }
+  for (const el of document.body.querySelectorAll("*")) {
+    if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) || !shown(el) || el.closest("[aria-hidden='true'], .stats-sr, .visually-hidden")) continue;
+    const st = getComputedStyle(el);
+    const fg = parse(st.color); const bg = background(el);
+    if (!fg || !bg || st.opacity === "0") continue;
+    const a = lum({ r: fg.r * fg.a + bg.r * (1 - fg.a), g: fg.g * fg.a + bg.g * (1 - fg.a), b: fg.b * fg.a + bg.b * (1 - fg.a) }); const b = lum(bg);
+    const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    const op = Number(st.opacity);
+    if (ratio < 3 && op > 0.5 && !el.disabled && !el.closest("[disabled], [aria-disabled='true']")) issues.push({ type: "low-contrast", selector: describe(el), detail: `${ratio.toFixed(2)}:1 ${st.color} on rgb(${bg.r | 0},${bg.g | 0},${bg.b | 0})` });
+  }
+  return issues;
+}
+
 async function openNav(page, index) {
   // Narrow windows hide the sidebar behind the menu button.
   const menu = page.locator(".mobile-menu").first();
@@ -219,6 +259,7 @@ for (const theme of themes) {
           await page.waitForTimeout(350);
           await prepare(page, screen);
           const issues = await page.evaluate(measure);
+          if (args.coverage) issues.push(...(await page.evaluate(coverage)));
           total += issues.length;
           results.push({ theme, width, height, zoom, screen, issues });
           if (args.shots) {

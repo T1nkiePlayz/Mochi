@@ -129,15 +129,48 @@ Theme CSS is treated as user-installed UI code. Mochi should therefore only inst
 
 ## Layers
 
-The launcher paints with four stylesheets, always in this order, and a theme comes last:
+Styles are split into CSS cascade layers, declared once in `index.html` and `src/styles/layers.css`:
 
-1. `src/styles/tokens.css` — every design token with Mochi's default value (103 of them; see `docs/theme-hooks.md`).
-2. `src/index.css` — structure and per-screen layout, written entirely against tokens.
-3. `src/styles/bridge.css` — maps remaining components onto tokens.
-4. `src/styles/components.css` — one definition per primitive (buttons, inputs, cards, panels, dialogs, tabs) plus the shell presets below.
-5. The theme: `theme.json` tokens (as a generated `:root` block), then `theme.css`.
+    @layer reset, tokens, base, layout, theme, user;
 
-Because every colour, radius, border width, shadow, font and surface is a token, a JSON-only theme can already reshape the whole launcher. `theme.css` is for what tokens cannot express: textures, clipped corners, pseudo-element ornaments, animation, structural changes.
+| Layer | Contents |
+| --- | --- |
+| `tokens` | `src/styles/tokens.css`: every design token with Mochi's default value |
+| `base` | `src/index.css`, `src/styles/bridge.css`, `src/styles/components.css`, `src/styles/features/*.css` (wrapped automatically by a PostCSS plugin in `vite.config.ts`, so feature files need no `@layer` of their own) |
+| `layout` | `src/styles/layout.css`: the protected shell (see below) |
+| `theme` | a built-in theme: its `theme.json` tokens as a `:root` block, then `theme.css` |
+| `user` | a user-installed theme (loaded from disk). Its CSS is re-serialised through the browser's CSS parser first so a stray `}` cannot escape the layer, and `@import` is dropped |
+
+Later layers win for normal declarations, so any theme restyles anything in `base`. Important declarations invert the order (the earliest layer wins), which is how `layout` stays protected: its `!important` rules cannot be overridden by any theme, built-in or user-installed, while everything it leaves alone stays fully themable.
+
+Layering never depends on the theme's cosmetics: a theme can change colours, fonts, borders, radii, shadows and ornaments of every element, and can pick a shell preset and tune sizes through tokens, but cannot make the window scroll sideways, clip the navigation, overflow a dialog or hide the main content.
+
+### Protected layout layer
+
+`src/styles/layout.css` owns structure only:
+
+- the page never scrolls sideways (`html`, `body`, `.app-shell`, `.main-content`), the shell is exactly as tall as the window (`100dvh`) and respects the OS safe areas (macOS notch/fullscreen, Wayland panels);
+- layout tokens are read through clamps with fallbacks (`--mochi-layout-sidebar`, `--mochi-layout-rail`, `--mochi-layout-topbar`), so a theme that omits `sidebarWidth`/`topbarHeight`, or sets an absurd value, still gets a usable window;
+- navigation adapts through `<html data-nav-mode>` which `useShellFit` (`src/lib/useShellFit.ts`) picks from what actually fits, whatever fonts, padding or item sizes the theme uses:
+
+| Mode | Top/bottom bar | Sidebar / rail |
+| --- | --- | --- |
+| `full` | labels, account name | sidebar |
+| `compact` | account shows its avatar only | sidebar |
+| `tight` | brand text hidden too | sidebar |
+| `icons` | navigation shows icons only (names stay in `aria-label`/`title`) | sidebar |
+| `drawer` | navigation behind the menu button in the top bar | same (window narrower than 720 CSS px) |
+
+- dialogs sit inside the window with safe padding and scroll internally;
+- the top bar's breadcrumb and search shrink instead of overflowing.
+
+Theme authors: use `shell` in `theme.json` and the layout tokens (`sidebarWidth`, `topbarHeight`, `contentMaxWidth`, `contentPadding`); do not size shell elements in `theme.css`. `scripts/lib/themeLint.mjs` lists what will be ignored (fixed shell sizes, `100vw`, `position: fixed` on the shell, `display: none` on navigation, `!important` on layout properties, `@import`) and which palette tokens are missing. It runs in `npm run check:themes` for built-in themes (findings fail the build) and when a user theme is loaded (findings are logged as warnings; `LoadedTheme.warnings`).
+
+Run `node scripts/layout-audit.mjs` (see `docs/improvements/responsive-round5.md`) after changing a theme to check every screen at every window size.
+
+## Theme coverage
+
+`node scripts/check-token-usage.mjs` (part of `npm run build`) fails when launcher CSS (anything under `src/` except `src/themes`, `tokens.css`, generated fonts, `accessibility.css` palettes and `generated-art.css`) contains a hard-coded colour or font, or an inline `style` with a colour literal. The launcher stylesheets carry no per-theme rules: anything specific to one theme lives in that theme's `theme.css`. A line can opt out with a trailing `/* token-ok: reason */`.
 
 ## Token vocabulary
 
