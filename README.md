@@ -246,4 +246,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT
 
 ## License
 
-Mochi does not currently declare an open-source license. Until one is added, do not assume the code may be reused, redistributed or relicensed.
+Mochi is free software, licensed under the [GNU General Public License v3.0 or later](LICENSE) (`GPL-3.0-or-later`). You may use, study, modify and share it, but distributed modified versions must stay under the same license with source available.
+
+The Mochi name, logo and artwork are not covered by that grant: forks must not present themselves as the official Mochi launcher. Contributions are accepted under the same license.
