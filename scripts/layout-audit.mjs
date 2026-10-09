@@ -262,7 +262,8 @@ async function prepare(page, screen) {
   } else if (screen === "tofu-manager") {
     await openDetails(page);
     await page.evaluate(() => document.querySelector("[aria-label='Tofu settings']")?.click() ?? [...document.querySelectorAll("button")].find((b) => /manage/i.test(b.textContent))?.click());
-    await page.waitForTimeout(300);
+    await page.waitForSelector(".tofu-manager-modal", { timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(200);
   } else if (screen === "account-menu") {
     await page.evaluate(() => document.querySelector(".sidebar-account")?.click());
     await page.waitForTimeout(200);
