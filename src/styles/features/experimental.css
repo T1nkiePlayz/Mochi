@@ -1,4 +1,4 @@
-.experimental-new-badge { margin-left: 8px; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; background: var(--mochi-accent-soft); color: var(--mochi-accent-strong); vertical-align: middle; }
+.experimental-new-badge { margin-left: 8px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; background: var(--mochi-accent-soft); color: var(--mochi-accent-strong); vertical-align: middle; }
 .experimental-since { opacity: .8; }
 .nav-new-dot { position: absolute; top: 6px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--mochi-accent-strong); box-shadow: 0 0 0 2px var(--mochi-sidebar-background, var(--mochi-background)); }
 .sidebar-bottom .nav-item { position: relative; }

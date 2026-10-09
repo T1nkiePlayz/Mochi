@@ -165,7 +165,7 @@ html:not([data-color-blind="none"]) :is([class*="status-"].error, [class*="statu
 .a11y-preview p { margin: 0; color: var(--mochi-text); font-size: 13px; }
 .a11y-preview-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .a11y-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--mochi-pill-radius); border: var(--mochi-border-width) solid currentColor; font-size: 12px; font-weight: 600; }
-.a11y-chip.ok { color: var(--mochi-success); } .a11y-chip.warn { color: var(--mochi-warning); } .a11y-chip.bad { color: var(--mochi-danger); }
+.a11y-chip.ok { color: color-mix(in srgb, var(--mochi-success) 48%, var(--mochi-text-strong)); } .a11y-chip.warn { color: color-mix(in srgb, var(--mochi-warning) 48%, var(--mochi-text-strong)); } .a11y-chip.bad { color: color-mix(in srgb, var(--mochi-danger) 48%, var(--mochi-text-strong)); }
 .a11y-quick { display: grid; gap: 4px; }
 .a11y-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px; }
 

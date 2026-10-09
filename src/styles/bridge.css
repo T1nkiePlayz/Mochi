@@ -89,7 +89,7 @@ footer { color: var(--mochi-text-faint); }
 .settings-group-heading span { color: var(--mochi-text-muted); }
 .theme-card strong { color: var(--mochi-text-strong); }
 .theme-card small { color: var(--mochi-text-muted); }
-.theme-card-meta { color: var(--mochi-text-faint) !important; }
+.theme-card-meta { color: var(--mochi-text-faint); }
 .provider-credential-card, .setup-provider-card { border-color: var(--mochi-border); background: var(--mochi-surface-raised); color: var(--mochi-text); }
 .setup-shell { color: var(--mochi-text); background: var(--mochi-background); }
 .setup-panel { background: var(--mochi-background-elevated); border-color: var(--mochi-border); box-shadow: 0 35px 120px var(--mochi-shadow); }
@@ -114,34 +114,34 @@ footer { color: var(--mochi-text-faint); }
 .security-card-copy { min-width: 0; flex: 1; }
 .security-card-copy strong, .security-card-copy small { display: block; }
 .security-card-copy strong { color: var(--mochi-text-strong); font-size: 12px; }
-.security-card-copy small { margin-top: 3px; color: var(--mochi-text-muted); font-size: 10px; line-height: 1.45; }
+.security-card-copy small { margin-top: 3px; color: var(--mochi-text-muted); font-size: 11px; line-height: 1.45; }
 .security-actions { padding: 10px 0 0; }
 .security-provider-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin: 8px 0 14px; }
 .security-provider { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border: 1px solid var(--mochi-border); border-radius: var(--mochi-radius-sm); color: var(--mochi-text); background: var(--mochi-surface-raised); text-align: left; }
 .security-provider:hover:not(:disabled) { border-color: var(--mochi-accent-strong); background: var(--mochi-surface-hover); }
-.security-provider span { color: var(--mochi-text-muted); font-size: 9px; }
+.security-provider span { color: var(--mochi-text-muted); font-size: 11px; }
 .passkey-list { display: grid; gap: 8px; margin-top: 8px; }
 .passkey-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--mochi-border); border-radius: var(--mochi-radius-sm); background: var(--mochi-surface-raised); }
 .passkey-row strong, .passkey-row small { display: block; }
-.passkey-row strong { color: var(--mochi-text-strong); font-size: 10px; }
-.passkey-row small { margin-top: 2px; color: var(--mochi-text-muted); font-size: 8px; }
+.passkey-row strong { color: var(--mochi-text-strong); font-size: 12px; }
+.passkey-row small { margin-top: 2px; color: var(--mochi-text-muted); font-size: 11px; }
 .danger-outline { color: var(--mochi-danger) !important; border-color: color-mix(in srgb, var(--mochi-danger) 35%, var(--mochi-border)) !important; }
 .mfa-setup-card { display: grid; gap: 10px; margin-top: 12px; padding: 14px; border: 1px solid var(--mochi-border); border-radius: var(--mochi-radius-md); background: var(--mochi-surface-raised); }
 .mfa-setup-card > div:first-child { display: grid; gap: 3px; }
 .mfa-setup-card strong { color: var(--mochi-text-strong); font-size: 12px; }
-.mfa-setup-card small { color: var(--mochi-text-muted); font-size: 9px; }
+.mfa-setup-card small { color: var(--mochi-text-muted); font-size: 11px; }
 .mfa-setup-card img { width: 176px; height: 176px; padding: 8px; border-radius: var(--mochi-radius-md); background: var(--mochi-art-text); }
-.mfa-setup-card code { overflow-wrap: anywhere; color: var(--mochi-text-muted); font: 9px var(--mochi-mono); }
+.mfa-setup-card code { overflow-wrap: anywhere; color: var(--mochi-text-muted); font: 11px var(--mochi-mono); }
 .mfa-setup-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .mfa-setup-actions .mfa-input { width: 130px; }
 .security-signed-out { display: flex; align-items: center; gap: 10px; padding: 16px; color: var(--mochi-text-muted); }
-.security-signed-out span { flex: 1; font-size: 10px; }
+.security-signed-out span { flex: 1; font-size: 11px; }
 .security-notice { display: block; margin-top: 10px; }
 .mfa-challenge { display: grid; justify-items: center; gap: 10px; padding: 8px 4px 2px; text-align: center; }
 .mfa-shield { display: grid; place-items: center; width: 56px; height: 56px; margin: 2px auto 3px; border: 1px solid var(--mochi-border); border-radius: 18px; color: var(--mochi-accent-strong); background: var(--mochi-accent-soft); }
 .mfa-title { margin: 0; color: var(--mochi-text-strong); font: 800 18px var(--mochi-font-display); }
 .mfa-description { max-width: 330px; margin: 0; color: var(--mochi-text-muted); font-size: 11px; line-height: 1.55; }
-.mfa-code-label { display: grid; gap: 7px; width: 100%; color: var(--mochi-text-muted); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; text-align: left; }
+.mfa-code-label { display: grid; gap: 7px; width: 100%; color: var(--mochi-text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; text-align: left; }
 .mfa-code-label .mfa-input { width: 100%; height: 50px; border: 1px solid var(--mochi-border); border-radius: var(--mochi-radius-md); color: var(--mochi-text-strong); background: var(--mochi-surface-raised); font: 700 22px var(--mochi-mono); letter-spacing: .3em; text-align: center; outline: none; }
 .mfa-code-label .mfa-input:focus { border-color: var(--mochi-accent-strong); box-shadow: 0 0 0 3px var(--mochi-accent-soft); }
 .mfa-challenge .form-submit { margin-top: 2px; }

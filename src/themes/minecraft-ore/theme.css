@@ -137,3 +137,4 @@ i.stat-cell { border-radius: 0; }
 /* Discover: game icons stay square like every other Ore image. */
 .discover-game-tabs, .nexus-game-picker-list { --mochi-game-icon-radius: 0; }
 .discover-game-tab, .discover-game-add { border-radius: 0; }
+.discover-card-title span { color: #a9c3f7; }

@@ -198,7 +198,7 @@ progress { accent-color: var(--mochi-accent-strong); }
 .game-card-copy strong { color: var(--mochi-text-strong); font-size: 13px; font-weight: 600; }
 .game-card-copy small { font-size: 11px; }
 .game-card-play { background: var(--mochi-primary-background); color: var(--mochi-primary-color); box-shadow: 0 6px 18px color-mix(in srgb, var(--mochi-shadow) 83%, transparent); }
-.game-cloud-status { font-size: 10px; }
+.game-cloud-status { font-size: 11px; }
 .game-cloud-status.is-synced { color: var(--mochi-success); }
 .game-cloud-status.not-synced { color: var(--mochi-warning); }
 .section-heading h3 { font-size: 18px; }
@@ -226,6 +226,7 @@ progress { accent-color: var(--mochi-accent-strong); }
 [data-mochi-shell="top"] .sidebar-account-wrap { order: 3; width: 230px; margin: 0 0 0 auto; }
 [data-mochi-shell="top"] .sidebar-bottom { order: 2; margin: 0; }
 [data-mochi-shell="bottom"] .sidebar-account-wrap { order: 3; width: 210px; margin: 0; }
+[data-mochi-shell="top"] .sidebar-account, [data-mochi-shell="bottom"] .sidebar-account { margin-bottom: 0; } /* the left-rail 12px gap would otherwise push the trigger off the bar centre */
 [data-mochi-shell="bottom"] .sidebar-bottom { order: 2; margin: 0; }
 [data-mochi-shell="bottom"] .brand { display: none; }
 [data-mochi-shell="top"] .main-content, [data-mochi-shell="bottom"] .main-content { height: auto; flex: 1; min-height: 0; }

@@ -16,14 +16,14 @@
 .sidebar-bottom .nav-item { width: 82px; }
 .sidebar-account-wrap { margin: 0; }
 .sidebar-account { background: #e8b868; border: 3px solid #3a1a05; border-radius: 0; box-shadow: inset 0 0 0 2px #f6d7a1; color: #2e1706; }
-.sidebar-account small { color: #7a4a22; }
+.sidebar-account small { color: #5e3513; }
 .sidebar-account:hover { background: #ffd58a; }
 .account-avatar { border-radius: 0; border: 3px solid #3a1a05; background: #8bc34a; color: #10300a; image-rendering: pixelated; }
 .account-menu { border-radius: 0; background: #f6d7a1; box-shadow: 0 0 0 3px #d9822b, 0 0 0 6px #5c2c0c; border: 3px solid #5c2c0c; }
 
 /* Menu boxes */
 .page-heading h1 { font-size: 34px; }
-.eyebrow { color: #a8691f; }
+.eyebrow { color: #783d08; }
 .section-heading h3 { font-size: 22px; }
 .game-card { padding: 4px; background: #fbe5b8; }
 .game-card .game-card-art { border: 3px solid #5c2c0c; image-rendering: pixelated; }

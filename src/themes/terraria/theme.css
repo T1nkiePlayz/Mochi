@@ -13,7 +13,7 @@
 .nav-item:hover { border-color: #ffd54a; background: linear-gradient(180deg, #7282f0, #4656c8); }
 .nav-item.active { color: #33260a; text-shadow: none; border-color: #0e1236; }
 .sidebar-account { border: 2px solid #0e1236; border-radius: 6px; background: rgba(14, 18, 54, .45); }
-.account-avatar { border-radius: 6px; border: 2px solid #0e1236; background: #4caf50; color: #fff; }
+.account-avatar { border-radius: 6px; border: 2px solid #0e1236; background: #4caf50; color: #0e1236; }
 
 .topbar { background: linear-gradient(180deg, rgba(14, 18, 54, .65), transparent); }
 .breadcrumb, .breadcrumb strong { color: #ffd54a; text-shadow: -1px 0 #000, 1px 0 #000, 0 -1px #000, 0 1px #000; font-weight: 700; }

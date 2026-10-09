@@ -79,11 +79,15 @@ body { font-size: 1.15rem; }
 .download-progress > span { background: #2bff7a; box-shadow: 0 0 10px #2bff7a; }
 progress { filter: hue-rotate(0deg); }
 ::selection { background: #2bff7a; color: #021006; text-shadow: none; }
-/* VT323 is a small face: lift every pixel-sized label to a readable size. */
-.eyebrow, small, .section-label, .detail-label, .metadata-note, .breadcrumb, .category-count, .library-count, .library-sort, .credential-status,
-.game-card-copy small, .continue-copy small, .setting-row small, .form-fields label, .setup-description, .modal-description, .search-box input, kbd { font-size: 1.05rem !important; }
+/* VT323 is a small face: the base sizes (10-13px) read as ~7px here, so every text size is floored at 1rem (17px).
+ * :where() keeps the floor at zero specificity so the explicit sizes below still win. */
+:where(p, li, dt, dd, label, small, code, kbd, footer span, .eyebrow, .section-label, .detail-label, .metadata-note, .library-count, .library-sort, .credential-status,
+  .search-box input, .setup-description, .modal-description, .setting-row small, .game-card-copy small, .continue-copy small, .account-avatar span, .game-avatar-initials,
+  .source-badge, .all-see-all, .all-other-hint, .discover-game-name, .discover-game-add span, .discover-card-title span, .settings-group-heading span, .theme-config-path span,
+  .a11y-chip, .a11y-value, .a11y-segmented button, .curseforge-credit button, .theme-actions button, .theme-card-meta) { font-size: 1rem; }
+.breadcrumb { font-size: 1.1rem; }
+.theme-card strong, .all-other-copy strong, .settings-group-heading strong, .discover-game-name, .a11y-control-head strong, .setting-row label strong { font-size: 1.2rem; }
 .continue-copy strong, .setting-row strong, .nav-item, .sidebar-account strong { font-size: 1.25rem; }
-
 /* Generated covers: a single phosphor-green tint */
 :root { --mochi-art-hue: 128; --mochi-art-saturation: 70%; --mochi-art-lightness: 12%; --mochi-art-text: #5cff7a; }
 

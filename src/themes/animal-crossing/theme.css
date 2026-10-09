@@ -30,7 +30,7 @@ html:not([data-nav-mode="drawer"])[data-mochi-shell="top"] .sidebar .sidebar-acc
 .breadcrumb, .breadcrumb strong { color: #6a5744; font-weight: 600; }
 .search-box { border-radius: 999px; border: 3px solid #fff; background: #fffdf2; color: #746553; box-shadow: 0 3px 0 #cfe6b2; }
 .page-heading h1 { font-size: 40px; color: #4a3b2b; text-shadow: 0 3px 0 rgba(255, 255, 255, .8); }
-.eyebrow { color: #2fae8a; background: #fff; display: inline-block; padding: 2px 12px; border-radius: 999px; letter-spacing: .04em; box-shadow: 0 2px 0 #cfe6b2; }
+.eyebrow { color: #1f725a; background: #fff; display: inline-block; padding: 2px 12px; border-radius: 999px; letter-spacing: .04em; box-shadow: 0 2px 0 #cfe6b2; }
 .section-heading h3 { font-size: 24px; color: #4a3b2b; text-shadow: 0 2px 0 rgba(255, 255, 255, .8); }
 
 .content { padding-top: 30px; }
