@@ -84,6 +84,7 @@
           "https://*.supabase.co",
           "wss://*.supabase.co",
           "https://api.modrinth.com",
+          "https://api.nexusmods.com",
           "https://api.github.com"
         ],
         "frame-src": [
@@ -158,6 +159,7 @@
           "https://*.supabase.co",
           "wss://*.supabase.co",
           "https://api.modrinth.com",
+          "https://api.nexusmods.com",
           "https://api.github.com",
           "http://localhost:5173",
           "ws://localhost:5173"

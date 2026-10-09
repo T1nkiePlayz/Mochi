@@ -8,15 +8,14 @@ const game = (id: number, name: string): CfGame => ({ id, name, slug: name.toLow
 
 describe("planSections", () => {
   const games = [
-    { key: "cf:1", name: "A", cfId: 1, primary: "curseforge" as const, needsNexusKey: false },
-    { key: "nx:b", name: "B", nexusDomain: "b", primary: "nexus" as const, needsNexusKey: false },
-    { key: "nx:c", name: "C", nexusDomain: "c", primary: null, needsNexusKey: true },
+    { key: "cf:1", name: "A", cfId: 1, primary: "curseforge" as const },
+    { key: "nx:b", name: "B", nexusDomain: "b", primary: "nexus" as const },
+    { key: "nx:c", name: "C", nexusDomain: "c", primary: null },
   ];
-  it("lists Minecraft first, then games in order, and counts Nexus-only games without a key", () => {
-    const { sections, skipped } = planSections({ modrinth: true, curseforge: true, games });
+  it("lists Minecraft first, then games in order, and skips games without a primary site", () => {
+    const { sections } = planSections({ modrinth: true, curseforge: true, games });
     expect(sections.map((section) => section.key)).toEqual(["minecraft", "cf:1", "nx:b"]);
     expect(sections[0].site).toBe("modrinth");
-    expect(skipped).toBe(1);
   });
   it("falls back to CurseForge for Minecraft and omits it when both are off", () => {
     expect(planSections({ modrinth: false, curseforge: true, games: [] }).sections[0]).toMatchObject({ site: "curseforge", cfId: 432 });

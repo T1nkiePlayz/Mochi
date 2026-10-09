@@ -11,19 +11,17 @@ export type GameAvailability = {
   curseforge?: boolean;
   /** The game exists on Nexus Mods. */
   nexus?: boolean;
-  /** The user saved a Nexus API key. */
-  nexusKey?: boolean;
 };
 
 /**
  * Which sources list mods for a game, best first. A source the user switched off never appears.
  * Minecraft: Modrinth and CurseForge. Any other game: CurseForge when it is there; Nexus Mods only when it is not
- * (or CurseForge is off) and a Nexus key is saved. CurseForge and Nexus are never shown together for one game.
+ * (or CurseForge is off). Browsing Nexus needs no key; downloads do. CurseForge and Nexus are never shown together for one game.
  */
 export function resolveSources(game: GameAvailability, settings: ModSourceSettings): SourceId[] {
   if (game.minecraft) return [...(settings.modrinth ? ["modrinth" as const] : []), ...(settings.curseforge ? ["curseforge" as const] : [])];
   if (settings.curseforge && game.curseforge) return ["curseforge"];
-  if (settings.nexus && game.nexus && game.nexusKey) return ["nexus"];
+  if (settings.nexus && game.nexus) return ["nexus"];
   return [];
 }
 
@@ -42,8 +40,8 @@ export function minecraftSourceFor(content: MinecraftContent, preferred: SourceI
 }
 
 /** Whether a Discover game tab should exist, and which source feeds it. */
-export function tabSource(game: { onCurseforge: boolean; onNexus: boolean }, settings: ModSourceSettings, nexusKey: boolean): SourceId | null {
-  return resolveSources({ curseforge: game.onCurseforge, nexus: game.onNexus, nexusKey }, settings)[0] ?? null;
+export function tabSource(game: { onCurseforge: boolean; onNexus: boolean }, settings: ModSourceSettings): SourceId | null {
+  return resolveSources({ curseforge: game.onCurseforge, nexus: game.onNexus }, settings)[0] ?? null;
 }
 
 /** CurseForge lists test and hidden games too; only apiStatus 2 (public) ones are real. */

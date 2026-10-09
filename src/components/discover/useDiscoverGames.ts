@@ -41,14 +41,14 @@ export function useGameSourceChoice(gameKey: string): [GameSourceChoice, (choice
   return [isSourceChoice(value) ? value : "auto", set];
 }
 
-export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean) {
+export function useDiscoverGames(settings: ModSourceSettings) {
   const [cfGames, setCfGames] = useState<CfGame[] | null>(null);
   const [cfError, setCfError] = useState("");
   const [cfLoading, setCfLoading] = useState(false);
   const [catalog, setCatalog] = useState<NexusGame[]>([]);
   const [stored, setStored] = useState<StoredGame[]>(readStored);
   const [reload, setReload] = useState(0);
-  const nexusOn = settings.nexus && nexusKey && Boolean(supabase);
+  const nexusOn = settings.nexus;
 
   useEffect(() => {
     if (!settings.curseforge) { setCfGames(null); setCfError(""); return; }
@@ -59,7 +59,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean)
   }, [settings.curseforge, reload]);
 
   useEffect(() => {
-    if (!nexusOn || !supabase) { setCatalog([]); return; }
+    if (!nexusOn) { setCatalog([]); return; }
     let cancelled = false;
     void getNexusGames(supabase).then((games) => { if (!cancelled) setCatalog(games); }).catch(() => undefined);
     return () => { cancelled = true; };

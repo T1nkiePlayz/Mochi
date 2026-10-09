@@ -29,7 +29,7 @@ export function sameFile(files: readonly ModFile[], installedName: string): ModF
  * the project (and the exact file when the site still lists it), so updates and "Downloaded" states work from then on.
  */
 export function LinkModModal({ piko, tofu, file, subdir = "", onLinked, onClose }: Props) {
-  const { behavior, credentials } = useApp();
+  const { behavior } = useApp();
   const minecraft = modSupportOf(piko) === "minecraft";
   const sources = useMemo(() => {
     const list: ModSource[] = [];
@@ -37,9 +37,9 @@ export function LinkModModal({ piko, tofu, file, subdir = "", onLinked, onClose 
     if (minecraft && settings.modrinth) list.push(createModrinthSource(subdir === "resourcepacks" ? "resourcepack" : subdir === "shaderpacks" ? "shader" : "mod"));
     const cfGame = minecraft ? CF_MINECRAFT_ID : piko.modLinks?.curseforge?.gameId;
     if (settings.curseforge && cfGame) list.push(createCurseforgeSource({ gameId: cfGame, gameSlug: minecraft ? "minecraft" : piko.modLinks?.curseforge?.slug }));
-    if (settings.nexus && credentials.status.nexus && supabase && piko.modLinks?.nexus) list.push(createNexusSource(supabase, piko.modLinks.nexus));
+    if (settings.nexus && supabase && piko.modLinks?.nexus) list.push(createNexusSource(supabase, piko.modLinks.nexus));
     return list;
-  }, [minecraft, piko.modLinks, behavior.modSources, credentials.status.nexus, subdir]);
+  }, [minecraft, piko.modLinks, behavior.modSources, subdir]);
   const [sourceId, setSourceId] = useState<ModSourceId | undefined>(sources[0]?.id);
   const source = sources.find((item) => item.id === sourceId) ?? sources[0];
   const [query, setQuery] = useState(titleFromFile(file.filename));

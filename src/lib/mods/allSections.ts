@@ -6,20 +6,18 @@ import type { ModPage, ModSource } from "./types";
 /** One game's block on Discover > All. `tab` is the id the page's tab list uses for that game. */
 export type SectionPlan = { key: string; tab: string; name: string; iconUrl?: string; site: "modrinth" | "curseforge" | "nexus"; cfId?: number; nexusDomain?: string; minecraft: boolean };
 
-type PlanGame = { key: string; name: string; iconUrl?: string; cfId?: number; nexusDomain?: string; primary: "curseforge" | "nexus" | null; needsNexusKey: boolean };
+type PlanGame = { key: string; name: string; iconUrl?: string; cfId?: number; nexusDomain?: string; primary: "curseforge" | "nexus" | null };
 
-/** Minecraft first (Modrinth, else CurseForge), then each tab game on its primary site. Games that need Nexus without a key are counted, not listed. */
-export function planSections(opts: { modrinth: boolean; curseforge: boolean; minecraftIconUrl?: string; games: readonly PlanGame[] }): { sections: SectionPlan[]; skipped: number } {
+/** Minecraft first (Modrinth, else CurseForge), then each tab game on its primary site. */
+export function planSections(opts: { modrinth: boolean; curseforge: boolean; minecraftIconUrl?: string; games: readonly PlanGame[] }): { sections: SectionPlan[] } {
   const sections: SectionPlan[] = [];
   if (opts.modrinth) sections.push({ key: "minecraft", tab: "minecraft", name: "Minecraft", iconUrl: opts.minecraftIconUrl, site: "modrinth", minecraft: true });
   else if (opts.curseforge) sections.push({ key: "minecraft", tab: "minecraft", name: "Minecraft", iconUrl: opts.minecraftIconUrl, site: "curseforge", cfId: 432, minecraft: true });
-  let skipped = 0;
   for (const game of opts.games) {
     if (game.primary === "curseforge" && game.cfId !== undefined) sections.push({ key: game.key, tab: game.key, name: game.name, iconUrl: game.iconUrl, site: "curseforge", cfId: game.cfId, minecraft: false });
     else if (game.primary === "nexus" && game.nexusDomain) sections.push({ key: game.key, tab: game.key, name: game.name, iconUrl: game.iconUrl, site: "nexus", nexusDomain: game.nexusDomain, minecraft: false });
-    else if (game.needsNexusKey) skipped += 1;
   }
-  return { sections, skipped };
+  return { sections };
 }
 
 /** Well-known CurseForge games, matched to the live list by name so a wrong id can never slip in. */

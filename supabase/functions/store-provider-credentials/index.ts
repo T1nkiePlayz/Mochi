@@ -251,6 +251,10 @@ async function nexusHeaders(userId: string) {
 }
 
 const NEXUS_V1 = "https://api.nexusmods.com/v1";
+const NEXUS_GRAPHQL = "https://api.nexusmods.com/v2/graphql";
+/** The public GraphQL API serves at most this many nodes per request. */
+const NEXUS_GRAPHQL_MAX = 80;
+const NEXUS_PUBLIC_HEADERS = { Accept: "application/json", "Content-Type": "application/json", "Application-Name": "Mochi", "Application-Version": "0.1.0" };
 const NEXUS_DOMAIN = /^[a-z0-9_-]{1,64}$/;
 const NEXUS_DL_KEY = /^[A-Za-z0-9_-]{8,256}$/;
 const nexusId = (value: unknown): value is number => typeof value === "number" && Number.isInteger(value) && value > 0 && value <= 2_147_483_647;
@@ -278,6 +282,22 @@ async function nexusV1(userId: string, path: string): Promise<unknown> {
   if (upstream.status === 429) throw new NexusError("Nexus Mods is rate limiting requests. Try again later.", 429);
   if (!upstream.ok) throw new NexusError(`Nexus Mods request failed (HTTP ${upstream.status}).`, upstreamStatus(upstream.status));
   try { return await upstream.json(); } catch { throw new NexusError("Nexus Mods returned invalid data.", 502); }
+}
+
+/** Public Nexus catalog data (games, mod lists) needs no key; sending none also avoids Nexus rejecting a stale one. */
+async function nexusGraphql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+  let upstream: Response;
+  try {
+    upstream = await fetch(NEXUS_GRAPHQL, { method: "POST", headers: NEXUS_PUBLIC_HEADERS, body: JSON.stringify({ query, variables }), signal: AbortSignal.timeout(15_000) });
+  } catch {
+    throw new NexusError("Unable to reach Nexus Mods. Try again.", 502);
+  }
+  if (upstream.status === 429) throw new NexusError("Nexus Mods is rate limiting requests. Try again later.", 429);
+  if (!upstream.ok) throw new NexusError(`Nexus Mods request failed (HTTP ${upstream.status}).`, upstreamStatus(upstream.status));
+  let payload: { data?: T; errors?: Array<{ message?: string }> };
+  try { payload = await upstream.json(); } catch { throw new NexusError("Nexus Mods returned invalid data.", 502); }
+  if (!payload.data) throw new NexusError(payload.errors?.map((item) => item.message).filter(Boolean).join("; ") || "Nexus Mods returned invalid data.", 502);
+  return payload.data;
 }
 
 function nexusFailure(error: unknown, fallback: string) {
@@ -406,30 +426,50 @@ Deno.serve(async (req) => {
 
   if (body.action === "nexus-games") {
     try {
-      const headers = await nexusHeaders(user.id);
-      if (!nexusGamesCache || Date.now() - nexusGamesCache.fetchedAt > NEXUS_GAMES_TTL_MS) {
-        const upstream = await fetch("https://api.nexusmods.com/v1/games.json", { headers });
-        if (!upstream.ok) return response({ error: `Nexus Mods returned HTTP ${upstream.status} while loading games.` }, upstreamStatus(upstream.status));
-        nexusGamesCache = { fetchedAt: Date.now(), games: await upstream.json() as Array<Record<string, unknown>> };
+      const query = typeof body.query === "string" ? body.query.trim() : "";
+      const key = await getStoredSecret(user.id, "nexus");
+      let upstreamGames: Array<Record<string, unknown>> | null = null;
+      if (key) {
+        // The full v1 list is only available with a key; if Nexus refuses it, fall back to the public catalog below.
+        if (!nexusGamesCache || Date.now() - nexusGamesCache.fetchedAt > NEXUS_GAMES_TTL_MS) {
+          const upstream = await fetch("https://api.nexusmods.com/v1/games.json", { headers: await nexusHeaders(user.id), signal: AbortSignal.timeout(15_000) }).catch(() => null);
+          if (upstream?.ok) nexusGamesCache = { fetchedAt: Date.now(), games: await upstream.json() as Array<Record<string, unknown>> };
+        }
+        upstreamGames = nexusGamesCache?.games ?? null;
       }
-      const games = nexusGamesCache.games;
-      const query = typeof body.query === "string" ? body.query.trim().toLowerCase() : "";
-      const filtered = games
-        .filter((game) => typeof game.name === "string" && typeof game.domain_name === "string")
-        .filter((game) => !query || String(game.name).toLowerCase().includes(query) || String(game.domain_name).toLowerCase().includes(query))
+      if (upstreamGames) {
+        const needle = query.toLowerCase();
+        const filtered = upstreamGames
+          .filter((game) => typeof game.name === "string" && typeof game.domain_name === "string")
+          .filter((game) => !needle || String(game.name).toLowerCase().includes(needle) || String(game.domain_name).toLowerCase().includes(needle))
+          .map((game) => ({
+            id: String(game.id ?? ""),
+            name: String(game.name),
+            domainName: String(game.domain_name),
+            iconUrl: game.id != null ? `https://staticdelivery.nexusmods.com/images/games/cover_${String(game.id)}.jpg` : undefined,
+            modCount: typeof game.mods === "number" ? game.mods : undefined,
+            genre: typeof game.genre === "string" ? game.genre : undefined,
+          }))
+          .filter((game) => game.id && game.name && game.domainName);
+        return response({ games: filtered });
+      }
+      const data = await nexusGraphql<{ games?: { nodes?: Array<Record<string, unknown>> } }>(
+        "query($count: Int!, $filter: GamesSearchFilter) { games(filter: $filter, count: $count, sort: [{ downloads: { direction: DESC } }]) { nodes { id name domainName modCount genre } } }",
+        { count: NEXUS_GRAPHQL_MAX, filter: query ? { name: { value: query, op: "WILDCARD" } } : undefined },
+      );
+      const games = (data.games?.nodes ?? [])
+        .filter((game) => typeof game.name === "string" && typeof game.domainName === "string" && game.id != null)
         .map((game) => ({
-          id: String(game.id ?? ""),
+          id: String(game.id),
           name: String(game.name),
-          domainName: String(game.domain_name),
-          iconUrl: game.id != null ? `https://staticdelivery.nexusmods.com/images/games/cover_${String(game.id)}.jpg` : undefined,
-          modCount: typeof game.mods === "number" ? game.mods : undefined,
+          domainName: String(game.domainName),
+          iconUrl: `https://staticdelivery.nexusmods.com/images/games/cover_${String(game.id)}.jpg`,
+          modCount: typeof game.modCount === "number" ? game.modCount : undefined,
           genre: typeof game.genre === "string" ? game.genre : undefined,
-        }))
-        .filter((game) => game.id && game.name && game.domainName);
-      return response({ games: filtered });
+        }));
+      return response({ games });
     } catch (error) {
-      console.error("Nexus game search failed", error);
-      return response({ error: error instanceof Error ? error.message : "Unable to search Nexus Mods games." }, 502);
+      return nexusFailure(error, "Unable to search Nexus Mods games.");
     }
   }
 
@@ -547,8 +587,8 @@ Deno.serve(async (req) => {
     const offset = Math.max(0, Math.min(100_000, Math.floor(Number(body.offset) || 0)));
     const limit = Math.max(8, Math.min(100, Math.floor(Number(body.limit) || 100)));
     try {
-      const headers = await nexusHeaders(user.id);
       if (sort === "trending") {
+        const headers = await nexusHeaders(user.id);
         const upstream = await fetch(`https://api.nexusmods.com/v3/games/${encodeURIComponent(domain)}/trending-mods`, { headers });
         if (!upstream.ok) return response({ error: `Nexus Mods returned HTTP ${upstream.status} while loading trending mods.` }, upstreamStatus(upstream.status));
         const payload = await upstream.json() as { data?: { mods?: Array<Record<string, unknown>> } };
@@ -564,28 +604,26 @@ Deno.serve(async (req) => {
         return response({ mods, total: mods.length, offset: 0 });
       }
 
-      // Nexus V3 currently has no paginated all-mods or downloads-ranked endpoint.
-      // Use the same paginated V2 GraphQL query used by Nexus's own Vortex client.
-      const upstream = await fetch("https://api.nexusmods.com/v2/graphql", {
-        method: "POST",
-        headers: { ...headers, "Content-Type": "application/json", APIKEY: headers.apikey },
-        body: JSON.stringify({
-          query: "query($domain: String!, $count: Int!, $offset: Int!) { mods(filter: { filter: [{ gameDomainName: { value: $domain, op: EQUALS } }] }, count: $count, offset: $offset) { totalCount nodes { modId name } } }",
-          variables: { domain, count: limit, offset },
-        }),
-      });
-      if (!upstream.ok) return response({ error: `Nexus Mods returned HTTP ${upstream.status} while loading the game catalog.` }, upstreamStatus(upstream.status));
-      const payload = await upstream.json() as { data?: { mods?: { totalCount?: number; nodes?: Array<{ modId?: number | string; name?: string }> } }; errors?: Array<{ message?: string }> };
-      if (payload.errors?.length) return response({ error: payload.errors.map((item) => item.message).filter(Boolean).join("; ") || "Nexus Mods could not load this game catalog." }, 502);
-      const result = payload.data?.mods;
+      // Nexus V3 currently has no paginated all-mods or downloads-ranked endpoint, so the catalog uses the public V2
+      // GraphQL API: no key (a key is never sent), most downloaded first, same paging as before.
+      const data = await nexusGraphql<{ mods?: { totalCount?: number; nodes?: Array<{ modId?: number | string; name?: string; summary?: string; thumbnailUrl?: string; pictureUrl?: string; author?: string }> } }>(
+        "query($domain: String!, $count: Int!, $offset: Int!) { mods(filter: { gameDomainName: { value: $domain, op: EQUALS } }, sort: [{ downloads: { direction: DESC } }], count: $count, offset: $offset) { totalCount nodes { modId name summary thumbnailUrl pictureUrl author } } }",
+        { domain, count: Math.min(limit, NEXUS_GRAPHQL_MAX), offset },
+      );
+      const result = data.mods;
       const mods = (result?.nodes ?? []).map((mod) => {
         const id = String(mod.modId ?? "");
-        return { id, modId: Number(id) || undefined, name: String(mod.name ?? "Untitled mod"), modPageUrl: `https://www.nexusmods.com/${encodeURIComponent(domain)}/mods/${encodeURIComponent(id)}` };
+        return {
+          id, modId: Number(id) || undefined, name: String(mod.name ?? "Untitled mod"),
+          author: typeof mod.author === "string" ? mod.author : undefined,
+          summary: typeof mod.summary === "string" ? mod.summary : undefined,
+          pictureUrl: nexusPictureUrl(mod.thumbnailUrl) ?? nexusPictureUrl(mod.pictureUrl),
+          modPageUrl: `https://www.nexusmods.com/${encodeURIComponent(domain)}/mods/${encodeURIComponent(id)}`,
+        };
       }).filter((mod) => mod.id);
       return response({ mods, total: Number(result?.totalCount ?? mods.length), offset });
     } catch (error) {
-      console.error("Nexus mod search failed", error);
-      return response({ error: error instanceof Error ? error.message : "Unable to load Nexus Mods." }, 502);
+      return nexusFailure(error, "Unable to load Nexus Mods.");
     }
   }
 
