@@ -1,0 +1,130 @@
+/*
+ * Protected layout layer.
+ *
+ * Cascade order is reset < tokens < base < layout < theme < user (src/styles/layers.css). Normal declarations in
+ * a later layer win, so a theme can restyle anything... except what this file marks !important: for important
+ * declarations the order flips and the EARLIEST layer wins, so these rules cannot be overridden by any theme,
+ * built-in or user-installed. Only structural properties live here (size limits, overflow, flex shrinking, which
+ * region is visible); colours, borders, fonts, radii and ornaments stay entirely with the theme.
+ *
+ * Layout reads theme tokens through clamps with fallbacks (--mochi-layout-*), so a theme that omits a token,
+ * or sets an absurd one (a 900px sidebar, a 400px top bar), still gets a working window.
+ *
+ * Navigation adapts with <html data-nav-mode>, set by useShellFit (src/lib/useShellFit.ts) from what really fits:
+ *   full    everything visible
+ *   compact account shows only its avatar (top/bottom bars)
+ *   tight   brand text hidden as well
+ *   icons   navigation shows icons only (top/bottom bars)
+ *   drawer  navigation moves behind the menu button in the top bar
+ * With no JavaScript yet the (max-width: 700px) media rules below give the same drawer.
+ */
+@layer layout {
+  :root {
+    --mochi-layout-sidebar: clamp(176px, var(--mochi-sidebar-width, 246px), min(340px, 36vw));
+    --mochi-layout-rail: clamp(56px, var(--mochi-rail-width, 78px), 96px);
+    --mochi-layout-topbar: clamp(44px, var(--mochi-topbar-height, 68px), 104px);
+    --mochi-layout-drawer: min(300px, 88vw);
+    --mochi-safe-top: env(safe-area-inset-top, 0px);
+    --mochi-safe-right: env(safe-area-inset-right, 0px);
+    --mochi-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --mochi-safe-left: env(safe-area-inset-left, 0px);
+  }
+
+  /* ---- Page: never scrolls sideways, never taller than the window -------------------------------- */
+  html, body { max-width: 100% !important; overflow-x: clip !important; }
+  body { min-width: 0 !important; }
+  #root { max-width: 100vw; }
+  .app-shell { max-width: 100vw !important; height: 100vh !important; height: 100dvh !important; min-height: 0 !important; overflow: hidden !important; padding-left: var(--mochi-safe-left); padding-right: var(--mochi-safe-right); }
+  .main-content { min-width: 0 !important; min-height: 0 !important; max-width: 100% !important; overflow-x: hidden !important; overflow-y: auto !important; height: 100% !important; flex: 1 1 0 !important; }
+  [data-mochi-shell="top"] .main-content, [data-mochi-shell="bottom"] .main-content { height: auto !important; }
+  .content { min-width: 0 !important; width: 100% !important; margin-inline: auto !important; max-width: max(var(--mochi-content-max-width, 1160px), min(72vw, 2200px)) !important; }
+  .content > * { min-width: 0; max-width: 100%; }
+  .content img, .content video, .content canvas { max-width: 100%; }
+  footer { flex-wrap: wrap; gap: 6px 16px; }
+
+  /* ---- Sidebar shells (left, right, rail) -------------------------------------------------------- */
+  .sidebar { min-height: 0; max-width: 100% !important; overflow-x: hidden !important; overflow-y: auto !important; }
+  [data-mochi-shell="left"] .sidebar, [data-mochi-shell="right"] .sidebar, :root:not([data-mochi-shell]) .sidebar {
+    width: var(--mochi-layout-sidebar) !important; flex: 0 0 var(--mochi-layout-sidebar) !important; min-width: 0 !important;
+  }
+  [data-mochi-shell="rail"] .sidebar { width: var(--mochi-layout-rail) !important; flex: 0 0 var(--mochi-layout-rail) !important; min-width: 0 !important; }
+  .sidebar > * { min-width: 0; }
+  .nav-item { max-width: 100%; }
+  .nav-item > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .brand > div { min-width: 0; }
+  .brand strong, .brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sidebar-account, .sidebar-account-wrap { min-width: 0; max-width: 100%; }
+  /* The account dropdown opens over the content, whichever side the navigation lives on. */
+  .account-menu { max-width: min(320px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow-y: auto; }
+
+  /* ---- Bar shells (top, bottom) -------------------------------------------------------------------- */
+  [data-mochi-shell="top"] .sidebar, [data-mochi-shell="bottom"] .sidebar {
+    display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; align-items: center !important;
+    width: auto; max-width: 100% !important; min-width: 0 !important; height: auto !important; max-height: none !important;
+    overflow: visible !important; position: relative !important; flex: 0 0 auto !important; box-sizing: border-box;
+  }
+  [data-mochi-shell="top"] .sidebar > *, [data-mochi-shell="bottom"] .sidebar > * { flex: 0 0 auto; }
+  [data-mochi-shell="top"] .primary-nav, [data-mochi-shell="bottom"] .primary-nav { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; flex: 0 0 auto !important; width: auto !important; }
+  [data-mochi-shell="top"] .nav-item, [data-mochi-shell="bottom"] .nav-item { flex: 0 0 auto; white-space: nowrap; }
+  [data-mochi-shell="top"] .sidebar-account-wrap, [data-mochi-shell="bottom"] .sidebar-account-wrap { width: auto !important; min-width: 0 !important; max-width: 260px !important; margin-block: 0 !important; }
+  [data-mochi-shell="top"] .sidebar-account-wrap { margin-left: 0 !important; }
+  [data-mochi-shell="top"] .sidebar-bottom, [data-mochi-shell="bottom"] .sidebar-bottom { margin: 0 !important; width: auto !important; }
+  [data-mochi-shell="top"] .account-menu, [data-mochi-shell="bottom"] .account-menu { right: 0; left: auto; width: min(280px, calc(100vw - 24px)); }
+  [data-mochi-shell="bottom"] .sidebar { flex-wrap: nowrap !important; }
+
+  /* Narrowing steps, picked by useShellFit from what fits: compact (account shows its avatar only), tight (brand text goes), icons. */
+  html[data-nav-mode="compact"] .sidebar-account > span, html[data-nav-mode="tight"] .sidebar-account > span, html[data-nav-mode="icons"] .sidebar-account > span,
+  html[data-nav-mode="compact"] .sidebar-account > svg:last-child, html[data-nav-mode="tight"] .sidebar-account > svg:last-child, html[data-nav-mode="icons"] .sidebar-account > svg:last-child,
+  html[data-nav-mode="tight"] .brand > div:not(.brand-mark), html[data-nav-mode="icons"] .brand > div:not(.brand-mark) { display: none !important; }
+  html[data-nav-mode="compact"] .sidebar-account, html[data-nav-mode="tight"] .sidebar-account, html[data-nav-mode="icons"] .sidebar-account { width: auto !important; }
+  html[data-nav-mode="icons"][data-mochi-shell="top"] .nav-item > span:not(.mochi-icon-wrap):not(.nav-new-dot),
+  html[data-nav-mode="icons"][data-mochi-shell="bottom"] .nav-item > span:not(.mochi-icon-wrap):not(.nav-new-dot) { display: none !important; }
+  html[data-nav-mode="icons"][data-mochi-shell="top"] .nav-item,
+  html[data-nav-mode="icons"][data-mochi-shell="bottom"] .nav-item { width: auto !important; min-width: 44px; justify-content: center; padding-inline: 12px !important; }
+
+  /* ---- Drawer: one behaviour for every shell ---------------------------------------------------------- */
+  .mobile-menu { display: none !important; }
+  html[data-nav-mode="drawer"] .mobile-menu { display: grid !important; flex: 0 0 auto; margin-right: 8px; }
+  html[data-nav-mode="drawer"] .sidebar { display: none !important; }
+  html[data-nav-mode="drawer"][data-nav-open="true"] .sidebar {
+    display: flex !important; position: fixed !important; inset: 0 auto 0 0 !important; z-index: 60;
+    width: var(--mochi-layout-drawer) !important; max-width: 100vw !important; height: 100dvh !important; max-height: none !important;
+    flex: none !important; flex-direction: column !important; flex-wrap: nowrap !important; align-items: stretch !important; gap: 0 !important;
+    margin: 0 !important; padding: calc(20px + var(--mochi-safe-top)) 14px 20px calc(14px + var(--mochi-safe-left)); overflow-x: hidden !important; overflow-y: auto !important;
+    border-radius: 0; border-width: 0 var(--mochi-border-width, 1px) 0 0; border-style: solid; border-color: var(--mochi-sidebar-border, var(--mochi-border));
+    background: var(--mochi-sidebar-background, var(--mochi-background-elevated));
+    box-shadow: 0 12px 40px color-mix(in srgb, var(--mochi-shadow, transparent) 55%, transparent);
+  }
+  html[data-nav-mode="drawer"][data-nav-open="true"] .sidebar .primary-nav { display: grid !important; grid-auto-flow: row; flex-direction: column !important; width: 100% !important; gap: 4px; }
+  html[data-nav-mode="drawer"][data-nav-open="true"] .sidebar .nav-item { width: 100% !important; min-height: 44px; justify-content: flex-start !important; flex-direction: row !important; height: auto !important; white-space: normal; padding-inline: 12px !important; }
+  html[data-nav-mode="drawer"][data-nav-open="true"] .sidebar .nav-item > span:not(.mochi-icon-wrap):not(.nav-new-dot) { display: inline !important; }
+  html[data-nav-mode="drawer"][data-nav-open="true"] .sidebar .brand { display: flex !important; padding: 0 12px 18px; }
+  html[data-nav-mode="drawer"][data-nav-open="true"] .sidebar .brand > div:not(.brand-mark) { display: block !important; }
+  html[data-nav-mode="drawer"][data-nav-open="true"] .sidebar .sidebar-account-wrap { order: 0 !important; width: auto !important; max-width: none !important; margin: 0 0 14px !important; }
+  html[data-nav-mode="drawer"][data-nav-open="true"] .sidebar .sidebar-account { width: 100% !important; }
+  html[data-nav-mode="drawer"][data-nav-open="true"] .sidebar .sidebar-account > span { display: grid !important; }
+  html[data-nav-mode="drawer"][data-nav-open="true"] .sidebar .sidebar-bottom { order: 2 !important; margin: auto 0 0 !important; width: 100% !important; }
+  html[data-nav-mode="drawer"][data-nav-open="true"] .sidebar .account-menu { position: static; width: auto; max-width: none; margin-top: 6px; }
+  html[data-nav-mode="drawer"][data-nav-open="true"] .main-content::after { content: ""; position: fixed; inset: 0; z-index: 55; background: color-mix(in srgb, var(--mochi-shadow, transparent) 45%, transparent); }
+  /* No-JavaScript fallback: same drawer below 700px. */
+  @media (max-width: 700px) {
+    html:not([data-nav-mode]) .mobile-menu { display: grid !important; margin-right: 8px; }
+    html:not([data-nav-mode]) .sidebar { display: none !important; }
+  }
+
+  /* ---- Top bar: shrinks instead of overflowing --------------------------------------------------------- */
+  .topbar { height: auto !important; min-height: var(--mochi-layout-topbar); min-width: 0 !important; max-width: 100%; flex-wrap: nowrap !important; gap: 10px; box-sizing: border-box; }
+  .breadcrumb { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .breadcrumb > strong { overflow: hidden; text-overflow: ellipsis; }
+  .topbar-actions { flex: 0 1 auto !important; min-width: 0; justify-content: flex-end; margin-left: auto; }
+  .topbar-actions > * { flex: 0 0 auto; }
+  .search-box { flex: 0 1 225px !important; width: auto !important; min-width: 0 !important; max-width: 225px !important; }
+  .search-box input { min-width: 0 !important; width: 100%; }
+  .notification-popover, .account-menu { max-width: calc(100vw - 16px); }
+
+  /* ---- Dialogs: always inside the window, scroll inside ------------------------------------------------- */
+  .modal-backdrop { padding: max(12px, var(--mochi-safe-top)) max(12px, var(--mochi-safe-right)) max(12px, var(--mochi-safe-bottom)) max(12px, var(--mochi-safe-left)) !important; box-sizing: border-box; overflow: hidden; }
+  .modal-backdrop > .modal, .modal-backdrop > [role="dialog"], .modal-backdrop > section {
+    max-width: 100% !important; max-height: 100% !important; min-width: 0 !important; overflow-y: auto !important; overflow-x: hidden !important; box-sizing: border-box;
+  }
+}

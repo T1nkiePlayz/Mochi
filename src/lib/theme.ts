@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readString, writeString } from "./storage";
+import { layerThemeCss } from "./themeLayers";
 
 export type ThemeManifest = {
   schemaVersion: 1;
@@ -197,7 +198,8 @@ export function applyTheme(theme: LoadedTheme): () => void {
 
   const style = document.createElement("style");
   style.id = styleId;
-  style.textContent = [buildTokenSheet(theme), theme.css].join("\n");
+  // Order must match index.html; repeating it here keeps a late-injected sheet from creating its own layer order.
+  style.textContent = "@layer reset, tokens, base, layout, theme, user;\n" + layerThemeCss([buildTokenSheet(theme), theme.css].join("\n"), theme.source === "user" ? "user" : "theme");
   document.head.appendChild(style);
 
   document.getElementById(fontStyleId)?.remove();

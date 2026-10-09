@@ -242,10 +242,7 @@ progress { accent-color: var(--mochi-accent-strong); }
 [data-mochi-shell="rail"] .primary-nav, [data-mochi-shell="rail"] .sidebar-bottom { width: 100%; }
 [data-mochi-shell="rail"] .account-menu { left: 100%; top: 0; width: 240px; margin-left: 10px; }
 
-@media (max-width: 800px) {
-  [data-mochi-shell="top"] .sidebar, [data-mochi-shell="bottom"] .sidebar { flex-wrap: wrap; padding: 10px 14px; gap: 8px; }
-  [data-mochi-shell="top"] .sidebar-account-wrap, [data-mochi-shell="bottom"] .sidebar-account-wrap { display: none; }
-}
+
 
 /* ---- Settings and theme picker ---------------------------------------------- */
 .settings-page { max-width: 880px; width: 100%; margin: 0; padding-top: 6px; }
