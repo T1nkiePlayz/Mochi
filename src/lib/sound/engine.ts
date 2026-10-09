@@ -25,14 +25,22 @@ const MAX_VOICES = 8;
 
 export type SoundScope = "bigpicture" | "launcher";
 
+let warned = false;
+const warnOnce = (message: string, error?: unknown) => { if (!warned) { warned = true; console.warn(`[sound] ${message}`, error ?? ""); } };
+
+/** Why interface sounds cannot play on this system, or null when nothing is known to be wrong. */
+export const AUDIO_UNAVAILABLE_MESSAGE = "Audio is unavailable on this system. On Linux, install the GStreamer plugins (gst-plugins-base and gst-plugins-good) and restart Mochi.";
+let unavailable = false;
+export const audioUnavailable = () => unavailable;
+
 function ensureContext(): AudioContext | null {
   if (context) return context;
   const Ctor = AudioCtor();
-  if (!Ctor) return null;
+  if (!Ctor) { unavailable = true; warnOnce("Web Audio is not available in this webview"); return null; }
   try {
     context = new Ctor({ latencyHint: "interactive" });
   } catch {
-    try { context = new Ctor(); } catch { return null; }
+    try { context = new Ctor(); } catch (error) { unavailable = true; warnOnce("could not create an AudioContext (missing GStreamer audio plugins?)", error); return null; }
   }
   master = context.createGain();
   master.gain.value = effectiveVolume(getSoundSettings());
@@ -64,6 +72,19 @@ export function unlockAudio(): boolean {
 
 export const isAudioUnlocked = () => context?.state === "running";
 
+/** Waits (briefly) for the context to be running. Call right after `unlockAudio()` inside the gesture; false means it never started. */
+export async function resumeAudio(timeoutMs = 1000): Promise<boolean> {
+  const ctx = context;
+  if (!ctx) return false;
+  if (ctx.state !== "running") {
+    try { await Promise.race([ctx.resume(), new Promise((resolve) => setTimeout(resolve, timeoutMs))]); } catch { /* ignore */ }
+  }
+  const running = (ctx.state as string) === "running";
+  if (!running) warnOnce(`AudioContext did not start (state: ${ctx.state}); GStreamer audio plugins may be missing`);
+  unavailable = !running;
+  return running;
+}
+
 function decode(ctx: AudioContext, data: ArrayBuffer): Promise<AudioBuffer> {
   // Older WebKit only has the callback form and returns undefined.
   return new Promise((resolve, reject) => {
@@ -94,7 +115,9 @@ export function loadPack(packId: string, installed?: SoundPackInfo): Promise<voi
   const ctx = ensureContext();
   if (!ctx) return Promise.resolve();
   const run = (async () => {
-    const fallback = synthesise(ctx, installed ? DEFAULT_PACK_ID : isBuiltinPack(packId) ? packId : DEFAULT_PACK_ID);
+    let fallback: Map<SoundEvent, AudioBuffer>;
+    try { fallback = synthesise(ctx, installed ? DEFAULT_PACK_ID : isBuiltinPack(packId) ? packId : DEFAULT_PACK_ID); }
+    catch (error) { warnOnce("could not synthesise the sound pack", error); throw error; }
     let gain = 1;
     if (installed) {
       gain = installed.volume;
@@ -108,6 +131,7 @@ export function loadPack(packId: string, installed?: SoundPackInfo): Promise<voi
     loadedKey = key;
   })();
   loading = run.finally(() => { if (loading === run) loading = null; });
+  loading.catch(() => {}); // callers handle `run`; don't leave a second unhandled rejection
   return run;
 }
 
@@ -126,23 +150,27 @@ export function soundAllowed(event: SoundEvent, scope: SoundScope, settings: Sou
 
 /** Plays a sound now. Never throws; quietly does nothing before the pack is ready or audio is unlocked. */
 export function play(event: SoundEvent, options: { force?: boolean; volume?: number } = {}): void {
-  const ctx = context;
+  const ctx = context, out = master;
   const buffer = buffers.get(event);
-  if (!ctx || !master || !buffer) return;
+  if (!ctx || !out || !buffer) return;
   const now = performance.now();
   if (!options.force && now - (lastPlayed.get(event) ?? -Infinity) < MIN_GAP_MS[event]) return;
   if (voices >= MAX_VOICES) return;
   lastPlayed.set(event, now);
-  try {
-    if (ctx.state === "suspended") void ctx.resume().catch(() => {});
+  const start = () => {
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     const gain = ctx.createGain();
     gain.gain.value = packGain * (options.volume ?? 1);
-    source.connect(gain).connect(master);
+    source.connect(gain).connect(out);
     voices += 1;
     source.onended = () => { voices = Math.max(0, voices - 1); source.disconnect(); gain.disconnect(); };
     source.start(0);
+  };
+  try {
+    // WebKit can also report "interrupted", not only "suspended"; schedule once the context is actually running.
+    if (ctx.state === "running") start();
+    else void ctx.resume().then(start).catch(() => {});
   } catch { /* audio unavailable */ }
 }
 
