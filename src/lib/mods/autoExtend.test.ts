@@ -23,7 +23,7 @@ describe("auto extend", () => {
     expect(merged.map((item) => item.author)).toEqual(["Ann", "Bob"]);
   });
   it("interleaves lists", () => {
-    expect(interleave([[1, 2, 3], ["a"], []])).toEqual([1, "a", 2, 3]);
+    expect(interleave<number | string>([[1, 2, 3], ["a"], []])).toEqual([1, "a", 2, 3]);
   });
   it("words the note", () => {
     expect(extendNote("CurseForge", 1, ["Nexus Mods"])).toBe("Showing mods from CurseForge and Nexus Mods because CurseForge has only 1 for this game.");

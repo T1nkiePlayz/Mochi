@@ -6,7 +6,7 @@ import { metasOfItem } from "./itemMeta";
 const tofu = (id: string, name: string, version: string, loader?: Tofu["loader"]) => ({ id, name, version, runtime: "Java", mods: 0, status: "Ready", loader }) as Tofu;
 const piko = (id: string, name: string, tofus: Tofu[], extra: Partial<Piko> = {}) => ({ id, name, tofus, ...extra }) as Piko;
 const mc = piko("mc", "Minecraft", [tofu("a", "Old Forge", "1.20.1", "forge"), tofu("b", "Fabric new", "1.21.1", "fabric"), tofu("c", "Fabric old", "1.19.4", "fabric")]);
-const terraria = piko("t", "Terraria", [tofu("t1", "tModLoader", "1.4.4")], { modLinks: { curseforge: { gameId: 431, slug: "terraria", name: "Terraria" } } });
+const terraria = piko("t", "Terraria", [tofu("t1", "tModLoader", "1.4.4")], { modLinks: { source: "user", curseforge: { gameId: 431, slug: "terraria", name: "Terraria" } } });
 const pikos = [mc, terraria, piko("s", "Stardew Valley", [tofu("s1", "Vanilla", "1.6")])];
 
 describe("buildTofuChoices", () => {
