@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { AlertTriangle, Gamepad2, RefreshCw, Rocket, Search } from "lucide-react";
 import { launcherArt, launcherIcon } from "../../lib/launcherArt";
+import minecraftGrassBlock from "../../assets/minecraft-grass-block.svg";
 import { detectImportSources, scanImportGames, type DetectedImportSource, type ImportSourceId, type ImportedGame } from "../../lib/sources";
+
+// The "Minecraft instances" source tile shows the game logo rather than the Prism launcher mark.
+const sourceIcon = (id: string): string => (id === "prism" ? minecraftGrassBlock : launcherIcon(id));
 
 export type PickerSelection = { games: ImportedGame[]; sources: ImportSourceId[] };
 
@@ -263,7 +267,7 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
                 onChange={() => toggleSource(source.id)}
               />
               <button type="button" className="sgp-source-main" aria-current={source.id === active} onClick={() => setActive(source.id)}>
-                <img className="sgp-source-icon" src={launcherIcon(source.id)} alt="" width={32} height={32} />
+                <img className="sgp-source-icon" src={sourceIcon(source.id)} alt="" width={32} height={32} />
                 <span className="sgp-source-copy"><strong>{source.name}</strong><small>{counts}</small></span>
                 {state?.status === "ready" && <span className="sgp-badge" aria-label={`${picked} of ${games.length} selected`}>{picked}/{games.length}</span>}
               </button>

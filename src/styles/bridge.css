@@ -106,9 +106,7 @@ footer { color: var(--mochi-text-faint); }
 .setup-next { color: var(--mochi-accent-text); border-color: var(--mochi-accent); background: var(--mochi-accent); }
 .setup-theme-card { border-color: var(--mochi-border); background: var(--mochi-surface); color: var(--mochi-text); }
 .setup-theme-card:hover, .setup-theme-card.selected { border-color: var(--mochi-accent); background: var(--mochi-surface-raised); }
-.setup-footer { display: flex !important; justify-content: space-between !important; width: 100%; }
-.setup-prev { margin-right: auto !important; }
-.setup-next { margin-left: auto !important; }
+.setup-footer { width: 100%; }
 .sidebar-account-wrap { margin-bottom: 24px; }
 .security-settings { padding: 16px 18px 18px; }
 .security-card { display: flex; align-items: center; gap: 11px; padding: 12px; border: 1px solid var(--mochi-border); border-radius: var(--mochi-radius-md); background: var(--mochi-surface-raised); }
