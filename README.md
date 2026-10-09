@@ -21,13 +21,14 @@
 > **Mochi builds are NOT code-signed or notarized.**
 >
 > - There is no Apple Developer account behind this project. The macOS DMG is **ad-hoc signed only**, so **Gatekeeper will block the first launch**. See [Install](#install) for how to open it.
-> - Linux packages (AppImage, deb, rpm) are not signed either. The only integrity check is the `SHA256SUMS.txt` published with each release.
-> - Only download Mochi from the official [GitHub Releases](https://github.com/T1nkiePlayz/Mochi/releases) page and verify `SHA256SUMS.txt` before running anything.
+> - Linux packages (AppImage, deb, rpm) are not platform-signed, but every release file carries a **GPG signature** and a **GitHub build attestation**, and the release lists `SHA256SUMS.txt`. See [Verify your download](#verify-your-download).
+> - Only download Mochi from the official [GitHub Releases](https://github.com/T1nkiePlayz/Mochi/releases) page and verify the download before running anything.
 > - **Early development:** storage formats, features and UI may change between versions. Do not treat Mochi as the only copy of data you care about (library, collections, playtime history). Keep your own backups.
 
 ## Table of contents
 
 - [Install](#install)
+- [Verify your download](#verify-your-download)
 - [Overview](#overview)
 - [Piko and Tofu](#piko-and-tofu)
 - [Features](#features)
@@ -47,10 +48,7 @@
 
 Download from the [Releases page](https://github.com/T1nkiePlayz/Mochi/releases) only.
 
-**Verify the download** (all platforms), with `SHA256SUMS.txt` from the same release in the same folder:
-
-    sha256sum -c --ignore-missing SHA256SUMS.txt      # Linux
-    shasum -a 256 -c --ignore-missing SHA256SUMS.txt  # macOS
+Verify what you downloaded before running it: see [Verify your download](#verify-your-download).
 
 ### Linux
 
@@ -65,6 +63,25 @@ One universal DMG is published. Because the app is only ad-hoc signed, macOS wil
 3. Advanced users, in Terminal: `xattr -dr com.apple.quarantine /Applications/Mochi.app`
 
 You only need to do this once per downloaded copy. Details and file locations: [docs/macos.md](docs/macos.md).
+
+## Verify your download
+
+Each release publishes three proofs; details and the one-time maintainer setup are in [docs/verify-downloads.md](docs/verify-downloads.md).
+
+```bash
+# 1. Checksums (SHA256SUMS.txt in the same folder; use shasum -a 256 on macOS)
+sha256sum -c --ignore-missing SHA256SUMS.txt
+
+# 2. GPG signature made with the Mochi release key
+curl -fsSL https://raw.githubusercontent.com/T1nkiePlayz/Mochi/main/docs/release-signing-key.asc | gpg --import
+gpg --verify SHA256SUMS.txt.asc SHA256SUMS.txt
+gpg --verify <file>.asc <file>
+
+# 3. GitHub build attestation: proves the file came from this repository's release workflow
+gh attestation verify <file> --repo T1nkiePlayz/Mochi
+```
+
+The release key fingerprint is listed in [docs/verify-downloads.md](docs/verify-downloads.md); compare it with what `gpg --fingerprint "Mochi Releases"` prints. A GPG "not certified" warning is expected. Verification proves the files are the ones the project built; it does not replace Apple notarization on macOS.
 
 ## Overview
 
