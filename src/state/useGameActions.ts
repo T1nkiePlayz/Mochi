@@ -1,7 +1,8 @@
 import { confirmAction } from "../lib/confirm";
 import { useEffect, useRef, useState } from "react";
 import type { Piko } from "../models";
-import { createGameShortcut, launchGame as startGame, openPath, removeGameShortcut, stopGame } from "../lib/platform";
+import { launchGame as startGame, openPath, removeGameShortcut, stopGame } from "../lib/platform";
+import { addPikoToSteam, createPikoShortcut, getShortcutTargets, runAddToSteam } from "../lib/shortcuts";
 import { describeModSync, subscribeNative, type ModSyncResult } from "../lib/nativeEvents";
 import { launchTargetFor } from "../lib/minecraftPiko";
 import type { Behavior } from "./settings";
@@ -83,10 +84,18 @@ export function useGameActions({ lib, behavior, refreshPlaytime, refreshSessions
     if (lib.selectedPikoId === game.id) { lib.setSelectedPikoId(""); lib.setSelectedTofuId(""); }
   };
 
-  const addShortcut = async (game: Piko) => {
+  const createShortcut = async (game: Piko, location: string) => {
     try {
-      await createGameShortcut(game.id, game.name);
-      notify("Shortcut added", `${game.name} now appears in your application menu.`);
+      await createPikoShortcut(game, location);
+      notify("Shortcut created", location === "desktop" ? `${game.name} was added to your Desktop.` : location === "applications" ? `${game.name} was added to your Applications folder.` : `${game.name} now appears in your application menu.`);
+    } catch (error) { setLaunchError(shortError(error)); }
+  };
+
+  const addToSteam = async (game: Piko, userId: string) => {
+    try {
+      const user = (await getShortcutTargets()).steamUsers.find((item) => item.id === userId);
+      if (!user) { setLaunchError("That Steam account was not found."); return; }
+      await runAddToSteam(game, user, { confirm: confirmAction, add: (id, allowRunning) => addPikoToSteam(game, id, allowRunning), notify });
     } catch (error) { setLaunchError(shortError(error)); }
   };
 
@@ -95,7 +104,7 @@ export function useGameActions({ lib, behavior, refreshPlaytime, refreshSessions
     if (folder) void openPath(folder).catch((error) => setLaunchError(shortError(error)));
   };
 
-  return { launchError, setLaunchError, isLaunching, launchGame, stopRunningGame, removeGame, addShortcut, openGameFolder, shortError };
+  return { launchError, setLaunchError, isLaunching, launchGame, stopRunningGame, removeGame, createShortcut, addToSteam, openGameFolder, shortError };
 }
 
 export type GameActions = ReturnType<typeof useGameActions>;

@@ -89,6 +89,77 @@ pub fn parse_shortcuts(data: &[u8]) -> Vec<Shortcut> {
     }).collect()
 }
 
+/// An order-preserving binary VDF value, so a file can be read, extended and written back unchanged.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Value {
+    Map(Vec<(String, Value)>),
+    Str(String),
+    Int(i32),
+}
+
+impl Value {
+    pub fn get(&self, key: &str) -> Option<&Value> {
+        match self { Value::Map(items) => items.iter().find(|(k, _)| k.eq_ignore_ascii_case(key)).map(|(_, v)| v), _ => None }
+    }
+    pub fn as_str(&self) -> Option<&str> { match self { Value::Str(s) => Some(s), _ => None } }
+}
+
+fn parse_map(data: &[u8], mut pos: usize, depth: usize) -> Option<(Vec<(String, Value)>, usize)> {
+    if depth > 16 { return None; }
+    let mut items = Vec::new();
+    while pos < data.len() {
+        let kind = data[pos];
+        pos += 1;
+        if kind == 0x08 { return Some((items, pos)); }
+        let (key, next) = cstring(data, pos)?;
+        pos = next;
+        let value = match kind {
+            0x00 => { let (children, next) = parse_map(data, pos, depth + 1)?; pos = next; Value::Map(children) }
+            0x01 => { let (text, next) = cstring(data, pos)?; pos = next; Value::Str(text) }
+            0x02 => { let bytes: [u8; 4] = data.get(pos..pos + 4)?.try_into().ok()?; pos += 4; Value::Int(i32::from_le_bytes(bytes)) }
+            // Other value types (floats, 64-bit ints, ...) are not used by shortcuts.vdf; refuse rather than drop them.
+            _ => return None,
+        };
+        items.push((key, value));
+    }
+    // A map without its end marker is truncated.
+    None
+}
+
+/// Parses a whole binary VDF file into its top-level map. Strict: a truncated or unknown file is `None`.
+pub fn parse_tree(data: &[u8]) -> Option<Vec<(String, Value)>> {
+    let (items, end) = parse_map(data, 0, 0)?;
+    (end == data.len()).then_some(items)
+}
+
+fn write_map(out: &mut Vec<u8>, items: &[(String, Value)]) {
+    for (key, value) in items {
+        match value {
+            Value::Map(children) => { out.push(0x00); out.extend(key.bytes().filter(|&b| b != 0)); out.push(0); write_map(out, children); }
+            Value::Str(text) => { out.push(0x01); out.extend(key.bytes().filter(|&b| b != 0)); out.push(0); out.extend(text.bytes().filter(|&b| b != 0)); out.push(0); }
+            Value::Int(number) => { out.push(0x02); out.extend(key.bytes().filter(|&b| b != 0)); out.push(0); out.extend(number.to_le_bytes()); }
+        }
+    }
+    out.push(0x08);
+}
+
+/// Serialises a tree the way Steam does (each map ends with `0x08`, the root map included).
+pub fn write_tree(items: &[(String, Value)]) -> Vec<u8> {
+    let mut out = Vec::new();
+    write_map(&mut out, items);
+    out
+}
+
+/// Steam's id for a non-Steam shortcut: CRC-32 of the quoted exe followed by the name, high bit set.
+pub fn shortcut_app_id(exe: &str, name: &str) -> u32 {
+    let mut crc = 0xFFFF_FFFFu32;
+    for byte in exe.bytes().chain(name.bytes()) {
+        crc ^= u32::from(byte);
+        for _ in 0..8 { crc = if crc & 1 != 0 { (crc >> 1) ^ 0xEDB8_8320 } else { crc >> 1 }; }
+    }
+    (!crc) | 0x8000_0000
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -113,5 +184,41 @@ mod tests {
         assert_eq!(shortcuts.len(), 1);
         assert_eq!(shortcuts[0].name, "Cool Game");
         assert_eq!(shortcuts[0].app_id, (-1_000_000i32) as u32);
+    }
+
+    fn sample_bytes() -> Vec<u8> {
+        let mut data = vec![0u8];
+        data.extend(b"shortcuts\0");
+        data.push(0);
+        data.extend(b"0\0");
+        data.push(2); data.extend(b"appid\0"); data.extend((-1_000_000i32).to_le_bytes());
+        data.push(1); data.extend(b"AppName\0Cool Game\0");
+        data.push(0); data.extend(b"tags\0"); data.push(8);
+        data.extend([8, 8, 8]);
+        data
+    }
+
+    #[test]
+    fn tree_round_trips_byte_for_byte() {
+        let bytes = sample_bytes();
+        let tree = parse_tree(&bytes).expect("parses");
+        assert_eq!(write_tree(&tree), bytes);
+        assert_eq!(parse_tree(&write_tree(&tree)), Some(tree));
+    }
+
+    #[test]
+    fn tree_rejects_truncated_and_unknown_data() {
+        let bytes = sample_bytes();
+        assert!(parse_tree(&bytes[..bytes.len() - 3]).is_none());
+        assert!(parse_tree(&[0, b'a', 0, 7, b'x', 0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 8]).is_none());
+    }
+
+    #[test]
+    fn crc_matches_the_standard_check_value_and_shortcut_ids_set_the_high_bit() {
+        // CRC-32 of "123456789" is the published check value 0xCBF43926 (its high bit is already set).
+        assert_eq!(shortcut_app_id("1234", "56789"), 0xCBF4_3926);
+        // Cross-checked with Python's zlib.crc32(...) | 0x80000000.
+        assert_eq!(shortcut_app_id("\"/usr/bin/xdg-open\"", "Test Game"), 0xD114_A57D);
+        assert_eq!(shortcut_app_id("a", "b") & 0x8000_0000, 0x8000_0000);
     }
 }

@@ -13,6 +13,8 @@ import { CollectionPicker } from "./library/CollectionPicker";
 import { TagEditor } from "./library/TagEditor";
 import { BacklogControl } from "./library/BacklogControl";
 import { backlogLabel, type Backlog } from "../lib/backlog";
+import { ShortcutMenu } from "./library/ShortcutMenu";
+import { getShortcutTargets } from "../lib/shortcuts";
 import { useDismiss } from "./library/useDismiss";
 import { SteamAchievements } from "./SteamAchievements";
 import { GameLogsButton } from "./GameLogs";
@@ -40,7 +42,8 @@ type Props = {
   onEdit: () => void;
   onRemove: () => void;
   onOpenFolder: () => void;
-  onShortcut: () => void;
+  onShortcutLocation: (location: string) => void;
+  onShortcutSteam: (userId: string) => void;
   collections: Collection[];
   tagSuggestions: string[];
   onToggleFavorite: () => void;
@@ -50,7 +53,7 @@ type Props = {
   onBacklogChange: (backlog: Backlog | undefined) => void;
 };
 
-export function GameDetails({ game, cloudStatus, running, playtime, launchError, launching, workspace, mods, canStop, capabilities, onBack, onPlay, onStop, onEdit, onRemove, onOpenFolder, onShortcut, collections, tagSuggestions, onToggleFavorite, onToggleCollection, onCreateCollection, onTagsChange, onBacklogChange }: Props) {
+export function GameDetails({ game, cloudStatus, running, playtime, launchError, launching, workspace, mods, canStop, onBack, onPlay, onStop, onEdit, onRemove, onOpenFolder, onShortcutLocation, onShortcutSteam, collections, tagSuggestions, onToggleFavorite, onToggleCollection, onCreateCollection, onTagsChange, onBacklogChange }: Props) {
   const [playTrailer, setPlayTrailer] = useState(false);
   const online = useOnline();
   const [showCollections, setShowCollections] = useState(false);
@@ -81,7 +84,7 @@ export function GameDetails({ game, cloudStatus, running, playtime, launchError,
         <GameLogsButton game={game} />
         <SaveBackupsButton game={game} />
         {folder && <button type="button" className="secondary-button" onClick={onOpenFolder}><FolderOpen size={14}/> Open folder</button>}
-        {capabilities?.supportsShortcuts && <button type="button" className="secondary-button" onClick={onShortcut}>Add to app menu</button>}
+        <ShortcutMenu loadTargets={getShortcutTargets} onLocation={onShortcutLocation} onSteam={onShortcutSteam} />
         <button type="button" className="secondary-button danger-outline" onClick={onRemove}><Trash2 size={14}/> Remove</button>
       </div>
       {launchError && <p className="auth-error launch-error">{launchError}</p>}

@@ -108,7 +108,8 @@ export function LibraryView() {
       onTagsChange={(tags) => lib.updateGame(details.id, { tags })}
       onBacklogChange={(backlog) => lib.updateGame(details.id, { backlog })}
       onOpenFolder={() => actions.openGameFolder(details)}
-      onShortcut={() => void actions.addShortcut(details)}
+      onShortcutLocation={(location) => void actions.createShortcut(details, location)}
+      onShortcutSteam={(userId) => void actions.addToSteam(details, userId)}
       workspace={<>
         <section className="tofu-section">
           <div className="section-heading"><div><p className="eyebrow">Environments</p><h3>Your Tofus</h3></div><button className="text-button" onClick={() => app.setShowTofuManager(true)}><MochiIcon name="manage" fallback={SlidersHorizontal} size={15} /> Manage</button></div>
