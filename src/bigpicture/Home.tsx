@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Play, Star } from "lucide-react";
 import { formatPlaytime, formatRelativeTime } from "../lib/format";
 import type { PlaytimeEntry } from "../lib/platform";
@@ -6,7 +7,7 @@ import { Art, hasCardArt } from "./Art";
 
 export type ShelfData = { id: string; title: string; items: Piko[] };
 
-export function GameCard({ piko, running, onOpen, onFocus }: { piko: Piko; running: boolean; onOpen: (piko: Piko) => void; onFocus: (piko: Piko) => void }) {
+export const GameCard = memo(function GameCard({ piko, running, onOpen, onFocus }: { piko: Piko; running: boolean; onOpen: (piko: Piko) => void; onFocus: (piko: Piko) => void }) {
   // Generated covers keep their title even when titles are hidden: initials alone do not identify a game.
   return <button type="button" className={`bp-card ${hasCardArt(piko) ? "" : "is-generated"}`.trim()} data-card-id={piko.id} aria-label={`${piko.name}${running ? ", playing now" : ""}${piko.favorite ? ", favourite" : ""}`}
     onClick={() => onOpen(piko)} onFocus={() => onFocus(piko)}>
@@ -16,7 +17,7 @@ export function GameCard({ piko, running, onOpen, onFocus }: { piko: Piko; runni
     {piko.favorite && <Star className="bp-card-star" size={20} fill="currentColor" aria-hidden="true" />}
     <span className="bp-card-title">{piko.name}</span>
   </button>;
-}
+});
 
 function Hero({ piko, entry, running, onPlay, onOpen }: { piko: Piko; entry?: PlaytimeEntry; running: boolean; onPlay: (piko: Piko) => void; onOpen: (piko: Piko) => void }) {
   return <section className="bp-hero" aria-label="Featured game">

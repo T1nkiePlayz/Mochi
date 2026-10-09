@@ -1,4 +1,5 @@
-import type { CSSProperties } from "react";
+import { memo, useRef, type CSSProperties } from "react";
+import { useNearViewport } from "../hooks";
 import type { Piko } from "../models";
 import { useArtworkUrl } from "./hooks";
 import { cssUrl } from "../lib/metadata/merge";
@@ -14,13 +15,16 @@ export function artStyle(url: string, piko: Piko | undefined): CSSProperties | u
 /** Whether a card shows real artwork (otherwise it draws a generated cover). */
 export const hasCardArt = (piko: Piko) => Boolean(piko.artworkCacheKey) || hasArtwork(piko);
 
-export function Art({ piko, className = "" }: { piko: Piko; className?: string }) {
-  const url = useArtworkUrl(piko);
+/** Covers load once near the viewport (shelves scroll sideways, hence the wide horizontal margin) and then stay loaded. */
+export const Art = memo(function Art({ piko, className = "" }: { piko: Piko; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const near = useNearViewport(ref, false, "200px 800px");
+  const url = useArtworkUrl(piko, near);
   const style = artStyle(url, piko);
-  if (style) return <div className={`bp-art ${className}`.trim()} style={style} aria-hidden="true" />;
+  if (style) return <div ref={ref} className={`bp-art ${className}`.trim()} style={style} aria-hidden="true" />;
   const art = generatedArt(piko);
-  return <div className={`bp-art generated-art ${className}`.trim()} style={generatedStyle(art)} aria-hidden="true"><GeneratedMarks art={art} /></div>;
-}
+  return <div ref={ref} className={`bp-art generated-art ${className}`.trim()} style={generatedStyle(art)} aria-hidden="true"><GeneratedMarks art={art} /></div>;
+});
 
 /** Full-bleed, crossfading background behind the whole screen. */
 export function BackdropLayer({ piko, override }: { piko: Piko | undefined; override?: string }) {
