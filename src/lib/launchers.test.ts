@@ -1,15 +1,14 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { LAUNCHERS, classifyLauncher, launcherForPiko, targetIds } from "./launchers";
 import { classifyLauncherEntry, matchesSmartFilter, sanitizeLibrary } from "./library";
 import type { Piko } from "../models";
+import rust from "../../src-tauri/src/sources/classify.rs?raw";
 
 const piko = (fields: Partial<Piko>): Piko => ({ id: "x", name: "X", description: "", accent: "", artwork: "", tofus: [], ...fields });
 const context = { playtime: new Map(), installed: new Map(), isRunning: () => false };
 
 describe("launcher table", () => {
   it("matches the Rust classification table exactly", () => {
-    const rust = readFileSync(new URL("../../src-tauri/src/sources/classify.rs", import.meta.url), "utf8");
     const list = (text: string) => [...text.matchAll(/"([^"]*)"/g)].map((match) => match[1]);
     const rows = [...rust.matchAll(/launcher!\("([^"]+)", "([^"]+)", \[([^\]]*)\], \[([^\]]*)\], \[([^\]]*)\]\)/g)]
       .map(([, id, name, ids, names, bundles]) => ({ id, name, ids: list(ids), names: list(names), bundles: list(bundles) }));
