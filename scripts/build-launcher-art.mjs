@@ -69,6 +69,8 @@ const brands = {
   cartridges: { color: "#7a5195", glyph: "play" },
   playonlinux: { color: "#c0392b", glyph: "play" },
   gamehub: { color: "#3d6a8c", glyph: "play" },
+  sober: { color: "#e2231a", icon: "siRoblox" },
+  vinegar: { color: "#00a2ff", icon: "siRobloxstudio" },
   launcher: { color: "#6a5acd", glyph: "play" },
 };
 
