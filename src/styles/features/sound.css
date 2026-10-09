@@ -1,0 +1,18 @@
+/* Settings > Sound: preview buttons and the installed sound pack list. */
+.sound-preview-row { align-items: start; flex-wrap: wrap; }
+.sound-preview { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: flex-end; max-width: min(34rem, 100%); }
+.sound-preview-button { display: inline-flex; align-items: center; gap: .35rem; min-height: 2rem; padding: 0 .7rem; font-size: .82rem; }
+.sound-pack-actions { display: inline-flex; flex-wrap: wrap; gap: .5rem; justify-content: flex-end; }
+.sound-pack-actions .secondary-button, .sound-pack-confirm .secondary-button { display: inline-flex; align-items: center; gap: .4rem; }
+.sound-pack-list { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.sound-pack { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem 1rem; padding: .8rem 1rem; border: 1px solid var(--mochi-border); border-radius: var(--mochi-radius-md); background: var(--mochi-surface); }
+.sound-pack-info { display: grid; gap: .15rem; min-width: 0; }
+.sound-pack-info strong { color: var(--mochi-text-strong); overflow-wrap: anywhere; }
+.sound-pack-info small { color: var(--mochi-text-muted); overflow-wrap: anywhere; }
+.sound-pack-confirm { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .5rem; color: var(--mochi-text); font-size: .9rem; }
+.sound-pack-status { margin: 0; padding: .6rem .9rem; border-radius: var(--mochi-radius-md); background: var(--mochi-accent-soft); color: var(--mochi-text-strong); font-size: .9rem; }
+.sound-pack-status.is-error { background: var(--mochi-danger-background); color: var(--mochi-danger-color); }
+.sound-pack-empty { margin: 0; }
+@media (max-width: 640px) {
+  .sound-preview, .sound-pack-actions { justify-content: flex-start; }
+}

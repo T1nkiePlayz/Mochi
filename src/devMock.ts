@@ -25,6 +25,7 @@ const fakeVersions = [
 const apiResult = (data: unknown) => ({ data, cached: false, stale: false, fetchedAt: Date.now() });
 
 const now = Math.floor(Date.now() / 1000);
+let mockSoundPacks: Array<Record<string, unknown> & { id: string }> = [];
 
 /** Deterministic pseudo-random history (about 14 months) so Stats and achievements have something to show. */
 function mockHistory(): unknown[] {
@@ -113,9 +114,22 @@ const handlers: Record<string, Handler> = {
   get_gamepads: () => [],
   gamepad_rumble: () => null,
   suspend_system: () => null,
+  get_power_capabilities: () => ({ suspend: true, restart: true, shutdown: true }),
+  power_action: (args) => { throw new Error(`Dev mock: would ${String(args.action)} the system now.`); },
   quit_mochi: () => null,
   "plugin:window|set_fullscreen": () => null,
   "plugin:window|is_fullscreen": () => false,
+  "plugin:window|minimize": () => null,
+  // Sound packs: an in-memory list; the mock files are not real audio, so the built-in sounds play instead.
+  list_sound_packs: () => mockSoundPacks,
+  import_sound_pack: () => {
+    const pack = { id: "dev-clicks", name: "Dev clicks", version: "1.0.0", author: "Mochi dev mock", description: "A pretend imported pack.", events: ["select", "back"], volume: 0.8, sizeBytes: 48_000 };
+    mockSoundPacks = [...mockSoundPacks.filter((item) => item.id !== pack.id), pack];
+    return pack;
+  },
+  remove_sound_pack: (args) => { mockSoundPacks = mockSoundPacks.filter((item) => item.id !== args.id); return null; },
+  export_sound_pack: () => null,
+  read_sound_pack_file: () => { throw new Error("Dev mock has no sound files."); },
   get_playtime: () => [
     { gameId: "a", name: "Minecraft", seconds: 93_600, lastPlayed: now - 3_600 },
     { gameId: "b", name: "Stardew Valley", seconds: 41_000, lastPlayed: now - 86_400 },
@@ -153,6 +167,7 @@ const handlers: Record<string, Handler> = {
   delete_game_artwork: (args) => { const store = mockArtwork(); delete store[String(args.cacheKey)]; localStorage.setItem("mochi:dev-artwork", JSON.stringify(store)); return null; },
   get_cached_game_artwork: (args) => mockArtwork()[String(args.cacheKey)] ?? null,
   cache_game_artwork: () => null,
+  "plugin:dialog|save": () => "/home/dev/sound-pack.zip",
   "plugin:dialog|open": (args) => {
     const options = (args.options ?? {}) as { filters?: Array<{ name: string }>; directory?: boolean };
     if (options.directory) return "/home/dev/Games";

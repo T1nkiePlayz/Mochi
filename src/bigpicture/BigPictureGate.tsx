@@ -4,6 +4,7 @@ import { useApp } from "../state/AppContext";
 import { emitAction, subscribeActions } from "../controller/manager";
 import { isTextField } from "../controller/keyboard";
 import type { Action } from "../controller/types";
+import { InterfaceSounds } from "./InterfaceSounds";
 import { enterBigPicture, syncInitialFullscreen, toggleBigPicture, useBigPictureActive } from "./mode";
 
 const BigPicture = lazy(() => import("./BigPicture"));
@@ -52,7 +53,7 @@ export function BigPictureGate({ children }: { children: ReactNode }) {
 
   // First-run setup comes first; Big Picture takes over once it is finished.
   if (active && !showFirstLaunchSetup) {
-    return <Suspense fallback={<div className="bp-loading" role="status" aria-label="Loading Big Picture" />}><BigPicture /></Suspense>;
+    return <><InterfaceSounds /><Suspense fallback={<div className="bp-loading" role="status" aria-label="Loading Big Picture" />}><BigPicture /></Suspense></>;
   }
-  return <>{children}</>;
+  return <><InterfaceSounds />{children}</>;
 }

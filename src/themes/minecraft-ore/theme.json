@@ -3,6 +3,7 @@
   "id": "minecraft-ore",
   "name": "Minecraft Ore",
   "version": "4.0.0",
+  "soundPack": "chiptune",
   "order": 3,
   "author": "Mochi",
   "description": "Ore UI Dark Diamond: charcoal panels, bevelled stone buttons and a diamond-blue toolbar, after Prism Launcher's Ore UI.",

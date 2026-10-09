@@ -2,12 +2,13 @@ import { Play, Star } from "lucide-react";
 import { formatPlaytime, formatRelativeTime } from "../lib/format";
 import type { PlaytimeEntry } from "../lib/platform";
 import type { Piko } from "../models";
-import { Art } from "./Art";
+import { Art, hasCardArt } from "./Art";
 
 export type ShelfData = { id: string; title: string; items: Piko[] };
 
 export function GameCard({ piko, running, onOpen, onFocus }: { piko: Piko; running: boolean; onOpen: (piko: Piko) => void; onFocus: (piko: Piko) => void }) {
-  return <button type="button" className="bp-card" data-card-id={piko.id} aria-label={`${piko.name}${running ? ", playing now" : ""}${piko.favorite ? ", favourite" : ""}`}
+  // Generated covers keep their title even when titles are hidden: initials alone do not identify a game.
+  return <button type="button" className={`bp-card ${hasCardArt(piko) ? "" : "is-generated"}`.trim()} data-card-id={piko.id} aria-label={`${piko.name}${running ? ", playing now" : ""}${piko.favorite ? ", favourite" : ""}`}
     onClick={() => onOpen(piko)} onFocus={() => onFocus(piko)}>
     <Art piko={piko} />
     <span className="bp-card-shade" aria-hidden="true" />
@@ -46,9 +47,11 @@ type Props = {
   onPlay: (piko: Piko) => void;
   onFocusCard: (piko: Piko) => void;
   onExit: () => void;
+  /** Wrap cards into a grid instead of horizontal shelves. */
+  grid: boolean;
 };
 
-export function Home({ hero, entryFor, shelves, query, isRunning, onOpen, onPlay, onFocusCard, onExit }: Props) {
+export function Home({ hero, entryFor, shelves, query, isRunning, onOpen, onPlay, onFocusCard, onExit, grid }: Props) {
   if (!hero) {
     return <section className="bp-empty" aria-live="polite">
       <h1>Nothing to play yet.</h1>
@@ -61,7 +64,7 @@ export function Home({ hero, entryFor, shelves, query, isRunning, onOpen, onPlay
     {query && !shelves.some((shelf) => shelf.items.length) && <section className="bp-empty" aria-live="polite"><h1>No games match “{query}”.</h1><p>Press B to clear the search.</p></section>}
     {shelves.filter((shelf) => shelf.items.length).map((shelf) => <section className="bp-shelf" key={shelf.id} data-shelf={shelf.id} aria-label={shelf.title}>
       <h2 className="bp-shelf-title">{shelf.title}<span>{shelf.items.length}</span></h2>
-      <div className="bp-shelf-row">
+      <div className={grid ? "bp-shelf-grid" : "bp-shelf-row"}>
         {shelf.items.map((piko) => <GameCard key={piko.id} piko={piko} running={isRunning(piko.id)} onOpen={onOpen} onFocus={onFocusCard} />)}
       </div>
     </section>)}

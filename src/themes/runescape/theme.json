@@ -3,6 +3,7 @@
   "id": "runescape",
   "name": "RuneScape",
   "version": "1.0.0",
+  "soundPack": "chiptune",
   "order": 7,
   "author": "Mochi",
   "description": "Gielinor stone: carved brown panels, bevelled inventory tabs on the right, shadowed yellow text and a quest-journal feel.",

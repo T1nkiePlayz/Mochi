@@ -82,6 +82,8 @@ pub struct UserThemeDescriptor {
     pub author: String,
     pub description: String,
     pub source: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sound_pack: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -410,6 +412,7 @@ pub fn list_user_themes(app: AppHandle) -> Result<Vec<UserThemeDescriptor>, Stri
                 author: manifest.author,
                 description: manifest.description,
                 source: "user".into(),
+                sound_pack: manifest.sound_pack,
             }),
             Err(error) => eprintln!("Ignoring invalid Mochi theme '{}': {error}", path.display()),
         }
@@ -524,6 +527,7 @@ pub fn import_theme(app: AppHandle, source_path: String) -> Result<UserThemeDesc
         author: manifest.author,
         description: manifest.description,
         source: "user".into(),
+        sound_pack: manifest.sound_pack,
     })
 }
 

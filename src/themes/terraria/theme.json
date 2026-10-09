@@ -3,6 +3,7 @@
   "id": "terraria",
   "name": "Terraria",
   "version": "1.0.0",
+  "soundPack": "chiptune",
   "order": 11,
   "author": "Mochi",
   "description": "Inventory blue: translucent royal panels with navy outlines, gold outlined titles and chunky item-slot cards.",

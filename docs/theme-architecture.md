@@ -204,6 +204,8 @@ Manifest sections map to CSS variables by camelCase-to-kebab-case (`components.p
 
 `"fonts"` lists Google Fonts stylesheet URLs (`https://fonts.googleapis.com/css...` only; the native backend rejects other hosts on import). Built-in themes ignore it: their fonts are bundled by `scripts/fetch-fonts.mjs`. For user themes Mochi downloads the fonts once into `<config>/fonts/<theme-id>/` and then works offline (see `docs/offline.md`). `"scheme"` (`light` or `dark`) tells the webview how to draw native controls such as scrollbars and date inputs.
 
+`"soundPack"` (optional) names the interface sound pack the theme suggests: a built-in pack (`mochi`, `chiptune`, `glass`) or the id of an installed sound pack. It applies while the user's Sound setting is "Match theme" (the default); unknown ids fall back to `mochi`. See `docs/sound-packs.md`.
+
 ## Built-in themes
 
 Built-in themes are real theme folders under `src/themes/`; every folder is discovered automatically at build time (`"order"` sorts the picker). Each uses a different shell and a different visual language:

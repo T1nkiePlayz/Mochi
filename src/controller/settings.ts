@@ -14,8 +14,6 @@ export type ControllerSettings = {
   promptStyle: PromptStyle;
   /** Open the built-in keyboard when a text field is confirmed with a controller. */
   onScreenKeyboard: boolean;
-  /** Short synthesized sounds in Big Picture. */
-  uiSounds: boolean;
 };
 
 export const defaultControllerSettings: ControllerSettings = {
@@ -25,7 +23,6 @@ export const defaultControllerSettings: ControllerSettings = {
   repeatSpeed: "normal",
   promptStyle: "auto",
   onScreenKeyboard: true,
-  uiSounds: false,
 };
 
 const styles: PromptStyle[] = ["auto", "xbox", "playstation", "switch", "deck", "keyboard"];
@@ -41,7 +38,6 @@ export function normalizeControllerSettings(raw: unknown): ControllerSettings {
     repeatSpeed: stored.repeatSpeed === "slow" || stored.repeatSpeed === "fast" ? stored.repeatSpeed : "normal",
     promptStyle: styles.includes(stored.promptStyle as PromptStyle) ? (stored.promptStyle as PromptStyle) : "auto",
     onScreenKeyboard: bool(stored.onScreenKeyboard, true),
-    uiSounds: bool(stored.uiSounds, false),
   };
 }
 
