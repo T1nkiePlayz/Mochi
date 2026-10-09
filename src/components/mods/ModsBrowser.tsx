@@ -43,8 +43,8 @@ type Props = {
 /** Search, filter and download mods from one source straight into the selected Tofu. */
 export function ModsBrowser({ source, target, filter, noun, collapsedCount }: Props) {
   const { lib, downloads } = useApp();
-  const active = downloads.filter((entry) => (tofu ? entry.tofuId === tofu.id : true) && entry.status === "downloading").length;
   const tofu = target.kind === "tofu" ? target.tofu : null;
+  const active = downloads.filter((entry) => (tofu ? entry.tofuId === tofu.id : true) && entry.status === "downloading").length;
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [sort, setSort] = useState(source.defaultSort);

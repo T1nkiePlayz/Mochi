@@ -17,6 +17,10 @@
   <img src="https://img.shields.io/badge/status-early%20development-orange?style=flat-square" alt="Early development">
 </p>
 
+<p align="center">
+  <img src="./docs/screenshots/library.webp" alt="The Mochi library with game covers, collections and the Continue playing shelf" width="100%">
+</p>
+
 > [!WARNING]
 > **Mochi builds are NOT code-signed or notarized.**
 >
@@ -30,6 +34,7 @@
 - [Install](#install)
 - [Verify your download](#verify-your-download)
 - [Overview](#overview)
+- [Screenshots](#screenshots)
 - [Piko and Tofu](#piko-and-tofu)
 - [Features](#features)
 - [Importing games and launching](#importing-games-and-launching)
@@ -91,6 +96,26 @@ Mochi is a cross-platform (Linux and macOS) desktop game launcher that sits abov
 - **Native where it matters.** React/TypeScript for the UI; Tauri 2 and Rust for launching, discovery, process tracking and downloads. OS-specific code lives in `src-tauri/src/platform/` and `src-tauri/src/sources/`, and the UI asks `get_platform_capabilities` instead of assuming an OS.
 - **Your launcher stays in charge of its games.** Imported games are launched through the owning launcher (Steam, Heroic, ...) so prefixes, overlays and authentication keep working.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="./docs/screenshots/game-details.webp" alt="Game page with details, Tofus and mods" width="100%"></td>
+    <td><img src="./docs/screenshots/discover.webp" alt="Discover: community mods from Modrinth, CurseForge and Nexus Mods" width="100%"></td>
+  </tr>
+  <tr>
+    <td><img src="./docs/screenshots/mods.webp" alt="Mod management for a Tofu" width="100%"></td>
+    <td><img src="./docs/screenshots/big-picture.webp" alt="Big Picture mode, the controller-first interface" width="100%"></td>
+  </tr>
+  <tr>
+    <td><img src="./docs/screenshots/stats.webp" alt="Playtime and activity stats" width="100%"></td>
+    <td><img src="./docs/screenshots/library-minecraft-ore.webp" alt="The library in the Minecraft Ore theme" width="100%"></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="./docs/screenshots/themes.webp" alt="Some of the 11 built-in themes" width="100%"><br><sub>Some of the 11 built-in themes</sub></td>
+  </tr>
+</table>
+
 ## Piko and Tofu
 
 **Piko = what you play. Tofu = how you play it.**
@@ -102,41 +127,48 @@ A **Piko** is a game in your library: name, artwork, genres, launch target, sour
 ### Library
 - Search across names, descriptions and categories (**Ctrl+K / Cmd+K**), sorting, and a *Continue playing* shelf.
 - **Favourites, tags and collections** (user-named, optional emoji, stored per profile) and **smart filters**: All, Favourites, Installed, Recently played, Unplayed, Most played, Launchers, Running now. Filter by source too.
-- Per-game page with playtime, Tofus, metadata, screenshots/trailer, Steam achievements and mod management.
+- Per-game page with playtime, Tofus, metadata, screenshots/trailer, Steam achievements and mod management. Screenshots open in a gallery with a lightbox and each set is credited to its real source (IGDB, Steam, SteamGridDB or your own).
 - Guided first-launch setup (welcome, account, accessibility, import) and an import picker with per-game selection.
+- Themed "Are you sure?" confirmations for destructive actions.
 - In-app notification centre plus desktop notifications (`notify-send` on Linux, `osascript` on macOS).
 
 ### Themes
-Eleven built-in themes: Mochi, Mochi Light, Minecraft Ore, Minecraft Dungeons, Subnautica, Stardew Valley, RuneScape, Fallout Pip-Boy, Cyberpunk 2077, Animal Crossing and Terraria. Themes are packages: a JSON manifest of design tokens (colours, shapes, fonts, shell position) and an optional `theme.css` and assets. You can import a theme file or folder in Settings > Appearance. The build validates themes, including contrast. See [src/themes/README.md](src/themes/README.md), [docs/theme-architecture.md](docs/theme-architecture.md) and [docs/theme-hooks.md](docs/theme-hooks.md).
+Eleven built-in themes (shown above): Mochi, Mochi Light, Minecraft Ore, Minecraft Dungeons, Subnautica, Stardew Valley, RuneScape, Fallout Pip-Boy, Cyberpunk 2077, Animal Crossing and Terraria. Themes are packages: a JSON manifest of design tokens (colours, shapes, fonts, shell position) and an optional `theme.css` and assets. Themes can suggest an interface sound pack. You can import a theme file or folder in Settings > Appearance. The build validates themes, including contrast. See [src/themes/README.md](src/themes/README.md), [docs/theme-architecture.md](docs/theme-architecture.md) and [docs/theme-hooks.md](docs/theme-hooks.md).
 
 ### Big Picture, controller and Steam Deck
 - **Big Picture mode**: a full-screen, controller-first interface with shelves, game pages, a side menu and a button legend. Enter from the top bar, F11, Start + Select, the tray, `mochi --big-picture` or `mochi://bigpicture`; it can also be the startup mode and is the default under gamescope.
+- **Display options** (Menu > Display): shelves or a wrapping grid, tile shape (portrait, landscape, square), tile size and when game titles show.
+- **Power menu** (Menu > Power): suspend or sleep, restart and shut down (Linux and macOS; each asks for a second press, and options the system does not allow are hidden), plus minimise, full screen and quit.
 - **Controller support** (Xbox, PlayStation, Switch Pro, Steam Deck, generic pads) for the whole app: spatial navigation, on-screen keyboard, configurable layout and prompts.
 - **Steam Deck** detection, 44px touch targets and instructions for adding Mochi to Steam.
 - See [docs/controller.md](docs/controller.md) and [docs/steam-deck.md](docs/steam-deck.md).
 
+### Interface sounds
+Short sounds for navigation, selection, dialogs, launches, downloads and achievements (Settings > Sound): on by default in Big Picture, off in the launcher, with mute, volume and movement-sound options. Built-in packs are Mochi, Chiptune and Glass, synthesised in code, and "Match theme" follows the pack a theme suggests. You can import (zip or folder), export and remove your own packs in Settings > Sound packs. Format and limits: [docs/sound-packs.md](docs/sound-packs.md).
+
 ### Metadata and artwork
 - Providers: **IGDB** (text, genres, screenshots, trailer, covers; needs a free Twitch Client ID/Secret), **SteamGridDB** (artwork; needs a free API key) and the **Steam Store** (no key, Steam games only). Choose the behaviour in Settings; IGDB matches are confirmed by you.
 - **Custom artwork**: pick, drop or crop your own image, or search SteamGridDB. Hand-edited fields and custom artwork are never overwritten by refreshes.
-- Results are cached and everything works offline from the cache. See [docs/metadata.md](docs/metadata.md).
+- Imported games get their desktop-entry icon (or the launcher's logo) as a local cover until real artwork is found. Results are cached and everything works offline from the cache. See [docs/metadata.md](docs/metadata.md).
 
 ### Playtime, stats and achievements
 - Playtime is credited when a game exits, for games Mochi starts directly and for games handed to another launcher (followed by process group or install folder; Linux and macOS). The Play button turns into **Stop**.
 - A **Stats** view shows playtime and activity.
 - **77 Mochi achievements** across Playtime, Streaks, Habits, Variety, Library, Explore, Mods and Steam categories, with rarities.
+- **Cloud saving** of achievements is a per-device toggle in Settings > Achievements (needs sign-in with cloud sync on); the same section can clear achievements data, locally and in the cloud.
 - **Steam achievements** per game, read from your local Steam account and public profile (optionally with your own Web API key, kept only on your device). See [docs/improvements/achievements.md](docs/improvements/achievements.md).
 
 ### Discover and mods
 - **Discover** browses community content from **Modrinth**, **CurseForge** and **Nexus Mods**. Each source can be switched off in Settings > Mod sources, and fixed rules pick the source per game (Minecraft Java: Modrinth and CurseForge; other CurseForge games: CurseForge; otherwise Nexus when you saved a Nexus key).
-- **Mods per Tofu**: install into a chosen Tofu, enable/disable/delete, **profiles** (saved mod sets), and **updates** for Modrinth files by hash. Downloads are done by Rust with a per-provider host allow-list, size cap, SHA-1 check and safe zip extraction. Nexus free accounts are linked out; `nxm://` links are not supported.
-- CurseForge uses Mochi's own server-side key (you need no account), shows "Powered by CurseForge", never caches CurseForge data and links back when an author disabled third-party downloads.
+- **Mods per Tofu**: install into a chosen Tofu, enable/disable/delete, **profiles** (Tofus can share a game folder and swap their mods, recorded in `.mochi/tofus.json` in the game folder), and **updates** for Modrinth, CurseForge and Nexus files. Updating keeps the older file for **rollback**. Buttons show Download, Downloading, Downloaded or Update available, and new imports are scanned in the background to find mods already installed. Downloads are done by Rust with a per-provider host allow-list, size cap, SHA-1 check and safe zip extraction. Nexus Mods `nxm://` links are handled (opt-in on Linux) and ask which Tofu to install into; there is no automatic dependency install.
+- CurseForge goes through a proxy that holds Mochi's own server-side key (you need no account), shows "Powered by CurseForge", never caches CurseForge data and opens the file's own CurseForge page when an author disabled third-party downloads.
 - See [docs/mods.md](docs/mods.md) and [docs/curseforge.md](docs/curseforge.md).
 
 ### Accessibility
 Settings > Accessibility covers text and interface size (85-150%), high contrast, colour-blind palettes, reduced motion/transparency, focus ring styling, a readable font, spacing, larger targets and text labels. Dialogs get focus traps, Escape handling and screen-reader names; `?` opens the shortcuts list. See [docs/accessibility.md](docs/accessibility.md).
 
 ### Updates
-Background check 10 seconds after start and every 6 hours (Settings > Updates > Auto-update), never installing without you pressing **Install & restart**. Updates are verified against an embedded public key. See [docs/updates.md](docs/updates.md).
+Background check 10 seconds after start and every 6 hours (Settings > Updates > Auto-update), never installing without you pressing **Install & restart**. Updates are verified against an embedded public key. **Opening a newer build.** When you open a newer AppImage, or a `Mochi.app` outside `/Applications`, Mochi checks it against a signed `install-hashes.json` from that version's GitHub release. If it cannot verify the build it warns you; if you continue, it installs the build and restarts from the installed location. See [docs/updates.md](docs/updates.md) and [docs/release.md](docs/release.md).
 
 ### Linux and macOS integration
 Application-menu shortcuts (`mochi://launch/<id>`), start at login, tray icon, managed AppImage copy and `mochi://` handler on Linux; LaunchAgent, Dock reopen and menu-bar hiding on macOS. Experimental opt-in features live in Settings > Experimental ([docs/experimental-features.md](docs/experimental-features.md)).
@@ -155,7 +187,7 @@ Application-menu shortcuts (`mochi://launch/<id>`), start at login, tray icon, m
 | Whisky bottle pins | no | yes | `open -a Whisky.app <exe>` |
 | Desktop apps categorised as games | yes | `.app` bundles in /Applications (also CrossOver launchers and known launchers) | the app itself |
 
-Not imported: Battle.net and GOG Galaxy libraries, and Prism/MultiMC instances (Prism itself is listed as a launcher on macOS). The Whisky pin format was inferred from its source and is not verified on a real machine. Imports never move, copy or uninstall anything, and you can point Mochi at a library folder manually when detection misses it.
+Battle.net, GOG Galaxy (macOS app bundles; offline installers under `~/GOG Games` on Linux) and Prism, Fjord, PolyMC and MultiMC Minecraft instances are imported too (see [docs/improvements/importers-round6.md](docs/improvements/importers-round6.md)); Battle.net and the Prism family are unverified on macOS hardware. The Whisky pin format was inferred from its source and is not verified on a real machine. Imports never move, copy or uninstall anything, and you can point Mochi at a library folder manually when detection misses it.
 
 Manually added games can target: executables, `.desktop` files, Flatpak IDs, `.sh`/`.bash`, `.py`, `.js`, macOS `.app` bundles, `.exe`/`.bat` through the Tofu's runtime (Wine or Proton, GameMode and MangoHud on Linux; CrossOver or Whisky on macOS), and the launcher URIs above. Runtimes are detected, not installed.
 
@@ -214,9 +246,9 @@ Push a tag `vX.Y.Z` (`-beta.N` for pre-releases) on the commit to ship. The rele
 
 - Builds are unsigned and unnotarized; macOS needs the manual Gatekeeper steps above.
 - macOS support is newer and less tested than Linux; some paths (Whisky, entitlements) are unverified on real hardware.
-- Source scanners read other launchers' local formats and may break when those change. Battle.net, GOG Galaxy and Prism/MultiMC libraries are not imported.
+- Source scanners read other launchers' local formats and may break when those change. Battle.net, GOG Galaxy and Prism code paths are unverified on real macOS hardware.
 - Runtimes (Wine, Proton, CrossOver) are detected, not installed.
-- Mod profiles and update checks cover Modrinth only; Nexus has no `nxm://` link handling and no automatic dependency install.
+- Nexus has no automatic dependency install.
 - Games handed to another launcher can only be stopped once Mochi detects them.
 - Synced paths may not work on another machine; sync is metadata-only.
 - Storage formats and UI may change before a stable release.
@@ -229,16 +261,15 @@ Not promises or dates.
 - [x] Themes (11), bundled fonts, accessibility, Big Picture, controller and Steam Deck support
 - [x] Metadata providers, custom artwork, collections, tags, smart filters
 - [x] Playtime, stats, achievements, Steam achievements
-- [x] Discover and mod management (Modrinth, CurseForge, Nexus)
+- [x] Discover and mod management (Modrinth, CurseForge, Nexus), Tofu mod profiles, `nxm://` links
+- [x] Battle.net, GOG Galaxy and Prism Launcher import
 - [x] Accounts, passkeys, MFA, optional cloud sync, auto-update, Linux packages, universal macOS DMG
 - [ ] Signed and notarized macOS builds (needs an Apple Developer account)
-- [ ] `nxm://` handling, Battle.net / GOG Galaxy / Prism import
-- [ ] Mod profiles and updates beyond Modrinth
 - [ ] Stable release
 
 ## Documentation index
 
-[accessibility](docs/accessibility.md), [controller](docs/controller.md), [Steam Deck and Big Picture](docs/steam-deck.md), [macOS](docs/macos.md), [metadata](docs/metadata.md), [mods](docs/mods.md), [CurseForge backend](docs/curseforge.md), [offline and fonts](docs/offline.md), [updates](docs/updates.md), [release](docs/release.md), [CSP](docs/security-csp.md), [platform architecture](docs/platform-architecture.md), [themes](docs/theme-architecture.md), [experimental features](docs/experimental-features.md), [achievements](docs/improvements/achievements.md).
+[accessibility](docs/accessibility.md), [controller](docs/controller.md), [Steam Deck and Big Picture](docs/steam-deck.md), [macOS](docs/macos.md), [metadata](docs/metadata.md), [mods](docs/mods.md), [CurseForge backend](docs/curseforge.md), [offline and fonts](docs/offline.md), [updates](docs/updates.md), [release](docs/release.md), [CSP](docs/security-csp.md), [platform architecture](docs/platform-architecture.md), [themes](docs/theme-architecture.md), [experimental features](docs/experimental-features.md), [sound packs](docs/sound-packs.md), [achievements](docs/improvements/achievements.md).
 
 ## Contributing
 
