@@ -3,7 +3,8 @@
  * `nexus-*` actions of `store-provider-credentials`) so Discover and the game pages can be previewed in a browser.
  *
  * Fixtures: Minecraft, Terraria and Stardew Valley are on CurseForge; Stardew Valley is also on Nexus Mods (so it
- * must show ONE CurseForge tab); "Cyberpunk 2077" is Nexus-only; "Hidden Test Game" has apiStatus 1 and must never
+ * must show ONE CurseForge tab; Terraria returns a single CurseForge project like the real API and also exists on Nexus,
+ * so Discover must add Nexus mods and say why; Balatro and "RuneScape: Dragonwilds" are Nexus-only); "Cyberpunk 2077" is Nexus-only; "Hidden Test Game" has apiStatus 1 and must never
  * be listed. Add `?premium` to the dev URL to pretend the Nexus account is Premium.
  */
 type Json = Record<string, unknown>;
@@ -12,6 +13,7 @@ const cfGames = [
   { id: 432, name: "Minecraft", slug: "minecraft", status: 1, apiStatus: 2 },
   { id: 431, name: "Terraria", slug: "terraria", status: 1, apiStatus: 2 },
   { id: 669, name: "Stardew Valley", slug: "stardewvalley", status: 1, apiStatus: 2 },
+  { id: 69271, name: "Minecraft Dungeons", slug: "minecraft-dungeons", status: 1, apiStatus: 2 },
   { id: 83374, name: "Satisfactory", slug: "satisfactory", status: 1, apiStatus: 2 },
   { id: 70667, name: "Hidden Test Game", slug: "hidden-test-game", status: 1, apiStatus: 1 },
 ].map((game) => ({ ...game, assets: { iconUrl: "", tileUrl: "", coverUrl: "" } }));
@@ -24,7 +26,7 @@ const categories = (gameId: number): Category[] => gameId === 432
 
 const words = ["Better", "Ultimate", "Tiny", "Mega", "Lucky", "Shiny", "Hardcore", "Cozy", "Rapid", "Ancient", "Neon", "Wild"];
 const nouns = ["Backpacks", "Tools", "Farming", "Lighting", "Maps", "Inventory", "Pets", "Weather", "Furniture", "Combat", "Cooking", "Fishing"];
-const modsFor = (gameId: number, classId?: number) => Array.from({ length: 140 }, (_, index) => {
+const modsFor = (gameId: number, classId?: number) => Array.from({ length: gameId === 431 ? 1 : 140 }, (_, index) => { // Terraria: the real CurseForge API shares only 1 project with apps
   const id = gameId * 1000 + index + 1 + (classId ? classId * 7 : 0);
   const name = `${words[index % words.length]} ${nouns[(index * 5) % nouns.length]} ${Math.floor(index / 12) + 1}`;
   const game = cfGames.find((candidate) => candidate.id === gameId);
@@ -76,6 +78,10 @@ function curseforge(body: Json): { status: number; json: unknown } {
 const nexusGames = [
   { id: "1303", name: "Stardew Valley", domain_name: "stardewvalley", mods: 90_000 },
   { id: "3333", name: "Cyberpunk 2077", domain_name: "cyberpunk2077", mods: 60_000 },
+  { id: "1049", name: "Terraria", domain_name: "terraria", mods: 160 },
+  { id: "6543", name: "Balatro", domain_name: "balatro", mods: 740 },
+  { id: "6600", name: "RuneScape: Dragonwilds", domain_name: "runescapedragonwilds", mods: 300 },
+  { id: "3279", name: "Minecraft Dungeons", domain_name: "minecraftdungeons", mods: 165 },
 ];
 const nexusMods = (domain: string) => Array.from({ length: 260 }, (_, index) => ({
   id: String(index + 1), modId: index + 1, name: `${domain} mod ${index + 1}`, author: `Modder${index % 7}`, summary: "A generated Nexus Mods entry for the dev server.",

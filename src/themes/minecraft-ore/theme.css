@@ -123,3 +123,7 @@ i.stat-cell { border-radius: 0; }
 .ach-icon { width: 46px; height: 46px; border: 2px solid #0E0E0F; border-radius: 0; background: #1C1D1D; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--rarity) 55%, #39393B); color: var(--rarity); }
 .stats-link { border-radius: 0; }
 .steam-ach-row, .steam-ach-icon { border-radius: 0; }
+
+/* Discover: game icons stay square like every other Ore image. */
+.discover-game-tabs, .nexus-game-picker-list { --mochi-game-icon-radius: 0; }
+.discover-game-tab, .discover-game-add { border-radius: 0; }

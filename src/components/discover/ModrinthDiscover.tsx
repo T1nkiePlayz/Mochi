@@ -1,30 +1,32 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, RefreshCw, WifiOff } from "lucide-react";
-import {
-  getModrinthProject, getModrinthVersions, startModrinthDownload,
-  type ModrinthProject, type ModrinthProjectDetails, type ModrinthProjectType,
-} from "../../lib/modrinth";
+import { Layers, RefreshCw, WifiOff } from "lucide-react";
+import { getModrinthProject, type ModrinthProject, type ModrinthProjectDetails, type ModrinthProjectType } from "../../lib/modrinth";
 import { CF_MINECRAFT_ID } from "../../lib/curseforge";
 import { createCurseforgeSource } from "../../lib/mods/curseforgeSource";
-import { createNexusSource } from "../../lib/mods/nexusSource";
-import { isLinkedTo } from "../../lib/mods/gameSupport";
+import { minecraftFilterFor } from "../../lib/mods/gameVersion";
 import { MINECRAFT_CLASS, minecraftSourceFor, resolveSources } from "../../lib/mods/resolveSources";
+import { createModrinthSource, modrinthFile, modrinthItem } from "../../lib/mods/modrinthSource";
 import type { Piko, Tofu } from "../../models";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useApp } from "../../state/AppContext";
 import { CurseforgeCredit } from "../mods/CurseforgeCredit";
+import { InstallNoticeBar } from "../mods/InstallNoticeBar";
 import { ModsBrowser } from "../mods/ModsBrowser";
+import { useModInstall } from "../mods/useModInstall";
 import { Select } from "../ui/Select";
 import { AddGamePicker } from "./AddGamePicker";
-import { DiscoveryImage, MinecraftIcon } from "./DiscoveryImage";
+import { AllGamesFeed } from "./AllGamesFeed";
+import { DiscoverTabs, type DiscoverTabItem } from "./DiscoverTabs";
+import { GameDiscoverTab } from "./GameDiscoverTab";
 import { MinecraftBrowser, minecraftTabs } from "./MinecraftBrowser";
-import { ProjectCard, ProjectSkeletons } from "./ProjectCard";
+import { MinecraftIcon } from "./DiscoveryImage";
 import { ProjectDetails } from "./ProjectDetails";
 import { TofuPicker } from "./TofuPicker";
-import { useDiscoverGames, type DiscoverGame } from "./useDiscoverGames";
-import { useModrinthFeed } from "./useModrinthFeed";
+import { metasOfItem } from "../../lib/mods/itemMeta";
+import { metaFromModFile } from "../../lib/mods/compat";
+import { useDiscoverGames } from "./useDiscoverGames";
 
-type DiscoveryTab = { kind: "all" } | { kind: "minecraft"; category: ModrinthProjectType } | { kind: "game"; game: DiscoverGame };
+type DiscoveryTab = { kind: "all" } | { kind: "minecraft"; category: ModrinthProjectType } | { kind: "game"; key: string };
 
 type Props = {
   tofu: Tofu;
@@ -36,7 +38,7 @@ type Props = {
 
 const loaderOptions = [{ value: "", label: "Any loader" }, { value: "fabric", label: "Fabric" }, { value: "forge", label: "Forge" }, { value: "neoforge", label: "NeoForge" }, { value: "quilt", label: "Quilt" }];
 const cfLabels: Record<ModrinthProjectType, string> = { mod: "mods", modpack: "modpacks", resourcepack: "resource packs", shader: "shaders" };
-const releaseOf = (tofu: Tofu) => /^\d+\.\d+(\.\d+)?$/.test(tofu.version) ? tofu.version : undefined;
+const tabId = (tab: DiscoveryTab) => tab.kind === "game" ? tab.key : tab.kind;
 
 export function ModrinthDiscover({ tofu, pikos, nexusConfigured, supabase }: Props) {
   const { behavior, setActiveNav } = useApp();
@@ -45,128 +47,103 @@ export function ModrinthDiscover({ tofu, pikos, nexusConfigured, supabase }: Pro
   const [tab, setTab] = useState<DiscoveryTab>({ kind: "all" });
   const [refreshKey, setRefreshKey] = useState(0);
   const [showPicker, setShowPicker] = useState(false);
-  const [message, setMessage] = useState("");
-  const [busyId, setBusyId] = useState("");
   const [details, setDetails] = useState<ModrinthProjectDetails | null>(null);
   const [detailsVersion, setDetailsVersion] = useState("");
-  const [tofuPicker, setTofuPicker] = useState<{ project: ModrinthProject; loader: string } | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const [picker, setPicker] = useState<{ project: ModrinthProject; file?: ReturnType<typeof modrinthFile> } | null>(null);
   const [provider, setProvider] = useState<"modrinth" | "curseforge">("modrinth");
   const [cfVersion, setCfVersion] = useState("");
   const [cfLoader, setCfLoader] = useState("");
   const [pendingKey, setPendingKey] = useState("");
+  const install = useModInstall();
 
   const minecraftSources = resolveSources({ minecraft: true }, settings);
-  const modrinthOn = settings.modrinth;
   const nothingOn = !settings.modrinth && !settings.curseforge && !(settings.nexus && nexusConfigured);
-  const preview = useModrinthFeed({ projectType: "mod", sort: "downloads" }, tab.kind === "all" && modrinthOn, 8);
+  const openSettings = () => setActiveNav("Settings");
 
   const detailsRequest = useRef(0);
   const openDetails = async (project: ModrinthProject, version: string) => {
-    setMessage("");
+    setLoadError("");
     const mine = ++detailsRequest.current;
     try {
       setDetailsVersion(version);
       const detail = await getModrinthProject(project.project_id);
       // Opening another project while this one loads must not let the slower answer replace it.
       if (mine === detailsRequest.current) setDetails({ ...project, ...detail, author: project.author || detail.author });
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to load project details."); }
+    } catch (error) { setLoadError(error instanceof Error ? error.message : "Unable to load project details."); }
   };
 
-  const install = async (project: ModrinthProject, target: Tofu, loader: string) => {
-    if (!target.path) { setMessage(`${target.name} has no folder yet. Choose one in the game's Tofu settings first.`); return; }
-    setBusyId(project.project_id);
-    setMessage("");
-    try {
-      const versions = await getModrinthVersions(project.project_id, target.version === "Local" ? undefined : target.version, project.project_type === "mod" ? loader || undefined : undefined);
-      const version = versions.find((item) => item.files.length > 0);
-      const file = version?.files.find((item) => item.primary) ?? version?.files[0];
-      if (!file || !version) throw new Error("No compatible Modrinth file was found for this Tofu.");
-      await startModrinthDownload(file.url, target.path, target.id, target.name, project.title, file.filename);
-      setMessage("Queued " + project.title + " for " + target.name + ".");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to queue this download."); }
-    finally { setBusyId(""); }
+  /** Modrinth downloads go through the same path as every other site: content folder, SHA-1, record, Downloads tab. */
+  const installModrinth = (project: ModrinthProject, file: ReturnType<typeof modrinthFile> | undefined, target: Tofu, force: boolean) => {
+    if (!target.path) { install.setNotice({ tone: "info", message: `${target.name} has no folder yet. Choose one in the game's Tofu settings first.` }); return; }
+    const source = createModrinthSource(project.project_type);
+    const item = modrinthItem(project);
+    if (file) void install.installFile(source, item, file, target);
+    else void install.installBest(source, item, target, minecraftFilterFor(target, project.project_type === "mod"), force);
   };
-
-  const gameSource = useMemo(() => {
-    if (tab.kind !== "game") return null;
-    const game = tab.game;
-    if (game.source === "curseforge" && game.cf) return createCurseforgeSource({ gameId: game.cf.id, gameSlug: game.cf.slug });
-    if (game.source === "nexus" && game.nexusDomain && supabase) return createNexusSource(supabase, { domain: game.nexusDomain, name: game.name });
-    return null;
-  }, [tab, supabase]);
 
   const minecraftCategory = tab.kind === "minecraft" ? tab.category : "mod";
   const effective = minecraftSourceFor(minecraftCategory, provider, settings);
   const minecraftCfSource = useMemo(() => createCurseforgeSource({ gameId: CF_MINECRAFT_ID, gameSlug: "minecraft", classId: MINECRAFT_CLASS[minecraftCategory] }), [minecraftCategory]);
-  const mcTofuFilter = (target: Tofu) => ({ gameVersion: releaseOf(target) });
-  const reload = () => { setRefreshKey((value) => value + 1); if (tab.kind === "all") preview.retry(); discover.retry(); };
+  const reload = () => { setRefreshKey((value) => value + 1); discover.retry(); };
   // A game just added from the picker opens as soon as its tab exists.
   useEffect(() => {
     const game = pendingKey ? discover.games.find((candidate) => candidate.key === pendingKey) : undefined;
-    if (game) { setTab({ kind: "game", game }); setPendingKey(""); }
+    if (game) { setTab({ kind: "game", key: game.key }); setPendingKey(""); }
   }, [pendingKey, discover.games]);
-  const loading = preview.loading || discover.cfLoading;
+  // A removed or switched-off game must not leave an empty page behind.
+  useEffect(() => { if (tab.kind === "game" && discover.games.length > 0 && !discover.games.some((game) => game.key === tab.key)) setTab({ kind: "all" }); }, [tab, discover.games]);
+  const activeGame = tab.kind === "game" ? discover.games.find((game) => game.key === tab.key) : undefined;
 
-  const gameCard = (game: DiscoverGame) => <button type="button" className="suggested-game-card" key={game.key} onClick={() => setTab({ kind: "game", game })}>
-    {game.iconUrl ? <DiscoveryImage src={game.iconUrl} className="discover-game-icon" alt="" label={game.name} /> : <span className="discover-game-icon fallback">{game.name.slice(0, 1)}</span>}
-    <span><strong>{game.name}</strong><small>{game.source === "curseforge" ? "CurseForge" : "Nexus Mods"}</small></span><span className="text-button">Browse</span>
-  </button>;
+  const mc432 = discover.cfGames?.find((game) => game.id === CF_MINECRAFT_ID);
+  const tabs: DiscoverTabItem[] = [
+    { id: "all", label: "All", icon: <Layers size={15} />, hint: "Mods from every game" },
+    ...(minecraftSources.length > 0 ? [{ id: "minecraft", label: "Minecraft", iconUrl: mc432?.assets?.iconUrl, icon: mc432?.assets?.iconUrl ? undefined : <MinecraftIcon /> }] : []),
+    ...discover.games.map((game) => ({ id: game.key, label: game.name, iconUrl: game.iconUrl })),
+  ];
+  const selectTab = (id: string) => {
+    if (id === "all") setTab({ kind: "all" });
+    else if (id === "minecraft") setTab({ kind: "minecraft", category: "mod" });
+    else setTab({ kind: "game", key: id });
+  };
 
   return <>
     <section className="modrinth-discover">
       <div className="discover-header">
         <div><p className="eyebrow">Discovery</p><h2>Discover</h2><p>Browse community content from the mod sites available to you. Most games need no account.</p></div>
-        <button type="button" className="secondary-button" onClick={reload} disabled={loading}>{loading ? <RefreshCw size={14} className="spin" /> : <RefreshCw size={14} />} Refresh</button>
+        <button type="button" className="secondary-button" onClick={reload} disabled={discover.cfLoading}>{discover.cfLoading ? <RefreshCw size={14} className="spin" /> : <RefreshCw size={14} />} Refresh</button>
       </div>
 
-      {nothingOn ? <p className="metadata-note" role="status">All mod sources are turned off. <button type="button" className="text-button" onClick={() => setActiveNav("Settings")}>Open Settings</button> and enable one under Mod sources.</p> : <>
-      <div className="discover-game-tabs" role="tablist" aria-label="Game discovery">
-        <button className={tab.kind === "all" ? "discover-game-tab active" : "discover-game-tab"} type="button" role="tab" aria-selected={tab.kind === "all"} onClick={() => setTab({ kind: "all" })}>All</button>
-        {minecraftSources.length > 0 && <button className={tab.kind === "minecraft" ? "discover-game-tab active" : "discover-game-tab"} type="button" role="tab" aria-label="Minecraft" title="Minecraft" aria-selected={tab.kind === "minecraft"} onClick={() => setTab({ kind: "minecraft", category: "mod" })}><MinecraftIcon /><span className="discover-game-name">Minecraft</span></button>}
-        {discover.games.map((game) => {
-          const active = tab.kind === "game" && tab.game.key === game.key;
-          return <button key={game.key} className={active ? "discover-game-tab active" : "discover-game-tab"} type="button" role="tab" aria-selected={active} onClick={() => setTab({ kind: "game", game })}>
-            {game.iconUrl ? <DiscoveryImage src={game.iconUrl} className="discover-game-icon" alt="" label={game.name} /> : <span className="discover-game-icon fallback">{game.name.slice(0, 1)}</span>}
-            <span className="discover-game-name">{game.name}</span>
-          </button>;
-        })}
-        {(settings.curseforge || discover.nexusOn) && <button className="discover-game-add" type="button" title="Add a game" aria-label="Add a game" onClick={() => setShowPicker(true)}><Plus size={17} /></button>}
-      </div>
+      {nothingOn ? <p className="metadata-note" role="status">All mod sources are turned off. <button type="button" className="text-button" onClick={openSettings}>Open Settings</button> and enable one under Mod sources.</p> : <>
+      <DiscoverTabs tabs={tabs} active={tabId(tab)} onSelect={selectTab} onAdd={settings.curseforge || settings.nexus ? () => setShowPicker(true) : undefined} />
       {discover.cfError && <div className="discover-error" role="alert"><p><WifiOff size={14} /> CurseForge games are unavailable</p><small>{discover.cfError}</small><button type="button" className="secondary-button" onClick={discover.retry}><RefreshCw size={13} /> Retry</button></div>}
-      {message && <p className="metadata-note" role="status">{message}</p>}
+      {loadError && <p className="metadata-note" role="status">{loadError}</p>}
+      {tab.kind === "minecraft" && effective === "modrinth" && <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />}
 
       {tab.kind === "all" && <>
-        {modrinthOn && <section className="discover-section"><div className="discover-section-heading"><div><h3>Popular Minecraft mods</h3><p>The most downloaded Minecraft mods from Modrinth.</p></div><button className="text-button" type="button" onClick={() => setTab({ kind: "minecraft", category: "mod" })}>Browse Minecraft</button></div>
-          {preview.offline && <p className="metadata-note discover-offline" role="status"><WifiOff size={13} /> Showing cached results (offline).</p>}
-          {preview.loading ? <div className="discover-grid" aria-busy="true"><ProjectSkeletons count={8} /></div> : preview.error ? <div className="discover-error" role="alert"><p>Could not load projects from Modrinth.</p><small>{preview.error}</small><button type="button" className="secondary-button" onClick={preview.retry}><RefreshCw size={13} /> Retry</button></div> : <div className="discover-grid">{preview.items.slice(0, 8).map((project, index) => <ProjectCard key={project.project_id} project={project} index={index} badge="Modrinth" onView={(value) => void openDetails(value, "")} onChoose={(value) => setTofuPicker({ project: value, loader: "" })} />)}</div>}
-        </section>}
-        <section className="discover-section"><div className="discover-section-heading"><div><h3>Games</h3><p>Pick a game to browse its mods. Each game uses one source: CurseForge when it is there, otherwise Nexus Mods.</p></div></div>
-          <div className="suggested-game-list">{minecraftSources.length > 0 && <button type="button" className="suggested-game-card" onClick={() => setTab({ kind: "minecraft", category: "mod" })}><MinecraftIcon /><span><strong>Minecraft</strong><small>{minecraftSources.map((id) => id === "modrinth" ? "Modrinth" : "CurseForge").join(" and ")}</small></span><span className="text-button">Browse</span></button>}{discover.games.map(gameCard)}</div>
-          {settings.curseforge && <CurseforgeCredit />}
-        </section>
+        <AllGamesFeed games={discover.games} pikos={pikos} supabase={supabase} settings={settings} nexusKey={nexusConfigured} refreshKey={refreshKey} onOpenSettings={openSettings} />
+        {settings.curseforge && <CurseforgeCredit />}
       </>}
 
-      {tab.kind === "minecraft" && (minecraftSources.length === 0 ? <p className="metadata-note" role="status">Modrinth and CurseForge are both turned off. <button type="button" className="text-button" onClick={() => setActiveNav("Settings")}>Open Settings</button> to enable one.</p> : <>
+      {tab.kind === "minecraft" && (minecraftSources.length === 0 ? <p className="metadata-note" role="status">Modrinth and CurseForge are both turned off. <button type="button" className="text-button" onClick={openSettings}>Open Settings</button> to enable one.</p> : <>
         {minecraftSources.length > 1 && <div className="mod-source-switch" role="group" aria-label="Mod source"><span>Source</span>{minecraftSources.map((id) => <button key={id} type="button" className={effective === id ? "active" : ""} aria-pressed={effective === id} onClick={() => setProvider(id as "modrinth" | "curseforge")}>{id === "modrinth" ? "Modrinth" : "CurseForge"}</button>)}</div>}
         {effective === "modrinth"
-          ? <MinecraftBrowser key={refreshKey} category={tab.category} onCategory={(category) => setTab({ kind: "minecraft", category })} tofuVersion={tofu.version} busy={busyId !== ""} onView={(project, version) => void openDetails(project, version)} onChoose={(project, loader) => setTofuPicker({ project, loader })} />
+          ? <MinecraftBrowser key={refreshKey} category={tab.category} onCategory={(category) => setTab({ kind: "minecraft", category })} tofuVersion={tofu.version} busy={install.busyId !== ""} onView={(project, version) => void openDetails(project, version)} onChoose={(project) => setPicker({ project })} />
           : <>
             <div className="discover-tabs" role="tablist" aria-label="Minecraft content categories">{minecraftTabs.map((item) => <button key={item.id} className={tab.category === item.id ? "active" : ""} type="button" role="tab" aria-selected={tab.category === item.id} onClick={() => setTab({ kind: "minecraft", category: item.id })}>{item.label}</button>)}</div>
             <div className="mods-controls"><input className="compact-input" value={cfVersion} onChange={(event) => setCfVersion(event.target.value)} placeholder="Game version" aria-label="Game version" />{tab.category === "mod" && <Select value={cfLoader} onChange={setCfLoader} options={loaderOptions} label="Loader" searchable={false} />}</div>
-            <ModsBrowser key={`${refreshKey}:${tab.category}`} source={minecraftCfSource} target={{ kind: "choose", pikos, ecosystem: { source: "curseforge", gameId: CF_MINECRAFT_ID }, tofuFilter: mcTofuFilter }} filter={{ gameVersion: cfVersion || undefined, loader: cfLoader || undefined }} noun={cfLabels[tab.category]} />
+            <ModsBrowser key={`${refreshKey}:${tab.category}`} source={minecraftCfSource} target={{ kind: "choose", pikos, gameName: "Minecraft", ecosystem: { source: "curseforge", gameId: CF_MINECRAFT_ID }, tofuFilter: (target) => minecraftFilterFor(target, tab.category === "mod") }} filter={{ gameVersion: cfVersion || undefined, loader: cfLoader || undefined }} noun={cfLabels[tab.category]} />
           </>}
       </>)}
 
-      {tab.kind === "game" && <section className="discover-section">
-        <div className="discover-section-heading"><div><h3>{tab.game.name} mods</h3><p>From {tab.game.source === "curseforge" ? "CurseForge" : "Nexus Mods"}.{tab.game.source === "nexus" ? " Free Nexus accounts download the file on the Nexus site." : ""}</p></div></div>
-        {gameSource
-          ? <ModsBrowser key={`${tab.game.key}:${refreshKey}`} source={gameSource} target={{ kind: "choose", pikos, ecosystem: tab.game.source === "curseforge" && tab.game.cf ? { source: "curseforge", gameId: tab.game.cf.id } : { source: "nexus", domain: tab.game.nexusDomain ?? "" } }} noun="mods" />
-          : <div className="discover-empty">This game is not available right now.</div>}
-      </section>}
+      {activeGame && <GameDiscoverTab game={activeGame} pikos={pikos} supabase={supabase} settings={settings} nexusKey={nexusConfigured} below={behavior.modAutoExtendBelow} refreshKey={refreshKey} onOpenSettings={openSettings} />}
       </>}
     </section>
-    {details && <ProjectDetails project={details} gameVersion={detailsVersion} onClose={() => setDetails(null)} />}
-    {tofuPicker && <TofuPicker title={tofuPicker.project.title} pikos={pikos} prefer={(piko) => isLinkedTo(piko, { source: "modrinth" })} onClose={() => setTofuPicker(null)} onInstall={(target) => { const { project, loader } = tofuPicker; setTofuPicker(null); void install(project, target, loader); }} />}
-    {showPicker && <AddGamePicker cfGames={discover.cfGames} cfEnabled={settings.curseforge} nexusEnabled={discover.nexusOn} onClose={() => setShowPicker(false)} onChoose={(entry) => { discover.add(entry); setShowPicker(false); setPendingKey(entry.k === "cf" ? `cf:${entry.id}` : `nx:${entry.domain}`); }} />}
+    {details && <ProjectDetails project={details} gameVersion={detailsVersion} tofu={tofu} onClose={() => setDetails(null)} onDownload={(project, file) => { setDetails(null); setPicker({ project, file }); }} />}
+    {picker && <TofuPicker title={picker.project.title} pikos={pikos} ecosystem={{ source: "modrinth" }} gameName="Minecraft"
+      metas={picker.file ? [metaFromModFile(picker.file)] : metasOfItem(modrinthItem(picker.project))} onClose={() => setPicker(null)}
+      onInstall={(target, _piko, force) => { const { project, file } = picker; setPicker(null); installModrinth(project, file, target, force); }} />}
+    {showPicker && <AddGamePicker cfGames={discover.cfGames} nexusGames={discover.nexusCatalog} cfEnabled={settings.curseforge} nexusEnabled={settings.nexus} nexusKey={nexusConfigured}
+      onClose={() => setShowPicker(false)} onChoose={(entry) => { discover.add(entry); setShowPicker(false); setPendingKey(entry.k === "cf" ? `cf:${entry.id}` : `nx:${entry.domain}`); }} />}
   </>;
 }

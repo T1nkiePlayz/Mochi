@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { metaFromModFile } from "../../lib/mods/compat";
+import { metasOfItem } from "../../lib/mods/itemMeta";
 import { open } from "@tauri-apps/plugin-dialog";
 import { RefreshCw, Search, WifiOff } from "lucide-react";
 import { getDownloads } from "../../lib/modrinth";
 import type { ModCategory, ModFile, ModItem, ModSource } from "../../lib/mods/types";
-import { isLinkedTo, type EcosystemRef } from "../../lib/mods/gameSupport";
+import { type EcosystemRef } from "../../lib/mods/gameSupport";
 import type { Piko, Tofu } from "../../models";
 import { useApp } from "../../state/AppContext";
 import { TofuPicker } from "../discover/TofuPicker";
@@ -22,7 +24,7 @@ type Filter = { gameVersion?: string; loader?: string };
 /** Where downloads go: one known Tofu (game page), or whichever Tofu the user picks per mod (Discover). */
 export type ModsTarget =
   | { kind: "tofu"; tofu: Tofu; onUpdateTofu: (patch: Partial<Tofu>) => void }
-  | { kind: "choose"; pikos: Piko[]; ecosystem: EcosystemRef; /** Version/loader narrowing derived from the chosen Tofu. */ tofuFilter?: (tofu: Tofu) => Filter | undefined };
+  | { kind: "choose"; pikos: Piko[]; ecosystem: EcosystemRef; /** Name of the game, used to find its Tofus when the game is not linked to the mod site yet. */ gameName?: string; /** Version/loader narrowing derived from the chosen Tofu. */ tofuFilter?: (tofu: Tofu, item: ModItem) => Filter | undefined };
 
 type Props = {
   source: ModSource;
@@ -78,11 +80,11 @@ export function ModsBrowser({ source, target, filter, noun }: Props) {
     return { ...chosen, path: folder };
   }, [target, lib]);
 
-  const run = useCallback(async (item: ModItem, file: ModFile | undefined, chosen: Tofu, owner?: Piko) => {
+  const run = useCallback(async (item: ModItem, file: ModFile | undefined, chosen: Tofu, owner?: Piko, force = false) => {
     const ready = await withFolder(chosen, owner);
     if (!ready) return;
     if (file) await install.installFile(source, item, file, ready);
-    else await install.installBest(source, item, ready, target.kind === "choose" ? target.tofuFilter?.(ready) : filter);
+    else await install.installBest(source, item, ready, target.kind === "choose" ? target.tofuFilter?.(ready, item) : filter, force);
   }, [withFolder, install, source, target, filter]);
 
   /** Card or modal action: download now (known Tofu) or ask which Tofu (Discover). */
@@ -105,9 +107,9 @@ export function ModsBrowser({ source, target, filter, noun }: Props) {
     <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />
     {active > 0 && <p className="metadata-note" role="status">{active} download{active === 1 ? "" : "s"} in progress. See Downloads.</p>}
     {!source.searchesServerSide && debounced && <p className="metadata-note">Nexus Mods cannot search by text, so this filters the mods Mochi has loaded so far. Scroll to load more.</p>}
-    <div className="mods-heading"><span aria-live="polite">{feed.loading ? "Loading..." : `${feed.items.length.toLocaleString()} of ${feed.total.toLocaleString()} ${noun}`}</span>{source.id === "curseforge" && <CurseforgeCredit />}</div>
+    <div className="mods-heading"><span aria-live="polite">{feed.loading ? "Loading..." : `${feed.items.length.toLocaleString()} of ${feed.total.toLocaleString()} ${noun}`}</span>{(source.id === "curseforge" || feed.items.some((item) => item.source === "curseforge")) && <CurseforgeCredit />}</div>
     {feed.loading && <div className="discover-grid mods-grid" aria-busy="true"><ProjectSkeletons count={6} /></div>}
-    {!feed.loading && feed.items.length > 0 && <div className="discover-grid mods-grid">{feed.items.map((item) => <ModCard key={item.id} item={item} actionLabel={actionLabel} busy={busy} onView={setViewing} onAction={(value) => act(value)} />)}</div>}
+    {!feed.loading && feed.items.length > 0 && <div className="discover-grid mods-grid">{feed.items.map((item) => <ModCard key={`${item.source}:${item.id}`} showSource={source.mixed === true || Boolean(item.game)} item={item} actionLabel={actionLabel} busy={busy} onView={setViewing} onAction={(value) => act(value)} />)}</div>}
     {feed.error && <div className="discover-error" role="alert">
       {feed.offline ? <p><WifiOff size={14} /> You appear to be offline</p> : <p>{feed.items.length ? "Could not load more." : `Could not load ${noun} from ${source.label}.`}</p>}
       <small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> Retry</button>
@@ -117,7 +119,8 @@ export function ModsBrowser({ source, target, filter, noun }: Props) {
     <div ref={sentinel} className="discover-sentinel" aria-hidden="true" />
     {!feed.hasMore && !feed.loading && !feed.error && feed.items.length > 0 && <p className="discover-end">You have reached the end. {feed.items.length.toLocaleString()} {noun}.</p>}
     {viewing && <ModDetailsModal source={source} item={viewing} filter={filter} installLabel={tofu ? `Download to ${tofu.name}` : "Choose Tofu instance"} busy={busy} notice={install.notice} onDismissNotice={() => install.setNotice(null)} onInstall={(file) => act(viewing, file)} onClose={() => setViewing(null)} />}
-    {picking && target.kind === "choose" && <TofuPicker title={picking.item.name} pikos={target.pikos} prefer={(piko) => isLinkedTo(piko, target.ecosystem)} onClose={() => setPicking(null)}
-      onInstall={(chosen, owner) => { const pending = picking; setPicking(null); void run(pending.item, pending.file, chosen, owner); }} />}
+    {picking && target.kind === "choose" && <TofuPicker title={picking.item.name} pikos={target.pikos} ecosystem={picking.item.ecosystem ?? target.ecosystem} gameName={picking.item.game ?? target.gameName}
+      metas={picking.file ? [metaFromModFile(picking.file)] : metasOfItem(picking.item)} onClose={() => setPicking(null)}
+      onInstall={(chosen, owner, force) => { const pending = picking; setPicking(null); void run(pending.item, pending.file, chosen, owner, force); }} />}
   </div>;
 }

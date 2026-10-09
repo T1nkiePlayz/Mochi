@@ -17,4 +17,12 @@ describe("normalizeBehavior (settings written by older versions)", () => {
     expect(normalizeBehavior({ autoUpdateMods: true }).autoUpdateMods).toBe(true);
     expect(normalizeBehavior({ autoUpdateMods: "yes" }).autoUpdateMods).toBe(false);
   });
+  it("the auto-extend threshold defaults to 15 and is clamped to 0..100", () => {
+    expect(defaultBehavior.modAutoExtendBelow).toBe(15);
+    expect(normalizeBehavior({ modAutoExtendBelow: 0 }).modAutoExtendBelow).toBe(0);
+    expect(normalizeBehavior({ modAutoExtendBelow: 500 }).modAutoExtendBelow).toBe(100);
+    expect(normalizeBehavior({ modAutoExtendBelow: -3 }).modAutoExtendBelow).toBe(0);
+    expect(normalizeBehavior({ modAutoExtendBelow: "x" }).modAutoExtendBelow).toBe(15);
+    expect(normalizeBehavior({ modAutoExtendBelow: 40 }).modAutoExtendBelow).toBe(40);
+  });
 });

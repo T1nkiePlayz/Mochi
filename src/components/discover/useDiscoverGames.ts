@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cfAllGames, type CfGame } from "../../lib/curseforge";
+import { KNOWN_NEXUS_GAMES, SEED_GAMES } from "../../lib/mods/gameCatalog";
 import { bestNameMatch } from "../../lib/mods/gameMatch";
+import { isSourceChoice, type GameSourceChoice } from "../../lib/mods/gameSources";
 import type { ModSourceSettings } from "../../lib/mods/resolveSources";
 import { getNexusGames, type NexusGame } from "../../lib/nexus";
 import { readJson, writeJson } from "../../lib/storage";
 import { supabase } from "../../lib/supabase";
 
-/** A game tab. A game on CurseForge always uses CurseForge; Nexus Mods only serves games that are not there. */
+/** A game tab. Its primary site is CurseForge when the game is there, otherwise Nexus Mods; `nexusDomain` is set when Nexus lists it too. */
 export type DiscoverGame = {
   key: string;
   name: string;
@@ -16,25 +18,27 @@ export type DiscoverGame = {
   nexusDomain?: string;
 };
 
-/** What the user added to Discover. Only ids and slugs are stored, never site content. */
-export type StoredGame = { k: "cf"; id: number; slug: string } | { k: "nx"; domain: string };
+/** What the user added to Discover. Only ids, slugs and names are stored, never site content. */
+export type StoredGame = { k: "cf"; id: number; slug: string; nx?: string } | { k: "nx"; domain: string; name?: string };
 const STORE = "mochi:discover-games";
 const LEGACY_NEXUS = "mochi:nexus-discovery-games";
-
-const seeds: Array<{ name: string; nexusDomain?: string }> = [
-  { name: "Stardew Valley", nexusDomain: "stardewvalley" },
-  { name: "Terraria" },
-  { name: "Satisfactory", nexusDomain: "satisfactory" },
-  { name: "Subnautica", nexusDomain: "subnautica" },
-  { name: "Subnautica: Below Zero", nexusDomain: "subnauticabelowzero" },
-  { name: "Five Nights at Freddy's: Security Breach", nexusDomain: "fnafsecuritybreach" },
-];
+const CHOICES = "mochi:discover-source-choice";
 
 function readStored(): StoredGame[] {
   const stored = readJson<unknown>(STORE, null);
   if (Array.isArray(stored)) return stored.filter((entry): entry is StoredGame => Boolean(entry) && typeof entry === "object" && ((entry as StoredGame).k === "cf" || (entry as StoredGame).k === "nx"));
   const legacy = readJson<unknown>(LEGACY_NEXUS, []);
   return Array.isArray(legacy) ? legacy.filter((domain): domain is string => typeof domain === "string").map((domain) => ({ k: "nx" as const, domain })) : [];
+}
+
+const sameEntry = (a: StoredGame, b: StoredGame) => a.k === b.k && (a.k === "cf" ? a.id === (b as { id: number }).id : a.domain === (b as { domain: string }).domain);
+
+/** The user's per-game site choice (Auto / CurseForge / Nexus Mods), remembered between runs. */
+export function useGameSourceChoice(gameKey: string): [GameSourceChoice, (choice: GameSourceChoice) => void] {
+  const [all, setAll] = useState<Record<string, unknown>>(() => readJson<Record<string, unknown>>(CHOICES, {}));
+  const value = all[gameKey];
+  const set = useCallback((choice: GameSourceChoice) => setAll((current) => { const next = { ...current, [gameKey]: choice }; writeJson(CHOICES, next); return next; }), [gameKey]);
+  return [isSourceChoice(value) ? value : "auto", set];
 }
 
 export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean) {
@@ -62,39 +66,45 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean)
   }, [nexusOn]);
 
   const games = useMemo<DiscoverGame[]>(() => {
+    // Wait for CurseForge's list so a game on both sites never shows up first as Nexus-only and then jumps.
+    if (settings.curseforge && !cfGames && !cfError) return [];
     const out = new Map<string, DiscoverGame>();
-    const nexusGame = (domain: string, fallbackName: string): DiscoverGame | null => {
-      if (!nexusOn) return null;
-      const known = catalog.find((game) => game.domainName === domain);
-      const name = known?.name ?? fallbackName;
-      // A game that is on CurseForge is served by CurseForge only.
-      const onCf = settings.curseforge && cfGames ? bestNameMatch(name, cfGames) : null;
-      if (onCf) return { key: `cf:${onCf.id}`, name: onCf.name, iconUrl: onCf.assets?.iconUrl, source: "curseforge", cf: onCf };
-      return { key: `nx:${domain}`, name, iconUrl: known?.iconUrl, source: "nexus", nexusDomain: domain };
-    };
     const put = (game: DiscoverGame | null) => { if (game && !out.has(game.key)) out.set(game.key, game); };
-    for (const seed of seeds) {
-      const match = settings.curseforge && cfGames ? bestNameMatch(seed.name, cfGames) : null;
-      if (match) put({ key: `cf:${match.id}`, name: match.name, iconUrl: match.assets?.iconUrl, source: "curseforge", cf: match });
-      else if (seed.nexusDomain) put(nexusGame(seed.nexusDomain, seed.name));
+    const nexusInfo = (domain: string) => catalog.find((game) => game.domainName === domain) ?? KNOWN_NEXUS_GAMES.find((game) => game.domainName === domain);
+    const cfGame = (game: CfGame, nexusDomain?: string): DiscoverGame => {
+      const domain = nexusDomain ?? (settings.nexus ? bestNameMatch(game.name, catalog.map((entry) => ({ ...entry, slug: entry.domainName })))?.domainName : undefined);
+      return { key: `cf:${game.id}`, name: game.name, iconUrl: game.assets?.iconUrl, source: "curseforge", cf: game, nexusDomain: settings.nexus ? domain : undefined };
+    };
+    const nexusOnly = (domain: string, fallbackName: string): DiscoverGame | null => {
+      if (!settings.nexus) return null;
+      const info = nexusInfo(domain);
+      const name = info?.name ?? fallbackName;
+      const onCf = settings.curseforge && cfGames ? bestNameMatch(name, cfGames) : null;
+      if (onCf) return cfGame(onCf, domain);
+      return { key: `nx:${domain}`, name, iconUrl: info?.iconUrl, source: "nexus", nexusDomain: domain };
+    };
+    for (const seed of SEED_GAMES) {
+      const byId = settings.curseforge && seed.cfId ? cfGames?.find((game) => game.id === seed.cfId) : undefined;
+      const match = byId ?? (settings.curseforge && cfGames ? bestNameMatch(seed.name, cfGames) : null);
+      if (match) put(cfGame(match, seed.nexusDomain));
+      else if (seed.nexusDomain) put(nexusOnly(seed.nexusDomain, seed.name));
     }
     for (const entry of stored) {
       if (entry.k === "cf") {
         const game = settings.curseforge ? cfGames?.find((candidate) => candidate.id === entry.id) : undefined;
-        if (game) put({ key: `cf:${game.id}`, name: game.name, iconUrl: game.assets?.iconUrl, source: "curseforge", cf: game });
-      } else put(nexusGame(entry.domain, entry.domain));
+        if (game) put(cfGame(game, entry.nx));
+      } else put(nexusOnly(entry.domain, entry.name ?? entry.domain));
     }
     return [...out.values()];
-  }, [cfGames, catalog, stored, settings.curseforge, nexusOn]);
+  }, [cfGames, cfError, catalog, stored, settings.curseforge, settings.nexus]);
 
   const add = useCallback((entry: StoredGame) => {
     setStored((current) => {
-      const exists = current.some((item) => item.k === entry.k && (entry.k === "cf" ? (item as { id: number }).id === entry.id : (item as { domain: string }).domain === entry.domain));
-      const next = exists ? current : [...current, entry];
+      const next = current.some((item) => sameEntry(item, entry)) ? current : [...current, entry];
       writeJson(STORE, next);
       return next;
     });
   }, []);
 
-  return { games, cfGames, cfError, cfLoading, nexusOn, add, retry: () => setReload((value) => value + 1) };
+  return { games, cfGames, cfError, cfLoading, nexusOn, nexusCatalog: catalog, add, retry: () => setReload((value) => value + 1) };
 }

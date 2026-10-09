@@ -48,8 +48,8 @@ export function useModFeed(source: ModSource | null, query: ModFeedQuery, enable
     try {
       const page = await active.search({ ...queryRef.current, offset: cursor.current.offset, limit: PAGE_SIZE });
       if (gen !== generation.current) return;
-      const fresh = page.items.filter((item) => !seen.current.has(item.id));
-      fresh.forEach((item) => seen.current.add(item.id));
+      const fresh = page.items.filter((item) => !seen.current.has(`${item.source}:${item.id}`));
+      fresh.forEach((item) => seen.current.add(`${item.source}:${item.id}`));
       const items = [...cursor.current.items, ...fresh];
       const done = !page.hasMore || items.length >= MAX_ITEMS;
       cursor.current = { items, offset: page.nextOffset, done };

@@ -1,3 +1,5 @@
+import type { EcosystemRef } from "./gameSupport";
+
 export type ModSourceId = "modrinth" | "curseforge" | "nexus";
 
 export const sourceLabels: Record<ModSourceId, string> = { modrinth: "Modrinth", curseforge: "CurseForge", nexus: "Nexus Mods" };
@@ -15,6 +17,10 @@ export type ModItem = {
   pageUrl: string;
   /** Provider label such as "Mods" or "Shaders". */
   kind?: string;
+  /** The game the mod belongs to, set in lists that mix several games (Discover > All). */
+  game?: string;
+  /** Which Tofus fit this item when it differs from the list's own game (mixed lists). */
+  ecosystem?: EcosystemRef;
   native: unknown;
 };
 
@@ -79,6 +85,8 @@ export interface ModSource {
   readonly defaultSort: string;
   /** False when the provider cannot search by text, so the query only filters what was already loaded. */
   readonly searchesServerSide: boolean;
+  /** True once the list also holds mods from other sites (auto-extend), so cards show which site each came from. */
+  readonly mixed?: boolean;
   categories(): Promise<ModCategory[]>;
   search(options: ModSearchOptions): Promise<ModPage>;
   details(item: ModItem): Promise<ModDetails>;

@@ -9,10 +9,10 @@ Three sources, each switchable under Settings > Mod sources (`Behavior.modSource
 | Game | Sources shown (best first) |
 |---|---|
 | Minecraft: Java Edition | Modrinth and CurseForge, selectable. Modrinth off: every content type (mods 6, modpacks 4471, resource packs 12, shaders 6552) comes from CurseForge. CurseForge off: Modrinth only. Both off: a message pointing to Settings. |
-| Any other game on CurseForge | CurseForge only. It replaces Nexus Mods for that game everywhere. A game on both sites has one CurseForge tab. |
-| A game not on CurseForge (or CurseForge off) | Nexus Mods, only when the user saved a Nexus key and Nexus is on. |
+| Any other game on CurseForge | CurseForge first. A game on both sites has one tab. When CurseForge lists fewer mods than the user's threshold (Settings > Mod sources, default 15, 0 = never, max 100) Discover adds the Nexus Mods list to the same list (see Discover below). |
+| A game not on CurseForge (or CurseForge off) | Nexus Mods, only when the user saved a Nexus key and Nexus is on; otherwise the tab says "Connect Nexus". |
 
-All of this is one pure function: `resolveSources` in `src/lib/mods/resolveSources.ts` (also `minecraftSourceFor`, `tabSource`). Never re-implement the priority in a component.
+The single-site rule above is `resolveSources`; the per-game Discover logic (source choice, extras, Nexus-key prompt) is `resolveGameSources` in `src/lib/mods/gameSources.ts`. Both are pure; never re-implement the priority in a component. `resolveSources` in `src/lib/mods/resolveSources.ts` (also `minecraftSourceFor`, `tabSource`). Never re-implement the priority in a component.
 
 ## Layers
 
@@ -24,6 +24,18 @@ All of this is one pure function: `resolveSources` in `src/lib/mods/resolveSourc
 - `src/state/useGameMods.ts` links a Piko to CurseForge/Nexus by normalised name once per session and stores the result in `piko.modLinks` (ids/slugs only; `source: "user"` entries are never overwritten).
 - `src/components/mods/` UI: `GameMods` (game page entry; Minecraft keeps `ModrinthManager`), `ModsBrowser` (search, category, sort, infinite scroll, download), `ModCard`, `ModDetailsModal` (file picker, required dependencies, restricted notice), `LinkGameModal`, `SafeHtml`.
 - `src/components/discover/` Discover tabs (`useDiscoverGames`, `AddGamePicker`, `ModrinthDiscover`). Every mod card has "Choose Tofu instance" (`TofuPicker`, lists Tofus of games linked to the mod's ecosystem first) and "View".
+
+## Discover (round 5)
+
+- **Tabs**: `DiscoverTabs` (fixed-size tabs, name always visible, roving arrow keys; icons through `GameAvatar`: full image, round, square in the Ore theme via `--mochi-game-icon-radius`, initials on a themed colour when there is no image). **All** is a mixed feed (`createMixedSource`, `AllGamesFeed`): Minecraft plus every added game take turns, each card shows its game and site; search runs in all of them; each game contributes its primary site only.
+- **Default games** (`SEED_GAMES` in `lib/mods/gameCatalog.ts`): Minecraft, Balatro (Nexus `balatro`), RuneScape: Dragonwilds (Nexus `runescapedragonwilds`), Minecraft Dungeons (CurseForge 69271, also Nexus `minecraftdungeons`), then Stardew Valley, Terraria, Satisfactory, Subnautica, Below Zero, FNAF Security Breach. CurseForge's `games` route has no Balatro and no Dragonwilds, so those two are Nexus only.
+- **Add a game** (`searchGameCatalog`): one row per game with a badge per site; case, punctuation, spacing ("Dragon wilds" finds "RuneScape: Dragonwilds") and aliases (`rsdw`, `mcd`, ...) are normalised; the Nexus games list is filtered on the client (the server's plain substring match missed the colon), and `KNOWN_NEXUS_GAMES` keep the seed games findable without a Nexus key.
+- **Per-game source** (`GameDiscoverTab`, `useGameSourceChoice`): when two sites list the game a switcher (Auto / CurseForge / Nexus Mods) appears and the choice is remembered per game. Auto = CurseForge, plus Nexus when CurseForge is short.
+- **Auto-extend** (`lib/mods/autoExtend.ts`, `extendedSource.ts`): decided once on the first page (never again while scrolling) from the primary site's total versus `Behavior.modAutoExtendBelow` (`DEFAULT_AUTO_EXTEND_BELOW` = 15 is only the default; clamped 0..100 by `clampAutoExtendBelow`). Extra sites' pages are interleaved with the primary's, duplicates (name + author) dropped, each card badged with its site, and a note explains why. A failing extra site never fails the list. Nexus without a key shows "Connect Nexus to see more mods" instead.
+- **CurseForge API limit**: for Terraria (gameId 431, class 4744) the API reports `totalCount` 1 even though curseforge.com shows hundreds of projects; they are not exposed to API clients. Discover says "CurseForge shares only N projects of this game with apps" with a link to the game on curseforge.com.
+- **Tofu picker** (`TofuPicker`, `buildTofuChoices`): Minecraft content lists only Minecraft instances grouped by loader and newest version, each with a compatible / may work / incompatible badge from `bestCompatibility` over what the listing or the chosen file says (`metasOfItem`, `metaFromModFile`); incompatible rows read "Install anyway" and force the newest file. Other games list only their own Tofus (linked by `modLinks` or by name).
+- **Versions tab** (`ProjectDetails`, `lib/mods/versionList.ts`): a table with loader and game-version chips (collapsed after three), release badge, date, size, one Download button per row, expandable changelog and files, filters for loader, game version and release type, and "Only what fits <Tofu>" with a highlight on versions that fit the selected Tofu.
+- **Avatars** (`Avatar`): lazy, no referrer, initials on error; the CSP `img-src` gained the hosts Modrinth avatars come from (see `docs/security-csp.md`).
 
 ## Rules to keep
 
