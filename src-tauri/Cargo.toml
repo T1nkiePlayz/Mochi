@@ -26,6 +26,8 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 sha1 = "0.10"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 libc = "0.2"
+sha2 = "0.10"
+minisign-verify = "0.2"
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp", "gif"] }
 gilrs = "0.11.2"
 # Reads macOS Info.plist / Whisky metadata; platform-neutral so the parsers are tested on Linux too.

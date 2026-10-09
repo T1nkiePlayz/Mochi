@@ -276,6 +276,18 @@ jobs:
           fi
           for dmg in "$bundle_dir"/dmg/*.dmg; do hdiutil verify "$dmg"; done
 
+      - name: Upload the install hash of the app executable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          app="src-tauri/target/universal-apple-darwin/release/bundle/macos/Mochi.app"
+          # The publish job folds this into install-hashes.json, which the app checks before self-installing.
+          shasum -a 256 "$app/Contents/MacOS/mochi" | cut -d' ' -f1 > install-hash-macos.txt
+          grep -Eq '^[0-9a-f]{64}$' install-hash-macos.txt
+          gh release upload "$TAG" install-hash-macos.txt --clobber
+
   publish:
     name: Checksums, signatures and publish
     needs: [prepare, linux, macos]
@@ -289,6 +301,8 @@ jobs:
       GH_REPO: ${{ github.repository }}
       GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
       GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     steps:
       # Only the public key and the checkout of the tag are needed from the repository.
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -305,6 +319,40 @@ jobs:
           [[ -n "$(ls -A)" ]] || { echo "::error::No release files were found to sign."; exit 1; }
           sha256sum -- * > SHA256SUMS.txt
           cat SHA256SUMS.txt
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+
+      # Manifest the app reads to verify a build before it installs itself. Kept out of assets/ while it is
+      # built so SHA256SUMS.txt is unchanged; the signed result is copied in afterwards for GPG signing.
+      - name: Build and sign install-hashes.json
+        run: |
+          set -euo pipefail
+          if [[ -z "$TAURI_SIGNING_PRIVATE_KEY" ]]; then
+            echo "::warning::TAURI_SIGNING_PRIVATE_KEY is not set: install-hashes.json is not published, so the app will ask before replacing an installed copy."
+            exit 0
+          fi
+          mkdir install-hashes && cd install-hashes
+          gh release download "$TAG" --pattern 'install-hash-macos.txt' || echo "::warning::install-hash-macos.txt is missing: the macOS list in install-hashes.json will be empty."
+          linux='[]'
+          for f in ../assets/*.AppImage; do
+            [[ -e "$f" ]] || continue
+            linux="$(jq -c --arg name "$(basename "$f")" --arg sha "$(sha256sum "$f" | cut -d' ' -f1)" '. + [{name: $name, sha256: $sha}]' <<<"$linux")"
+          done
+          macos='[]'
+          if [[ -f install-hash-macos.txt ]]; then
+            macos="$(jq -cn --arg sha "$(tr -d '[:space:]' < install-hash-macos.txt)" '[{name: "Mochi.app/Contents/MacOS/mochi", arch: "universal", sha256: $sha}]')"
+          fi
+          jq -n --arg version "${TAG#v}" --argjson linux "$linux" --argjson macos "$macos" \
+            '{version: $version, linux: $linux, macos: $macos}' > install-hashes.json
+          jq -e '[.linux[], .macos[]] | all(.sha256 | test("^[0-9a-f]{64}$"))' install-hashes.json >/dev/null \
+            || { echo "::error::install-hashes.json contains a malformed SHA-256."; exit 1; }
+          cat install-hashes.json
+          # Same key and format as the updater .sig files; the CLI reads the key from the TAURI_SIGNING_* variables.
+          npx --yes @tauri-apps/cli@2.12 signer sign install-hashes.json
+          test -s install-hashes.json.sig
+          cp install-hashes.json install-hashes.json.sig ../assets/
 
       - name: Sign with GPG
         run: |
@@ -350,7 +398,8 @@ jobs:
       - name: Upload checksums and signatures
         run: |
           cd assets
-          gh release upload "$TAG" SHA256SUMS.txt *.asc --clobber
+          shopt -s nullglob
+          gh release upload "$TAG" SHA256SUMS.txt *.asc install-hashes.json* --clobber
 
       - name: Add copy-and-paste verification commands to the release notes
         run: |
@@ -376,7 +425,7 @@ jobs:
             fi
             echo
             echo "# Build attestation"
-            for f in $(cd assets && ls | grep -v '\.asc$' | grep -v '^SHA256SUMS.txt$'); do echo "gh attestation verify $f --repo ${GH_REPO}"; done
+            for f in $(cd assets && ls | grep -v '\.asc$' | grep -v '^SHA256SUMS.txt$' | grep -v '^install-hashes\.json'); do echo "gh attestation verify $f --repo ${GH_REPO}"; done
             echo '```'
           } >> notes.md
           gh release edit "$TAG" --notes-file notes.md

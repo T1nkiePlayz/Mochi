@@ -110,6 +110,7 @@ const handlers: Record<string, Handler> = {
     supportsAppBundles: false, supportsStartup: true, supportsSystemNotifications: true, supportsShortcuts: true,
     isSteamDeck: new URLSearchParams(location.search).has("deck"), isGamescope: new URLSearchParams(location.search).has("gamescope"),
   }),
+  self_install_status: () => null, self_install_verify: () => ({ status: "verified", detail: "Dev mock." }), self_install_apply: () => null, self_install_skip: () => null,
   open_external_url: () => null, launch_game_tracked: () => null, stop_game: () => null, list_flatpaks: () => [],
   set_launch_on_startup: () => null, send_system_notification: () => null, create_game_shortcut: () => "/mock.desktop", remove_game_shortcut: () => null,
   get_system_status: () => ({ hasBattery: true, batteryPercent: 76, charging: false }),

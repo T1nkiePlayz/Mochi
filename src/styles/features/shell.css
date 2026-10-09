@@ -51,3 +51,7 @@
 .shot-lightbox-nav { position: absolute; top: 50%; translate: 0 -50%; width: 40px; height: 40px; border-radius: 50%; background: color-mix(in srgb, var(--mochi-surface) 80%, transparent); color: var(--mochi-text-strong); }
 .shot-lightbox-nav.prev { left: 6px; }
 .shot-lightbox-nav.next { right: 6px; }
+.self-install-dialog { outline: none; }
+.self-install-status { display: flex; align-items: flex-start; gap: 10px; }
+.self-install-spinner { flex: 0 0 auto; margin-top: 3px; color: var(--mochi-accent); animation: spin .9s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .self-install-spinner { animation: none; } }
