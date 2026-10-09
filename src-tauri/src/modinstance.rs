@@ -94,10 +94,12 @@ pub struct RecordInput { pub source: String, pub project_id: String, pub file_id
 
 impl RecordInput {
     pub fn into_record(self, file: &str, subdir: &str, sha1: Option<String>) -> ModRecord {
-        let source = if matches!(self.source.as_str(), "modrinth" | "curseforge" | "nexus") { self.source } else { "manual".into() };
+        let source: String = if matches!(self.source.as_str(), "modrinth" | "curseforge" | "nexus") { self.source } else { "manual".into() };
+        let is_curseforge = source == "curseforge";
         ModRecord {
             file: file.to_string(), subdir: subdir.to_string(), enabled: true, source, project_id: self.project_id.chars().take(80).collect(), file_id: self.file_id.chars().take(80).collect(),
-            version: self.version.chars().take(120).collect(), title: self.title.chars().take(160).collect(), icon_url: self.icon_url.filter(|url| url.starts_with("https://") && url.len() < 500),
+            version: self.version.chars().take(120).collect(), title: self.title.chars().take(160).collect(), // CurseForge terms: no stored API content beyond what identifies the installed file, so no icon for those.
+            icon_url: self.icon_url.filter(|url| !is_curseforge && url.starts_with("https://") && url.len() < 500),
             sha1, file_date: self.file_date.map(|value| value.chars().take(40).collect()), installed_at: now_ms(), rollback: None,
         }
     }
@@ -689,6 +691,10 @@ mod tests {
         let record = RecordInput { source: "evil".into(), icon_url: Some("javascript:alert(1)".into()), ..Default::default() }.into_record("a.jar", "", None);
         assert_eq!(record.source, "manual");
         assert!(record.icon_url.is_none());
+        let cf = RecordInput { source: "curseforge".into(), icon_url: Some("https://media.forgecdn.net/a.png".into()), ..Default::default() }.into_record("a.jar", "", None);
+        assert!(cf.icon_url.is_none());
+        let modrinth = RecordInput { source: "modrinth".into(), icon_url: Some("https://cdn.modrinth.com/a.png".into()), ..Default::default() }.into_record("a.jar", "", None);
+        assert!(modrinth.icon_url.is_some());
         assert!(content_dir(Path::new("/x"), "../etc").is_err());
         assert_eq!(content_dir(Path::new("/x"), "shaderpacks").unwrap(), PathBuf::from("/x/shaderpacks"));
     }

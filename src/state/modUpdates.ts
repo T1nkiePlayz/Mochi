@@ -1,6 +1,5 @@
 import { useSyncExternalStore } from "react";
 import type { Piko, Tofu } from "../models";
-import { applyModUpdate, checkTofuUpdates } from "../lib/mods/updateService";
 import type { ModSourceSettings } from "../lib/mods/resolveSources";
 import { dueForCheck, installableUpdates, type ModUpdateItem, type UpdateCheck } from "../lib/mods/updates";
 
@@ -58,7 +57,8 @@ export function ensureChecked(tofu: Tofu, piko: Piko | undefined, modSources: Mo
   const failed = (current.check?.notes.length ?? 0) > 0 && !current.check?.items.length;
   if (!force && lastAt && !dueForCheck(lastAt, Date.now(), failed ? RETRY_AFTER_FAILURE_MS : undefined)) return Promise.resolve(current.check);
   set(tofu.id, { ...current, status: "checking" });
-  const promise = checkTofuUpdates(tofu, piko, modSources).then((check) => {
+  // The check code (sources, API clients) loads on demand so it stays out of the app's entry chunk.
+  const promise = import("../lib/mods/updateService").then((service) => service.checkTofuUpdates(tofu, piko, modSources)).then((check) => {
     set(tofu.id, { ...getUpdateState(tofu.id), status: "done", check, message: undefined });
     return check;
   }).finally(() => { inflight.delete(tofu.id); });
@@ -76,7 +76,7 @@ export async function applyUpdates(tofu: Tofu, items: readonly ModUpdateItem[], 
     const before = getUpdateState(tofu.id);
     set(tofu.id, { ...before, updating: [...before.updating, item.path] });
     try {
-      await applyModUpdate(tofu, item);
+      await (await import("../lib/mods/updateService")).applyModUpdate(tofu, item);
       result.updated += 1;
       const state = getUpdateState(tofu.id);
       set(tofu.id, { ...state, check: state.check && { ...state.check, items: state.check.items.filter((entry) => entry.path !== item.path) } });
