@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { keepIfEqual } from "./lib/equal";
 import { getActiveSessions, type ActiveSession } from "./lib/platform";
@@ -23,7 +23,10 @@ export function useGameSessions() {
     const mine = ++seq.current;
     try { const next = await getActiveSessions(); if (mine === seq.current) setSessions(keepIfEqual(next)); } catch { /* browser/development mode */ }
   }, []);
-  const isRunning = useCallback((gameId: string) => sessions.some((session) => session.gameId === gameId), [sessions]);
+  // Keyed by content so isRunning only changes identity when the set of running games does.
+  const runningKey = useMemo(() => [...new Set(sessions.map((session) => session.gameId))].sort().join("\n"), [sessions]);
+  const running = useMemo(() => new Set(runningKey ? runningKey.split("\n") : []), [runningKey]);
+  const isRunning = useCallback((gameId: string) => running.has(gameId), [running]);
 
   useEffect(() => {
     void refresh();

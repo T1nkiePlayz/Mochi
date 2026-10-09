@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { editDistance, gameSearchMatches, normalizeText } from "./search";
+import type { Piko } from "../models";
+import { editDistance, gameSearchMatches, normalizeText, pikoSearchMatcher } from "./search";
 
 describe("search", () => {
   it("keeps non-latin names searchable", () => {
@@ -13,4 +14,13 @@ describe("search", () => {
     expect(gameSearchMatches("", "x")).toBe(false);
   });
   it("editDistance", () => { expect(editDistance("kitten", "sitting")).toBe(3); expect(editDistance("", "abc")).toBe(3); });
+  it("matcher follows piko edits (cache keyed by object)", () => {
+    const piko = { id: "a", name: "Stardew Valley", description: "", tags: ["farm"] } as Piko;
+    expect(pikoSearchMatcher("stardew vally")(piko)).toBe(true);
+    expect(pikoSearchMatcher("zelda")(piko)).toBe(false);
+    const edited = { ...piko, name: "Zelda" };
+    expect(pikoSearchMatcher("zelda")(edited)).toBe(true);
+    expect(pikoSearchMatcher("zelda")(piko)).toBe(false);
+    expect(pikoSearchMatcher("")(piko)).toBe(false);
+  });
 });
