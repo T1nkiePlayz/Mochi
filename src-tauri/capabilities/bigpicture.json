@@ -1,11 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "bigpicture",
-  "description": "Big Picture mode toggles fullscreen. Showing and focusing the window is done natively from Rust (tray, single-instance).",
+  "description": "Big Picture mode toggles fullscreen and can minimise the window. Showing and focusing the window is done natively from Rust (tray, single-instance).",
   "windows": [
     "main"
   ],
   "permissions": [
-    "core:window:allow-set-fullscreen"
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-is-fullscreen",
+    "core:window:allow-minimize"
   ]
 }

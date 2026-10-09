@@ -3,6 +3,7 @@
   "id": "cyberpunk",
   "name": "Cyberpunk 2077",
   "version": "1.0.0",
+  "soundPack": "glass",
   "order": 9,
   "author": "Mochi",
   "description": "Night City neon: razor-cut yellow panels on black, glitching cyan and magenta edges, and a slim rail.",

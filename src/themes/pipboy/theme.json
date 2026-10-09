@@ -3,6 +3,7 @@
   "id": "pipboy",
   "name": "Fallout Pip-Boy",
   "version": "1.0.0",
+  "soundPack": "chiptune",
   "order": 8,
   "author": "Mochi",
   "description": "A phosphor-green CRT terminal: scanlines, bracketed controls, monochrome cover art and tabs across the top.",

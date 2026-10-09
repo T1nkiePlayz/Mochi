@@ -20,6 +20,7 @@ mod platform;
 mod playtime;
 mod process;
 mod sources;
+mod soundpacks;
 mod steam_achievements;
 mod steam_store;
 mod themes;
@@ -240,7 +241,7 @@ fn main() {
             launch_game_tracked, stop_game, get_active_sessions, get_playtime, get_playtime_history, get_dir_size, get_downloads,
             list_flatpaks, list_runtimes, get_platform_capabilities, create_game_shortcut, remove_game_shortcut,
             detect_import_sources, scan_import_games,
-            bigpicture::get_system_status, bigpicture::suspend_system, bigpicture::quit_mochi, gamepad::get_gamepads, gamepad::gamepad_rumble,
+            bigpicture::get_system_status, bigpicture::suspend_system, bigpicture::power_action, bigpicture::get_power_capabilities, soundpacks::list_sound_packs, soundpacks::import_sound_pack, soundpacks::remove_sound_pack, soundpacks::export_sound_pack, soundpacks::read_sound_pack_file, bigpicture::quit_mochi, gamepad::get_gamepads, gamepad::gamepad_rumble,
             get_mochi_config_info, move_mochi_config, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
             fonts::cache_theme_fonts,
             game_artwork::cache_game_artwork, game_artwork::get_cached_game_artwork, game_artwork::clear_game_artwork_cache,

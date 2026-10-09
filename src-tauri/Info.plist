@@ -6,5 +6,6 @@
   <key>ITSAppUsesNonExemptEncryption</key><false/>
   <key>NSHumanReadableCopyright</key><string>Mochi contributors</string>
   <key>NSSupportsAutomaticGraphicsSwitching</key><true/>
+  <key>NSAppleEventsUsageDescription</key><string>Mochi asks System Events to restart or shut down your Mac when you choose Restart or Shut down in Big Picture.</string>
 </dict>
 </plist>

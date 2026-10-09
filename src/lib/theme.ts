@@ -26,6 +26,8 @@ export type ThemeManifest = {
   shell?: "left" | "right" | "top" | "bottom" | "rail";
   /** Whether native controls (scrollbars, form widgets) should render light or dark. */
   scheme?: "light" | "dark";
+  /** Interface sound pack this theme suggests: a built-in pack (mochi, chiptune, glass) or an installed pack id. */
+  soundPack?: string;
   /** Sort position in theme pickers; built-in themes only. */
   order?: number;
 };

@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import type { Piko } from "../models";
 import { useArtworkUrl } from "./hooks";
 import { cssUrl } from "../lib/metadata/merge";
-import { artworkBackground, generatedArt } from "../lib/fallbackArt";
+import { artworkBackground, generatedArt, hasArtwork } from "../lib/fallbackArt";
 import { GeneratedMarks, generatedStyle } from "../components/GeneratedArt";
 
 export function artStyle(url: string, piko: Piko | undefined): CSSProperties | undefined {
@@ -10,6 +10,9 @@ export function artStyle(url: string, piko: Piko | undefined): CSSProperties | u
   const fallback = piko ? artworkBackground(piko.artwork) : undefined;
   return fallback ? { backgroundImage: fallback } : undefined;
 }
+
+/** Whether a card shows real artwork (otherwise it draws a generated cover). */
+export const hasCardArt = (piko: Piko) => Boolean(piko.artworkCacheKey) || hasArtwork(piko);
 
 export function Art({ piko, className = "" }: { piko: Piko; className?: string }) {
   const url = useArtworkUrl(piko);

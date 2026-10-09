@@ -3,6 +3,7 @@
   "id": "subnautica",
   "name": "Subnautica",
   "version": "4.0.0",
+  "soundPack": "glass",
   "order": 5,
   "author": "Mochi",
   "description": "A pressurised-hull HUD: drifting bubbles, translucent scanner glass, chamfered panels and cold cyan light.",

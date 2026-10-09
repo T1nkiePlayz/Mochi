@@ -8,5 +8,7 @@
     validation does not apply to. If a notarized build ever fails to start, see docs/macos.md.
   -->
   <key>com.apple.security.network.client</key><true/>
+  <!-- Big Picture's Restart and Shut down ask System Events through osascript (macOS asks the user once). -->
+  <key>com.apple.security.automation.apple-events</key><true/>
 </dict>
 </plist>

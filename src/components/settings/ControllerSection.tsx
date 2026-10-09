@@ -40,7 +40,6 @@ export function ControllerSection() {
     <div className="setting-row"><span><strong>Button prompts</strong><small>Which button icons Mochi shows.</small></span>
       <Select<PromptStyle> label="Button prompts" value={settings.promptStyle} options={PROMPT_STYLES} onChange={(promptStyle) => update({ promptStyle })} align="end" /></div>
     <ToggleRow title="On-screen keyboard" description="Open a built-in keyboard when you confirm a text field with a controller." checked={settings.onScreenKeyboard} onChange={(onScreenKeyboard) => update({ onScreenKeyboard })} />
-    <ToggleRow title="Interface sounds" description="Short sounds when moving and selecting in Big Picture." checked={settings.uiSounds} onChange={(uiSounds) => update({ uiSounds })} />
     <div className="setting-row controller-list-row"><span><strong>Connected controllers</strong>
       <small>{pads.length ? "Press any button to test; the last action appears on the right." : "No controller detected. Connect one by cable or Bluetooth."}</small>
       {pads.length > 0 && <ul className="controller-list">{pads.map((pad) => <li key={pad.key}><span>{pad.name}</span><small>{FAMILY_NAMES[pad.family]}</small></li>)}</ul>}

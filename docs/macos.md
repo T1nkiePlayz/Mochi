@@ -50,7 +50,7 @@ Games started with `open` are children of launchd, not Mochi. Mochi matches proc
 
 ## Entitlements
 
-`entitlements.plist` only contains `com.apple.security.network.client`. The web view runs in Apple's WebContent process, Mochi has no JIT, and games are separate processes, so `allow-jit`, `allow-unsigned-executable-memory` and `disable-library-validation` were removed. This could not be tested on a Mac here: if a notarized build refuses to start, the first thing to try is re-adding `com.apple.security.cs.allow-jit` and `com.apple.security.cs.allow-unsigned-executable-memory`.
+`entitlements.plist` contains `com.apple.security.network.client` and `com.apple.security.automation.apple-events` (Big Picture's Restart and Shut down run `osascript -e 'tell application "System Events" to restart'`; macOS asks once, using `NSAppleEventsUsageDescription` from `Info.plist`; Sleep uses `pmset sleepnow` and needs no permission). The web view runs in Apple's WebContent process, Mochi has no JIT, and games are separate processes, so `allow-jit`, `allow-unsigned-executable-memory` and `disable-library-validation` were removed. This could not be tested on a Mac here: if a notarized build refuses to start, the first thing to try is re-adding `com.apple.security.cs.allow-jit` and `com.apple.security.cs.allow-unsigned-executable-memory`.
 
 ## Other notes
 

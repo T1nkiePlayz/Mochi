@@ -33,6 +33,7 @@ for (const folder of readdirSync(root, { withFileTypes: true }).filter((entry) =
   if (!manifest.name?.trim()) fail("missing name");
   if (manifest.shell && !SHELLS.includes(manifest.shell)) fail(`shell must be one of ${SHELLS.join(", ")}`);
   if (manifest.scheme && !["light", "dark"].includes(manifest.scheme)) fail("scheme must be light or dark");
+  if (manifest.soundPack && !["mochi", "chiptune", "glass"].includes(manifest.soundPack)) fail("soundPack must be a built-in sound pack (mochi, chiptune or glass)");
   for (const font of manifest.fonts ?? []) if (!font.startsWith("https://fonts.googleapis.com/css")) fail(`font "${font}" must be a Google Fonts stylesheet`);
   for (const color of REQUIRED_COLORS) if (!manifest.colors?.[color]) fail(`colors.${color} is required`);
   if (!existsSync(join(dir, "theme.css"))) fail("missing theme.css");
