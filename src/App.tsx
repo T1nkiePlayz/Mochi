@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, memo, useEffect } from "react";
 import { Gamepad2 } from "lucide-react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { MochiIcon } from "./components/MochiIcon";
@@ -6,7 +6,7 @@ import { UpdateBanner } from "./components/UpdateBanner";
 import { Sidebar } from "./components/layout/Sidebar";
 import { Topbar } from "./components/layout/Topbar";
 import { LibraryView } from "./views/LibraryView";
-import { AppProvider, useApp } from "./state/AppContext";
+import { AppProvider, shallowEqual, useApp, useAppSelector } from "./state/AppContext";
 import { BigPictureGate } from "./bigpicture/BigPictureGate";
 import { ControllerRuntime } from "./controller/ControllerRuntime";
 import { ShortcutsHelp } from "./components/ShortcutsHelp";
@@ -48,11 +48,11 @@ function CurrentView() {
   }
 }
 
-function Footer() {
-  const { cloud, account } = useApp();
-  const label = cloud.syncState === "syncing" ? "Cloud sync syncing…" : cloud.syncState === "synced" ? "Cloud sync active" : cloud.syncState === "error" ? "Cloud sync error" : account.user && !cloud.cloudSyncEnabled ? "Cloud sync disabled" : "Cloud sync unavailable";
+const Footer = memo(function Footer() {
+  const { syncState, cloudSyncEnabled, signedIn } = useAppSelector((app) => ({ syncState: app.cloud.syncState, cloudSyncEnabled: app.cloud.cloudSyncEnabled, signedIn: Boolean(app.account.user) }), shallowEqual);
+  const label = syncState === "syncing" ? "Cloud sync syncing…" : syncState === "synced" ? "Cloud sync active" : syncState === "error" ? "Cloud sync error" : signedIn && !cloudSyncEnabled ? "Cloud sync disabled" : "Cloud sync unavailable";
   return <footer><span>Mochi v{__APP_VERSION__} · Local-first by design</span><span><MochiIcon name="cloud" fallback={Cloud} size={13} /> {label}</span></footer>;
-}
+});
 
 function SkipLink() {
   return <a className="skip-link" href="#main-content" onClick={(event) => { event.preventDefault(); const main = document.getElementById("main-content"); main?.focus(); main?.scrollIntoView(); }}>Skip to content</a>;
