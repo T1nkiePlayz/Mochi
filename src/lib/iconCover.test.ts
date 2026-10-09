@@ -6,22 +6,22 @@ const providerCalls: Array<Record<string, unknown>> = [];
 vi.mock("./functions", () => ({
   invokeProviderFunction: (_client: unknown, body: Record<string, unknown>) => {
     providerCalls.push(body);
-    return Promise.resolve({ companies: [{ name: "Valve", slug: "valve", logo: { image_id: "abc123" } }] });
+    return Promise.resolve(body.slug === "valve" ? { company: { name: "Valve", logoUrl: "https://images.igdb.com/igdb/image/upload/t_logo_med/abc123.png" } } : { company: null });
   },
 }));
 
-const { applyIconCovers, applyLauncherLogos, pickCompanyLogo, LAUNCHER_COMPANIES } = await import("./iconCover");
+const { applyIconCovers, applyLauncherLogos, companyLogoUrl, LAUNCHER_COMPANIES } = await import("./iconCover");
 const { LAUNCHERS } = await import("./launchers");
 
 beforeEach(() => { invoke.mockReset(); providerCalls.length = 0; });
 
 describe("company logos", () => {
-  it("prefers slugs in order, then names, and ignores entries without a logo", () => {
-    const wanted = { slugs: ["steam", "valve"], names: ["Valve"] };
-    expect(pickCompanyLogo([{ slug: "valve", logo: { image_id: "v1" } }, { slug: "steam", logo: null }], wanted)).toBe("https://images.igdb.com/igdb/image/upload/t_logo_med_2x/v1.png");
-    expect(pickCompanyLogo([{ slug: "other", name: "valve", logo: { image_id: "n1" } }], wanted)).toContain("/n1.png");
-    expect(pickCompanyLogo([{ slug: "steam", logo: { image_id: "../x" } }], wanted)).toBeNull();
-    expect(pickCompanyLogo([], wanted)).toBeNull();
+  it("accepts only IGDB image URLs", () => {
+    expect(companyLogoUrl({ company: { logoUrl: "https://images.igdb.com/igdb/image/upload/t_logo_med/x1.png" } })).toContain("x1.png");
+    expect(companyLogoUrl({ company: { logoUrlLarge: "https://images.igdb.com/igdb/image/upload/t_original/x2.png" } })).toContain("x2.png");
+    expect(companyLogoUrl({ company: { logoUrl: "https://evil.example/x.png" } })).toBeNull();
+    expect(companyLogoUrl({ company: null })).toBeNull();
+    expect(companyLogoUrl(null)).toBeNull();
   });
 
   it("only names launchers Mochi knows", () => {
@@ -39,8 +39,9 @@ describe("company logos", () => {
       { id: "e", kind: "game", launcherId: "steam", artworkCacheKey: "ke" },
     ]);
     expect([...done].sort()).toEqual(["a", "b"]);
-    expect(providerCalls).toEqual([{ action: "igdb-company", slugs: LAUNCHER_COMPANIES.steam.slugs, names: LAUNCHER_COMPANIES.steam.names }]);
-    expect(invoke).toHaveBeenCalledWith("cache_icon_cover", { cacheKey: "ka", source: "https://images.igdb.com/igdb/image/upload/t_logo_med_2x/abc123.png", replace: true });
+    // Slugs are tried in order until one has a logo, once per launcher.
+    expect(providerCalls).toEqual([{ action: "igdb-company", slug: "steam", name: "Valve" }, { action: "igdb-company", slug: "valve", name: "Valve" }]);
+    expect(invoke).toHaveBeenCalledWith("cache_icon_cover", { cacheKey: "ka", source: "https://images.igdb.com/igdb/image/upload/t_logo_med/abc123.png", replace: true });
   });
 });
 

@@ -56,48 +56,48 @@ export async function eachLimited<T>(items: T[], limit: number, task: (item: T) 
 }
 
 /**
- * IGDB company profiles for launchers (igdb.com/companies/<slug>), tried in order, with the
- * company name as a fallback when no slug matches. Launchers without a company are left out.
+ * IGDB company profiles for launchers (igdb.com/companies/<slug>). The `igdb-company` action tries the
+ * slug, then the exact name; slugs are asked in order until one has a logo. Launchers without a company are left out.
  */
-export const LAUNCHER_COMPANIES: Record<string, { slugs: string[]; names: string[] }> = {
-  steam: { slugs: ["steam", "valve", "valve-corporation"], names: ["Valve", "Valve Corporation"] },
-  epic: { slugs: ["epic-games"], names: ["Epic Games"] },
-  gog: { slugs: ["gog-dot-com", "gog", "gog-sp-z-o-o"], names: ["GOG.com", "GOG sp. z o.o."] },
-  battlenet: { slugs: ["blizzard-entertainment"], names: ["Blizzard Entertainment"] },
-  ea: { slugs: ["electronic-arts"], names: ["Electronic Arts"] },
-  ubisoft: { slugs: ["ubisoft-entertainment", "ubisoft"], names: ["Ubisoft Entertainment", "Ubisoft"] },
-  rockstar: { slugs: ["rockstar-games"], names: ["Rockstar Games"] },
-  amazon: { slugs: ["amazon-games", "amazon-game-studios"], names: ["Amazon Games", "Amazon Game Studios"] },
-  jagex: { slugs: ["jagex"], names: ["Jagex"] },
-  minecraft: { slugs: ["mojang-studios", "mojang", "mojang-ab"], names: ["Mojang Studios", "Mojang"] },
-  "minecraft-bedrock": { slugs: ["mojang-studios", "mojang", "mojang-ab"], names: ["Mojang Studios", "Mojang"] },
-  itch: { slugs: ["itch-dot-io", "itch-io"], names: ["itch.io"] },
-  hytale: { slugs: ["hypixel-studios"], names: ["Hypixel Studios"] },
-  curseforge: { slugs: ["overwolf"], names: ["Overwolf"] },
-  gamejolt: { slugs: ["game-jolt"], names: ["Game Jolt"] },
+export const LAUNCHER_COMPANIES: Record<string, { slugs: string[]; name: string }> = {
+  steam: { slugs: ["steam", "valve", "valve-corporation"], name: "Valve" },
+  epic: { slugs: ["epic-games"], name: "Epic Games" },
+  gog: { slugs: ["gog-dot-com", "gog"], name: "GOG.com" },
+  battlenet: { slugs: ["blizzard-entertainment"], name: "Blizzard Entertainment" },
+  ea: { slugs: ["electronic-arts"], name: "Electronic Arts" },
+  ubisoft: { slugs: ["ubisoft-entertainment", "ubisoft"], name: "Ubisoft Entertainment" },
+  rockstar: { slugs: ["rockstar-games"], name: "Rockstar Games" },
+  amazon: { slugs: ["amazon-games", "amazon-game-studios"], name: "Amazon Games" },
+  jagex: { slugs: ["jagex"], name: "Jagex" },
+  minecraft: { slugs: ["mojang-studios", "mojang"], name: "Mojang Studios" },
+  "minecraft-bedrock": { slugs: ["mojang-studios", "mojang"], name: "Mojang Studios" },
+  itch: { slugs: ["itch-dot-io", "itch-io"], name: "itch.io" },
+  hytale: { slugs: ["hypixel-studios"], name: "Hypixel Studios" },
+  curseforge: { slugs: ["overwolf"], name: "Overwolf" },
+  gamejolt: { slugs: ["game-jolt"], name: "Game Jolt" },
 };
 
-type IgdbCompany = { name?: string; slug?: string; logo?: { image_id?: string } | null };
+type IgdbCompanyAnswer = { company?: { logoUrl?: string; logoUrlLarge?: string } | null };
 
-/** The preferred company among IGDB's answer: first by slug order, then by name order. */
-export function pickCompanyLogo(companies: IgdbCompany[], wanted: { slugs: string[]; names: string[] }): string | null {
-  const withLogo = companies.filter((company) => typeof company.logo?.image_id === "string" && /^[a-z0-9]+$/i.test(company.logo.image_id));
-  const bySlug = wanted.slugs.map((slug) => withLogo.find((company) => company.slug === slug)).find(Boolean);
-  const byName = wanted.names.map((name) => withLogo.find((company) => company.name?.toLowerCase() === name.toLowerCase())).find(Boolean);
-  const id = (bySlug ?? byName)?.logo?.image_id;
-  return id ? `https://images.igdb.com/igdb/image/upload/t_logo_med_2x/${id}.png` : null;
+/** A logo URL Mochi can cache (IGDB's image host only). */
+export function companyLogoUrl(answer: IgdbCompanyAnswer | null | undefined): string | null {
+  const url = answer?.company?.logoUrl || answer?.company?.logoUrlLarge;
+  return typeof url === "string" && /^https:\/\/images\.igdb\.com\/igdb\/image\/upload\/[\w/.-]+$/.test(url) ? url : null;
 }
 
-/** Looks up a launcher's company logo on IGDB (through the provider edge function). Null when unknown or offline. */
+/** Looks up a launcher's company logo on IGDB (through the provider edge function). Null when unknown, signed out or offline. */
 export async function launcherLogoUrl(client: SupabaseClient, launcherId: string): Promise<string | null> {
   const wanted = LAUNCHER_COMPANIES[launcherId];
   if (!wanted) return null;
-  try {
-    const data = await invokeProviderFunction<{ companies?: IgdbCompany[] }>(client, { action: "igdb-company", slugs: wanted.slugs, names: wanted.names });
-    return pickCompanyLogo(data.companies ?? [], wanted);
-  } catch {
-    return null;
+  for (const slug of wanted.slugs) {
+    try {
+      const url = companyLogoUrl(await invokeProviderFunction<IgdbCompanyAnswer>(client, { action: "igdb-company", slug, name: wanted.name }));
+      if (url) return url;
+    } catch {
+      return null; // no IGDB key, signed out or offline: the bundled art stays
+    }
   }
+  return null;
 }
 
 type CoverSubject = { id: string; artworkCacheKey?: string; artworkSource?: string; lockedFields?: string[]; launcherId?: string; kind?: string };
