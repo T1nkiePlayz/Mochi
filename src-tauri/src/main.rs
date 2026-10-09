@@ -17,6 +17,7 @@ mod modscan;
 mod nxm;
 mod modrinth;
 mod platform;
+mod selfinstall;
 mod playtime;
 mod process;
 mod sources;
@@ -173,21 +174,29 @@ fn startup_mark(since: std::time::Instant, step: &str) {
 fn main() {
     #[cfg(target_os = "linux")]
     platform::prepare_linux_webview_environment();
-    tauri::Builder::default()
+    // A build that will offer to install itself runs beside any running copy: no single-instance
+    // lock (the installed copy takes it after the relaunch) and no desktop integration yet.
+    let candidate = selfinstall::detect();
+    let installing = candidate.is_some();
+    let mut builder = tauri::Builder::default()
         // Tells the frontend how it was started before the first paint.
         .plugin(tauri::plugin::Builder::<tauri::Wry, ()>::new("mochi-boot").js_init_script(bigpicture::boot_script(bigpicture::parse_flags(std::env::args()))).build())
-        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+        .manage(std::sync::Mutex::new(candidate));
+    if !installing {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             // The window is hidden to the tray on close, so a second launch or a
             // mochi:// link must bring it back or it appears to do nothing.
             tray::show_mochi(app);
             // `mochi --big-picture` from a Steam shortcut switches the running instance over.
             if bigpicture::parse_flags(&argv).big_picture { let _ = app.emit("mochi-bigpicture", true); }
-        }))
+        }));
+    }
+    builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
-        .setup(|app| {
+        .setup(move |app| {
             let startup = std::time::Instant::now();
             // Desktop integration (registering the mochi:// handler, copying the AppImage, writing desktop
             // entries) spawns helper processes and touches several folders; it must neither delay
@@ -202,7 +211,7 @@ fn main() {
                         // Only mochi:// here; nxm:// (also in the config) is opt-in, see nxm.rs.
                         if let Err(error) = handle.deep_link().register("mochi") { eprintln!("Mochi deep link registration: {error}"); }
                     }
-                    if let Err(error) = platform::ensure_platform_integration() { eprintln!("Mochi platform integration: {error}"); }
+                    if !installing { if let Err(error) = platform::ensure_platform_integration() { eprintln!("Mochi platform integration: {error}"); } }
                     nxm::apply_saved(&handle);
                 });
             }
@@ -256,6 +265,7 @@ fn main() {
             modscan::hash_mod_files, modscan::modrinth_identify, modscan::record_instance_mods, modscan::list_instance_records, modscan::copy_instance_records,
             modprofiles::read_tofu_manifest, modprofiles::write_tofu_manifest, modprofiles::restore_instance_records, modprofiles::apply_tofu_mods, nxm::get_nxm_handler, nxm::set_nxm_handler,
             gamelogs::list_game_logs, gamelogs::read_game_log, gamelogs::clear_game_logs,
+            selfinstall::self_install_status, selfinstall::self_install_verify, selfinstall::self_install_apply, selfinstall::self_install_skip,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Mochi")

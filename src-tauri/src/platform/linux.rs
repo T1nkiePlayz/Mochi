@@ -364,37 +364,11 @@ pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> {
 }
 
 fn installed_executable() -> Result<PathBuf, String> {
-    // AppImage mounts its payload under /tmp at runtime. Keep a managed copy
-    // in ~/.local/bin so desktop and autostart entries survive after the
-    // downloaded source image is moved or deleted.
-    if let Some(appimage) = std::env::var_os("APPIMAGE") {
-        let source = PathBuf::from(appimage);
-        if source.is_file() {
-            let source = fs::canonicalize(&source).map_err(|e| format!("Unable to resolve the launched AppImage: {e}"))?;
-            let bin = home_dir().ok_or("Unable to determine the home directory.")?.join(".local/bin");
-            fs::create_dir_all(&bin).map_err(|e| format!("Unable to create the AppImage install directory: {e}"))?;
-
-            let installed = bin.join("mochi.AppImage");
-            if fs::canonicalize(&installed).ok().as_deref() == Some(source.as_path()) { return Ok(installed); }
-            // Already installed and not older than the image we are running: do not copy ~100 MB on every launch.
-            if let (Ok(have), Ok(want)) = (installed.metadata(), source.metadata()) {
-                if have.len() == want.len() && have.modified().ok() >= want.modified().ok() { return Ok(installed); }
-            }
-
-            use std::os::unix::fs::PermissionsExt;
-            let temporary = bin.join(format!(".mochi.AppImage.{}.tmp", std::process::id()));
-            let _ = fs::remove_file(&temporary);
-            let result = fs::copy(&source, &temporary)
-                .map_err(|e| format!("Unable to copy Mochi into ~/.local/bin: {e}"))
-                .and_then(|_| source.metadata().map_err(|e| format!("Unable to inspect the launched AppImage: {e}")))
-                .and_then(|meta| fs::set_permissions(&temporary, fs::Permissions::from_mode(meta.permissions().mode() | 0o100)).map_err(|e| format!("Unable to make the installed AppImage executable: {e}")))
-                .and_then(|_| fs::rename(&temporary, &installed).map_err(|e| format!("Unable to update the installed Mochi AppImage: {e}")));
-            if let Err(error) = result {
-                let _ = fs::remove_file(&temporary);
-                return Err(error);
-            }
-            return Ok(installed);
-        }
+    // AppImage mounts its payload under /tmp at runtime, so desktop and autostart entries must point at
+    // the managed copy in ~/.local/bin (put there by the self-install step), or else at the AppImage itself.
+    if let Some(installed) = crate::selfinstall::linux_install_target().filter(|path| path.exists()) { return Ok(installed); }
+    if let Some(appimage) = std::env::var_os("APPIMAGE").map(PathBuf::from).filter(|path| path.is_file()) {
+        return fs::canonicalize(&appimage).map_err(|e| format!("Unable to resolve the launched AppImage: {e}"));
     }
     std::env::current_exe().map_err(|e| format!("Unable to determine the Mochi executable: {e}"))
 }
