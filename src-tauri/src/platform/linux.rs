@@ -154,8 +154,10 @@ pub fn prepare_launch(target: &str, config: &LaunchConfig) -> Result<Prepared, S
     // `steam://open/main` starts the Steam client itself (a launcher entry).
     if let Some((scheme, id)) = ["steam://rungameid/", "steam://open/"].iter().find_map(|scheme| target.strip_prefix(scheme).map(|id| (*scheme, id))) {
         let uri = format!("{scheme}{}", safe_launch_id(id)?);
-        return handoff(if command_exists("steam") {
-            let mut command = Command::new("steam");
+        // Native package, Debian/Ubuntu's /usr/games, or the Snap, before Flatpak and the URL handler.
+        let native = command_path("steam").or_else(|| ["/usr/games/steam", "/snap/bin/steam", "/var/lib/snapd/snap/bin/steam"].iter().map(PathBuf::from).find(|path| super::is_executable(path)));
+        return handoff(if let Some(program) = native {
+            let mut command = Command::new(program);
             command.arg(uri);
             command
         } else if flatpak_installed(STEAM_FLATPAK) {

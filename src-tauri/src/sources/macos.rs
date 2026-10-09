@@ -3,11 +3,12 @@
 //! unit-tested on Linux as well; only the roots below are macOS specific.
 #![cfg_attr(not(target_os = "macos"), allow(dead_code))]
 
-use super::{battlenet, classify, gog, icons, make, prism, make_launcher, scan_epic_manifests, sort_games, ImportedGame, SourceDef};
-use crate::platform::command_exists;
+use super::{battlenet, classify, gog, icons, launchers::{self, DetectedLauncher, Env, Memo, Method}, make, prism, make_launcher, scan_epic_manifests, sort_games, ImportKind, ImportedGame, SourceDef};
+use crate::platform::command_path;
 use std::{
     fs,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 pub fn source_defs() -> Vec<SourceDef> {
@@ -52,19 +53,54 @@ fn gog_dirs(home: &Path) -> Vec<PathBuf> {
     dirs
 }
 
-fn app_exists(name: &str, home: &Path) -> bool {
-    Path::new("/Applications").join(name).exists() || home.join("Applications").join(name).exists()
+/// Games and launcher bundles found in the Applications folders, plus the launcher detectors' result.
+struct Snapshot {
+    games: Vec<ImportedGame>,
+    launchers: Vec<DetectedLauncher>,
 }
+
+struct RealEnv {
+    home: PathBuf,
+    scanned: Vec<(Method, ImportedGame)>,
+}
+
+impl Env for RealEnv {
+    fn home(&self) -> PathBuf { self.home.clone() }
+    fn binary(&self, name: &str) -> Option<PathBuf> { command_path(name) }
+    fn exists(&self, path: &Path) -> bool { path.exists() }
+    fn flatpaks(&self) -> &[(String, String)] { &[] }
+    fn scanned(&self) -> &[(Method, ImportedGame)] { &self.scanned }
+}
+
+fn scan_applications(home: &Path) -> Vec<ImportedGame> {
+    let mut out = Vec::new();
+    let own_exe = std::env::current_exe().ok();
+    let mut seen = std::collections::HashSet::new();
+    for dir in [PathBuf::from("/Applications"), home.join("Applications")] { collect_apps(&dir, 0, own_exe.as_deref(), &mut out); }
+    out.retain(|item| seen.insert(item.id.clone()));
+    sort_games(out)
+}
+
+fn snapshot(home: &Path) -> Arc<Snapshot> {
+    static MEMO: Memo<Snapshot> = Memo::new();
+    MEMO.get(|| {
+        let (launchers, games): (Vec<_>, Vec<_>) = scan_applications(home).into_iter().partition(|item| item.kind == ImportKind::Launcher);
+        let env = RealEnv { home: home.to_path_buf(), scanned: launchers.into_iter().map(|item| (Method::AppBundle, item)).collect() };
+        Snapshot { games, launchers: launchers::detect_launchers(&env) }
+    })
+}
+
+fn launcher_installed(home: &Path, id: &str) -> bool { snapshot(home).launchers.iter().any(|launcher| launcher.def_id == id) }
 
 pub fn is_installed(source: &str, home: &Path) -> bool {
     match source {
-        "steam" => support(home).join("Steam").exists() || app_exists("Steam.app", home),
-        "heroic" => support(home).join("heroic").exists() || app_exists("Heroic Games Launcher.app", home),
-        "epic" => support(home).join("Epic/EpicGamesLauncher").exists() || app_exists("Epic Games Launcher.app", home),
-        "itch" => support(home).join("itch").exists() || app_exists("itch.app", home) || command_exists("itch-setup"),
-        "whisky" => whisky_bottles(home).exists() || app_exists("Whisky.app", home),
-        "battlenet" => Path::new(BATTLENET_PRODUCT_DB).is_file() || app_exists("Battle.net.app", home),
-        "gog" => app_exists("GOG Galaxy.app", home) || Path::new(gog::GALAXY_CONFIG).is_file(),
+        "steam" => support(home).join("Steam").exists() || launcher_installed(home, "steam"),
+        "heroic" => support(home).join("heroic").exists() || launcher_installed(home, "heroic"),
+        "epic" => support(home).join("Epic/EpicGamesLauncher").exists() || launcher_installed(home, "epic"),
+        "itch" => support(home).join("itch").exists() || launcher_installed(home, "itch"),
+        "whisky" => whisky_bottles(home).exists() || launcher_installed(home, "whisky"),
+        "battlenet" => Path::new(BATTLENET_PRODUCT_DB).is_file() || launcher_installed(home, "battlenet"),
+        "gog" => launcher_installed(home, "gog") || Path::new(gog::GALAXY_CONFIG).is_file(),
         "prism" => instance_roots(home).iter().any(|(root, _)| root.is_dir()),
         _ => false,
     }
@@ -160,12 +196,9 @@ fn scan_whisky(bottles: &Path) -> Vec<ImportedGame> {
 pub fn scan_extra(source: &str, home: &Path) -> Vec<ImportedGame> {
     match source {
         "apps" => {
-            let mut out = Vec::new();
-            let own_exe = std::env::current_exe().ok();
-            let mut seen = std::collections::HashSet::new();
-            for dir in [PathBuf::from("/Applications"), home.join("Applications")] { collect_apps(&dir, 0, own_exe.as_deref(), &mut out); }
-            out.retain(|item| seen.insert(item.id.clone()));
-            sort_games(out)
+            let snapshot = snapshot(home);
+            let launchers = snapshot.launchers.iter().filter(|l| launchers::emittable(l)).map(|l| l.to_item("apps"));
+            sort_games(snapshot.games.iter().cloned().chain(launchers).collect())
         }
         "epic" => scan_epic_manifests(&epic_manifests(home)),
         "whisky" => scan_whisky(&whisky_bottles(home)),

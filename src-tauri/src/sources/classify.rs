@@ -9,14 +9,15 @@
 /// match the display name exactly; `bundles` are macOS bundle identifiers.
 pub struct LauncherDef {
     pub id: &'static str,
+    pub name: &'static str,
     pub ids: &'static [&'static str],
     pub names: &'static [&'static str],
     pub bundles: &'static [&'static str],
 }
 
 macro_rules! launcher {
-    ($id:expr, $_name:expr, [$($i:expr),*], [$($n:expr),*], [$($b:expr),*]) => {
-        LauncherDef { id: $id, ids: &[$($i),*], names: &[$($n),*], bundles: &[$($b),*] }
+    ($id:expr, $name:expr, [$($i:expr),*], [$($n:expr),*], [$($b:expr),*]) => {
+        LauncherDef { id: $id, name: $name, ids: &[$($i),*], names: &[$($n),*], bundles: &[$($b),*] }
     };
 }
 
@@ -77,6 +78,8 @@ fn normalise(value: &str) -> String {
     let value = value.trim().to_lowercase();
     value.strip_suffix(".desktop").map(str::to_owned).unwrap_or(value)
 }
+
+pub fn launcher_def(id: &str) -> Option<&'static LauncherDef> { LAUNCHERS.iter().find(|def| def.id == id) }
 
 /// Matches a desktop-entry id, Flatpak id, executed program or macOS bundle id.
 pub fn classify_launcher(ids: &[&str], name: &str, bundle_id: Option<&str>) -> Option<&'static LauncherDef> {

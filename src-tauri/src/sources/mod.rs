@@ -30,6 +30,7 @@ pub mod battlenet;
 pub mod classify;
 pub mod gog;
 pub mod icons;
+pub mod launchers;
 pub mod prism;
 mod vdf;
 
@@ -91,15 +92,6 @@ fn make(id: String, name: String, source: &str, target: String, path: Option<Str
 
 fn make_launcher(id: String, name: String, source: &str, target: String, launcher: &str) -> ImportedGame {
     ImportedGame { id, name, source: source.into(), launch_target: target, install_path: None, kind: ImportKind::Launcher, launcher_id: Some(launcher.into()), icon_path: None, minecraft: None }
-}
-
-/// Re-labels an item as a launcher when its ids or name match a known launcher.
-fn classify_item(mut game: ImportedGame, ids: &[&str]) -> ImportedGame {
-    if let Some(def) = classify::classify_launcher(ids, &game.name, None) {
-        game.kind = ImportKind::Launcher;
-        game.launcher_id = Some(def.id.into());
-    }
-    game
 }
 
 fn sort_games(mut games: Vec<ImportedGame>) -> Vec<ImportedGame> {
@@ -674,16 +666,6 @@ mod tests {
         assert_eq!(launcher.launch_target, "steam://open/main");
         assert!(launcher.kind == ImportKind::Launcher);
         assert_eq!(launcher.launcher_id.as_deref(), Some("steam"));
-    }
-
-    #[test]
-    fn classify_item_flags_launchers_and_leaves_games() {
-        let game = make("flatpak:org.supertuxproject.SuperTux".into(), "SuperTux".into(), "flatpak", "flatpak://org.supertuxproject.SuperTux".into(), None);
-        assert!(classify_item(game, &["org.supertuxproject.SuperTux"]).kind == ImportKind::Game);
-        let heroic = make("flatpak:com.heroicgameslauncher.hgl".into(), "Heroic Games Launcher".into(), "flatpak", "flatpak://com.heroicgameslauncher.hgl".into(), None);
-        let heroic = classify_item(heroic, &["com.heroicgameslauncher.hgl"]);
-        assert!(heroic.kind == ImportKind::Launcher);
-        assert_eq!(heroic.launcher_id.as_deref(), Some("heroic"));
     }
 
     #[test]

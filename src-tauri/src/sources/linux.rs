@@ -1,9 +1,10 @@
-use super::{battlenet, classify, classify_item, gog, icons, prism, make, make_launcher, scan_bottles, scan_lutris, sort_games, ImportedGame, SourceDef};
-use crate::platform::{command_exists, list_flatpaks};
+use super::{battlenet, classify, gog, icons, launchers::{self, DetectedLauncher, Env, Memo, Method}, prism, make, make_launcher, scan_bottles, scan_lutris, sort_games, ImportedGame, SourceDef};
+use crate::platform::{command_exists, command_path, list_flatpaks, FlatpakApp};
 use std::{
     fs,
     path::{Path, PathBuf},
     process::Command,
+    sync::Arc,
 };
 
 pub fn source_defs() -> Vec<SourceDef> {
@@ -63,17 +64,52 @@ pub fn wine_prefixes(home: &Path) -> Vec<PathBuf> {
 
 fn gog_dirs(home: &Path) -> Vec<PathBuf> { vec![home.join("GOG Games"), home.join("Games/GOG Games")] }
 
+/// Everything one pass over the desktop entries, Flatpaks and launcher detectors finds. The
+/// "apps" and "flatpak" sources and `is_installed` share it, so a launcher installed several
+/// ways is reported once and the slow lookups run once.
+struct Snapshot {
+    games: Vec<ImportedGame>,
+    launchers: Vec<DetectedLauncher>,
+    flatpaks: Vec<FlatpakApp>,
+}
+
+struct RealEnv {
+    home: PathBuf,
+    flatpaks: Vec<(String, String)>,
+    scanned: Vec<(Method, ImportedGame)>,
+}
+
+impl Env for RealEnv {
+    fn home(&self) -> PathBuf { self.home.clone() }
+    fn binary(&self, name: &str) -> Option<PathBuf> { command_path(name) }
+    fn exists(&self, path: &Path) -> bool { path.exists() }
+    fn flatpaks(&self) -> &[(String, String)] { &self.flatpaks }
+    fn scanned(&self) -> &[(Method, ImportedGame)] { &self.scanned }
+}
+
+fn snapshot(home: &Path) -> Arc<Snapshot> {
+    static MEMO: Memo<Snapshot> = Memo::new();
+    MEMO.get(|| {
+        let (games, scanned) = scan_desktop_apps(home);
+        let flatpaks = list_flatpaks().unwrap_or_default();
+        let env = RealEnv { home: home.to_path_buf(), flatpaks: flatpaks.iter().map(|app| (app.id.clone(), app.name.clone())).collect(), scanned };
+        Snapshot { games, launchers: launchers::detect_launchers(&env), flatpaks }
+    })
+}
+
+fn launcher_installed(home: &Path, id: &str) -> bool { snapshot(home).launchers.iter().any(|launcher| launcher.def_id == id) }
+
 pub fn is_installed(source: &str, home: &Path) -> bool {
     match source {
         "flatpak" => command_exists("flatpak"),
-        "steam" => command_exists("steam") || flatpak_data(home, "com.valvesoftware.Steam"),
-        "heroic" => command_exists("heroic") || flatpak_data(home, "com.heroicgameslauncher.hgl"),
-        "lutris" => command_exists("lutris") || flatpak_data(home, "net.lutris.Lutris"),
-        "bottles" => command_exists("bottles-cli") || flatpak_data(home, "com.usebottles.bottles"),
-        "itch" => command_exists("itch-setup") || home.join(".itch").exists(),
+        "steam" => launcher_installed(home, "steam") || flatpak_data(home, "com.valvesoftware.Steam"),
+        "heroic" => launcher_installed(home, "heroic") || flatpak_data(home, "com.heroicgameslauncher.hgl"),
+        "lutris" => launcher_installed(home, "lutris") || flatpak_data(home, "net.lutris.Lutris"),
+        "bottles" => launcher_installed(home, "bottles") || command_exists("bottles-cli") || flatpak_data(home, "com.usebottles.bottles"),
+        "itch" => launcher_installed(home, "itch") || home.join(".itch").exists(),
         "prism" => instance_roots(home).iter().any(|(root, _)| root.is_dir()),
         "battlenet" => !wine_prefixes(home).is_empty(),
-        "gog" => gog_dirs(home).iter().any(|dir| dir.is_dir()) || command_exists("minigalaxy") || flatpak_data(home, "io.github.sharkwouter.Minigalaxy"),
+        "gog" => gog_dirs(home).iter().any(|dir| dir.is_dir()) || launcher_installed(home, "minigalaxy") || flatpak_data(home, "io.github.sharkwouter.Minigalaxy"),
         _ => false,
     }
 }
@@ -148,49 +184,64 @@ fn parse_desktop_app(file: &Path, text: &str, own_exe: Option<&Path>, icon_dirs:
     Some(item)
 }
 
-fn scan_desktop_apps(home: &Path) -> Vec<ImportedGame> {
-    let mut dirs = vec![home.join(".local/share/applications"), PathBuf::from("/usr/share/applications"), PathBuf::from("/usr/local/share/applications")];
+/// Desktop entries as (games, launcher entries with the method that found them). Snap exports its
+/// entries to `/var/lib/snapd/desktop/applications`.
+fn scan_desktop_apps(home: &Path) -> (Vec<ImportedGame>, Vec<(Method, ImportedGame)>) {
+    let mut dirs = vec![home.join(".local/share/applications"), PathBuf::from("/usr/share/applications"), PathBuf::from("/usr/local/share/applications"), PathBuf::from(SNAP_APPLICATIONS)];
     if let Some(extra) = std::env::var_os("XDG_DATA_DIRS") {
         dirs.extend(std::env::split_paths(&extra).map(|dir| dir.join("applications")));
     }
     let own_exe = std::env::current_exe().ok();
     let icon_dirs = icons::data_dirs(home);
     let mut seen = std::collections::HashSet::new();
-    let mut out = Vec::new();
+    let (mut games, mut launchers) = (Vec::new(), Vec::new());
     for dir in dirs {
         let Ok(entries) = fs::read_dir(&dir) else { continue };
+        let method = if dir.starts_with("/var/lib/snapd") { Method::Snap } else { Method::Desktop };
         for file in entries.flatten().map(|e| e.path()).filter(|p| p.extension().and_then(|e| e.to_str()) == Some("desktop")) {
             let file_name = file.file_name().and_then(|n| n.to_str()).unwrap_or_default().to_owned();
             if !seen.insert(file_name) { continue; }
             let Ok(text) = fs::read_to_string(&file) else { continue };
-            if let Some(item) = parse_desktop_app(&file, &text, own_exe.as_deref(), &icon_dirs) { out.push(item); }
+            match parse_desktop_app(&file, &text, own_exe.as_deref(), &icon_dirs) {
+                Some(item) if item.kind == super::ImportKind::Launcher => launchers.push((method, item)),
+                Some(item) => games.push(item),
+                None => {}
+            }
         }
     }
-    sort_games(out)
+    (sort_games(games), launchers)
 }
 
-/// Games, plus known launchers (Sober, Vinegar, ...) whose desktop entry may not declare the Game category.
-fn keep_flatpak(id: &str, name: &str, category: &str) -> bool {
-    category == "Games" || classify::classify_launcher(&[id], name, None).is_some()
+const SNAP_APPLICATIONS: &str = "/var/lib/snapd/desktop/applications";
+
+/// The Flatpak source lists games; launchers (Heroic, Sober, ...) come from the launcher detectors.
+fn flatpak_items(snapshot: &Snapshot, home: &Path) -> Vec<ImportedGame> {
+    let icon_dirs = icons::data_dirs(home);
+    // Flatpak exports its icons under the application id.
+    let icon = |id: &str| icons::resolve_icon(id, &icon_dirs).and_then(|path| path.to_str().map(str::to_owned));
+    let games = snapshot.flatpaks.iter().filter(|app| app.category == "Games" && classify::classify_launcher(&[&app.id], &app.name, None).is_none())
+        .filter(|app| !classify::is_mochi(&[&app.id], &app.name, None, None, None) && !classify::is_non_game(&[&app.id], &app.name))
+        .map(|app| { let mut item = make(format!("flatpak:{}", app.id), app.name.clone(), "flatpak", format!("flatpak://{}", app.id), None); item.icon_path = icon(&app.id); item });
+    let launchers = snapshot.launchers.iter().filter(|l| l.method == Method::Flatpak && launchers::emittable(l)).map(|l| {
+        let mut item = l.to_item("flatpak");
+        item.icon_path = l.launch_target.strip_prefix("flatpak://").and_then(icon);
+        item
+    });
+    games.chain(launchers).collect()
+}
+
+/// Desktop-entry games plus every detected launcher whose best install method is not Flatpak.
+fn app_items(snapshot: &Snapshot) -> Vec<ImportedGame> {
+    let launchers = snapshot.launchers.iter().filter(|l| l.method != Method::Flatpak && launchers::emittable(l)).map(|l| l.to_item("apps"));
+    sort_games(snapshot.games.iter().cloned().chain(launchers).collect())
 }
 
 pub fn scan_extra(source: &str, home: &Path) -> Vec<ImportedGame> {
     match source {
-        "flatpak" => {
-            let icon_dirs = icons::data_dirs(home);
-            list_flatpaks().unwrap_or_default().into_iter().filter(|app| keep_flatpak(&app.id, &app.name, &app.category))
-                .filter(|app| !classify::is_mochi(&[&app.id], &app.name, None, None, None) && !classify::is_non_game(&[&app.id], &app.name))
-                .map(|app| {
-                    let id = app.id.clone();
-                    let mut item = classify_item(make(format!("flatpak:{}", app.id), app.name, "flatpak", format!("flatpak://{}", app.id), None), &[&id]);
-                    // Flatpak exports its icons under the application id.
-                    item.icon_path = icons::resolve_icon(&id, &icon_dirs).and_then(|path| path.to_str().map(str::to_owned));
-                    item
-                }).collect()
-        }
+        "flatpak" => flatpak_items(&snapshot(home), home),
         "lutris" => scan_lutris(),
         "bottles" => scan_bottles(),
-        "apps" => scan_desktop_apps(home),
+        "apps" => app_items(&snapshot(home)),
         "battlenet" => battlenet::scan_prefixes(&wine_prefixes(home)),
         "gog" => gog::scan_linux_installs(&gog_dirs(home)),
         _ => Vec::new(),
@@ -203,12 +254,47 @@ mod tests {
 
     fn parse(file: &str, text: &str) -> Option<ImportedGame> { parse_desktop_app(Path::new(file), text, None, &[]) }
 
+    fn flatpak(id: &str, name: &str, category: &str) -> FlatpakApp { FlatpakApp { id: id.into(), name: name.into(), category: category.into() } }
+
+    struct Fake(Vec<(String, String)>);
+    impl Env for Fake {
+        fn home(&self) -> PathBuf { PathBuf::from("/home/u") }
+        fn binary(&self, _: &str) -> Option<PathBuf> { None }
+        fn exists(&self, _: &Path) -> bool { false }
+        fn flatpaks(&self) -> &[(String, String)] { &self.0 }
+        fn scanned(&self) -> &[(Method, ImportedGame)] { &[] }
+    }
+
     #[test]
-    fn flatpak_filter_keeps_launchers_without_games_category() {
-        assert!(keep_flatpak("org.vinegarhq.Sober", "Sober", "Other"));
-        assert!(keep_flatpak("org.vinegarhq.Vinegar", "Vinegar", "Other"));
-        assert!(keep_flatpak("org.supertuxproject.SuperTux", "SuperTux", "Games"));
-        assert!(!keep_flatpak("org.gnome.Calculator", "Calculator", "Other"));
+    fn flatpak_source_lists_games_and_detected_launchers_once() {
+        let flatpaks = vec![flatpak("org.vinegarhq.Sober", "Sober", "Other"), flatpak("com.valvesoftware.Steam", "Steam", "Games"), flatpak("com.heroicgameslauncher.hgl", "Heroic Games Launcher", "Games"),
+            flatpak("org.supertuxproject.SuperTux", "SuperTux", "Games"), flatpak("org.gnome.Calculator", "Calculator", "Other")];
+        let env = Fake(flatpaks.iter().map(|app| (app.id.clone(), app.name.clone())).collect());
+        let snapshot = Snapshot { games: Vec::new(), launchers: launchers::detect_launchers(&env), flatpaks };
+        let items = flatpak_items(&snapshot, Path::new("/home/u"));
+        let ids: Vec<_> = items.iter().map(|item| item.id.as_str()).collect();
+        assert_eq!(ids, ["flatpak:org.supertuxproject.SuperTux", "flatpak:com.heroicgameslauncher.hgl", "flatpak:org.vinegarhq.Sober"]);
+        // Steam belongs to the Steam source, so it is not listed as a launcher here either.
+        assert!(!ids.iter().any(|id| id.contains("Steam")));
+        assert!(items.iter().filter(|item| item.kind == super::super::ImportKind::Launcher).count() == 2);
+    }
+
+    #[test]
+    fn launchers_found_natively_are_not_repeated_for_flatpak() {
+        let env = Fake(vec![("net.lutris.Lutris".into(), "Lutris".into())]);
+        let native = make_launcher("apps:lutris.desktop".into(), "Lutris".into(), "apps", "/usr/share/applications/net.lutris.Lutris.desktop".into(), "lutris");
+        struct Both(Fake, Vec<(Method, ImportedGame)>);
+        impl Env for Both {
+            fn home(&self) -> PathBuf { self.0.home() }
+            fn binary(&self, _: &str) -> Option<PathBuf> { None }
+            fn exists(&self, _: &Path) -> bool { false }
+            fn flatpaks(&self) -> &[(String, String)] { self.0.flatpaks() }
+            fn scanned(&self) -> &[(Method, ImportedGame)] { &self.1 }
+        }
+        let snapshot = Snapshot { games: Vec::new(), launchers: launchers::detect_launchers(&Both(env, vec![(Method::Desktop, native)])), flatpaks: Vec::new() };
+        assert!(flatpak_items(&snapshot, Path::new("/home/u")).is_empty());
+        let apps = app_items(&snapshot);
+        assert_eq!((apps.len(), apps[0].id.as_str()), (1, "apps:lutris.desktop"));
     }
 
     #[test]
