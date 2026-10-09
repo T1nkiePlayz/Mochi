@@ -5,7 +5,7 @@ import { ProviderError, type MetadataProvider, type ProviderResult } from "./typ
 
 export type SteamStoreDetails = {
   appid: number; name: string; description: string; genres: string[]; screenshots: string[];
-  movies?: Array<{ name: string; thumbnail?: string | null; mp4Url?: string | null; webmUrl?: string | null }>;
+  movies?: Array<{ name: string; thumbnail?: string | null; mp4Url?: string | null; webmUrl?: string | null; hlsUrl?: string | null }>;
   releaseDate?: number | null; coverUrl: string; headerUrl: string; heroUrl: string;
 };
 export type SteamStoreResult = { status: "ok" | "not-found" | "offline" | "error"; details?: SteamStoreDetails | null; stale: boolean; message?: string | null };
@@ -15,10 +15,10 @@ export async function getSteamStoreDetails(appid: number): Promise<SteamStoreRes
   catch (error) { return { status: "error", stale: false, message: error instanceof Error ? error.message : String(error) }; }
 }
 
-/** The first two Steam movies that have a direct mp4/webm file; HLS-only movies are skipped. */
+/** The first two Steam movies that have a direct mp4/webm file or an HLS playlist. */
 export function steamTrailerVideos(details: Pick<SteamStoreDetails, "movies">): TrailerVideo[] {
-  return (details.movies ?? []).filter((movie) => movie.mp4Url || movie.webmUrl).slice(0, 2)
-    .map((movie) => ({ name: movie.name, thumbnail: movie.thumbnail ?? undefined, mp4: movie.mp4Url ?? undefined, webm: movie.webmUrl ?? undefined }));
+  return (details.movies ?? []).filter((movie) => movie.mp4Url || movie.webmUrl || movie.hlsUrl).slice(0, 2)
+    .map((movie) => ({ name: movie.name, thumbnail: movie.thumbnail ?? undefined, mp4: movie.mp4Url ?? undefined, webm: movie.webmUrl ?? undefined, hls: movie.hlsUrl ?? undefined }));
 }
 
 export function steamToResult(details: SteamStoreDetails): ProviderResult {

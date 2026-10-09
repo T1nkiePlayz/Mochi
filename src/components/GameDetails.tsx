@@ -14,7 +14,7 @@ import { SteamAchievements } from "./SteamAchievements";
 import { GameLogsButton } from "./GameLogs";
 import { steamAppIdOf } from "../lib/metadata/merge";
 import { ScreenshotGallery, singleCredit } from "./details/ScreenshotGallery";
-import { pickTrailer } from "../lib/trailer";
+import { canPlayHlsNatively, pickTrailer } from "../lib/trailer";
 import { imageSourceLabels } from "../lib/imageSource";
 
 type Props = {
@@ -51,7 +51,8 @@ export function GameDetails({ game, synced, running, playtime, launchError, laun
   const collectionAnchor = useRef<HTMLDivElement>(null);
   useDismiss(collectionAnchor, showCollections, () => setShowCollections(false));
   const memberOf = collections.filter((collection) => game.collectionIds?.includes(collection.id));
-  const choice = pickTrailer(game);
+  const [videoFailed, setVideoFailed] = useState(false);
+  const choice = pickTrailer(game, { canPlayHls: canPlayHlsNatively(), skipSteam: videoFailed });
   const trailer = choice.kind === "youtube" ? choice.id : "";
   const steamAppId = steamAppIdOf(game);
   const screenshots = game.screenshots ?? [];
@@ -91,7 +92,7 @@ export function GameDetails({ game, synced, running, playtime, launchError, laun
     <div className="game-workspace">{workspace}</div>
     {(steamAppId !== null || choice.kind !== "none") && <div className="game-details-content">
       {steamAppId !== null && <SteamAchievements key={steamAppId} appid={steamAppId} gameName={game.name} />}
-      {choice.kind === "steam" ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Trailer</h3><p>From the Steam store.</p></div></div><div className="game-trailer-frame">{online ? <video controls preload="none" playsInline poster={choice.video.thumbnail} title={`${game.name} trailer`}>{choice.video.webm && <source src={choice.video.webm} type="video/webm" />}{choice.video.mp4 && <source src={choice.video.mp4} type="video/mp4" />}</video> : <p className="game-trailer-offline">Trailer needs internet</p>}</div></section> : null}
+      {choice.kind === "steam" ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Trailer</h3><p>From the Steam store.</p></div></div><div className="game-trailer-frame">{online ? <video controls preload="none" playsInline poster={choice.video.thumbnail} title={`${game.name} trailer`} onError={() => setVideoFailed(true)}>{choice.video.webm && <source src={choice.video.webm} type="video/webm" onError={choice.video.mp4 ? undefined : () => setVideoFailed(true)} />}{choice.video.mp4 && <source src={choice.video.mp4} type="video/mp4" onError={() => setVideoFailed(true)} />}{choice.video.hls && <source src={choice.video.hls} type="application/vnd.apple.mpegurl" onError={() => setVideoFailed(true)} />}</video> : <p className="game-trailer-offline">Trailer needs internet</p>}</div></section> : null}
       {trailer ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Trailer</h3><p>If the player below shows an error, watch it on YouTube instead.</p></div><button type="button" className="text-button" onClick={() => void openExternalUrl(`https://www.youtube.com/watch?v=${trailer}`).catch(() => undefined)}><ExternalLink size={13}/> Watch on YouTube</button></div><div className="game-trailer-frame">{playTrailer && online ? <iframe src={`https://www.youtube-nocookie.com/embed/${trailer}?autoplay=1&controls=1&playsinline=1`} title={`${game.name} trailer`} referrerPolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /> : <button type="button" className="game-trailer-start" disabled={!online} onClick={() => setPlayTrailer(true)}><GameArtwork className="game-trailer-poster" cacheKey={game.artworkCacheKey} fallback={game.artwork} name={game.name} kind={game.kind} sourceId={game.sourceId} /><span><Play size={23} fill="currentColor"/> {online ? "Play trailer" : "Trailer needs internet"}</span></button>}</div></section> : null}
     </div>}
     {mods && <div className="game-workspace game-mods-section">{mods}</div>}

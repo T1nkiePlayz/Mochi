@@ -134,7 +134,12 @@ fn string_list(value: Option<&Value>, key: &str) -> Vec<String> {
 /// A direct video file from a movie's `mp4`/`webm` object (`{"480": url, "max": url}`): the small one, over https on a Steam CDN only.
 fn movie_file(value: Option<&Value>) -> Option<String> {
     let value = value?;
-    let url = value.get("480").or_else(|| value.get("max")).and_then(Value::as_str).map(strip_query)?;
+    steam_cdn_url(value.get("480").or_else(|| value.get("max")).and_then(Value::as_str))
+}
+
+/// An https URL on a `*.steamstatic.com` host with its query stripped (the files load without it).
+fn steam_cdn_url(url: Option<&str>) -> Option<String> {
+    let url = strip_query(url?);
     let host = url.strip_prefix("https://")?.split('/').next()?;
     if host == "steamstatic.com" || host.ends_with(".steamstatic.com") { Some(url) } else { None }
 }
@@ -157,7 +162,7 @@ pub fn parse_app_details(appid: u32, body: &str) -> Result<Option<SteamStoreDeta
         items.iter().take(6).map(|m| SteamMovie {
             name: m.get("name").and_then(Value::as_str).unwrap_or("Trailer").to_string(),
             thumbnail: m.get("thumbnail").and_then(Value::as_str).map(strip_query).filter(|u| u.starts_with("https://")),
-            hls_url: m.get("hls_h264").and_then(Value::as_str).map(str::to_string).filter(|u| u.starts_with("https://")),
+            hls_url: steam_cdn_url(m.get("hls_h264").and_then(Value::as_str)),
             mp4_url: movie_file(m.get("mp4")),
             webm_url: movie_file(m.get("webm")),
         }).collect()
@@ -277,7 +282,7 @@ mod tests {
         assert_eq!(movies[0].mp4_url.as_deref(), Some("https://video.akamai.steamstatic.com/a_480.mp4"));
         assert_eq!(movies[0].webm_url.as_deref(), Some("https://video.akamai.steamstatic.com/a_max.webm"));
         assert_eq!(movies[0].thumbnail.as_deref(), Some("https://shared.akamai.steamstatic.com/t.jpg"));
-        assert!(movies[1].mp4_url.is_none() && movies[1].webm_url.is_none() && movies[1].hls_url.is_some());
+        assert!(movies[1].mp4_url.is_none() && movies[1].webm_url.is_none() && movies[1].hls_url.as_deref() == Some("https://video.akamai.steamstatic.com/b.m3u8"));
         assert!(movies[2].mp4_url.is_none() && movies[2].webm_url.is_none());
     }
 
