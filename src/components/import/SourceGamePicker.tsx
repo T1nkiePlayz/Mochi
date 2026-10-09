@@ -2,10 +2,10 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { AlertTriangle, Gamepad2, RefreshCw, Rocket, Search } from "lucide-react";
 import { launcherArt, launcherIcon } from "../../lib/launcherArt";
 import minecraftGrassBlock from "../../assets/minecraft-grass-block.svg";
+import { detectImportSources, scanImportGames, type DetectedImportSource, type ImportSourceId, type ImportedGame } from "../../lib/sources";
 
 // The "Minecraft instances" source tile shows the game logo rather than the Prism launcher mark.
 const sourceIcon = (id: string): string => (id === "prism" ? minecraftGrassBlock : launcherIcon(id));
-import { detectImportSources, scanImportGames, type DetectedImportSource, type ImportSourceId, type ImportedGame } from "../../lib/sources";
 
 export type PickerSelection = { games: ImportedGame[]; sources: ImportSourceId[] };
 
