@@ -100,9 +100,29 @@ Every provider goes through `start_mod_download` (`downloads.rs`). Entries live 
 
 The page behind the `Installed` nav id lists every Tofu's mods, disk use and updates, so it is called **Mods & Content** (`src/lib/nav.ts`, `navLabel`; used by the sidebar, the top bar and the page title). The id stays `Installed` because themes, icons and the controller use it.
 
-## Known limitation: nxm:// links
+## Tofus as mod profiles (round 6)
 
-Free Nexus users could return from the site's "Mod Manager Download" button through an `nxm://` link. It is not implemented: the Tauri deep-link plugin only forwards schemes listed in `tauri.conf.json` (dynamic schemes are ignored by its single-instance handling), so it needs Rust changes in `main.rs` (forward a single `nxm://` argument as a `deep-link://new-url` event) plus an opt-in `register("nxm")` setting on Linux. The frontend pieces would be: parse `nxm://<game>/mods/<id>/files/<fid>?key=&expires=`, call `nexus-download` with `key` and `expires`, then download to the Tofu the user was working in.
+- **Shared folder.** Several Tofus of a game may work directly on the same game folder (`path === gameDir`). Each Tofu's records (`mods.json`) are its mods and their on/off state. Switching Tofu enables exactly the active Tofu's enabled mods and disables the other Tofus' mods by renaming `x` <-> `x.disabled` (`modprofiles::apply_membership`). Files no Tofu owns are never touched; nothing is deleted; a name that exists both enabled and disabled is reported, not resolved. Toggling a file in a Tofu makes it that Tofu's mod. "New Tofu" starts empty on the same folder (switching to it turns the others' mods off); "Duplicate" copies the records (`copy_instance_records`).
+- **When.** At launch (the launch request carries `modSync` from `modSyncFor(tofu, piko.tofus)`, which now also covers shared folders) and when the user switches Tofu on the game page while the game is not running (`useTofuSwitch` -> `apply_tofu_mods`, same code). A Tofu with its own store still syncs as in round 5; switching from it to a shared-folder Tofu takes the placed files out again.
+- **`.mochi/tofus.json`.** Written atomically into the game folder after a switch, a launch or any change of the folder (`write_tofu_manifest`, only when the content changed, never for a single Tofu without mods). Versioned (`schema: 1`, a newer schema is ignored), sanitised on read. Holds every Tofu (id, name, version, loader, separate) with its mods (file, subdir, enabled, source, project, file id, version, title, sha1, file date) and the active Tofu. On import it is restored (`planRestore` in `lib/mods/manifest.ts`): the first saved Tofu takes over the default Tofu (keeping its launch settings), the others are added on the same folder.
+- Tests (`cargo test modprofiles`): BepInEx plugins, Minecraft mods + resource packs, tModLoader with a shared and a separate Tofu, clashes, manifest round trip and sanitising.
+
+## Import-time scan and identification (round 6)
+
+- `useModImportScan` (mounted once through `ModBackground` in `App.tsx`) visits every moddable game whose default Tofu has no `modScan` mark yet (new imports, older libraries) one at a time: detects and selects the mod folder, restores `.mochi/tofus.json` when present, otherwise reads the files into the default Tofu (`scanTofuMods`) and identifies them. A scan that ran offline is repeated once online.
+- Identification (`lib/mods/identify.ts`, pure; network passed in): Modrinth by SHA-1 (`modrinth_identify`, Minecraft), CurseForge by fingerprint (`hash_mod_files` computes MurmurHash2 seed 1 without bytes 9/10/13/32; proxy route `fingerprints`, names through `cfModNames`), Nexus Mods by MD5 (`nexus-md5` action, needs the user's key and a Nexus-linked game). Identified files get a record with site, project, file id, version and file date, so update checks and "Downloaded" states work; the rest get manual records. "Identify N" re-runs it; "Identify" on a row opens `LinkModModal` to pick the mod by hand (the exact file is matched by name, else the file's date stands in).
+- `record_instance_mods` merges in one write: an identified record replaces a manual one, never the reverse.
+
+## Folder selection and download states (round 6)
+
+- Detection returns `fileCount` and `modifiedMs`; `bestPick` chooses: the only existing folder, else the ones that hold mods, else table order (Minecraft: the instance changed last). The pick is applied and saved (`useAutoModFolder`, `ModFolderEditor`, `ensureTofuFolder` before any download), so a download only asks for a folder when nothing was detected.
+- Cards (`ModCard`, Modrinth results) show Download / Downloading n% / Downloaded (disabled) / Update available from `useInstallState`: install records (`list_instance_records`, also unpacked archives, marked `extracted`), download entries (now with `projectId` and `subdir`) and the update check. It survives restarts because records are on disk.
+- Game pages list 8 mods, then "Show more" switches to infinite scroll; long lists render through `WindowedGrid` (chunks of 24 replaced by spacers off screen). The mods widget is the last section of the game page (`GameDetails` prop `mods`).
+
+## nxm:// links (round 6)
+
+- `nxm` is in `plugins.deep-link.schemes` (so the running Mochi receives links and the macOS bundle declares the scheme). On Linux Mochi registers only `mochi` at start; the `nxm` default handler is opt-in (`set_nxm_handler`, marker file in app data, re-applied after the desktop integration rewrites the handler entry), from the Mods & Content page or the Nexus notice. The packaged `.desktop` lists `x-scheme-handler/nxm` as a candidate.
+- `parseNxmLink` (strict, tested) accepts `nxm://<domain>/mods/<id>/files/<fid>?key=&expires=&user_id=`; collections are refused with a message. `NxmPrompt` asks which Tofu (games linked to the Nexus domain first, the Tofu the user started from preselected), calls `nexus-download` with key and expires and starts a normal recorded download. Free accounts get "Download on Nexus" pointing at the file's Mod Manager Download page.
 
 ## Dev server
 

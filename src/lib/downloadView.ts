@@ -3,6 +3,10 @@ import { formatBytes } from "./format";
 
 export const providerLabels: Record<DownloadEntry["provider"], string> = { modrinth: "Modrinth", curseforge: "CurseForge", nexus: "Nexus Mods" };
 
+const kindLabels: Record<string, string> = { resourcepacks: "Resource pack", shaderpacks: "Shader" };
+/** "Mod", "Resource pack" or "Shader", from where the file lands. */
+export const downloadKind = (entry: Pick<DownloadEntry, "subdir">) => (entry.subdir && kindLabels[entry.subdir]) || "Mod";
+
 export type DownloadRow = {
   /** 0-100, or null while the size is unknown. */
   percent: number | null;
@@ -17,7 +21,7 @@ export function describeDownload(entry: DownloadEntry): DownloadRow {
   switch (entry.status) {
     case "failed": return { percent, state: "failed", detail: entry.error || "Failed", canCancel: false };
     case "cancelled": return { percent, state: "cancelled", detail: "Cancelled", canCancel: false };
-    case "completed": return { percent: 100, state: "done", detail: entry.total ? `Completed · ${formatBytes(entry.total)}` : "Completed", canCancel: false };
+    case "completed": return { percent: 100, state: "done", detail: `${entry.total ? `Completed · ${formatBytes(entry.total)}` : "Completed"} · added to ${entry.tofuName}`, canCancel: false };
     default: return {
       percent, state: "active", canCancel: true,
       detail: entry.total ? `${percent}% · ${formatBytes(entry.downloaded)} of ${formatBytes(entry.total)}` : `${formatBytes(entry.downloaded)} downloaded`,

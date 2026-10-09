@@ -1,13 +1,18 @@
 import { useState } from "react";
 import { Download, FolderOpen, Trash2, X } from "lucide-react";
 import { MochiIcon } from "../components/MochiIcon";
-import { describeDownload, groupDownloads, hasFinished, providerLabels } from "../lib/downloadView";
+import { describeDownload, downloadKind, groupDownloads, hasFinished, providerLabels } from "../lib/downloadView";
+import { getUpdateState, updateCount, useUpdateVersion } from "../state/modUpdates";
 import { cancelModDownload, clearFinishedDownloads } from "../lib/downloads";
 import { openPath } from "../lib/platform";
 import { useApp } from "../state/AppContext";
 
 export function DownloadsView() {
-  const { downloads } = useApp();
+  const { downloads, lib, setActiveNav } = useApp();
+  useUpdateVersion();
+  // Mod updates install in place (not through this list); show where they wait or run.
+  const updating = lib.library.flatMap((piko) => piko.tofus.map((tofu) => ({ piko, tofu, state: getUpdateState(tofu.id) })))
+    .filter((entry) => entry.state.updating.length || updateCount(entry.state));
   const [error, setError] = useState("");
   const groups = groupDownloads(downloads);
   const report = (reason: unknown) => setError(reason instanceof Error ? reason.message : typeof reason === "string" ? reason : "That did not work.");
@@ -17,6 +22,10 @@ export function DownloadsView() {
       <p>Mods, resource packs and shaders from Modrinth, CurseForge and Nexus Mods download here and keep going while Mochi is hidden in the tray. Finished downloads stay in this list for 10 minutes.</p>
     </div>
     {error && <p className="auth-error" role="alert">{error}</p>}
+    {updating.length > 0 && <section className="download-group download-updates" aria-label="Mod updates">
+      <div className="download-group-heading"><strong>Mod updates</strong><button type="button" className="text-button" onClick={() => setActiveNav("Installed")}>Open Mods &amp; Content</button></div>
+      <ul className="download-update-list">{updating.map(({ piko, tofu, state }) => <li key={tofu.id}><span>{piko.name}: {tofu.name}</span><small>{state.updating.length ? `Updating ${state.updating.length}…` : `${updateCount(state)} update${updateCount(state) === 1 ? "" : "s"} available`}</small></li>)}</ul>
+    </section>}
     {hasFinished(downloads) && <div className="download-toolbar"><button type="button" className="secondary-button" onClick={() => void clearFinishedDownloads().catch(report)}><Trash2 size={13} /> Clear finished</button></div>}
     {!downloads.length ? <div className="download-empty"><div className="empty-icon"><MochiIcon name="downloads" fallback={Download} size={22} /></div><h3>No active downloads</h3><p>Nothing is downloading right now.</p></div> : (
       <div className="download-groups">
@@ -26,7 +35,7 @@ export function DownloadsView() {
             <div className="download-list">{group.items.map((download) => {
               const row = describeDownload(download);
               return <article className={`download-row is-${row.state}`} key={download.id}>
-                <div className="download-row-copy"><strong>{download.itemName}</strong><small>{download.filename} · {providerLabels[download.provider]}</small></div>
+                <div className="download-row-copy"><strong>{download.itemName}</strong><small>{download.filename} · {downloadKind(download)} · {providerLabels[download.provider]}</small></div>
                 <div className="download-progress-wrap">
                   <div className={"download-progress " + (row.state === "active" && row.percent === null ? "indeterminate" : row.state === "failed" || row.state === "cancelled" ? "failed" : "")} role="progressbar" aria-label={`${download.itemName} download`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={row.percent ?? undefined} aria-valuetext={row.detail}>
                     <span style={{ width: row.percent !== null && row.state !== "failed" && row.state !== "cancelled" ? `${row.percent}%` : undefined }} />

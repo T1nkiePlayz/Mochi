@@ -17,7 +17,9 @@ Mochi app --Tauri command start_mod_download--> Rust downloader --> provider CDN
 ```
 
 - `supabase/functions/curseforge-proxy` accepts `POST { route, ...params }` with an allow-list of read-only routes
-  (`games`, `categories`, `search`, `mod`, `description`, `files`, `download-url`). Every parameter is validated
+  (`games`, `categories`, `search`, `mod`, `description`, `files`, `download-url`, `fingerprints`).
+  `fingerprints` (POST upstream) identifies installed files; the client sends the CurseForge fingerprint computed natively
+  (`modhash.rs`) and keeps the answer in memory only. Every parameter is validated
   (integers and ranges, `pageSize <= 50`, `index + pageSize <= 10000`, restricted charset for `searchFilter` and
   `gameVersion`). Errors are `{ error, code }` with `code` one of `bad_request` (400), `not_configured` (503),
   `rate_limited` (429), `upstream` (502). `download-url` returns `{ data, restricted }`.

@@ -29,6 +29,22 @@ pub struct ModLocation {
     /// Minecraft only, from the instance's own files: "vanilla", "fabric", "quilt", "forge" or "neoforge".
     pub loader: Option<String>,
     pub game_version: Option<String>,
+    /// Mod files already in `mods_dir` (counted up to `MAX_COUNTED`), so the frontend can rank candidates.
+    pub file_count: usize,
+    /// Last change of `mods_dir` (or of the game folder when it has no mods folder yet), ms since the epoch.
+    pub modified_ms: u64,
+}
+
+const MAX_COUNTED: usize = 2000;
+
+/// How many mod files a folder holds and when it last changed. Cheap: one directory listing, no file reads.
+fn dir_stats(dir: &Path, fallback: &Path) -> (usize, u64) {
+    let modified = |path: &Path| fs::metadata(path).ok().and_then(|m| m.modified().ok()).and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_millis() as u64);
+    let count = fs::read_dir(dir).map(|read| read.flatten().take(MAX_COUNTED * 4).filter(|entry| {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        !name.starts_with('.') && crate::modrinth::CONTENT_EXTENSIONS.contains(&crate::modrinth::content_extension(&name).as_str())
+    }).take(MAX_COUNTED).count()).unwrap_or(0);
+    (count, modified(dir).or_else(|| modified(fallback)).unwrap_or(0))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -176,9 +192,10 @@ fn location(launcher: &str, instance: Option<&str>, game_dir: &Path, meta_dir: &
     let mods = game_dir.join("mods");
     let (loader, game_version) = minecraft_meta(meta_dir, game_dir);
     let label = match instance { Some(name) => format!("{launcher}: {name}"), None => launcher.to_string() };
+    let (file_count, modified_ms) = dir_stats(&mods, game_dir);
     ModLocation {
         id: mods.to_string_lossy().into_owned(), label, launcher: launcher.to_string(), instance: instance.map(str::to_string), exists: game_dir.is_dir(),
-        mods_dir: mods.to_string_lossy().into_owned(), content_root: Some(game_dir.to_string_lossy().into_owned()), loader, game_version,
+        mods_dir: mods.to_string_lossy().into_owned(), content_root: Some(game_dir.to_string_lossy().into_owned()), loader, game_version, file_count, modified_ms,
     }
 }
 
@@ -244,7 +261,8 @@ fn steam_common_dirs(os: Os, home: &Path) -> Vec<PathBuf> {
 }
 
 fn game_location(label: &str, launcher: &str, dir: PathBuf) -> ModLocation {
-    ModLocation { id: dir.to_string_lossy().into_owned(), label: label.to_string(), launcher: launcher.to_string(), instance: None, exists: dir.is_dir(), mods_dir: dir.to_string_lossy().into_owned(), content_root: None, loader: None, game_version: None }
+    let (file_count, modified_ms) = dir_stats(&dir, &dir);
+    ModLocation { id: dir.to_string_lossy().into_owned(), label: label.to_string(), launcher: launcher.to_string(), instance: None, exists: dir.is_dir(), mods_dir: dir.to_string_lossy().into_owned(), content_root: None, loader: None, game_version: None, file_count, modified_ms }
 }
 
 /// Whether two folder paths name the same directory. Spelling alone is not enough: macOS volumes ignore case

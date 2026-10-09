@@ -1,0 +1,21 @@
+/* Tofu settings (TofuManager): grouped sections built from the shared form controls. Tokens only. */
+.tofu-manager-modal { background: var(--mochi-modal-background, var(--mochi-background-elevated)); border-color: var(--mochi-modal-border, var(--mochi-border)); }
+.tofu-manager-item { border-color: var(--mochi-border); background: var(--mochi-surface); color: var(--mochi-text); border-radius: var(--mochi-radius-md, 10px); }
+.tofu-manager-item small { color: var(--mochi-text-muted); opacity: 1; }
+.tofu-manager-item.active { border-color: var(--mochi-accent-strong); background: var(--mochi-accent-soft); }
+.tofu-manager-item:focus-visible { outline: none; box-shadow: var(--mochi-focus-ring); }
+
+.tofu-settings { display: grid; align-content: start; gap: 14px; margin: 0; }
+.tofu-settings-section { display: grid; gap: 12px; padding: 14px; border: var(--mochi-border-width, 1px) solid var(--mochi-panel-border, var(--mochi-border)); border-radius: var(--mochi-radius-lg, 12px); background: var(--mochi-panel-background, var(--mochi-surface)); }
+.tofu-settings-heading h3 { margin: 0; color: var(--mochi-text-strong); font-size: 13px; font-weight: var(--mochi-heading-weight, 700); letter-spacing: var(--mochi-heading-tracking, normal); text-transform: var(--mochi-heading-transform, none); }
+.tofu-settings-heading p { margin: 4px 0 0; color: var(--mochi-text-muted); font-size: 11px; line-height: 1.5; }
+.tofu-settings-body { display: grid; gap: 12px; min-width: 0; }
+.tofu-settings-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 12px; }
+.tofu-settings-wrappers { display: grid; gap: 8px; padding: 10px 12px; border: var(--mochi-border-width, 1px) solid var(--mochi-border); border-radius: var(--mochi-radius-md, 8px); background: var(--mochi-surface-raised, var(--mochi-surface)); }
+.tofu-settings-inline { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.tofu-settings-inline input { min-width: 0; }
+.tofu-settings textarea { resize: vertical; font-family: var(--mochi-mono, monospace); }
+.tofu-settings .mochi-select { display: block; width: 100%; }
+.tofu-settings .mod-folder-editor .metadata-note { margin: 0; }
+.tofu-settings .mod-folder-editor .form-row { grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); }
+@media (max-width: 760px) { .tofu-manager-list { grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); overflow-x: auto; overflow-y: hidden; } }

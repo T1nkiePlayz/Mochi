@@ -21,6 +21,7 @@ const AuthModal = lazy(() => import("./components/AuthModal").then((m) => ({ def
 const FirstLaunchSetup = lazy(() => import("./components/FirstLaunchSetup").then((m) => ({ default: m.FirstLaunchSetup })));
 const GameEditor = lazy(() => import("./components/GameEditor").then((m) => ({ default: m.GameEditor })));
 const TofuManager = lazy(() => import("./components/TofuManager").then((m) => ({ default: m.TofuManager })));
+const ModBackground = lazy(() => import("./components/mods/ModBackground").then((m) => ({ default: m.ModBackground })));
 
 // Everything except the library loads on demand so the launcher reaches an interactive library sooner.
 const SettingsView = lazy(() => import("./views/SettingsView").then((m) => ({ default: m.SettingsView })));
@@ -95,6 +96,7 @@ function Shell() {
       </div>
     </main>
     <Suspense fallback={null}>
+      <ModBackground />
       {addOpen && <AddGameModals />}
       {app.showTofuManager && lib.library.some((piko) => piko.id === lib.selectedPiko.id) && <TofuManager piko={lib.selectedPiko} selectedTofuId={lib.selectedTofu.id} runtimes={app.runtimes} onSelect={lib.setSelectedTofuId} onChange={(tofus) => lib.updateGame(lib.selectedPiko.id, { tofus })} onClose={() => app.setShowTofuManager(false)} />}
       {editing && <GameEditor game={editing} capabilities={app.platformCapabilities} onSave={(changes) => { lib.updateGame(editing.id, changes); app.setEditingGameId(""); }} onClose={() => app.setEditingGameId("")} />}

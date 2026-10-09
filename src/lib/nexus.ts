@@ -130,3 +130,18 @@ export async function getNexusDownload(client: SupabaseClient, gameDomain: strin
 
 export const nexusModPageUrl = (gameDomain: string, modId: number, files = false) =>
   `https://www.nexusmods.com/${encodeURIComponent(gameDomain)}/mods/${modId}${files ? "?tab=files" : ""}`;
+
+export type NexusMd5Match = { md5: string; modId: number; fileId: number; name: string; version: string; fileName: string; uploadedAt: number; pictureUrl?: string };
+type RawMd5Match = { modId?: number; fileId?: number; name?: string; modVersion?: string; fileVersion?: string; fileName?: string; uploadedAt?: number | string; pictureUrl?: string };
+/** Installed files identified by MD5 on Nexus Mods (the user's own key; one lookup per hash). Unknown hashes are simply missing. */
+export async function nexusMd5Search(client: SupabaseClient, gameDomain: string, md5s: string[], limit = 200): Promise<NexusMd5Match[]> {
+  const out: NexusMd5Match[] = [];
+  for (const md5 of [...new Set(md5s.map((value) => value.toLowerCase()))].slice(0, limit)) {
+    const data = await invokeProviderFunction<{ matches?: RawMd5Match[] }>(client, { action: "nexus-md5", gameDomain, md5 });
+    const hit = (Array.isArray(data.matches) ? data.matches : []).find((match) => Number.isSafeInteger(match.modId) && Number.isSafeInteger(match.fileId));
+    if (!hit) continue;
+    const uploaded = typeof hit.uploadedAt === "number" ? (hit.uploadedAt > 1e11 ? Math.floor(hit.uploadedAt / 1000) : hit.uploadedAt) : hit.uploadedAt ? Math.floor(Date.parse(hit.uploadedAt) / 1000) || 0 : 0;
+    out.push({ md5, modId: hit.modId as number, fileId: hit.fileId as number, name: hit.name ?? "", version: hit.fileVersion || hit.modVersion || "", fileName: hit.fileName ?? "", uploadedAt: uploaded, pictureUrl: hit.pictureUrl });
+  }
+  return out;
+}

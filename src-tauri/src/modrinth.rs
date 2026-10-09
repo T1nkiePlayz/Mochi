@@ -41,6 +41,9 @@ pub struct DownloadEntry {
     pub provider: String,
     /// Folder the file lands in (for "Open folder").
     pub dir: String,
+    /// The mod (site project id) and Tofu content folder, so lists can show "Downloading" on the right card.
+    pub project_id: Option<String>,
+    pub subdir: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -64,10 +67,10 @@ pub struct ModAnalysis {
 struct ApiFile { url: String, filename: String, #[serde(default)] primary: bool, #[serde(default)] size: u64, #[serde(default)] hashes: HashMap<String, String> }
 
 #[derive(Debug, Deserialize)]
-struct ApiVersion { id: String, project_id: String, version_number: String, #[serde(default)] date_published: String, #[serde(default)] files: Vec<ApiFile> }
+pub(crate) struct ApiVersion { pub id: String, pub project_id: String, pub version_number: String, #[serde(default)] pub date_published: String, #[serde(default)] files: Vec<ApiFile> }
 
 #[derive(Debug, Deserialize)]
-struct ApiProject { id: String, title: String, icon_url: Option<String> }
+pub(crate) struct ApiProject { pub id: String, pub title: String, pub icon_url: Option<String> }
 
 static DOWNLOADS: OnceLock<Mutex<HashMap<String, DownloadEntry>>> = OnceLock::new();
 pub(crate) static NEXT_DOWNLOAD_ID: AtomicU64 = AtomicU64::new(1);
@@ -375,11 +378,27 @@ pub(crate) fn sha1_hex(path: &Path) -> Result<String, String> {
     Ok(hex(&hasher.finalize()))
 }
 
-async fn post_versions(endpoint: &str, body: Value) -> Result<HashMap<String, ApiVersion>, String> {
+pub(crate) async fn post_versions(endpoint: &str, body: Value) -> Result<HashMap<String, ApiVersion>, String> {
     let response = client()?.post(format!("{API_BASE}/{endpoint}")).json(&body).timeout(std::time::Duration::from_secs(30))
         .send().await.map_err(|e| format!("Unable to reach Modrinth: {e}"))?;
     if !response.status().is_success() { return Err(format!("Modrinth request failed ({}).", response.status())); }
     response.json().await.map_err(|e| format!("Modrinth returned invalid data: {e}"))
+}
+
+/// Titles and icons of Modrinth projects by id. Chunked so a big mod folder never produces a URL the API rejects;
+/// failures leave entries out (callers fall back to ids).
+pub(crate) async fn fetch_projects(mut ids: Vec<&str>) -> HashMap<String, ApiProject> {
+    ids.sort_unstable();
+    ids.dedup();
+    let mut projects: HashMap<String, ApiProject> = HashMap::new();
+    let Ok(client) = client() else { return projects };
+    for chunk in ids.chunks(100) {
+        let Ok(url) = reqwest::Url::parse_with_params(&format!("{API_BASE}/projects"), [("ids", serde_json::to_string(chunk).unwrap_or_default())]) else { continue };
+        let response = client.get(url).timeout(std::time::Duration::from_secs(30)).send().await;
+        let found: Vec<ApiProject> = match response { Ok(response) if response.status().is_success() => response.json().await.unwrap_or_default(), _ => Vec::new() };
+        projects.extend(found.into_iter().map(|project| (project.id.clone(), project)));
+    }
+    projects
 }
 
 /// Identifies installed files on Modrinth and reports newer compatible versions.
@@ -397,15 +416,7 @@ pub async fn analyze_mod_files(path: String, game_version: Option<String>, loade
     if let Some(version) = game_version.filter(|v| !v.is_empty()) { filters["game_versions"] = json!([version]); }
     let latest = post_versions("version_files/update", filters).await.unwrap_or_default();
 
-    let project_ids: Vec<&str> = { let mut ids: Vec<&str> = current.values().map(|v| v.project_id.as_str()).collect(); ids.sort_unstable(); ids.dedup(); ids };
-    // Chunked so a big mod folder never produces a URL the API rejects; titles fall back to ids on failure.
-    let mut projects: HashMap<String, ApiProject> = HashMap::new();
-    for chunk in project_ids.chunks(100) {
-        let url = reqwest::Url::parse_with_params(&format!("{API_BASE}/projects"), [("ids", serde_json::to_string(chunk).unwrap_or_default())]).map_err(|e| e.to_string())?;
-        let response = client()?.get(url).timeout(std::time::Duration::from_secs(30)).send().await;
-        let found: Vec<ApiProject> = match response { Ok(response) if response.status().is_success() => response.json().await.unwrap_or_default(), _ => Vec::new() };
-        projects.extend(found.into_iter().map(|project| (project.id.clone(), project)));
-    }
+    let projects = fetch_projects(current.values().map(|v| v.project_id.as_str()).collect()).await;
 
     Ok(hashed.into_iter().filter_map(|(file, hash)| {
         let version = current.get(&hash)?;

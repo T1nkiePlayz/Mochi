@@ -1,0 +1,62 @@
+/* Shared themed form controls (components/ui/Checkbox.tsx): checkbox, switch and labelled field.
+   Everything comes from tokens so each theme (and user themes) restyles them; class names are stable theme hooks. */
+
+/* Native checkboxes and radios inside generic forms must never take the text-input look (full width, padding). */
+.form-fields input[type="checkbox"], .form-fields input[type="radio"] { width: auto; min-width: 0; padding: 0; border: 0; background: none; box-shadow: none; }
+
+.mochi-check, .mochi-switch,
+.form-fields .mochi-check, .form-fields .mochi-switch {
+  display: flex; align-items: flex-start; gap: 10px; position: relative; min-width: 0; margin: 0;
+  color: var(--mochi-text); font-size: 13px; font-weight: 500; line-height: 1.35; letter-spacing: normal; text-transform: none; cursor: pointer;
+}
+.mochi-switch, .form-fields .mochi-switch { align-items: center; justify-content: space-between; }
+.mochi-check.is-disabled, .mochi-switch.is-disabled { cursor: not-allowed; opacity: .55; }
+
+/* The real input stays focusable and clickable but invisible; the box/track draws the state. */
+.mochi-check .mochi-check-input, .mochi-switch .mochi-switch-input {
+  position: absolute; inset: 0 auto auto 0; width: 18px; height: 18px; margin: 0; padding: 0; border: 0; opacity: 0; cursor: inherit; appearance: none;
+}
+.mochi-check-box {
+  display: inline-grid; place-items: center; flex: 0 0 auto; width: 18px; height: 18px; margin-top: 1px;
+  border: var(--mochi-border-width, 1px) solid var(--mochi-input-border, var(--mochi-border-strong));
+  border-radius: min(var(--mochi-radius-sm, 5px), 6px); background: var(--mochi-input-background, var(--mochi-background));
+  color: transparent; transition: background var(--mochi-transition, .15s ease), border-color var(--mochi-transition, .15s ease), color var(--mochi-transition, .15s ease);
+}
+.mochi-check:hover .mochi-check-box { border-color: var(--mochi-accent); }
+.mochi-check-input:checked + .mochi-check-box, .mochi-check-input[aria-checked="mixed"] + .mochi-check-box {
+  border-color: var(--mochi-accent-strong); background: var(--mochi-accent-strong); color: var(--mochi-accent-text, var(--mochi-text-strong));
+}
+.mochi-check-input:focus-visible + .mochi-check-box { box-shadow: var(--mochi-focus-ring); }
+
+.mochi-check-text { display: grid; gap: 3px; min-width: 0; }
+.mochi-check-label { color: var(--mochi-text-strong); overflow-wrap: anywhere; }
+.mochi-check-description, .form-fields .mochi-check-description { color: var(--mochi-text-muted); font-size: 11px; font-weight: 400; line-height: 1.45; }
+
+.mochi-switch .mochi-switch-input { inset: 50% 0 auto auto; transform: translateY(-50%); width: 34px; height: 20px; }
+.mochi-switch-track {
+  position: relative; flex: 0 0 auto; width: 34px; height: 20px; border-radius: var(--mochi-pill-radius, 999px);
+  border: var(--mochi-border-width, 1px) solid var(--mochi-input-border, var(--mochi-border-strong)); background: var(--mochi-surface-hover);
+  transition: background var(--mochi-transition, .15s ease), border-color var(--mochi-transition, .15s ease);
+}
+.mochi-switch-thumb {
+  position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: var(--mochi-pill-radius, 999px);
+  background: var(--mochi-text-muted); transition: transform var(--mochi-transition, .15s ease), background var(--mochi-transition, .15s ease);
+}
+.mochi-switch-input:checked + .mochi-switch-track { border-color: var(--mochi-accent-strong); background: var(--mochi-accent-strong); }
+.mochi-switch-input:checked + .mochi-switch-track .mochi-switch-thumb { transform: translateX(14px); background: var(--mochi-accent-text, var(--mochi-text-strong)); }
+.mochi-switch-input:focus-visible + .mochi-switch-track { box-shadow: var(--mochi-focus-ring); }
+.mochi-switch:hover .mochi-switch-track { border-color: var(--mochi-accent); }
+
+.mochi-field, .form-fields .mochi-field { display: grid; gap: 6px; min-width: 0; }
+.mochi-field-label { color: var(--mochi-text-muted); font-size: 11px; font-weight: var(--mochi-label-weight, 700); letter-spacing: var(--mochi-label-tracking, .06em); text-transform: var(--mochi-label-transform, uppercase); }
+.mochi-field-hint { color: var(--mochi-text-muted); font-size: 11px; line-height: 1.45; text-transform: none; letter-spacing: normal; font-weight: 400; }
+.mochi-field input, .mochi-field textarea {
+  width: 100%; padding: 9px 11px; border: var(--mochi-border-width, 1px) solid var(--mochi-input-border, var(--mochi-border-strong));
+  border-radius: var(--mochi-input-radius, 7px); outline: 0; color: var(--mochi-text-strong); background: var(--mochi-input-background, var(--mochi-background-elevated));
+  box-shadow: var(--mochi-input-shadow, none); font: inherit; font-size: 13px; text-transform: none; letter-spacing: normal;
+}
+.mochi-field input:focus-visible, .mochi-field textarea:focus-visible { border-color: var(--mochi-input-focus-border, var(--mochi-accent-strong)); box-shadow: var(--mochi-focus-ring); }
+
+@media (prefers-reduced-motion: reduce) {
+  .mochi-check-box, .mochi-switch-track, .mochi-switch-thumb { transition: none; }
+}
