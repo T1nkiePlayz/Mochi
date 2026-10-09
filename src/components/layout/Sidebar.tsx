@@ -45,7 +45,8 @@ export const Sidebar = memo(function Sidebar() {
   // The menu lives in a portal (themes give the sidebar their own stacking context), so it counts as "inside" via its own selector.
   useDismiss(accountWrap, showAccountMenu, () => setShowAccountMenu(false), { inside: ".account-menu", returnFocus: triggerRef });
   const menuStyle = useAnchoredMenu(triggerRef, showAccountMenu);
-  useEffect(() => { if (showAccountMenu && menuStyle) { const menu = menuRef.current; if (menu && !menu.contains(document.activeElement)) menu.querySelector<HTMLElement>("[role='menuitem']")?.focus({ preventScroll: true }); } }, [showAccountMenu, Boolean(menuStyle)]);
+  const placed = Boolean(menuStyle);
+  useEffect(() => { if (showAccountMenu && placed) { const menu = menuRef.current; if (menu && !menu.contains(document.activeElement)) menu.querySelector<HTMLElement>("[role='menuitem']")?.focus({ preventScroll: true }); } }, [showAccountMenu, placed]);
   return <aside className="sidebar" ref={ref}>
     <div className="brand"><div className="brand-mark"><img src="/mochi-mark.png" alt="Mochi" /></div><div><strong>Mochi</strong><span>Your games, your way.</span></div></div>
     <div className="sidebar-account-wrap" ref={accountWrap}>
