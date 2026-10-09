@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { Pool } from "jsr:@db/postgres@^0";
+import { companyQuery, mapCompanies, parseCompanyRequest } from "./igdb_company.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,6 +22,7 @@ type Body =
   | { action: "nexus-files"; gameDomain: string; modId: number }
   | { action: "nexus-download"; gameDomain: string; modId: number; fileId: number; key?: string; expires?: number | string }
   | { action: "igdb-search"; query: string; limit?: number }
+  | { action: "igdb-company"; slugs?: unknown; names?: unknown }
   | { action: "sgdb-search"; query: string }
   | {
     action: "sgdb-assets"; gameId?: number; steamAppId?: number; kinds?: SgdbKind[]; dimensions?: string[]; styles?: string[];
@@ -30,7 +32,7 @@ type Body =
 type IgdbCredential = { clientId: string; clientSecret: string };
 
 const pool = new Pool(Deno.env.get("SUPABASE_DB_URL")!, 1, true);
-const ACTIONS = new Set(["set", "status", "delete", "nexus-games", "nexus-mods", "nexus-status", "nexus-mod", "nexus-files", "nexus-download", "igdb-search", "sgdb-search", "sgdb-assets"]);
+const ACTIONS = new Set(["set", "status", "delete", "nexus-games", "nexus-mods", "nexus-status", "nexus-mod", "nexus-files", "nexus-download", "igdb-search", "igdb-company", "sgdb-search", "sgdb-assets"]);
 const SGDB_API = "https://www.steamgriddb.com/api/v2";
 const SGDB_KINDS = new Set<SgdbKind>(["grids", "heroes", "logos", "icons"]);
 const MAX_BODY_BYTES = 16 * 1024;
@@ -158,7 +160,8 @@ async function igdbAccessToken(credentials: IgdbCredential): Promise<string> {
   return token.access_token;
 }
 
-async function searchIgdb(userId: string, query: string, limit: number) {
+/** POST an Apicalypse query to one IGDB endpoint with the user's own credentials. */
+async function igdbQuery(userId: string, endpoint: "games" | "companies", query: string) {
   const raw = await getStoredSecret(userId, "igdb");
   if (!raw) throw new Error("IGDB credentials are not configured for this Mochi account.");
 
@@ -173,8 +176,7 @@ async function searchIgdb(userId: string, query: string, limit: number) {
   }
 
   const accessToken = await igdbAccessToken(credentials);
-  const escapedQuery = query.trim().replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-  const upstream = await fetch("https://api.igdb.com/v4/games", {
+  const upstream = await fetch(`https://api.igdb.com/v4/${endpoint}`, {
     method: "POST",
     headers: {
       "Client-ID": credentials.clientId.trim(),
@@ -182,13 +184,18 @@ async function searchIgdb(userId: string, query: string, limit: number) {
       "Content-Type": "text/plain",
       Accept: "application/json",
     },
-  body: `search "${escapedQuery}"; fields name,summary,cover.url,artworks.url,screenshots.url,videos.name,videos.video_id,genres.name,themes.name,game_modes.name,player_perspectives.name,first_release_date; limit ${limit};`,
+    body: query,
   });
   if (!upstream.ok) {
-    console.error("IGDB request failed", upstream.status);
+    console.error("IGDB request failed", endpoint, upstream.status);
     throw new Error(`IGDB metadata request failed (${upstream.status}).`);
   }
   return await upstream.json();
+}
+
+function searchIgdb(userId: string, query: string, limit: number) {
+  const escapedQuery = query.trim().replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return igdbQuery(userId, "games", `search "${escapedQuery}"; fields name,summary,cover.url,artworks.url,screenshots.url,videos.name,videos.video_id,genres.name,themes.name,game_modes.name,player_perspectives.name,first_release_date; limit ${limit};`);
 }
 
 async function nexusHeaders(userId: string) {
@@ -271,6 +278,17 @@ Deno.serve(async (req) => {
     } catch (error) {
       console.error("IGDB search failed", error);
       return response({ error: error instanceof Error ? error.message : "IGDB search failed." }, 502);
+    }
+  }
+
+  if (body.action === "igdb-company") {
+    const request = parseCompanyRequest(body);
+    if ("error" in request) return response({ error: request.error }, 400);
+    try {
+      return response({ companies: mapCompanies(await igdbQuery(user.id, "companies", companyQuery(request))) });
+    } catch (error) {
+      console.error("IGDB company lookup failed", error);
+      return response({ error: error instanceof Error ? error.message : "IGDB company lookup failed." }, 502);
     }
   }
 
