@@ -26,7 +26,11 @@ function walk(dir, out = []) {
 /** Counts offending literals in CSS text; comments and lines marked token-ok are skipped. */
 export function cssViolations(css) {
   const found = [];
-  const text = css.replace(/\/\*(?!\s*token-ok)[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "));
+  const text = css.replace(/\/\*(?!\s*token-ok)[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+    // A literal that is only the fallback of a theme token, and colour functions built purely from tokens
+    // (procedural hues on theme saturation/lightness), are themable already.
+    .replace(/(var\(\s*--[\w-]+\s*,\s*)(?:#[0-9a-fA-F]{3,8}|[a-z]+)(\s*\))/g, "$1x$2")
+    .replace(/\b(?:hsla?|rgba?|oklch)\((?=\s*(?:var|calc)\()/g, "fn(");
   text.split("\n").forEach((line, index) => {
     if (/token-ok/.test(line)) return;
     for (const match of line.matchAll(COLOR)) found.push({ line: index + 1, text: match[0] });

@@ -28,7 +28,7 @@ const base = String(args.base ?? "http://localhost:5173");
 const outDir = resolve(String(args.out ?? "audit-out"));
 const THEMES = readdirSync("src/themes", { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name);
 const DEFAULT_SIZES = "320x640,480x800,640x800,800x600,1024x768,1280x800,1600x900,2560x1440,3840x2160,1000x1040,1280x400,1024x2160";
-const SCREENS = ["setup", "library", "details", "settings", "stats", "downloads", "installed", "discover", "bigpicture", "modal-add", "modal-edit", "account-menu"];
+const SCREENS = ["setup", "library", "library-compact", "library-list", "library-shelves", "library-large", "details", "settings", "stats", "downloads", "installed", "discover", "bigpicture", "modal-add", "modal-edit", "tofu-manager", "account-menu"];
 const themes = !args.themes || args.themes === "all" ? THEMES : String(args.themes).split(",");
 const sizes = String(args.sizes ?? DEFAULT_SIZES).split(",").map((size) => size.split("x").map(Number));
 const screens = !args.screens || args.screens === "all" ? SCREENS : String(args.screens).split(",");
@@ -227,7 +227,7 @@ async function openNav(page, index) {
 const NAV_INDEX = { stats: 4, downloads: 3, installed: 1, discover: 2, settings: 5, library: 0 };
 
 async function prepare(page, screen) {
-  if (screen === "setup" || screen === "library") return;
+  if (screen === "setup" || screen.startsWith("library")) return;
   if (screen in NAV_INDEX) return openNav(page, NAV_INDEX[screen]);
   if (screen === "details") {
     await page.evaluate(() => document.querySelector(".game-card, .library-row, [class*='game-card']")?.click());
@@ -239,7 +239,13 @@ async function prepare(page, screen) {
     await page.evaluate(() => [...document.querySelectorAll("button")].find((b) => /add game|add a game|add piko/i.test(b.textContent + (b.getAttribute("aria-label") || "")))?.click());
     await page.waitForTimeout(300);
   } else if (screen === "modal-edit") {
-    await page.evaluate(() => document.querySelector("[aria-label*='Edit' i], [title*='Edit' i]")?.click());
+    // GameEditor: open a game, then its Edit button.
+    await page.evaluate(() => document.querySelector(".game-card, .library-row, [class*='game-card']")?.click());
+    await page.waitForTimeout(300);
+    await page.evaluate(() => [...document.querySelectorAll(".main-content button")].find((b) => b.textContent.trim() === "Edit")?.click());
+    await page.waitForTimeout(300);
+  } else if (screen === "tofu-manager") {
+    await page.evaluate(() => document.querySelector("[aria-label='Tofu settings']")?.click() ?? [...document.querySelectorAll("button")].find((b) => /manage/i.test(b.textContent))?.click());
     await page.waitForTimeout(300);
   } else if (screen === "account-menu") {
     await page.evaluate(() => document.querySelector(".sidebar-account")?.click());
@@ -267,6 +273,8 @@ for (const theme of themes) {
         const page = await context.newPage();
         try {
           if (screen === "setup") await page.addInitScript(() => { try { localStorage.removeItem("mochi:setup-complete"); } catch { /* */ } });
+          const viewMode = screen.startsWith("library-") ? screen.slice(8) : "grid";
+          await page.addInitScript((mode) => { try { localStorage.setItem("mochi:library-view", JSON.stringify(mode)); } catch { /* */ } }, viewMode);
           await page.goto(base, { waitUntil: "load" });
           await page.waitForSelector(screen === "setup" ? ".setup-shell, .setup, main, #root > *" : ".app-shell, .bp-root, [class*='bigpicture']", { timeout: 8000 }).catch(() => {});
           await page.waitForFunction((id) => document.documentElement.dataset.mochiTheme === id, theme, { timeout: 8000 }).catch(() => {});
