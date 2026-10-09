@@ -19,7 +19,9 @@ export function sanitizeCloudAchievements(raw: unknown): AchievementCloudData {
   const data = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const unlocked: Record<string, number> = {};
   if (data.unlocked && typeof data.unlocked === "object") {
-    for (const [id, at] of Object.entries(data.unlocked as Record<string, unknown>).slice(0, MAX_IDS)) if (id.length <= 100 && validTime(at)) unlocked[id] = at;
+    // Sorted so the same data always serialises the same way (Postgres jsonb reorders keys), letting sync skip no-op uploads.
+    const entries = Object.entries(data.unlocked as Record<string, unknown>).slice(0, MAX_IDS).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    for (const [id, at] of entries) if (id.length <= 100 && validTime(at)) unlocked[id] = at;
   }
   const flags = (data.flags && typeof data.flags === "object" ? data.flags : {}) as Record<string, unknown>;
   return {
