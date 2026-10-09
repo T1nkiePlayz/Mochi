@@ -5,12 +5,14 @@ import minecraftGrassBlock from "../../assets/minecraft-grass-block.svg";
 import { ImportThumb } from "./ImportThumb";
 import { applyKindOverride, applyKindOverrides, readOverrides, setOverride, overrideKeyForImport } from "../../lib/launcherOverrides";
 import { filterItems, type PickerFilter } from "./filterItems";
+import { MinecraftModeChooser } from "./MinecraftModeChooser";
+import type { MinecraftMode } from "../../lib/minecraftCopy";
 import { detectImportSources, scanImportGames, type DetectedImportSource, type ImportSourceId, type ImportedGame } from "../../lib/sources";
 
 // The "Minecraft instances" source tile shows the game logo rather than the Prism launcher mark.
 const sourceIcon = (id: string): string => (id === "prism" ? minecraftGrassBlock : launcherIcon(id));
 
-export type PickerSelection = { games: ImportedGame[]; sources: ImportSourceId[] };
+export type PickerSelection = { games: ImportedGame[]; sources: ImportSourceId[]; /** What to do with the selected Minecraft instances (one choice for all of them). */ minecraftMode: MinecraftMode };
 
 type Props = {
   /** Called whenever the checked games change. */
@@ -52,6 +54,7 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
   const [active, setActive] = useState<ImportSourceId | null>(null);
   const [query, setQuery] = useState("");
   const [nonce, setNonce] = useState(0);
+  const [minecraftMode, setMinecraftMode] = useState<MinecraftMode>("copy");
   const initialised = useRef<Set<string>>(new Set());
 
   // The single place scanned items enter the picker: everything downstream sees only the filtered list.
@@ -111,8 +114,8 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
       const picked = (data[source.id]?.games ?? []).filter((game) => selected.has(keyOf(game)));
       if (picked.length) { games.push(...picked); ids.push(source.id); }
     }
-    return { games, sources: ids };
-  }, [detected, data, selected]);
+    return { games, sources: ids, minecraftMode };
+  }, [detected, data, selected, minecraftMode]);
 
   const onChangeRef = useRef(onSelectionChange);
   onChangeRef.current = onSelectionChange;
@@ -301,6 +304,7 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
       <section className="sgp-detail" aria-label={activeSource ? `${activeSource.name} games` : "Games"}>
         {activeSource && (
           <>
+            {activeSource.id === "prism" && <MinecraftModeChooser value={minecraftMode} onChange={setMinecraftMode} />}
             <div className="sgp-toolbar">
               <label className="sgp-search">
                 <Search size={14} aria-hidden="true" />

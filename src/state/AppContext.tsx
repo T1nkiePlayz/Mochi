@@ -6,6 +6,7 @@ import { useGameSessions } from "../hooks";
 import { useThemeEngine } from "../lib/theme";
 import { getPlatformCapabilities, listRuntimes, type PlatformCapabilities, type RuntimeInfo } from "../lib/platform";
 import type { ImportedGame, ImportSourceId } from "../lib/sources";
+import type { MinecraftMode } from "../lib/minecraftCopy";
 import { discardPendingWrites, readJson, readString, storageKeys, writeJson, writeString } from "../lib/storage";
 import { normalizeBehavior, type Behavior } from "./settings";
 import { useNotifications } from "./useNotifications";
@@ -54,7 +55,7 @@ function useAppController() {
     startProgress: notifications.startProgress, updateProgress: notifications.updateProgress,
   });
   const hasIgdb = Boolean(supabase && user && credentials.status.igdb);
-  const add = useAddGame(lib, metadata, hasIgdb, credentials.status.igdb, actions.setLaunchError, () => setActiveNav("Library"));
+  const add = useAddGame(lib, metadata, hasIgdb, credentials.status.igdb, actions.setLaunchError, () => setActiveNav("Library"), notifications);
   const storage = useProfileStorage({
     user, library: lib.library, setLibrary: lib.setLibrary, behavior, setBehavior,
     notifications: notifications.notifications, setNotifications: notifications.setNotifications,
@@ -106,11 +107,11 @@ function useAppController() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const finishFirstLaunchSetup = (games: ImportedGame[], sources: ImportSourceId[]) => {
+  const finishFirstLaunchSetup = (games: ImportedGame[], sources: ImportSourceId[], minecraftMode: MinecraftMode = "copy") => {
     writeString(storageKeys.setupComplete, "true");
     writeJson(storageKeys.importSources, sources);
     setShowFirstLaunchSetup(false);
-    if (games.length) add.importGames(games);
+    if (games.length) add.importGames(games, { minecraftMode });
   };
 
   const chooseConfigLocation = async () => {

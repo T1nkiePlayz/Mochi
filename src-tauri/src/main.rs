@@ -137,6 +137,18 @@ fn detect_import_sources() -> Vec<sources::DetectedImportSource> { sources::dete
 #[tauri::command(async)]
 fn scan_import_games(source: String, library_path: Option<String>) -> Vec<sources::ImportedGame> { sources::scan_import_games(source.trim(), library_path) }
 
+/// Copies a Minecraft launcher instance next to the original (see `sources::mccopy`), reporting `minecraft-copy-progress`.
+#[tauri::command]
+async fn copy_minecraft_instance(app: tauri::AppHandle, launch_target: String) -> Result<sources::mccopy::CopiedInstance, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let home = platform::home_dir().ok_or("Could not find your home folder.")?;
+        let target = launch_target.clone();
+        sources::mccopy::copy_instance(&home, &launch_target, &mut |copied_bytes, total_bytes, file| {
+            let _ = app.emit("minecraft-copy-progress", sources::mccopy::CopyProgress { target: target.clone(), copied_bytes, total_bytes, file: file.to_owned() });
+        })
+    }).await.map_err(|e| format!("The copy was interrupted: {e}"))?
+}
+
 #[tauri::command(async)]
 fn get_mochi_config_info(app: tauri::AppHandle) -> Result<themes::MochiConfigInfo, String> { themes::get_mochi_config_info(app) }
 
@@ -249,7 +261,7 @@ fn main() {
             send_system_notification, open_external_url, open_path_in_file_manager, set_launch_on_startup,
             launch_game_tracked, stop_game, get_active_sessions, get_playtime, get_playtime_history, get_dir_size, get_downloads,
             list_flatpaks, list_runtimes, get_platform_capabilities, create_game_shortcut, remove_game_shortcut,
-            detect_import_sources, scan_import_games,
+            detect_import_sources, scan_import_games, copy_minecraft_instance,
             bigpicture::get_system_status, bigpicture::suspend_system, bigpicture::power_action, bigpicture::get_power_capabilities, soundpacks::list_sound_packs, soundpacks::import_sound_pack, soundpacks::remove_sound_pack, soundpacks::export_sound_pack, soundpacks::read_sound_pack_file, bigpicture::quit_mochi, gamepad::get_gamepads, gamepad::gamepad_rumble,
             get_mochi_config_info, move_mochi_config, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
             fonts::cache_theme_fonts,

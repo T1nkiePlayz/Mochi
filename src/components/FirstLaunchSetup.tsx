@@ -4,6 +4,7 @@ import type { ThemeDescriptor } from "../lib/theme";
 import type { ProviderCredential } from "../lib/providerCredentials";
 import type { ImportSourceId, ImportedGame } from "../lib/sources";
 import type { PickerSelection } from "./import/SourceGamePicker";
+import type { MinecraftMode } from "../lib/minecraftCopy";
 import { WelcomeStep } from "./setup/WelcomeStep";
 import { ThemeStep } from "./setup/ThemeStep";
 import { AccessibilityStep } from "./setup/AccessibilityStep";
@@ -29,7 +30,7 @@ type SetupProps = {
   setSteamGridDbKey: (value: string) => void;
   saveCredential: (provider: ProviderCredential) => Promise<void>;
   credentialBusy: ProviderCredential | null;
-  onFinish: (games: ImportedGame[], sources: ImportSourceId[]) => void;
+  onFinish: (games: ImportedGame[], sources: ImportSourceId[], minecraftMode: MinecraftMode) => void;
 };
 
 const steps = ["welcome", "theme", "accessibility", "account", "services", "imports"] as const;
@@ -38,7 +39,7 @@ const stepLabels: Record<Step, string> = { welcome: "Welcome", theme: "Theme", a
 
 export function FirstLaunchSetup(props: SetupProps) {
   const [step, setStep] = useState<Step>("welcome");
-  const [selection, setSelection] = useState<PickerSelection>({ games: [], sources: [] });
+  const [selection, setSelection] = useState<PickerSelection>({ games: [], sources: [], minecraftMode: "copy" });
   const index = steps.indexOf(step);
   const last = index === steps.length - 1;
 
@@ -49,7 +50,7 @@ export function FirstLaunchSetup(props: SetupProps) {
     if (next >= 0 && next < steps.length) setStep(steps[next]);
   };
 
-  const finish = () => props.onFinish(selection.games, selection.sources);
+  const finish = () => props.onFinish(selection.games, selection.sources, selection.minecraftMode);
   const nextLabel = step === "welcome" ? "Get started" : last ? (selection.games.length ? `Import ${selection.games.length} and finish` : "Finish") : "Next";
 
   return (

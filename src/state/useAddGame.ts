@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { supabase } from "../lib/supabase";
 import { lookupIgdbGames, type IgdbGame } from "../lib/igdb";
 import { mergeInstances, isInstanceTarget, instanceTofuId } from "../lib/minecraftPiko";
+import { copyInstances, type MinecraftMode } from "../lib/minecraftCopy";
 import { importedGameToPiko } from "../lib/importMapping";
 import { applyIgdbMetadata, sanitizeKey } from "../lib/metadata";
 import { cacheArtwork } from "./useMetadata";
@@ -20,8 +21,17 @@ export type AddStep = "form" | "igdb" | "cover";
 
 export { platformLabel } from "../lib/importMapping";
 
+/** Progress and notices for work that outlives the picker (copying Minecraft instances). */
+export type ImportJobs = {
+  notify: (title: string, message: string) => void;
+  startProgress: (title: string, message: string, total: number) => string;
+  updateProgress: (id: string, progress: { value: number; total: number }, message: string) => void;
+};
+
+const megabytes = (bytes: number) => `${Math.max(1, Math.round(bytes / 1_048_576))} MB`;
+
 /** The "Add a Piko" flows: custom games, importing from other launchers and picking a Flatpak. */
-export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: boolean, _igdbConfigured: boolean, setLaunchError: (message: string) => void, showLibrary: () => void = () => {}) {
+export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: boolean, _igdbConfigured: boolean, setLaunchError: (message: string) => void, showLibrary: () => void = () => {}, jobs?: ImportJobs) {
   const [showAddPiko, setShowAddPiko] = useState(false);
   const [showCustomGame, setShowCustomGame] = useState(false);
   const [showImportPicker, setShowImportPicker] = useState(false);
@@ -136,7 +146,31 @@ export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: 
     await addToLibrary(pendingGame.name, pendingGame.executablePath, pendingGame.match ?? null, pendingGame.platformCategory, useCover ? cover : null);
   };
 
-  const importGames = (games: ImportedGame[]) => {
+  /** Copies Minecraft instances one by one (with a progress row), then imports the copies; failures are reported, never imported. */
+  const copyThenImport = async (instances: ImportedGame[]) => {
+    const total = instances.length;
+    const job = jobs?.startProgress("Copying Minecraft instances", `Copying ${total === 1 ? instances[0].name : `${total} instances`}…`, total * 1000);
+    const update = (done: number, fraction: number, message: string) => { if (job) jobs?.updateProgress(job, { value: Math.round((done + fraction) * 1000), total: total * 1000 }, message); };
+    const { copied, failed } = await copyInstances(instances, {
+      onStart: (game, index) => update(index, 0, `Copying ${game.name} (${index + 1} of ${total})…`),
+      onProgress: (game, progress) => update(instances.indexOf(game), progress.totalBytes ? progress.copiedBytes / progress.totalBytes : 0, `Copying ${game.name}: ${megabytes(progress.copiedBytes)} of ${megabytes(progress.totalBytes)}`),
+    });
+    update(total, 0, failed.length ? `Copied ${copied.length} of ${total} instances.` : `Copied ${total === 1 ? instances[0].name : `${total} instances`}.`);
+    if (failed.length) jobs?.notify(`${failed.length === 1 ? "An instance was" : `${failed.length} instances were`} not copied`, `${failed.map((item) => item.game.name).join(", ")}: ${failed[0].error} Your originals were not changed.`);
+    if (copied.length) importNow(copied);
+  };
+
+  const importGames = (games: ImportedGame[], options: { minecraftMode?: MinecraftMode } = {}) => {
+    const instances = games.filter((game) => isInstanceTarget(game.launchTarget));
+    if (instances.length && (options.minecraftMode ?? "copy") === "copy") {
+      void copyThenImport(instances);
+      games = games.filter((game) => !isInstanceTarget(game.launchTarget));
+    }
+    if (games.length) importNow(games);
+    else { setShowAddPiko(false); closeImportPicker(); }
+  };
+
+  const importNow = (games: ImportedGame[]) => {
     const now = Date.now();
     // Minecraft instances are Tofus of the one Minecraft Piko; they are never deduplicated by name.
     const instances = games.filter((game) => isInstanceTarget(game.launchTarget));

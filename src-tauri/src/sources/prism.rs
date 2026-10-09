@@ -58,7 +58,7 @@ pub struct MinecraftInstance {
 }
 
 /// `key=value` lines of an INI-style file (sections ignored; the first occurrence wins).
-fn ini_value(text: &str, key: &str) -> Option<String> {
+pub(super) fn ini_value(text: &str, key: &str) -> Option<String> {
     text.lines().find_map(|line| {
         let (name, value) = line.split_once('=')?;
         (name.trim() == key).then(|| value.trim().to_owned())
@@ -82,7 +82,7 @@ fn pack_info(text: &str) -> (Option<String>, String) {
 }
 
 /// The instances folder: `InstanceDir` from the launcher's config (absolute or relative to its data folder).
-fn instances_dir(root: &Path, launcher: &InstanceLauncher) -> PathBuf {
+pub(super) fn instances_dir(root: &Path, launcher: &InstanceLauncher) -> PathBuf {
     let configured = read(&root.join(launcher.config)).and_then(|text| ini_value(&text, "InstanceDir"));
     match configured.map(PathBuf::from) {
         Some(path) if path.is_absolute() => path,
@@ -92,7 +92,7 @@ fn instances_dir(root: &Path, launcher: &InstanceLauncher) -> PathBuf {
 }
 
 /// One instance folder, or `None` when it is not an instance (no `instance.cfg`).
-fn read_instance(root: &Path, dir: &Path, launcher: &InstanceLauncher) -> Option<ImportedGame> {
+pub(super) fn read_instance(root: &Path, dir: &Path, launcher: &InstanceLauncher) -> Option<ImportedGame> {
     let id = dir.file_name()?.to_str()?.to_owned();
     if id.starts_with('.') || id.starts_with('_') { return None; }
     let config = read(&dir.join("instance.cfg"))?;
