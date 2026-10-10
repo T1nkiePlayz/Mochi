@@ -32,7 +32,7 @@ export function useGameNewsPoller(enabled: boolean, library: readonly Piko[], no
     if (!enabled) return;
     let cancelled = false;
     let running = false;
-    // Until Mochi has a language selector, follow the OS/webview locale.
+    // The launcher passes its selected display language; the OS/webview locale is only the fallback.
     const language = steamNewsLanguage(locale ?? (typeof navigator === "undefined" ? "en" : navigator.language));
     const currentNews = getNewsSnapshot().news;
     if (currentNews.language !== language) setNews(resetNewsLanguage(currentNews, language));
