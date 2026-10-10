@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+import ts from "typescript";
 import { launcherLanguages } from "./languages";
 import { getTranslationMessages, hasTranslation, translate } from "./i18n";
 
@@ -20,6 +23,80 @@ describe("shared UI translations", () => {
         expect(hasTranslation(message, language.code), `${language.code}: ${message}`).toBe(true);
       }
     }
+  });
+
+  it("covers every literal user-facing JSX string in every supported locale", () => {
+    const root = path.resolve(process.cwd(), "src");
+    const skippedTags = new Set(["CodeBlock", "WritingBlock", "AppBlock", "pre", "code", "textarea", "script", "style"]);
+    const visibleAttributes = new Set(["aria-label", "aria-description", "aria-valuetext", "title", "placeholder", "alt", "label", "description", "emptyLabel", "confirmLabel", "cancelLabel", "submitLabel", "buttonLabel", "heading", "caption", "tooltip", "helpText"]);
+    const files: string[] = [];
+    const walk = (directory: string) => {
+      for (const entry of readdirSync(directory, { withFileTypes: true })) {
+        const fullPath = path.join(directory, entry.name);
+        if (entry.isDirectory()) walk(fullPath);
+        else if (entry.isFile() && entry.name.endsWith(".tsx") && !/\.test\.tsx$/.test(entry.name) && entry.name !== "LocalizedText.tsx") files.push(fullPath);
+      }
+    };
+    const decode = (value: string) => value.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ");
+    const normalize = (value: string) => value.split(/\r?\n/).map((line, index, lines) => {
+      let part = line.replace(/\t/g, " ");
+      if (index > 0) part = part.replace(/^\s+/, "");
+      if (index < lines.length - 1) part = part.replace(/\s+$/, "");
+      return part;
+    }).filter(Boolean).join(" ").trim();
+    const found = new Map<string, string>();
+    const collect = (node: ts.Node, skipText = false) => {
+      if (ts.isJsxElement(node)) {
+        const tag = node.openingElement.tagName.getText();
+        const skipChildren = skipText || skippedTags.has(tag);
+        for (const attribute of node.openingElement.attributes.properties) {
+          if (ts.isJsxAttribute(attribute) && visibleAttributes.has(attribute.name.getText()) && attribute.initializer && ts.isStringLiteral(attribute.initializer)) {
+            const message = decode(attribute.initializer.text).trim();
+            if (message && /[\p{L}\p{N}]/u.test(message)) found.set(message, path.relative(root, attribute.getSourceFile().fileName));
+          }
+        }
+        node.children.forEach((child) => collect(child, skipChildren));
+        return;
+      }
+      if (ts.isJsxSelfClosingElement(node)) {
+        for (const attribute of node.attributes.properties) {
+          if (ts.isJsxAttribute(attribute) && visibleAttributes.has(attribute.name.getText()) && attribute.initializer && ts.isStringLiteral(attribute.initializer)) {
+            const message = decode(attribute.initializer.text).trim();
+            if (message && /[\p{L}\p{N}]/u.test(message)) found.set(message, path.relative(root, attribute.getSourceFile().fileName));
+          }
+        }
+        return;
+      }
+      if (ts.isJsxFragment(node)) {
+        node.children.forEach((child) => collect(child, skipText));
+        return;
+      }
+      if (ts.isJsxText(node) && !skipText) {
+        const message = decode(normalize(node.text));
+        if (message && /[\p{L}\p{N}]/u.test(message)) found.set(message, path.relative(root, node.getSourceFile().fileName));
+        return;
+      }
+      if (ts.isJsxExpression(node) && node.expression && ts.isStringLiteralLike(node.expression) && !skipText) {
+        const message = decode(node.expression.text).trim();
+        if (message && /[\p{L}\p{N}]/u.test(message)) found.set(message, path.relative(root, node.getSourceFile().fileName));
+        return;
+      }
+      ts.forEachChild(node, (child) => collect(child, skipText));
+    };
+    walk(root);
+    for (const file of files) {
+      const source = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+      collect(source);
+    }
+    const missing: string[] = [];
+    for (const [message, file] of found) {
+      for (const language of launcherLanguages) {
+        if (language.code !== "en" && !hasTranslation(message, language.code)) {
+          missing.push(`${language.code}: "${message}" (${file})`);
+        }
+      }
+    }
+    expect(missing, `Missing literal UI translations (first 100 shown):\n${missing.slice(0, 100).join("\n")}`).toEqual([]);
   });
 
   it("falls back to the original text for unknown messages and unsupported locales", () => {
