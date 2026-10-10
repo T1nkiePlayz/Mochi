@@ -33,7 +33,7 @@ layerPlugin.postcss = true;
  * Source code blocks and editable text are deliberately excluded.
  */
 function jsxLocalizationPlugin() {
-  const skippedTextTags = new Set(["CodeBlock", "WritingBlock", "AppBlock", "pre", "code", "textarea", "script", "style"]);
+  const skippedTextTags = new Set(["CodeBlock", "WritingBlock", "AppBlock", "pre", "code", "textarea", "script", "style", "kbd"]);
   const visibleAttributes = new Set(["aria-label", "aria-description", "aria-valuetext", "title", "placeholder", "alt", "label", "description", "emptyLabel", "confirmLabel", "cancelLabel", "submitLabel", "buttonLabel", "heading", "caption", "tooltip", "helpText"]);
 
   function normalizeText(value: string): string {
