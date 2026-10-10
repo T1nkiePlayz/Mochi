@@ -1,3 +1,4 @@
+import { withCleanNotes } from "./gameNotes";
 import type { Piko, Tofu } from "../models";
 import type { PlaytimeEntry } from "./platform";
 import { migrateMinecraftPikos } from "./minecraftPiko";
@@ -117,14 +118,14 @@ export function sanitizeLibrary(value: unknown, overrides: KindOverrides = readO
     if (!isRecord(item) || typeof item.id !== "string" || !item.id || seen.has(item.id)) continue;
     seen.add(item.id);
     const tofus = (Array.isArray(item.tofus) ? item.tofus : []).filter((tofu): tofu is Tofu => isRecord(tofu) && typeof tofu.id === "string");
-    result.push(classifyLauncherEntry({
+    result.push(classifyLauncherEntry(withCleanNotes({
       ...(item as unknown as Piko),
       name: typeof item.name === "string" ? item.name : "Untitled",
       description: typeof item.description === "string" ? item.description : "",
       accent: typeof item.accent === "string" ? item.accent : "#a99ad6",
       artwork: typeof item.artwork === "string" ? item.artwork : "",
       tofus: tofus.length ? tofus.map((tofu) => ({ ...tofu, name: typeof tofu.name === "string" ? tofu.name : "Default", mods: Number.isFinite(tofu.mods) ? tofu.mods : 0 })) : [defaultTofuOf()],
-    }, overrides));
+    }), overrides));
   }
   return migrateMinecraftPikos(result);
 }

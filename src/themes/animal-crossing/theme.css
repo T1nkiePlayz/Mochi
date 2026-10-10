@@ -91,6 +91,7 @@ html:not([data-nav-mode="drawer"])[data-mochi-shell="top"] .sidebar .sidebar-acc
 [data-mochi-theme="animal-crossing"] .settings-page { width: min(900px, calc(100% - 32px)); margin-inline: auto; }
 
 /* Edit game tabs: the generic accent text colour is unreadable on the cream card, so match the pill style used by .workspace-tabs. */
-[data-mochi-theme="animal-crossing"] .editor-tabs { gap: 6px; padding-bottom: 8px; border-bottom: 3px dotted #cfe6b2; }
+[data-mochi-theme="animal-crossing"] .editor-tabs { gap: 6px; border-color: #cfe6b2; border-style: dotted; border-width: 0 3px 0 0; }
+@media (max-width: 720px) { [data-mochi-theme="animal-crossing"] .editor-tabs { border-width: 0 0 3px; padding-bottom: 8px; } }
 [data-mochi-theme="animal-crossing"] .editor-tabs button { border: 0; border-radius: 999px; color: #746553; font-weight: 600; }
 [data-mochi-theme="animal-crossing"] .editor-tabs button.active { background: #5cc9a7; color: #fff; box-shadow: 0 3px 0 #2fae8a; }

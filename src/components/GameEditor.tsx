@@ -13,6 +13,7 @@ import type { ArtworkSelection } from "./artwork/ArtworkPicker";
 import { ArtworkTab } from "./library/editor/ArtworkTab";
 import { GeneralTab } from "./library/editor/GeneralTab";
 import { LaunchTab } from "./library/editor/LaunchTab";
+import { NotesTab } from "./library/editor/NotesTab";
 import { MetadataTab } from "./library/editor/MetadataTab";
 import type { EditorContext, LockedField } from "./library/editor/types";
 
@@ -23,7 +24,7 @@ type Props = {
   onClose: () => void;
 };
 
-const tabs = [["general", "General"], ["launch", "Launch"], ["artwork", "Artwork"], ["metadata", "Metadata"]] as const;
+const tabs = [["general", "General"], ["launch", "Launch"], ["artwork", "Artwork"], ["notes", "Notes"], ["metadata", "Metadata"]] as const;
 type TabId = (typeof tabs)[number][0];
 
 export function GameEditor({ game, capabilities, onSave, onClose }: Props) {
@@ -89,7 +90,7 @@ export function GameEditor({ game, capabilities, onSave, onClose }: Props) {
   };
 
   const onTabKey = (event: KeyboardEvent, index: number) => {
-    const next = event.key === "ArrowRight" ? index + 1 : event.key === "ArrowLeft" ? index - 1 : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : -1;
+    const next = event.key === "ArrowRight" || event.key === "ArrowDown" ? index + 1 : event.key === "ArrowLeft" || event.key === "ArrowUp" ? index - 1 : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : -1;
     if (next < 0) return;
     event.preventDefault();
     const target = (next + tabs.length) % tabs.length;
@@ -108,6 +109,7 @@ export function GameEditor({ game, capabilities, onSave, onClose }: Props) {
       <div className="editor-panel" role="tabpanel" id={`editor-panel-${tab}`} aria-labelledby={`editor-tab-${tab}`}>
         {tab === "general" && <GeneralTab ctx={ctx} />}
         {tab === "launch" && <LaunchTab ctx={ctx} />}
+        {tab === "notes" && <NotesTab ctx={ctx} />}
         {tab === "artwork" && <ArtworkTab ctx={ctx} />}
         {tab === "metadata" && <MetadataTab ctx={ctx} />}
       </div>

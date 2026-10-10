@@ -1,5 +1,5 @@
 /* Game editor (tabbed modal), artwork picker and cropper. */
-.game-editor { width: min(960px, calc(100vw - 32px)); max-height: min(640px, calc(100vh - 48px)); display: flex; flex-direction: column; overflow: hidden; }
+.modal.game-editor { width: min(960px, calc(100vw - 32px)); max-height: min(640px, calc(100vh - 48px)); display: flex; flex-direction: column; overflow: hidden; }
 .editor-tabs { display: flex; gap: 4px; margin: 14px 0 0; border-bottom: var(--mochi-border-width) solid var(--mochi-border); }
 .editor-tabs button { padding: 9px 14px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--mochi-text-muted); font-size: 13px; cursor: pointer; }
 .editor-tabs button:hover { color: var(--mochi-text); }
@@ -80,3 +80,29 @@
 .launch-command { display: block; min-width: 0; padding: 10px 12px; border: var(--mochi-border-width, 1px) solid var(--mochi-input-border); border-radius: var(--mochi-radius-md, 8px); background: var(--mochi-surface); color: var(--mochi-text-strong); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
 .launch-command:focus-visible { outline: 2px solid var(--mochi-input-focus-border); outline-offset: 1px; }
 .launch-hint { margin: 0; color: var(--mochi-text-muted); font-size: 11px; line-height: 1.5; }
+
+.editor-links { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
+.editor-links legend { padding: 0; font-weight: 600; margin-bottom: 6px; }
+.editor-link-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-radius-sm, 8px); }
+.editor-link-row span { min-width: 0; display: grid; }
+.editor-link-row small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--mochi-text-muted); }
+.editor-link-add { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; gap: 8px; }
+.game-details-links { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.link-button { background: none; border: 0; padding: 0; color: var(--mochi-accent-text); cursor: pointer; text-decoration: underline; font: inherit; }
+@media (max-width: 560px) { .editor-link-add { grid-template-columns: 1fr; } }
+
+/* Wide layout: tab rail on the left, a two-column form on the right, so the dialog is short instead of tall. */
+.modal.game-editor { display: grid; grid-template-columns: 180px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto; column-gap: 24px; }
+.game-editor > .modal-header { grid-column: 1 / -1; }
+.game-editor > .editor-tabs { grid-column: 1; grid-row: 2 / 5; flex-direction: column; align-self: start; margin: 14px 0 0; padding-right: 16px; border-bottom: 0; border-right: var(--mochi-border-width) solid var(--mochi-border); }
+.game-editor > .editor-tabs button { text-align: left; border-bottom: 0; border-radius: var(--mochi-radius-sm, 8px); }
+.game-editor > .editor-tabs button.active { background: var(--mochi-accent-soft); }
+.game-editor > .editor-panel, .game-editor > .editor-footer, .game-editor > .auth-error { grid-column: 2; }
+.game-editor .editor-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; grid-auto-flow: dense; }
+.game-editor .editor-fields > :is(.editor-field, .editor-suggestions, .editor-locked, .check-row, fieldset, p, .editor-actions-row, ul, h3),
+.game-editor .editor-fields > label:has(textarea) { grid-column: 1 / -1; }
+@media (max-width: 760px) {
+  .modal.game-editor { display: flex; }
+  .game-editor > .editor-tabs { flex-direction: row; flex-wrap: wrap; align-self: stretch; padding-right: 0; border-right: 0; border-bottom: var(--mochi-border-width) solid var(--mochi-border); }
+  .game-editor .editor-fields { grid-template-columns: minmax(0, 1fr); }
+}
