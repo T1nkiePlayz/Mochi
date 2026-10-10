@@ -32,15 +32,24 @@ export function DownloadsView() {
       <p>Mods, resource packs and shaders from Modrinth, CurseForge and Nexus Mods download here and keep going while Mochi is hidden in the tray. Finished downloads stay in this list for 10 minutes.</p>
     </div>
     <section className="download-group download-pacing" aria-label="Download controls">
-      <div className="download-group-heading"><strong>Download controls</strong><span>{held ? (prefs.paused ? "Paused" : "Waiting for your allowed hours") : "Running"}</span></div>
-      <div className="download-toolbar">
-        <button type="button" className="secondary-button" aria-pressed={prefs.paused} onClick={() => setPrefs((current) => ({ ...current, paused: !current.paused }))}>{prefs.paused ? <><Play size={14} /> Resume all downloads</> : <><Pause size={14} /> Pause all downloads</>}</button>
-        <label className="download-pacing-field"><span>Speed limit</span><select value={prefs.limitKiB} onChange={(event) => setPrefs((current) => ({ ...current, limitKiB: Number(event.target.value) }))}>{speedLimits.map((item) => <option key={item.kib} value={item.kib}>{item.label}</option>)}</select></label>
-        <label className="download-pacing-field"><input type="checkbox" checked={prefs.window.enabled} onChange={(event) => setPrefs((current) => ({ ...current, window: { ...current.window, enabled: event.target.checked } }))} /><span>Schedule downloads</span></label>
-        <label className="download-pacing-field"><span>From</span><input type="time" aria-label="Allowed from" value={prefs.window.start} disabled={!prefs.window.enabled} onChange={(event) => event.target.value && setPrefs((current) => ({ ...current, window: { ...current.window, start: event.target.value } }))} /></label>
-        <label className="download-pacing-field"><span>Until</span><input type="time" aria-label="Allowed until" value={prefs.window.end} disabled={!prefs.window.enabled} onChange={(event) => event.target.value && setPrefs((current) => ({ ...current, window: { ...current.window, end: event.target.value } }))} /></label>
+      <div className="download-group-heading"><div className="download-control-heading-copy"><strong>Download controls</strong><small>Manage bandwidth and when downloads are allowed to run.</small></div><span className={held ? "download-control-status held" : "download-control-status"}><i />{held ? (prefs.paused ? "Paused" : "Scheduled wait") : "Downloads enabled"}</span></div>
+      <div className="download-control-body">
+        <div className="download-control-primary">
+          <div><strong>{prefs.paused ? "Downloads are paused" : held ? "Waiting for your schedule" : "Downloads can run"}</strong><small>{prefs.paused ? "Resume when you're ready to continue." : held ? "Downloads will resume automatically during your allowed hours." : "Your active downloads will continue in the background."}</small></div>
+          <button type="button" className="secondary-button" aria-pressed={prefs.paused} onClick={() => setPrefs((current) => ({ ...current, paused: !current.paused }))}>{prefs.paused ? <><Play size={14} /> Resume all</> : <><Pause size={14} /> Pause all</>}</button>
+        </div>
+        <div className="download-control-grid">
+          <label className="download-pacing-field download-speed-field"><span>Bandwidth limit</span><select value={prefs.limitKiB} onChange={(event) => setPrefs((current) => ({ ...current, limitKiB: Number(event.target.value) }))}>{speedLimits.map((item) => <option key={item.kib} value={item.kib}>{item.label}</option>)}</select><small>Shared across active downloads</small></label>
+          <div className="download-schedule-card">
+            <label className="download-schedule-toggle"><span><strong>Download schedule</strong><small>Only download during a time window</small></span><input type="checkbox" checked={prefs.window.enabled} onChange={(event) => setPrefs((current) => ({ ...current, window: { ...current.window, enabled: event.target.checked } }))} /></label>
+            <div className="download-schedule-times">
+              <label className="download-pacing-field"><span>Start time</span><input type="time" aria-label="Allowed from" value={prefs.window.start} disabled={!prefs.window.enabled} onChange={(event) => event.target.value && setPrefs((current) => ({ ...current, window: { ...current.window, start: event.target.value } }))} /></label>
+              <label className="download-pacing-field"><span>End time</span><input type="time" aria-label="Allowed until" value={prefs.window.end} disabled={!prefs.window.enabled} onChange={(event) => event.target.value && setPrefs((current) => ({ ...current, window: { ...current.window, end: event.target.value } }))} /></label>
+            </div>
+          </div>
+        </div>
       </div>
-      <small className="metadata-note">Pausing holds running downloads where they are (a server may drop one that waits too long, and it can be started again). The speed limit is shared between running downloads. Settings apply while Mochi is open.</small>
+      <small className="metadata-note">Pausing holds running downloads in place, although a server may drop a connection that waits too long. Settings apply while Mochi is open.</small>
     </section>
     {error && <p className="auth-error" role="alert">{error}</p>}
     {updating.length > 0 && <section className="download-group download-updates" aria-label="Mod updates">
