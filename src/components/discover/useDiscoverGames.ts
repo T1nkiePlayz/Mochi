@@ -54,9 +54,11 @@ function lookupNexusGameIcon(client: SupabaseClient, game: Pick<NexusGame, "doma
   })();
 
   igdbIconLookupCache.set(key, request);
-  void request.catch(() => {
-    if (igdbIconLookupCache.get(key) === request) igdbIconLookupCache.delete(key);
-  });
+  // Cache successful URLs, but allow transient failures and empty searches to be retried later.
+  void request.then(
+    (url) => { if (!url && igdbIconLookupCache.get(key) === request) igdbIconLookupCache.delete(key); },
+    () => { if (igdbIconLookupCache.get(key) === request) igdbIconLookupCache.delete(key); },
+  );
   return request;
 }
 
@@ -104,11 +106,19 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
 
   // Nexus can omit game icons. Use IGDB only when configured and avoid duplicate lookups.
   useEffect(() => {
-    if (!igdbConfigured || !client) { setIgdbIcons({}); return; }
+    if (!settings.nexus || !igdbConfigured || !client) { setIgdbIcons({}); return; }
     let cancelled = false;
-    const missingByDomain = new Map([...KNOWN_NEXUS_GAMES, ...catalog]
+    // Prioritise explicitly added games and the live Nexus catalogue before built-in suggestions.
+    // This keeps the request budget useful even when the built-in catalogue grows beyond the cap.
+    const candidates: Array<Pick<NexusGame, "domainName" | "name"> & { iconUrl?: string }> = [
+      ...stored.filter((entry): entry is Extract<StoredGame, { k: "nx" }> => entry.k === "nx")
+        .map((entry) => ({ domainName: entry.domain, name: entry.name ?? entry.domain })),
+      ...catalog,
+      ...KNOWN_NEXUS_GAMES,
+    ];
+    const missingByDomain = new Map(candidates
       .filter((game) => !game.iconUrl)
-      .map((game) => [game.domainName, game]));
+      .map((game) => [game.domainName.toLocaleLowerCase(), game]));
     const missing = [...missingByDomain.values()].slice(0, 32);
 
     void (async () => {
@@ -126,7 +136,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
       if (!cancelled) setIgdbIcons((current) => ({ ...current, ...Object.fromEntries(resolved) }));
     })();
     return () => { cancelled = true; };
-  }, [catalog, igdbConfigured, client]);
+  }, [catalog, stored, settings.nexus, igdbConfigured, client]);
 
   const games = useMemo<DiscoverGame[]>(() => {
     // Wait for CurseForge's list so a game on both sites never shows up first as Nexus-only and then jumps.
