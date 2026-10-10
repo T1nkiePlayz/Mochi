@@ -22,7 +22,9 @@ export function GameAvatar({ src, fallbackSrcs = [], name, className = "" }: { s
   const [fallbackIndex, setFallbackIndex] = useState(-1);
   const [failed, setFailed] = useState(false);
   const fallbacks = fallbackSrcs.filter((url, index, all) => Boolean(url) && url !== src && all.indexOf(url) === index);
-  useEffect(() => { setFallbackIndex(-1); setFailed(false); }, [src, fallbackSrcs]);
+  const fallbackKey = fallbacks.join("\n");
+  // Depend on URL values rather than array identity; callers may build an equivalent array during render.
+  useEffect(() => { setFallbackIndex(-1); setFailed(false); }, [src, fallbackKey]);
   const activeSrc = fallbackIndex < 0 ? src : fallbacks[fallbackIndex];
   const style = { "--game-hue": hueOf(name) } as React.CSSProperties;
   const onError = () => {
