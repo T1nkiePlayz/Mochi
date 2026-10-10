@@ -99,7 +99,7 @@ function jsxLocalizationPlugin() {
           const normalized = normalizeText(node.text);
           const message = decodeEntities(normalized.trim());
           if (!message || !/[\p{L}\p{N}]/u.test(message)) return node;
-          return localizedText(message, /^\\s/.test(normalized), /\\s$/.test(normalized));
+          return localizedText(message, !node.text.includes("\n") && /^\s/.test(node.text), !node.text.includes("\n") && /\s$/.test(node.text));
         }
         if (ts.isJsxExpression(node) && node.expression && ts.isStringLiteralLike(node.expression) && !skipText) {
           return localizedText(decodeEntities(node.expression.text), false, false);
