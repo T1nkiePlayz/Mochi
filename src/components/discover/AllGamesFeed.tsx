@@ -45,7 +45,7 @@ export function AllGamesFeed({ games, cfGames, pikos, supabase, settings, refres
   const minecraftIconUrl = cfGames?.find((game) => game.id === CF_MINECRAFT_ID)?.assets?.iconUrl;
   const { sections } = useMemo(() => planSections({
     modrinth: settings.modrinth, curseforge: settings.curseforge, minecraftIconUrl,
-    games: games.map((game) => { const sources = resolveGameSources({ onCurseforge: Boolean(game.cf), onNexus: Boolean(game.nexusDomain), choice: "auto" }, settings); return { key: game.key, name: game.name, iconUrl: game.iconUrl, cfId: game.cf?.id, nexusDomain: game.nexusDomain, primary: sources.primary === "curseforge" || sources.primary === "nexus" ? sources.primary : null }; }),
+    games: games.map((game) => { const sources = resolveGameSources({ onCurseforge: Boolean(game.cf), onNexus: Boolean(game.nexusDomain), choice: "auto" }, settings); return { key: game.key, name: game.name, iconUrl: game.iconUrl, iconFallbackUrls: game.iconFallbackUrls, cfId: game.cf?.id, nexusDomain: game.nexusDomain, primary: sources.primary === "curseforge" || sources.primary === "nexus" ? sources.primary : null }; }),
   }), [games, settings, minecraftIconUrl]);
 
   const makeSource = (plan: (typeof sections)[number]): ModSource | null => {
