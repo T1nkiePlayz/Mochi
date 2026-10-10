@@ -12,7 +12,7 @@ export function ThemeStep({ themes, theme, setTheme }: Props) {
     <section className="setup-page setup-theme-page">
       <div className="setup-icon"><Palette size={22} /></div>
       <h1>{t("Choose your theme.")}</h1>
-      <p className="setup-description">Themes restyle the whole launcher and apply as soon as you pick one. Change it any time in Settings, where you can also install your own.</p>
+      <p className="setup-description">{t("Themes restyle the whole launcher and apply as soon as you pick one. Change it any time in Settings, where you can also install your own.")}</p>
       <div className="setup-theme-scroll">
         <div className="setup-theme-grid" role="radiogroup" aria-label={t("Theme")}>
           {themes.map((option) => {
