@@ -50,7 +50,7 @@ export function FirstLaunchSetup(props: SetupProps) {
   // The services step is only useful when signed in, so signed-out users skip straight past it.
   const hop = (direction: 1 | -1) => {
     let next = index + direction;
-    while (steps[next] && ((!props.user && steps[next] === "services") || (!props.user && steps[next] === "cloud"))) next += direction;
+    while (steps[next] && !props.user && steps[next] === "services") next += direction;
     if (next >= 0 && next < steps.length) setStep(steps[next]);
   };
 
