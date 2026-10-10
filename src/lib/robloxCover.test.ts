@@ -7,10 +7,11 @@ const roblox = piko({ id: "r", name: "Roblox", artworkSource: "igdb", artworkCac
 const sober = piko({ id: "s", name: "Sober (Roblox)", kind: "launcher", launcherId: "sober", artwork: "/launcher.png" });
 
 describe("withRobloxCover", () => {
-  it("gives Sober and Vinegar the Roblox IGDB cover", () => {
+  it("gives Sober and Mocktail the Roblox IGDB cover but leaves Vinegar artwork alone", () => {
+    const mocktail = piko({ id: "m", name: "Mocktail", kind: "launcher", launcherId: "mocktail", artwork: "/mocktail.png" });
     const vinegar = piko({ id: "v", name: "Vinegar", kind: "launcher", launcherId: "vinegar" });
-    const [, s, v] = withRobloxCover([roblox, sober, vinegar]);
-    expect([s.artworkCacheKey, v.artworkCacheKey, s.artworkSource]).toEqual(["rk", "rk", "igdb"]);
+    const [, s, m, v] = withRobloxCover([roblox, sober, mocktail, vinegar]);
+    expect([s.artworkCacheKey, s.artworkSource, m.artworkCacheKey, m.artworkSource, v.artworkCacheKey]).toEqual(["rk", "igdb", "rk", "igdb", undefined]);
   });
   it("changes nothing without an IGDB Roblox cover, with custom art, or for other launchers", () => {
     const library = [piko({ ...roblox, artworkSource: "steam" }), sober];

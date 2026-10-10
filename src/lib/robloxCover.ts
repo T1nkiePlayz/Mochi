@@ -10,8 +10,8 @@ const isRoblox = (piko: Piko) => piko.kind !== "launcher" && piko.name.trim().to
 const hasIgdbCover = (piko: Piko) => piko.artworkSource === "igdb" && Boolean(piko.artworkCacheKey || piko.artworkUrl);
 
 /**
- * Sober and Vinegar are only launchers for Roblox, so when the user has added Roblox and it has an IGDB cover,
- * they borrow it. Their own choice always wins (custom or locked artwork), and nothing changes without a Roblox cover.
+ * Sober and Mocktail are Roblox launchers, so when the user has added Roblox and it has an IGDB cover,
+ * they borrow it. Vinegar (Roblox Studio) keeps its own SteamGridDB artwork. User artwork always wins.
  * Returns the same array when there is nothing to change.
  */
 export function withRobloxCover(library: Piko[]): Piko[] {
