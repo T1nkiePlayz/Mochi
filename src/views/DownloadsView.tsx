@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Pause, Play } from "lucide-react";
+import { downloadsHeld, speedLimits } from "../lib/downloadPacing";
 import { Download, FolderOpen, Trash2, X } from "lucide-react";
 import { MochiIcon } from "../components/MochiIcon";
 import { describeDownload, downloadKind, groupDownloads, hasFinished, providerLabels } from "../lib/downloadView";
@@ -9,7 +11,9 @@ import { useApp } from "../state/AppContext";
 import { confirmAction } from "../lib/confirm";
 
 export function DownloadsView() {
-  const { downloads, lib, setActiveNav } = useApp();
+  const { downloads, lib, setActiveNav, downloadPacing } = useApp();
+  const { prefs, setPrefs } = downloadPacing;
+  const held = downloadsHeld(prefs, new Date());
   useUpdateVersion();
   // Mod updates install in place (not through this list); show where they wait or run.
   const updating = lib.library.flatMap((piko) => piko.tofus.map((tofu) => ({ piko, tofu, state: getUpdateState(tofu.id) })))
@@ -27,6 +31,17 @@ export function DownloadsView() {
       <p className="eyebrow">Activity</p><h2>Downloads</h2>
       <p>Mods, resource packs and shaders from Modrinth, CurseForge and Nexus Mods download here and keep going while Mochi is hidden in the tray. Finished downloads stay in this list for 10 minutes.</p>
     </div>
+    <section className="download-group download-pacing" aria-label="Download controls">
+      <div className="download-group-heading"><strong>Download controls</strong><span>{held ? (prefs.paused ? "Paused" : "Waiting for your allowed hours") : "Running"}</span></div>
+      <div className="download-toolbar">
+        <button type="button" className="secondary-button" onClick={() => setPrefs((current) => ({ ...current, paused: !current.paused }))}>{prefs.paused ? <><Play size={13} /> Resume all</> : <><Pause size={13} /> Pause all</>}</button>
+        <label className="download-pacing-field">Speed limit <select value={prefs.limitKiB} onChange={(event) => setPrefs((current) => ({ ...current, limitKiB: Number(event.target.value) }))}>{speedLimits.map((item) => <option key={item.kib} value={item.kib}>{item.label}</option>)}</select></label>
+        <label className="download-pacing-field"><input type="checkbox" checked={prefs.window.enabled} onChange={(event) => setPrefs((current) => ({ ...current, window: { ...current.window, enabled: event.target.checked } }))} /> Only download between</label>
+        <input type="time" aria-label="Allowed from" value={prefs.window.start} disabled={!prefs.window.enabled} onChange={(event) => event.target.value && setPrefs((current) => ({ ...current, window: { ...current.window, start: event.target.value } }))} />
+        <input type="time" aria-label="Allowed until" value={prefs.window.end} disabled={!prefs.window.enabled} onChange={(event) => event.target.value && setPrefs((current) => ({ ...current, window: { ...current.window, end: event.target.value } }))} />
+      </div>
+      <small className="metadata-note">Pausing holds running downloads where they are (a server may drop one that waits too long, and it can be started again). The speed limit is shared between running downloads. Settings apply while Mochi is open.</small>
+    </section>
     {error && <p className="auth-error" role="alert">{error}</p>}
     {updating.length > 0 && <section className="download-group download-updates" aria-label="Mod updates">
       <div className="download-group-heading"><strong>Mod updates</strong><button type="button" className="text-button" onClick={() => setActiveNav("Installed")}>Open Mods &amp; Content</button></div>

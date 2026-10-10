@@ -58,7 +58,7 @@ export function LaunchTab({ ctx }: { ctx: EditorContext }) {
         <button type="button" className="secondary-button" onClick={() => void guarded(async () => { const picked = await open({ directory: true, multiple: false, title: "Choose install folder" }); if (typeof picked === "string") patch({ installPath: picked }); })}>Choose folder…</button>
       </div>
     </label>
-    <LaunchOptionsSection ctx={ctx} />
+    <LaunchOptionsSection key={ctx.draft.activeLaunchProfile ?? ""} ctx={ctx} />
     {error && <p className="auth-error" role="alert">{error}</p>}
   </div>;
 }

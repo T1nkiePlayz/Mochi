@@ -13,6 +13,7 @@ mod gamepad;
 mod downloads;
 mod modinstance;
 mod mochipack;
+mod librarybackup;
 mod modsnapshot;
 mod modhash;
 mod modlocs;
@@ -339,12 +340,12 @@ fn main() {
             steam_store::get_steam_store_details, steam_news::get_steam_news, steam_achievements::get_steam_achievements, steam_achievements::get_steam_achievement_totals,
             steam_achievements::clear_steam_achievements_cache, steam_store::clear_steam_store_cache,
             modrinth::delete_mod_file, modrinth::start_modrinth_download, downloads::start_mod_download, modrinth::update_mod_file, modrinth::analyze_mod_files,
-            downloads::cancel_mod_download, downloads::clear_finished_downloads,
+            downloads::cancel_mod_download, downloads::clear_finished_downloads, downloads::set_downloads_paused, downloads::set_download_limit,
             modinstance::list_instance_mods, modinstance::get_instance_store_dir, modinstance::record_instance_mod, modinstance::set_instance_mods_enabled,
             modinstance::rollback_mod_update, modinstance::sync_instance_mods, modinstance::import_mods_from_folder, modlocs::detect_mod_locations,
             modscan::hash_mod_files, modscan::modrinth_identify, modscan::record_instance_mods, modscan::list_instance_records, modscan::copy_instance_records,
             modprofiles::read_tofu_manifest, modprofiles::write_tofu_manifest, modprofiles::restore_instance_records, modprofiles::apply_tofu_mods, nxm::get_nxm_handler, nxm::set_nxm_handler,
-            mochipack::write_mochipack_file, mochipack::read_mochipack_file,
+            mochipack::write_mochipack_file, mochipack::read_mochipack_file, librarybackup::write_library_backup, librarybackup::read_library_backup, librarybackup::write_scheduled_library_backup,
             modsnapshot::create_tofu_snapshot, modsnapshot::list_tofu_snapshots, modsnapshot::restore_tofu_snapshot, modsnapshot::delete_tofu_snapshot,
             gamelogs::list_game_logs, gamelogs::read_game_log, gamelogs::clear_game_logs,
             savebackup::list_save_locations, savebackup::create_save_backup, savebackup::list_save_backups, savebackup::restore_save_backup, savebackup::delete_save_backup, savebackup::auto_backup_saves, savebackup::get_save_backup_settings, savebackup::set_save_backup_settings,

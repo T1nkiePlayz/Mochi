@@ -139,6 +139,11 @@ A **Piko** is a game in your library: name, artwork, genres, launch target, sour
 - **Shortcuts**: create desktop shortcuts (Linux menu/Desktop, macOS .app) and add any game to Steam as a non-Steam game ([docs/shortcuts.md](docs/shortcuts.md)).
 - **Command line and deep links**: `mochi launch|open <game>`, `mochi list` and `mochi://launch|open/<game>` work with a running or closed Mochi; ambiguous names open a chooser ([docs/cli.md](docs/cli.md)).
 - **Storage manager** (Settings > Storage): see where disk space goes and safely clear Mochi's own caches ([docs/storage.md](docs/storage.md)).
+- **Saved filters, Next up and launch profiles**: save any combination of status, played, tags, genres and hours-to-beat as a named filter chip; mark backlog games *Next up* so the picker favours them; keep alternative launch-option sets per game (for example another Proton version) and switch from the game page or the palette.
+- **Library backup** (Settings > Data): one `.mochibackup` file with your games, collections, wishlist and saved filters, plus an optional automatic copy to a folder (daily, weekly or monthly, newest few kept). No credentials; playtime history is not included.
+- **Debug info and launch hints**: *Copy debug info* (secrets and your user name removed), and a notification with likely causes when a game closes within 15 seconds of starting, including a rollback hint after a recent mod update.
+- **Download controls** (Downloads page): pause and resume all, a shared speed limit and allowed hours. **Stats**: recent sessions and a year-in-review summary.
+- **Game themes** (Settings > Appearance): one switch that uses each game's cover colour as the accent on its page, with any theme.
 - **Settings backup**: export or import settings, themes, collections, wishlist and per-game choices as a zip; credentials are never included ([docs/settings-export.md](docs/settings-export.md)).
 
 ### Themes
@@ -321,15 +326,16 @@ Not promises or dates.
 - [ ] Stable release
 - [ ] Theme marketplace / in-app theme gallery (browse and one-click install of community themes)
 - [ ] Theme creator (live-edit colours, fonts and hooks, export a theme file)
+- [x] Automatic per-game theme: one setting that uses each game's cover colour as the accent on its page
 - [x] Copy debug info (Settings > Data) and likely-cause hints when a game closes right after starting
-- [ ] Saved smart collections (for example "unplayed under 8 hours" or "co-op") built on cached IGDB data
-- [ ] Backlog and wishlist view with a "next up" queue that feeds "What should I play?"
-- [ ] Per-game launch profiles (Wine/Proton version, environment variables, arguments, pre and post scripts)
-- [ ] Shareable mod profiles (export and import) with rollback when a mod update breaks the game
-- [ ] Library backup and restore in one file, with an optional scheduled copy to a folder
-- [ ] Session history, a playtime timeline and a year-in-review card
-- [ ] Download manager (queue, pause and resume, bandwidth cap, scheduled downloads)
-- [ ] More command-palette actions (launch, switch profile, run the picker)
+- [x] Saved smart filters (for example "unplayed under 8 hours" or "co-op") built on cached IGDB data
+- [x] Backlog "Next up" queue that feeds "What should I play?", with hours-to-beat totals
+- [x] Per-game launch profiles (Wine/Proton version, environment variables, arguments, wrappers); pre and post scripts are not included yet
+- [x] Mod pack export/import, a snapshot before every mod update, and a rollback hint when a game closes right after an update
+- [x] Library backup and restore in one file, with an optional scheduled copy to a folder
+- [x] Recent sessions, playtime timeline and a year-in-review card
+- [x] Download controls: pause and resume all, speed limit, allowed hours
+- [x] More command-palette actions (picker, play next up or last played, stop, switch launch profile, pause downloads)
 - [ ] Per-game automatic themes (the launcher takes on a game's look when you open it, e.g. Hades)
 
 ## Documentation index

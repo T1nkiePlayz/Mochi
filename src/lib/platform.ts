@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { Piko, Tofu } from "../models";
+import { effectiveLaunchOptions } from "./launchProfiles";
 import { modSyncFor } from "./mods/targets";
 import { buildLaunchConfig } from "./launch";
 import { launchTargetFor } from "./minecraftPiko";
@@ -58,7 +59,7 @@ export type LaunchPreview = {
 };
 
 export function previewLaunchCommand(piko: Piko, tofu: Tofu | undefined): Promise<LaunchPreview> {
-  return invoke<LaunchPreview>("preview_launch_command", { request: { gameId: piko.id, launchTarget: launchTargetFor(piko, tofu) ?? "", tofuId: tofu?.id ?? null, config: buildLaunchConfig(tofu?.launch, piko.launchOptions) } });
+  return invoke<LaunchPreview>("preview_launch_command", { request: { gameId: piko.id, launchTarget: launchTargetFor(piko, tofu) ?? "", tofuId: tofu?.id ?? null, config: buildLaunchConfig(tofu?.launch, effectiveLaunchOptions(piko)) } });
 }
 
 export const getPlaytime = () => invoke<PlaytimeEntry[]>("get_playtime");
@@ -79,7 +80,7 @@ export function launchGame(piko: Piko, tofu: Tofu | undefined): Promise<void> {
       launchTarget,
       installPath: tofu?.installPath ?? sourceInstallPathFor(piko) ?? null,
       tofuId: tofu?.id ?? null,
-      config: buildLaunchConfig(tofu?.launch, piko.launchOptions),
+      config: buildLaunchConfig(tofu?.launch, effectiveLaunchOptions(piko)),
       // A Tofu with its own store is copied into the game folder, Tofus sharing a folder swap their mods; natively, right before starting.
       modSync: modSyncFor(tofu, piko.tofus) ?? null,
     },

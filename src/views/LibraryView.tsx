@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckSquare, ChevronDown, ChevronRight, Gamepad2, LayoutGrid, List, Maximize2, Play, Dices, Plus, Rows3, SlidersHorizontal, Settings, Grid3x3, X } from "lucide-react";
 import { BulkActionBar } from "../components/library/BulkActionBar";
 import { ConfirmDialog } from "../components/library/ConfirmDialog";
@@ -18,6 +18,11 @@ import { DuplicatesDialog, DuplicatesNotice } from "../components/library/Duplic
 import { useDuplicates } from "../state/useDuplicates";
 import type { Piko } from "../models";
 import { GameArtwork } from "../components/GameArtwork";
+import { subscribePickerRequest, takePickerRequest } from "../lib/pickerRequest";
+import { selectLaunchProfile } from "../lib/launchProfiles";
+import { mergeHours } from "../state/hoursStore";
+import { ruleUsesHours } from "../lib/savedFilters";
+import { remainingHours } from "../lib/hoursCache";
 import { GameDetails } from "../components/GameDetails";
 import { LibraryModSearch } from "../components/LibraryModSearch";
 import { MochiIcon } from "../components/MochiIcon";
@@ -37,7 +42,9 @@ const greeting = () => { const hour = new Date().getHours(); return hour < 5 || 
 /** IGDB time-to-beat (hours) keyed by Piko id, for pikos that have an IGDB id. */
 async function loadPickerHours(pikos: Piko[]): Promise<Map<string, number>> {
   const byGame = await lookupTimeToBeat(supabase!, pikos.flatMap((piko) => (piko.igdbId ? [piko.igdbId] : [])));
-  return new Map(pikos.flatMap((piko) => (piko.igdbId && byGame.has(piko.igdbId) ? [[piko.id, byGame.get(piko.igdbId)!] as const] : [])));
+  const found = new Map(pikos.flatMap((piko) => (piko.igdbId && byGame.has(piko.igdbId) ? [[piko.id, byGame.get(piko.igdbId)!] as const] : [])));
+  mergeHours(found);
+  return found;
 }
 
 export function LibraryView() {
@@ -52,6 +59,20 @@ export function LibraryView() {
   const [showCollections, setShowCollections] = useState(false);
   const [showWishlist, setShowWishlist] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  useEffect(() => {
+    if (takePickerRequest()) setShowPicker(true);
+    return subscribePickerRequest(() => { if (takePickerRequest()) setShowPicker(true); });
+  }, []);
+  // Hours are only fetched when something needs them (an hours filter, or the backlog totals), once per game.
+  const needsHours = lib.savedFilters.filters.some((item) => ruleUsesHours(item.rule)) || (lib.filter.kind === "smart" && (lib.filter.id === "backlog" || lib.filter.id === "next-up"));
+  const hoursAsked = useRef(new Set<string>());
+  useEffect(() => {
+    if (!needsHours || !credentials.status.igdb || !supabase) return;
+    const missing = lib.library.filter((piko) => piko.igdbId && !lib.hours.has(piko.id) && !hoursAsked.current.has(piko.id));
+    if (!missing.length) return;
+    missing.forEach((piko) => hoursAsked.current.add(piko.id));
+    void (async () => { for (let index = 0; index < missing.length; index += 100) await loadPickerHours(missing.slice(index, index + 100)).catch(() => undefined); })();
+  }, [needsHours, credentials.status.igdb, lib.library, lib.hours]);
   const [showDuplicates, setShowDuplicates] = useState(false);
   const duplicates = useDuplicates(lib.library, lib.setLibrary);
   const wishlist = useWishlist();
@@ -118,6 +139,7 @@ export function LibraryView() {
       onCreateCollection={(name) => collections.createCollection(name)}
       onTagsChange={(tags) => lib.updateGame(details.id, { tags })}
       onBacklogChange={(backlog) => lib.updateGame(details.id, { backlog })}
+      onLaunchProfileChange={(id) => lib.updateGame(details.id, { activeLaunchProfile: selectLaunchProfile(details, id) })}
       onSourceChange={(sourceId) => lib.updateGame(details.id, { preferredSource: sourceId })}
       onUnmerge={(sourceId) => duplicates.unmerge(details.id, sourceId)}
       onOpenFolder={() => actions.openGameFolder(details)}
@@ -179,7 +201,7 @@ export function LibraryView() {
       wishlist={{ active: showWishlist, count: wishlist.items.length, onToggle: () => setShowWishlist((on) => !on) }} />
     {showWishlist ? <WishlistPanel /> : <>
     <section className="library-toolbar">
-      <span className="library-count">{lib.visiblePikos.length} game{lib.visiblePikos.length === 1 ? "" : "s"}{search.trim() ? ` matching “${search.trim()}”` : ""}</span>
+      <span className="library-count">{lib.visiblePikos.length} game{lib.visiblePikos.length === 1 ? "" : "s"}{search.trim() ? ` matching “${search.trim()}”` : ""}{(() => { if (lib.filter.kind !== "smart" || (lib.filter.id !== "backlog" && lib.filter.id !== "next-up")) return ""; const left = remainingHours(lib.visiblePikos.map((piko) => piko.id), lib.hours); return left.known ? ` · about ${left.total} h to beat (${left.known} with data)` : ""; })()}</span>
       <div className="library-toolbar-actions">
         <button type="button" className="secondary-button view-switcher" title={`View: ${viewModeLabel(view)}. Click for the next view, Shift+click for the previous.`}
           aria-label={`Library view: ${viewModeLabel(view)}. Activate to switch to ${viewModeLabel(cycleViewMode(view))}.`}

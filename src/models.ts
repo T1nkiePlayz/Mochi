@@ -33,6 +33,9 @@ export type LaunchOptions = {
   gamescope?: { enabled: boolean; args: string[] };
 };
 
+/** A named alternative set of launch options for one game (for example "Proton Experimental" or "Low graphics"). */
+export type LaunchProfile = { id: string; name: string; options: LaunchOptions };
+
 /** A saved set of enabled mods for a Tofu folder. */
 export type ModProfile = {
   id: string;
@@ -132,6 +135,10 @@ export type Piko = {
   executablePath?: string;
   /** Environment, arguments, working directory, runtime and wrappers for launching this game. */
   launchOptions?: LaunchOptions;
+  /** Extra launch-option sets; the active one replaces `launchOptions` when the game starts. Local to this device. */
+  launchProfiles?: LaunchProfile[];
+  /** The `launchProfiles` id in use; the plain `launchOptions` when unset. */
+  activeLaunchProfile?: string;
   /** Where the game is installed on this device; used to follow its process. Never synced. */
   installPath?: string;
   source?: "built-in" | "custom";
@@ -144,7 +151,7 @@ export type Piko = {
   /** Ids of the user's collections this game belongs to. */
   collectionIds?: string[];
   /** Backlog tracking ("Want to play", playing, finished, dropped). Local to this device (not part of the cloud schema). */
-  backlog?: { status: "want" | "playing" | "finished" | "dropped"; note?: string; addedAt: number };
+  backlog?: { status: "want" | "playing" | "finished" | "dropped"; note?: string; addedAt: number; /** In the "Next up" queue (only while the game is still in the backlog). */ nextUp?: boolean };
   /** Where the artwork came from, so a refresh does not overwrite a user's own image. */
   artworkSource?: "igdb" | "steamgriddb" | "steam" | "custom" | "icon";
   /** Metadata the user edited by hand; automatic refreshes leave these alone. */

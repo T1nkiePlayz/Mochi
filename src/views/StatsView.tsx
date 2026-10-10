@@ -14,6 +14,7 @@ import { ShareCardDialog } from "../components/stats/ShareCardDialog";
 import { useExperimental } from "../state/useExperimental";
 import { usernameOf } from "../state/useAccount";
 import { Share2 } from "lucide-react";
+import { RecentSessions, YearInReview } from "../components/stats/SessionHistory";
 import { AchievementsPanel, RecentAchievements } from "../components/stats/AchievementsPanel";
 
 const RANGES = [{ value: 7, label: "7 days" }, { value: 30, label: "30 days" }, { value: 90, label: "90 days" }, { value: 365, label: "Year" }] as const;
@@ -108,6 +109,10 @@ export function StatsView() {
                 <Card id="st-comp" title="Library by source">{lib.library.length ? <Composition library={lib.library.filter((piko) => !isExtra(piko))} playtime={playtimeById} /> : <p className="stats-muted">Your library is empty.</p>}</Card>
               </div>
               <Card id="st-heat" title="Past year" wide><Heatmap totals={totals} /></Card>
+              <div className="stats-grid">
+                <Card id="st-recent" title="Recent sessions"><RecentSessions records={data} /></Card>
+                <Card id="st-year" title="Year in review"><YearInReview records={data} /></Card>
+              </div>
               <RecentAchievements progress={progress} unlocked={stored.unlocked} onOpen={() => setTab("achievements")} />
             </>
           )}

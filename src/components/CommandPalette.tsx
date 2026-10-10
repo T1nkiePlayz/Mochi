@@ -2,7 +2,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, us
 import { Search, X } from "lucide-react";
 import { shallowEqual, useAppGetter, useAppSelector } from "../state/AppContext";
 import { commandsVersion, listCommands, subscribeCommands } from "../lib/commands";
-import { registerBuiltinCommands, registerThemeCommands } from "../lib/builtinCommands";
+import { registerBuiltinCommands, registerLaunchProfileCommands, registerThemeCommands } from "../lib/builtinCommands";
 import { OPEN_PALETTE_EVENT, parsePaletteQuery, paletteShortcutLabel, rankPalette, readRecents, rememberAction, type PaletteItem } from "../lib/palette";
 import { useBigPictureActive } from "../bigpicture/mode";
 
@@ -19,6 +19,9 @@ export function CommandPalette() {
   const themeKey = themes.map((theme) => `${theme.id}:${theme.name}`).join("|");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => registerThemeCommands(themes, (id) => void getApp().themeEngine.setTheme(id)), [themeKey, getApp]);
+
+  const profileGames = useAppSelector((app) => app.lib.library.filter((piko) => piko.launchProfiles?.length).map((piko) => `${piko.id}\u0001${piko.name}\u0001${piko.activeLaunchProfile ?? ""}\u0001${piko.launchProfiles!.map((profile) => `${profile.id}\u0002${profile.name}`).join("\u0003")}`).join("\u0004"));
+  useEffect(() => registerLaunchProfileCommands(getApp().lib.library.filter((piko) => piko.launchProfiles?.length), (gameId, profileId) => getApp().lib.updateGame(gameId, { activeLaunchProfile: profileId })), [profileGames, getApp]);
 
   const disabled = setupOpen || bigPicture;
   useEffect(() => {

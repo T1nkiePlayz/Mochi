@@ -2,10 +2,10 @@ import { FileJson, FolderOpen, Palette } from "lucide-react";
 import { MochiIcon } from "../MochiIcon";
 import { importThemeFile, importThemeFolder } from "../../lib/theme";
 import { useApp } from "../../state/AppContext";
-import { SettingsGroup } from "./Section";
+import { SettingsGroup, ToggleRow } from "./Section";
 
 export function AppearanceSection() {
-  const { themeEngine, actions } = useApp();
+  const { themeEngine, actions, behavior, setBehavior } = useApp();
   const { themes, theme, setTheme, reloadThemes, configInfo } = themeEngine;
   const report = (error: unknown) => actions.setLaunchError(error instanceof Error ? error.message : String(error));
   return <SettingsGroup title="Appearance" subtitle="Personalize the launcher" id="settings-appearance">
@@ -25,5 +25,6 @@ export function AppearanceSection() {
       <button className="secondary-button" onClick={() => void importThemeFolder().then((result) => { if (result) void reloadThemes(); }).catch(report)}><MochiIcon name="folder" fallback={FolderOpen} size={14} /> Import theme folder</button>
     </div>
     {configInfo && <div className="theme-config-path"><span>Theme directory</span><code>{configInfo.themesPath}</code></div>}
+    <ToggleRow title="Game themes" description="While a game's page is open, use that game's own colour (taken from its cover) as the accent. Works with every theme; nothing to set up per game." checked={behavior.gameThemes} onChange={(gameThemes) => setBehavior((current) => ({ ...current, gameThemes }))} />
   </SettingsGroup>;
 }

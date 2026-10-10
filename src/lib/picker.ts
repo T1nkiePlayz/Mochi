@@ -49,6 +49,7 @@ export function pickerCandidates(library: Piko[], context: PickerContext): Piko[
 export function pickerWeight(piko: Piko, options: PickerOptions, context: PickerContext): number {
   const seconds = context.playtime.get(piko.id)?.seconds ?? 0;
   let weight = piko.backlog?.status === "want" ? 4 : piko.backlog?.status === "playing" ? 2.5 : seconds <= 0 ? 2.5 : 1;
+  if (piko.backlog?.nextUp && (piko.backlog.status === "want" || piko.backlog.status === "playing")) weight *= 4;
   if (matchesHints(piko, MOOD_HINTS[options.mood])) weight *= 3;
   const hours = context.hoursToBeat?.get(piko.id);
   const isShort = hours === undefined ? matchesHints(piko, SHORT_HINTS) : hours <= SHORT_HOURS;

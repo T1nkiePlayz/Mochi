@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { backlogStatuses, NOTE_MAX, withBacklogNote, withBacklogStatus, type Backlog } from "../../lib/backlog";
+import { backlogStatuses, NOTE_MAX, withBacklogNote, withBacklogStatus, withNextUp, type Backlog } from "../../lib/backlog";
 
 type Props = {
   value?: Backlog;
@@ -17,6 +17,7 @@ export function BacklogControl({ value, onChange, commit = "blur" }: Props) {
     <div className="filter-row" role="group" aria-label="Backlog status">
       <button type="button" className={`filter-chip ${value ? "" : "active"}`} aria-pressed={!value} onClick={() => onChange(undefined)}>Not tracked</button>
       {backlogStatuses.map(({ id, label }) => <button type="button" key={id} className={`filter-chip ${value?.status === id ? "active" : ""}`} aria-pressed={value?.status === id} onClick={() => onChange(withBacklogStatus(value, id))}>{label}</button>)}
+      {value && (value.status === "want" || value.status === "playing") && <button type="button" className={`filter-chip ${value.nextUp ? "active" : ""}`} aria-pressed={Boolean(value.nextUp)} title="Games marked Next up are picked first by What should I play?" onClick={() => onChange(withNextUp(value, !value.nextUp))}>Next up</button>}
     </div>
     {value && <input className="backlog-note" value={note} maxLength={NOTE_MAX} placeholder="Note, e.g. recommended by a friend" aria-label="Backlog note"
       onChange={(event) => { setNote(event.target.value); if (commit === "change") save(event.target.value); }}
