@@ -1,4 +1,4 @@
-import { RefreshCw, Store, Tag, Heart, ExternalLink, Clock3 } from "lucide-react";
+import { RefreshCw, Store, Tag, Heart, ExternalLink as ExternalLinkIcon, Clock3 } from "lucide-react";
 import { useApp } from "../state/AppContext";
 import { useWishlist } from "../lib/wishlist";
 import { dealStores, filterDeals, storeLabel, watchedItems, type StoreId } from "../lib/deals";
@@ -61,9 +61,7 @@ export function DealsPanel() {
         <div className="deals-offer-price">{item.priceWatch?.lastPrice !== undefined ? <><strong>{money(item.priceWatch.lastPrice)}</strong><small>Current price</small></> : <span>Waiting for price</span>}</div>
       </article>)}</div>
     </section>}
-    <footer className="deals-attribution">Sale data by <ExternalLink href="https://www.cheapshark.com">CheapShark <ExternalLinkIcon /></ExternalLink> · Free games from Epic Games Store.</footer>
+    <footer className="deals-attribution">Sale data by <ExternalLink href="https://www.cheapshark.com">CheapShark <ExternalLinkIcon size={11} aria-hidden="true" /></ExternalLink> · Free games from Epic Games Store.</footer>
   </section>;
 }
 
-function ExternalLinkIcon() { return <ExternalLinkIconGlyph />; }
-function ExternalLinkIconGlyph() { return <ExternalLink size={11} aria-hidden="true" />; }
