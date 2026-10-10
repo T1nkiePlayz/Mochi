@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Trash2, X } from "lucide-react";
 import type { Collection } from "../../models";
 import type { CollectionsState } from "../../state/useCollections";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { useTranslation } from "../../lib/useTranslation";
 
 const EMOJI = ["⭐", "🎮", "🕹️", "🏆", "🧩", "⚔️", "🚗", "🌲", "👾", "👥", "🛠️", "📚", "🔥", "💤", "🎵", "🧪"];
 
@@ -11,6 +12,7 @@ type Props = { state: CollectionsState; counts: Map<string, number>; onClose: ()
 
 /** Create, rename, reorder, re-icon and delete collections. */
 export function CollectionManager({ state, counts, onClose }: Props) {
+  const t = useTranslation();
   const { collections, createCollection, renameCollection, moveCollection, deleteCollection } = state;
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("");
@@ -31,7 +33,7 @@ export function CollectionManager({ state, counts, onClose }: Props) {
         {collections.map((collection, index) => <li key={collection.id} className="collection-row">
           <EmojiField value={collection.icon ?? ""} onChange={(value) => renameCollection(collection.id, collection.name, value)} label={`Emoji for ${collection.name}`} />
           <input defaultValue={collection.name} aria-label={`Rename ${collection.name}`} maxLength={40} onBlur={(event) => { if (event.target.value.trim() && event.target.value !== collection.name) renameCollection(collection.id, event.target.value, collection.icon); else event.target.value = collection.name; }} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} />
-          <small>{counts.get(collection.id) ?? 0} games</small>
+          <small>{t((counts.get(collection.id) ?? 0) === 1 ? "{count} game" : "{count} games").replace("{count}", String(counts.get(collection.id) ?? 0))}</small>
           <button type="button" className="icon-button" aria-label={`Move ${collection.name} up`} disabled={index === 0} onClick={() => moveCollection(collection.id, -1)}><ArrowUp size={14} /></button>
           <button type="button" className="icon-button" aria-label={`Move ${collection.name} down`} disabled={index === collections.length - 1} onClick={() => moveCollection(collection.id, 1)}><ArrowDown size={14} /></button>
           <button type="button" className="icon-button" aria-label={`Delete ${collection.name}`} onClick={() => setDeleting(collection)}><Trash2 size={14} /></button>
