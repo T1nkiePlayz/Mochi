@@ -7,6 +7,15 @@ export const NEWS_CYCLE_CAP = 50;
 export const NEWS_MAX_ITEMS = 100;
 export const NEWS_MAX_SEEN = 1500;
 
+/** Converts a UI/OS locale to Steam's language names; a future launcher-language setting can pass its locale here. */
+export function steamNewsLanguage(locale: string): string {
+  const normalized = locale.toLowerCase().replace(/_/g, "-");
+  if (/^zh-(tw|hk|mo)(-|$)/.test(normalized)) return "tchinese";
+  const code = normalized.split("-", 1)[0];
+  const names: Record<string, string> = { ar: "arabic", bg: "bulgarian", zh: "schinese", cs: "czech", da: "danish", nl: "dutch", en: "english", fi: "finnish", fr: "french", de: "german", el: "greek", hu: "hungarian", id: "indonesian", it: "italian", ja: "japanese", ko: "koreana", no: "norwegian", pl: "polish", pt: "portuguese", ro: "romanian", ru: "russian", es: "spanish", sv: "swedish", th: "thai", tr: "turkish", uk: "ukrainian", vi: "vietnamese" };
+  return names[code] ?? "english";
+}
+
 export type NewsItem = { gid: string; appid: number; game: string; title: string; url: string; feedLabel: string; date: number; summary: string };
 export type NewsState = {
   /** Steam news language used for this cache; a language change invalidates the old feed. */
