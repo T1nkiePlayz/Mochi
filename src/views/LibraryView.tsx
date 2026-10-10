@@ -242,7 +242,7 @@ export function LibraryView() {
           <span className="view-switcher-icon" key={view}><ViewIcon size={14} /></span> <span className="view-switcher-label">{viewModeLabel(view)}</span>
           <span className="view-switcher-dots" aria-hidden="true">{viewModes.map((mode) => <i key={mode.id} className={mode.id === view ? "on" : ""} />)}</span>
         </button>
-        <span className="library-view-announce" role="status" aria-live="polite">{`${viewModeLabel(view)} view`}</span>
+        <span className="library-view-announce" role="status" aria-live="polite">{`${t(viewModeLabel(view))} view`}</span>
         <button type="button" className="secondary-button" onClick={() => setShowPicker(true)}><Dices size={14} /> {t("What should I play?")}</button>
         <button type="button" className={`secondary-button ${selecting ? "active" : ""}`} aria-pressed={selecting} onClick={() => (selecting ? endSelecting() : setSelecting(true))}><CheckSquare size={14} /> {selecting ? t("Done selecting") : t("Select")}</button>
         <div className="library-sort"><span>{t("Sort by")}</span><Select<LibrarySort> label={t("Sort by")} value={lib.librarySort} onChange={lib.setLibrarySort} align="end" options={[{ value: "category", label: "Category" }, { value: "name", label: "Name" }, { value: "recent", label: "Recently played" }, { value: "playtime", label: "Most played" }]} /></div>
