@@ -62,7 +62,7 @@ export function AddGameModals() {
           <div className="igdb-selection-actions"><button type="button" className="secondary-button" onClick={() => add.setStep("form")}>Back</button><button type="button" className="secondary-button" onClick={() => add.approveIgdbGame(null)}>None of these</button></div>
         </>}
         {add.step === "cover" && <>
-          <p className="modal-description">Optional. Pick your own cover, or skip to use {add.pendingGame?.match ? "the IGDB artwork" : "Mochi's placeholder"}. You can change it later in Edit.</p>
+          <p className="modal-description">{t("Optional. Pick your own cover, or skip to use {cover}. You can change it later in Edit.").replace("{cover}", add.pendingGame?.match ? t("the IGDB artwork") : t("Mochi's placeholder"))}</p>
           <ArtworkPicker gameName={add.pendingGame?.match?.name || add.pendingGame?.name || ""} onChange={add.setCover} />
           {add.formError && <p className="auth-error" role="alert">{add.formError}</p>}
           <div className="igdb-selection-actions">
