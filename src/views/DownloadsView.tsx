@@ -9,7 +9,7 @@ import { cancelModDownload, clearFinishedDownloads } from "../lib/downloads";
 import { openPath } from "../lib/platform";
 import { useApp } from "../state/AppContext";
 import { confirmAction } from "../lib/confirm";
-import { useTranslation } from "../lib/i18n";
+import { useTranslation } from "../lib/useTranslation";
 
 export function DownloadsView() {
   const t = useTranslation();
