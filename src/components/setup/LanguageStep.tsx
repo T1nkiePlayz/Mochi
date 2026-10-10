@@ -14,7 +14,7 @@ export function LanguageStep({ language, setLanguage }: { language: string; setL
   return <section className="setup-page setup-language-page">
     <div className="setup-icon"><Languages size={22} /></div>
     <h1>{t("Choose your language.")}</h1>
-    <p className="setup-description">Choose the language Mochi should use wherever a translation is available. Game news will automatically follow this choice. You can change it any time in Settings.</p>
+    <p className="setup-description">{t("Choose the language Mochi should use wherever a translation is available. Game news will automatically follow this choice. You can change it any time in Settings.")}</p>
     <label className="setup-language-search">
       <span className="sr-only">Search languages</span>
       <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Search languages…")} autoComplete="off" />
