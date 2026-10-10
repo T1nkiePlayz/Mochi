@@ -72,25 +72,33 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
   useEffect(() => {
     if (!igdbConfigured || !client) { setIgdbIcons({}); return; }
     let cancelled = false;
-    const missing = catalog.filter((game) => !game.iconUrl).slice(0, 80);
-    void Promise.all(missing.map(async (game) => {
-      try {
-        const matches = await lookupIgdbGames(client, game.name);
-        const normalize = (value: string) => value.toLocaleLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, " ").trim();
-        const needle = normalize(game.name);
-        const match = matches.find((candidate) => normalize(candidate.name) === needle) ?? matches.find((candidate) => {
-          const name = normalize(candidate.name);
-          return name.length > 2 && (name.includes(needle) || needle.includes(name));
-        });
-        const raw = match?.cover?.url ?? match?.artworks?.[0]?.url;
-        if (!raw) return null;
-        const url = raw.startsWith("//") ? `https:${raw}` : raw;
-        if (!/^https:\/\//i.test(url) || !/images\.igdb\.com\//i.test(url)) return null;
-        return [game.domainName, url.replace(/t_[a-z0-9]+\./i, "t_cover_big.")] as const;
-      } catch { return null; }
-    })).then((entries) => {
-      if (!cancelled) setIgdbIcons((current) => ({ ...current, ...Object.fromEntries(entries.filter((entry): entry is readonly [string, string] => entry !== null)) }));
-    });
+    const missingByDomain = new Map([...KNOWN_NEXUS_GAMES, ...catalog].filter((game) => !game.iconUrl).map((game) => [game.domainName, game]));
+    const missing = [...missingByDomain.values()].slice(0, 32);
+    void (async () => {
+      const resolved: Array<readonly [string, string]> = [];
+      // Keep provider traffic bounded; these are only fallback lookups for games with no Nexus icon.
+      for (let offset = 0; offset < missing.length; offset += 4) {
+        const batch = await Promise.all(missing.slice(offset, offset + 4).map(async (game) => {
+          try {
+            const matches = await lookupIgdbGames(client, game.name);
+            const normalize = (value: string) => value.toLocaleLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, " ").trim();
+            const needle = normalize(game.name);
+            const match = matches.find((candidate) => normalize(candidate.name) === needle) ?? matches.find((candidate) => {
+              const name = normalize(candidate.name);
+              return name.length > 2 && (name.includes(needle) || needle.includes(name));
+            });
+            const raw = match?.cover?.url ?? match?.artworks?.[0]?.url;
+            if (!raw) return null;
+            const url = raw.startsWith("//") ? `https:${raw}` : raw;
+            if (!/^https:\/\//i.test(url) || !/images\.igdb\.com\//i.test(url)) return null;
+            return [game.domainName, url.replace(/t_[a-z0-9]+\./i, "t_cover_big.")] as const;
+          } catch { return null; }
+        }));
+        resolved.push(...batch.filter((entry): entry is readonly [string, string] => entry !== null));
+        if (cancelled) return;
+      }
+      if (!cancelled) setIgdbIcons((current) => ({ ...current, ...Object.fromEntries(resolved) }));
+    })();
     return () => { cancelled = true; };
   }, [catalog, igdbConfigured, client]);
 
