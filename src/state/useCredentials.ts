@@ -33,6 +33,7 @@ export function useCredentials(user: User | null, requireSignIn: () => void) {
       .then((statuses) => { if (!cancelled) { setStatus(statuses); setLoaded(true); } })
       .catch((error) => console.warn("Mochi provider credential status unavailable", error));
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when the signed-in account changes
   }, [user?.id]);
 
   const remove = async (provider: ProviderCredential) => {

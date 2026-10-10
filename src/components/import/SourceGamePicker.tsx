@@ -75,6 +75,7 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
       })
       .catch(() => { if (!cancelled) { setDetected([]); setDetectError(true); } });
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- re-detect only when the sources, a retry or the filter change; `launchersOnly` follows `filter`
   }, [fixedSources, nonce, filter]);
 
   // Read every source's items up front so counts are exact and the footer total is right.

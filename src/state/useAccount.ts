@@ -101,6 +101,7 @@ export function useAccount(notify: (title: string, message: string) => void) {
   useEffect(() => {
     if (user) void loadSecurity();
     else { setSecurityFactors([]); setPasskeys([]); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reload only when the signed-in account changes
   }, [user?.id, loadSecurity]);
 
   const switchAccount = async (account: SavedAccount) => {

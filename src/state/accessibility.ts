@@ -146,6 +146,7 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
 
   const update = useCallback((changes: Partial<Accessibility>) => setSettings((current) => normalizeAccessibility({ ...current, ...changes })), []);
   const reset = useCallback(() => setSettings(defaultAccessibility), []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `systemTick` forces `effective` to be recomputed when the OS preference changes
   const value = useMemo(() => ({ settings, update, reset, effective: effectiveAccessibility(settings) }), [settings, update, reset, systemTick]);
   return createElement(AccessibilityContext.Provider, { value }, children);
 }

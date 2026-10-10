@@ -103,6 +103,7 @@ export default function BigPicture() {
   const focusCard = useCallback((piko: Piko) => { lastCard.current = piko.id; setFocusId(piko.id); }, []);
   const toggleFavorite = useCallback((id: string) => { const piko = byId.get(id); if (piko) lib.updateGame(id, { favorite: !piko.favorite }); }, [byId, lib]);
 
+  const heroKey = hero ? "has-hero" : "no-hero";
   // Focus follows the screen: the Play button on a game page, the card you came from on the home screen.
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -113,7 +114,7 @@ export default function BigPicture() {
       if (target) focusElement(target);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [gameId, hero ? "has-hero" : "no-hero"]);
+  }, [gameId, heroKey]);
 
   useEffect(() => {
     if (menu === "closed") { returnFocus.current?.focus({ preventScroll: true }); return; }

@@ -53,6 +53,7 @@ export function Select<T extends string>({ value, onChange, options, label, plac
   useEffect(() => {
     if (!open) return;
     setActive(Math.max(0, visible.findIndex((option) => option.value === value)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- re-centre the highlight when the menu opens or the filter changes only
   }, [open, query]);
 
   useEffect(() => {

@@ -8,6 +8,7 @@ export function ExperimentalSection() {
   // Features that were new when the section opened keep their badge for this visit.
   const newOnOpen = useRef<string[] | null>(null);
   if (newOnOpen.current === null) newOnOpen.current = unseen;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mark features as seen once per change of the list, not whenever `markSeen` changes identity
   useEffect(() => { markSeen(); }, [features.length]);
   if (!features.length) return null;
   return <SettingsGroup title="Experimental" subtitle="Unfinished features. They may change, break, or disappear." id="settings-experimental">
