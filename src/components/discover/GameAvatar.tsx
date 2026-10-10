@@ -18,14 +18,15 @@ export function hueOf(name: string): number {
  * A game's full icon, cropped to the avatar shape (round; square in the Ore theme) with a themed backdrop, so a
  * transparent PNG never shows up as a box. No image, or one that fails to load, becomes initials.
  */
-export function GameAvatar({ src, fallbackSrc, name, className = "" }: { src?: string; fallbackSrc?: string; name: string; className?: string }) {
-  const [useFallback, setUseFallback] = useState(false);
+export function GameAvatar({ src, fallbackSrcs = [], name, className = "" }: { src?: string; fallbackSrcs?: string[]; name: string; className?: string }) {
+  const [fallbackIndex, setFallbackIndex] = useState(-1);
   const [failed, setFailed] = useState(false);
-  useEffect(() => { setUseFallback(false); setFailed(false); }, [src, fallbackSrc]);
-  const activeSrc = useFallback ? fallbackSrc : src;
+  const fallbacks = fallbackSrcs.filter((url, index, all) => Boolean(url) && url !== src && all.indexOf(url) === index);
+  useEffect(() => { setFallbackIndex(-1); setFailed(false); }, [src, fallbackSrcs]);
+  const activeSrc = fallbackIndex < 0 ? src : fallbacks[fallbackIndex];
   const style = { "--game-hue": hueOf(name) } as React.CSSProperties;
   const onError = () => {
-    if (!useFallback && fallbackSrc && fallbackSrc !== src) setUseFallback(true);
+    if (fallbackIndex + 1 < fallbacks.length) setFallbackIndex((index) => index + 1);
     else setFailed(true);
   };
   return <span className={`game-avatar ${className}`.trim()} style={style} aria-hidden="true">
