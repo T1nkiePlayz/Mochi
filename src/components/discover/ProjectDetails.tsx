@@ -39,7 +39,7 @@ function VersionRow({ version, fit, onDownload }: { version: ModrinthVersion; fi
   const loaders = version.loaders.filter((loader) => parseLoader(loader) !== undefined);
   return <div className={`version-row${open ? " open" : ""}`} data-fit={fit?.status}>
     <div className="version-row-main">
-      <button type="button" className="version-expand" aria-expanded={open} aria-label={`${open ? "Hide" : "Show"} changelog and files for ${version.name || version.version_number}`} onClick={() => setOpen((value) => !value)}>{open ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</button>
+      <button type="button" className="version-expand" aria-expanded={open} aria-label={`${open ? t("Hide changelog and files for") : t("Show changelog and files for")} ${version.name || version.version_number}`} onClick={() => setOpen((value) => !value)}>{open ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</button>
       <div className="version-name"><strong title={version.name}>{version.name || version.version_number}</strong><small>{version.version_number}</small></div>
       <span className={`release-badge release-${channel}`}>{channelLabel[channel]}</span>
       <div className="version-chips" aria-label="Loaders">{loaders.map((loader) => <span key={loader} className="chip chip-loader">{loaderLabels[parseLoader(loader)!]}</span>)}</div>
@@ -49,7 +49,7 @@ function VersionRow({ version, fit, onDownload }: { version: ModrinthVersion; fi
       <div className="version-action">
         {fit && fit.status !== "compatible" && <span className={`compat-badge compat-${fit.status}`} title={fit.reason}>{fit.status === "maybe" ? "May work" : "Not for your Tofu"}</span>}
         {fit?.status === "compatible" && <span className="compat-badge compat-compatible">Fits your Tofu</span>}
-        <button type="button" className="secondary-button" onClick={onDownload} disabled={!primary} aria-label={`Download ${version.name || version.version_number}`}><Download size={13} /> Download</button>
+        <button type="button" className="secondary-button" onClick={onDownload} disabled={!primary} aria-label={`${t("Download")} ${version.name || version.version_number}`}><Download size={13} /> Download</button>
       </div>
     </div>
     {open && <div className="version-row-detail">
