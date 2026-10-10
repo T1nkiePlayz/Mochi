@@ -1,4 +1,5 @@
 import { Check, CloudDownload, CloudOff, LoaderCircle, RefreshCw } from "lucide-react";
+import { useTranslation } from "../../lib/useTranslation";
 
 type Props = {
   busy: boolean;
@@ -12,11 +13,12 @@ type Props = {
 };
 
 export function CloudImportStep({ busy, ready, accessAllowed, settingsReady, message, syncEnabled, syncState, onImport }: Props) {
+  const t = useTranslation();
   const syncing = syncState === "syncing" || syncState === "retrying";
   return <section className="setup-page setup-cloud-page">
     <div className="setup-icon"><CloudDownload size={22} /></div>
-    <h1>Bring your cloud library with you.</h1>
-    <p className="setup-description">If you have used Mochi on another device, import the games saved to your account. Mochi merges cloud games into this device and keeps games that exist only here.</p>
+    <h1>{t("Bring your cloud library with you.")}</h1>
+    <p className="setup-description">{t("If you have used Mochi on another device, import the games saved to your account. Mochi merges cloud games into this device and keeps games that exist only here.")}</p>
     <div className="setup-cloud-card">
       <div className="setup-cloud-status">
         {syncEnabled ? <Check size={18} /> : <CloudOff size={18} />}
@@ -24,7 +26,7 @@ export function CloudImportStep({ busy, ready, accessAllowed, settingsReady, mes
       </div>
       <button type="button" className="play-button setup-cloud-import" onClick={() => void onImport()} disabled={busy || !ready || !settingsReady || !accessAllowed}>
         {busy ? <LoaderCircle size={16} className="spin" /> : <RefreshCw size={16} />}
-        {busy ? "Importing cloud library…" : !ready ? "Preparing your account…" : !settingsReady ? "Checking your cloud account…" : !accessAllowed ? "Enable cloud access in Settings" : "Check and import cloud data"}
+        {busy ? "Importing cloud library…" : !ready ? "Preparing your account…" : !settingsReady ? "Checking your cloud account…" : !accessAllowed ? "Enable cloud access in Settings" : t("Check and import cloud data")}
       </button>
       <p className="setup-cloud-safety">This does not delete your local games or move any installed files.</p>
       {message && <p className="setup-cloud-message" role="status">{message}</p>}
