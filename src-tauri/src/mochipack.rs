@@ -18,13 +18,36 @@ pub(crate) fn write_pack(path: &Path, content: &str) -> Result<PathBuf, String> 
     let mut target = path.to_path_buf();
     if extension_of(&target) != "mochipack" { target.set_extension("mochipack"); }
     if target.is_dir() { return Err("Choose a file name, not a folder.".into()); }
-    // Written beside the target and renamed, so an interrupted save never leaves half a pack.
-    let mut temp = target.clone().into_os_string();
-    temp.push(".part");
-    let temp = PathBuf::from(temp);
-    fs::write(&temp, content).map_err(|error| format!("Could not save the pack: {error}"))?;
-    fs::rename(&temp, &target).map_err(|error| { let _ = fs::remove_file(&temp); format!("Could not save the pack: {error}") })?;
+    // A unique sibling and create_new prevent a pre-created symlink or file from being followed.
+    let temp = temp_path(&target);
+    write_atomic_to(&target, content, &temp, "pack")?;
     Ok(target)
+}
+
+static TEMP_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+fn temp_path(target: &Path) -> PathBuf {
+    let mut temp = target.as_os_str().to_os_string();
+    temp.push(format!(".part-{}-{}", std::process::id(), TEMP_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed)));
+    PathBuf::from(temp)
+}
+
+/// The temp file is created exclusively (never follows a symlink), then renamed into place.
+fn write_atomic_to(target: &Path, content: &str, temp: &Path, label: &str) -> Result<(), String> {
+    use std::io::Write;
+    let mut file = fs::OpenOptions::new().write(true).create_new(true).open(temp)
+        .map_err(|error| format!("Could not save the {label}: {error}"))?;
+    if let Err(error) = file.write_all(content.as_bytes()) {
+        drop(file);
+        let _ = fs::remove_file(temp);
+        return Err(format!("Could not save the {label}: {error}"));
+    }
+    drop(file);
+    fs::rename(temp, target).map_err(|error| {
+        let _ = fs::remove_file(temp);
+        format!("Could not save the {label}: {error}")
+    })
+}
 }
 
 pub(crate) fn read_pack(path: &Path) -> Result<String, String> {
