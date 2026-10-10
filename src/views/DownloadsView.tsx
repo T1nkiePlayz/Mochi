@@ -34,19 +34,19 @@ export function DownloadsView() {
       <p>Mods, resource packs and shaders from Modrinth, CurseForge and Nexus Mods download here and keep going while Mochi is hidden in the tray. Finished downloads stay in this list for 10 minutes.</p>
     </div>
     <section className="download-group download-pacing" aria-label="Download controls">
-      <div className="download-group-heading"><div className="download-control-heading-copy"><strong>Download controls</strong><small>Manage bandwidth and when downloads are allowed to run.</small></div><span className={held ? "download-control-status held" : "download-control-status"}><i />{held ? (prefs.paused ? "Paused" : "Scheduled wait") : "Downloads enabled"}</span></div>
+      <div className="download-group-heading"><div className="download-control-heading-copy"><strong>{t("Download controls")}</strong><small>Manage bandwidth and when downloads are allowed to run.</small></div><span className={held ? "download-control-status held" : "download-control-status"}><i />{held ? (prefs.paused ? "Paused" : "Scheduled wait") : "Downloads enabled"}</span></div>
       <div className="download-control-body">
         <div className="download-control-primary">
           <div><strong>{prefs.paused ? "Downloads are paused" : held ? "Waiting for your schedule" : "Downloads can run"}</strong><small>{prefs.paused ? "Resume when you're ready to continue." : held ? "Downloads will resume automatically during your allowed hours." : "Your active downloads will continue in the background."}</small></div>
           <button type="button" className="secondary-button" aria-pressed={prefs.paused} onClick={() => setPrefs((current) => ({ ...current, paused: !current.paused }))}>{prefs.paused ? <><Play size={14} /> Resume all</> : <><Pause size={14} /> Pause all</>}</button>
         </div>
         <div className="download-control-grid">
-          <label className="download-pacing-field download-speed-field"><span>Bandwidth limit</span><select value={prefs.limitKiB} onChange={(event) => setPrefs((current) => ({ ...current, limitKiB: Number(event.target.value) }))}>{speedLimits.map((item) => <option key={item.kib} value={item.kib}>{item.label}</option>)}</select><small>Shared across active downloads</small></label>
+          <label className="download-pacing-field download-speed-field"><span>{t("Bandwidth limit")}</span><select value={prefs.limitKiB} onChange={(event) => setPrefs((current) => ({ ...current, limitKiB: Number(event.target.value) }))}>{speedLimits.map((item) => <option key={item.kib} value={item.kib}>{item.label}</option>)}</select><small>Shared across active downloads</small></label>
           <div className="download-schedule-card">
-            <label className="download-schedule-toggle"><span><strong>Download schedule</strong><small>Only download during a time window</small></span><input type="checkbox" checked={prefs.window.enabled} onChange={(event) => setPrefs((current) => ({ ...current, window: { ...current.window, enabled: event.target.checked } }))} /></label>
+            <label className="download-schedule-toggle"><span><strong>{t("Download schedule")}</strong><small>Only download during a time window</small></span><input type="checkbox" checked={prefs.window.enabled} onChange={(event) => setPrefs((current) => ({ ...current, window: { ...current.window, enabled: event.target.checked } }))} /></label>
             <div className="download-schedule-times">
-              <label className="download-pacing-field"><span>Start time</span><input type="time" aria-label="Allowed from" value={prefs.window.start} disabled={!prefs.window.enabled} onChange={(event) => event.target.value && setPrefs((current) => ({ ...current, window: { ...current.window, start: event.target.value } }))} /></label>
-              <label className="download-pacing-field"><span>End time</span><input type="time" aria-label="Allowed until" value={prefs.window.end} disabled={!prefs.window.enabled} onChange={(event) => event.target.value && setPrefs((current) => ({ ...current, window: { ...current.window, end: event.target.value } }))} /></label>
+              <label className="download-pacing-field"><span>{t("Start time")}</span><input type="time" aria-label="Allowed from" value={prefs.window.start} disabled={!prefs.window.enabled} onChange={(event) => event.target.value && setPrefs((current) => ({ ...current, window: { ...current.window, start: event.target.value } }))} /></label>
+              <label className="download-pacing-field"><span>{t("End time")}</span><input type="time" aria-label="Allowed until" value={prefs.window.end} disabled={!prefs.window.enabled} onChange={(event) => event.target.value && setPrefs((current) => ({ ...current, window: { ...current.window, end: event.target.value } }))} /></label>
             </div>
           </div>
         </div>
@@ -58,7 +58,7 @@ export function DownloadsView() {
       <div className="download-group-heading"><strong>Mod updates</strong><button type="button" className="text-button" onClick={() => setActiveNav("Installed")}>Open Mods &amp; Content</button></div>
       <ul className="download-update-list">{updating.map(({ piko, tofu, state }) => <li key={tofu.id}><span>{piko.name}: {tofu.name}</span><small>{state.updating.length ? `Updating ${state.updating.length}…` : `${updateCount(state)} update${updateCount(state) === 1 ? "" : "s"} available`}</small></li>)}</ul>
     </section>}
-    {hasFinished(downloads) && <div className="download-toolbar"><button type="button" className="secondary-button" onClick={() => void clearFinished()}><Trash2 size={13} /> Clear finished</button></div>}
+    {hasFinished(downloads) && <div className="download-toolbar"><button type="button" className="secondary-button" onClick={() => void clearFinished()}><Trash2 size={13} /> {t("Clear finished")}</button></div>}
     {!downloads.length ? <div className="download-empty"><div className="empty-icon"><MochiIcon name="downloads" fallback={Download} size={22} /></div><h3>{t("No active downloads")}</h3><p>{t("Nothing is downloading right now.")}</p></div> : (
       <div className="download-groups">
         {groups.map((group) => (
