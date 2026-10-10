@@ -10,7 +10,8 @@ export const NEWS_MAX_SEEN = 1500;
 /** Converts a UI/OS locale to Steam's language names; a future launcher-language setting can pass its locale here. */
 export function steamNewsLanguage(locale: string): string {
   const normalized = locale.toLowerCase().replace(/_/g, "-");
-  if (/^zh-(tw|hk|mo)(-|$)/.test(normalized)) return "tchinese";
+  if (/^zh-(hant|tw|hk|mo)(-|$)/.test(normalized)) return "tchinese";
+  if (/^zh-hans(-|$)/.test(normalized)) return "schinese";
   if (/^pt-br(-|$)/.test(normalized)) return "brazilian";
   const code = normalized.split("-", 1)[0];
   const names: Record<string, string> = { ar: "arabic", bg: "bulgarian", zh: "schinese", cs: "czech", da: "danish", nl: "dutch", en: "english", fi: "finnish", fr: "french", de: "german", el: "greek", hu: "hungarian", id: "indonesian", it: "italian", ja: "japanese", ko: "koreana", no: "norwegian", pl: "polish", pt: "portuguese", ro: "romanian", ru: "russian", es: "spanish", sv: "swedish", th: "thai", tr: "turkish", uk: "ukrainian", vi: "vietnamese" };
