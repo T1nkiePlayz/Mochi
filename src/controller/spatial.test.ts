@@ -28,6 +28,31 @@ describe("focusElement scrolling", () => {
     });
   });
 
+  it("does not scroll the Big Picture stage vertically when focus moves horizontally", () => {
+    const root = document.createElement("div");
+    root.setAttribute("data-bp-root", "");
+    root.style.overflowY = "auto";
+    const row = document.createElement("div");
+    row.style.overflowX = "auto";
+    Object.defineProperty(row, "scrollWidth", { configurable: true, value: 400 });
+    Object.defineProperty(row, "clientWidth", { configurable: true, value: 200 });
+    row.getBoundingClientRect = () => ({ left: 0, right: 200, top: 20, bottom: 180, width: 200, height: 160, x: 0, y: 20, toJSON() {} } as DOMRect);
+    const button = document.createElement("button");
+    button.getBoundingClientRect = () => ({ left: 180, right: 230, top: 30, bottom: 120, width: 50, height: 90, x: 180, y: 30, toJSON() {} } as DOMRect);
+    const scrollIntoView = vi.fn();
+    button.scrollIntoView = scrollIntoView;
+    row.append(button);
+    root.append(row);
+    document.body.append(root);
+
+    focusElement(button, "right");
+
+    expect(document.activeElement).toBe(button);
+    expect(row.scrollLeft).toBe(30);
+    expect(root.scrollTop).toBe(0);
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
   it("preserves smooth scrolling in the regular launcher UI", () => {
     const button = document.createElement("button");
     document.body.append(button);
