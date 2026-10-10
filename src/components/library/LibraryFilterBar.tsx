@@ -4,6 +4,7 @@ import type { Collection } from "../../models";
 import { smartFilters, type LibraryFilter } from "../../lib/library";
 import type { LibraryState } from "../../state/useLibrary";
 import { SavedFilterDialog } from "./SavedFilterDialog";
+import { useTranslation } from "../../lib/useTranslation";
 import { type SavedFilter, type SavedRule } from "../../lib/savedFilters";
 
 type Props = {
@@ -19,6 +20,7 @@ const same = (a: LibraryFilter, b: LibraryFilter) => a.kind === b.kind && a.id =
 
 /** Smart-filter chips with live counts, sources, collections and multi-select tags. */
 export function LibraryFilterBar({ lib, collections, tags, onManageCollections, wishlist }: Props) {
+  const t = useTranslation();
   const { filter, setFilter, filterCounts, tagFilters, toggleTagFilter, setTagFilters } = lib;
   const [showTags, setShowTags] = useState(tagFilters.length > 0);
   const { savedFilters, hours } = lib;
@@ -59,7 +61,7 @@ export function LibraryFilterBar({ lib, collections, tags, onManageCollections, 
     <div className="filter-row filter-actions">
       {wishlist && <button type="button" className={`filter-chip ${wishlist.active ? "active" : ""}`} aria-pressed={wishlist.active} onClick={wishlist.onToggle}><Gift size={13} /><span>Wishlist</span><span className="filter-count">{wishlist.count}</span></button>}
       <button type="button" className="text-button" onClick={() => setEditing({ initial: currentRule() })}><Save size={13} /> Save filter</button>
-      {activeSaved && <button type="button" className="text-button" onClick={() => setEditing({ existing: activeSaved, initial: activeSaved.rule })}><Pencil size={13} /> Edit “{activeSaved.name}”</button>}
+      {activeSaved && <button type="button" className="text-button" onClick={() => setEditing({ existing: activeSaved, initial: activeSaved.rule })}><Pencil size={13} /> {t("Edit “{name}”").replace("{name}", activeSaved.name)}</button>}
       <button type="button" className="text-button" onClick={onManageCollections}><Settings2 size={13} /> Collections</button>
       {tags.length > 0 && <button type="button" className={`text-button ${tagFilters.length ? "has-active" : ""}`} aria-expanded={showTags} onClick={() => setShowTags(!showTags)}><Tag size={13} /> Tags{tagFilters.length ? ` (${tagFilters.length})` : ""}</button>}
       {tagFilters.length > 0 && <button type="button" className="text-button" onClick={() => setTagFilters([])}>Clear tags</button>}
