@@ -1,4 +1,5 @@
 import { navLabel } from "./nav";
+import { getTranslationLocale } from "./translationLocale";
 import { setupMessages } from "./i18nSetup";
 import { setupCopyMessages } from "./i18nSetupCopy";
 import { setupCopyExtraMessages } from "./i18nSetupCopyExtra";
@@ -90,7 +91,7 @@ Object.assign(messages, {
   "Welcome to Mochi setup": { ar: "مرحبًا بك في إعداد Mochi", bg: "Добре дошли в настройката на Mochi", "zh-Hans": "欢迎使用 Mochi 设置", "zh-Hant": "歡迎使用 Mochi 設定", cs: "Vítejte v nastavení Mochi", da: "Velkommen til opsætning af Mochi", nl: "Welkom bij de installatie van Mochi", fi: "Tervetuloa Mochin käyttöönottoon", fr: "Bienvenue dans la configuration de Mochi", de: "Willkommen bei der Mochi-Einrichtung", el: "Καλώς ορίσατε στη ρύθμιση του Mochi", hu: "Üdvözlünk a Mochi beállításában", id: "Selamat datang di penyiapan Mochi", it: "Benvenuto nella configurazione di Mochi", ja: "Mochi のセットアップへようこそ", ko: "Mochi 설정에 오신 것을 환영합니다", no: "Velkommen til oppsettet av Mochi", pl: "Witamy w konfiguracji Mochi", pt: "Bem-vindo à configuração do Mochi", "pt-BR": "Boas-vindas à configuração do Mochi", ro: "Bun venit la configurarea Mochi", ru: "Добро пожаловать в настройку Mochi", es: "Te damos la bienvenida a la configuración de Mochi", sv: "Välkommen till Mochis konfiguration", th: "ยินดีต้อนรับสู่การตั้งค่า Mochi", tr: "Mochi kurulumuna hoş geldiniz", uk: "Ласкаво просимо до налаштування Mochi", vi: "Chào mừng bạn đến với thiết lập Mochi" },
 });
 
-export function translate(message: string, language: unknown = "en"): string {
+export function translate(message: string, language: unknown = getTranslationLocale()): string {
   const normalized = normalizeLanguage(language);
   const navigation = navLabel(message, normalized);
   if (navigation !== message) return navigation;
