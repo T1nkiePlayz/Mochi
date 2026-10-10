@@ -1,74 +1,51 @@
-/* Downloads view additions: per-row actions and the clear button. Tokens only. */
-.download-toolbar { display: flex; justify-content: flex-end; }
+/* Downloads view: compact rows and a control panel with clear hierarchy. */
+.download-toolbar { display: flex; justify-content: flex-end; gap: 8px; }
 .download-list .download-row { grid-template-columns: minmax(160px, .45fr) minmax(240px, 1fr) auto; }
 .download-row-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; min-width: 36px; }
 .download-row.is-cancelled .download-row-copy strong { color: var(--mochi-text-muted); }
 @media (max-width: 900px) { .download-list .download-row { grid-template-columns: 1fr; } .download-row-actions { justify-content: flex-start; } }
 
-/* Mod updates waiting or running (DownloadsView). */
+/* Mod updates waiting or running. */
 .download-update-list { list-style: none; margin: 0; padding: 0 16px 14px; display: grid; gap: 6px; }
 .download-update-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; color: var(--mochi-text); font-size: 13px; }
 .download-update-list small { color: var(--mochi-text-muted); }
 
-/* Download pacing controls: use the shared input, button and surface tokens so
-   the controls inherit each theme instead of falling back to browser defaults. */
+/* Download pacing controls inherit the same theme tokens as the rest of Mochi. */
 .download-pacing { overflow: hidden; }
 .download-pacing .download-group-heading { align-items: center; gap: 12px; }
-.download-pacing .download-group-heading > span {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-height: 24px; padding: 2px 9px;
-  border: var(--mochi-border-width) solid var(--mochi-card-border);
-  border-radius: var(--mochi-pill-radius);
-  background: var(--mochi-card-background); color: var(--mochi-text-muted);
-  font-size: 11px; line-height: 1.3; text-align: center;
-}
-.download-pacing .download-toolbar {
-  display: grid; grid-template-columns: minmax(170px, auto) repeat(4, minmax(0, 1fr));
-  align-items: end; justify-content: stretch; gap: 12px;
-  padding: 14px 16px 12px;
-}
-.download-pacing .download-toolbar > .secondary-button {
-  grid-column: 1 / -1; justify-self: start; min-height: var(--mochi-button-height);
-}
-.download-pacing-field {
-  display: flex; flex-direction: column; justify-content: flex-end; gap: 7px;
-  min-width: 0; color: var(--mochi-text-muted); font-size: 12px; font-weight: 600;
-}
-.download-pacing-field select,
-.download-pacing-field input[type="time"] {
-  box-sizing: border-box; width: 100%; min-width: 0; min-height: var(--mochi-input-height, 38px);
-  padding: 8px 10px; border: var(--mochi-border-width) solid var(--mochi-input-border);
-  border-radius: var(--mochi-input-radius); background: var(--mochi-input-background);
-  color: var(--mochi-text); box-shadow: var(--mochi-input-shadow);
-  font: inherit; color-scheme: inherit;
-  transition: border-color var(--mochi-transition), box-shadow var(--mochi-transition), opacity var(--mochi-transition);
-}
-.download-pacing-field select:focus-visible,
-.download-pacing-field input[type="time"]:focus-visible {
-  border-color: var(--mochi-input-focus-border); box-shadow: var(--mochi-focus-ring);
-}
-.download-pacing-field select:disabled,
-.download-pacing-field input[type="time"]:disabled { opacity: .45; cursor: not-allowed; }
-.download-pacing-field:has(input[type="checkbox"]) {
-  flex-direction: row; align-items: center; justify-content: flex-start;
-  align-self: stretch; min-height: var(--mochi-input-height, 38px); padding: 0 10px;
-  border: var(--mochi-border-width) solid var(--mochi-input-border);
-  border-radius: var(--mochi-input-radius); background: var(--mochi-input-background);
-  color: var(--mochi-text); box-shadow: var(--mochi-input-shadow);
-}
-.download-pacing-field input[type="checkbox"] {
-  flex: 0 0 auto; width: 16px; height: 16px; margin: 0; accent-color: var(--mochi-accent-strong);
-}
+.download-control-heading-copy { display: grid; gap: 4px; min-width: 0; }
+.download-control-heading-copy strong { color: var(--mochi-text); }
+.download-control-heading-copy small { color: var(--mochi-text-muted); font-size: 11px; font-weight: 400; line-height: 1.45; }
+.download-pacing .download-group-heading > .download-control-status { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 27px; padding: 4px 10px; border: var(--mochi-border-width) solid var(--mochi-card-border); border-radius: var(--mochi-pill-radius); background: var(--mochi-card-background); color: var(--mochi-text-muted); font-size: 11px; line-height: 1.3; text-align: center; white-space: nowrap; }
+.download-control-status i { width: 7px; height: 7px; border-radius: 50%; background: var(--mochi-success); }
+.download-control-status.held i { background: var(--mochi-warning); }
+.download-control-body { display: grid; gap: 12px; padding: 14px 16px; }
+.download-control-primary { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 14px; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-card-radius); background: var(--mochi-background); }
+.download-control-primary > div { display: grid; gap: 4px; min-width: 0; }
+.download-control-primary strong { color: var(--mochi-text); font-size: 12px; }
+.download-control-primary small { color: var(--mochi-text-muted); font-size: 11px; line-height: 1.45; }
+.download-control-primary > button { flex: 0 0 auto; }
+.download-control-grid { display: grid; grid-template-columns: minmax(170px, .8fr) minmax(280px, 1.4fr); gap: 12px; }
+.download-pacing-field { display: flex; flex-direction: column; justify-content: flex-end; gap: 7px; min-width: 0; color: var(--mochi-text-muted); font-size: 12px; font-weight: 600; }
+.download-pacing-field select, .download-pacing-field input[type="time"] { box-sizing: border-box; width: 100%; min-width: 0; min-height: var(--mochi-input-height, 38px); padding: 8px 10px; border: var(--mochi-border-width) solid var(--mochi-input-border); border-radius: var(--mochi-input-radius); background: var(--mochi-input-background); color: var(--mochi-text); box-shadow: var(--mochi-input-shadow); font: inherit; color-scheme: inherit; transition: border-color var(--mochi-transition), box-shadow var(--mochi-transition), opacity var(--mochi-transition); }
+.download-pacing-field select:focus-visible, .download-pacing-field input[type="time"]:focus-visible { border-color: var(--mochi-input-focus-border); box-shadow: var(--mochi-focus-ring); }
+.download-pacing-field select:disabled, .download-pacing-field input[type="time"]:disabled { opacity: .45; cursor: not-allowed; }
+.download-pacing-field > small { color: var(--mochi-text-muted); font-size: 10px; font-weight: 400; }
+.download-schedule-card { display: grid; gap: 12px; min-width: 0; padding: 12px; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-card-radius); background: var(--mochi-background); }
+.download-schedule-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
+.download-schedule-toggle > span { display: grid; gap: 4px; min-width: 0; }
+.download-schedule-toggle strong { color: var(--mochi-text); font-size: 12px; }
+.download-schedule-toggle small { color: var(--mochi-text-muted); font-size: 10px; line-height: 1.4; }
+.download-schedule-toggle input { flex: 0 0 auto; width: 17px; height: 17px; margin: 0; accent-color: var(--mochi-accent-strong); }
+.download-schedule-times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .download-pacing .metadata-note { display: block; margin: 0; padding: 0 16px 14px; line-height: 1.55; }
-@media (min-width: 760px) {
-  .download-pacing .download-toolbar > .secondary-button { grid-column: auto; align-self: stretch; }
-}
-@media (max-width: 680px) {
-  .download-pacing .download-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px; }
-  .download-pacing .download-toolbar > .secondary-button { grid-column: 1 / -1; width: 100%; }
-  .download-pacing .download-group-heading { align-items: flex-start; }
+@media (max-width: 760px) { .download-control-grid { grid-template-columns: 1fr; } }
+@media (max-width: 560px) {
+  .download-pacing .download-group-heading { align-items: flex-start; flex-direction: column; }
+  .download-control-body { padding: 12px; }
+  .download-control-primary { align-items: flex-start; flex-direction: column; }
+  .download-control-primary > button { width: 100%; }
+  .download-schedule-times { grid-template-columns: 1fr 1fr; }
   .download-pacing .metadata-note { padding: 0 12px 12px; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .download-pacing-field select, .download-pacing-field input[type="time"] { transition: none; }
-}
+@media (prefers-reduced-motion: reduce) { .download-pacing-field select, .download-pacing-field input[type="time"] { transition: none; } }
