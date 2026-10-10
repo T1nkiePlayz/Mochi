@@ -54,6 +54,7 @@ Mochi is a cross-platform (Linux and macOS) desktop game launcher that sits abov
 
 - **Local first.** Installations stay where they are; the library, launching, playtime, themes and settings work without an account or a network. Cloud sync is optional and metadata-only.
 - **Native where it matters.** React/TypeScript for the UI; Tauri 2 and Rust for launching, discovery, process tracking and downloads. OS-specific code lives in `src-tauri/src/platform/` and `src-tauri/src/sources/`, and the UI asks `get_platform_capabilities` instead of assuming an OS.
+- **Easy to verify.** Download from [Releases](https://github.com/T1nkiePlayz/Mochi/releases) only and check it with [Install](#install) and [Verify your download](#verify-your-download).
 - **Your launcher stays in charge of its games.** Imported games are launched through the owning launcher (Steam, Heroic, ...) so prefixes, overlays and authentication keep working.
 
 ## Features
@@ -269,6 +270,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [x] Backlog, wishlist, Next up, play suggestions and saved filters
 - [x] Per-game launch options and launch profiles, Wine/Proton prefix tools, crash hints and suspected-mod helpers
 - [x] Library/settings backups, storage manager, download controls, keyboard-first navigation and command palette
+- [x] Game themes that use each game's cover colour as the accent on its page
 - [x] Accounts, optional metadata-only cloud sync, TOTP MFA, provider credential management and offline library use
 - [x] Linux packages, universal macOS DMG, update verification and release checksums/signatures/attestations
 
@@ -278,7 +280,9 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] Stable release
 - [ ] Theme marketplace / in-app theme gallery for browsing and installing community themes
 - [ ] Theme creator with live editing of colours, fonts and hooks, plus theme export
-- [ ] Per-game automatic themes that temporarily adapt the whole launcher to a game's look when opened
+- [ ] Per-game notes and links, included in the library backup
+- [ ] A "clear unused data" action in the storage manager that removes cached and saved data no game uses
+- [ ] Redesigned Edit game window
 - [ ] Pre-launch and post-exit scripts in per-game launch profiles
 
 ## Documentation index
