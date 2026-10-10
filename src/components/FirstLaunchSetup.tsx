@@ -15,6 +15,7 @@ import { AccountStep } from "./setup/AccountStep";
 import { ServicesStep } from "./setup/ServicesStep";
 import { ImportStep } from "./setup/ImportStep";
 import { CloudImportStep } from "./setup/CloudImportStep";
+import { useTranslation } from "../lib/i18n";
 
 type SetupProps = {
   igdbClientId: string;
@@ -53,6 +54,7 @@ type Step = typeof steps[number];
 const stepLabels: Record<Step, string> = { welcome: "Welcome", language: "Language", theme: "Theme", accessibility: "Accessibility", account: "Account", cloud: "Cloud library", services: "Game services", imports: "Find your games" };
 
 export function FirstLaunchSetup(props: SetupProps) {
+  const t = useTranslation();
   const [step, setStep] = useState<Step>("welcome");
   const [selection, setSelection] = useState<PickerSelection>({ games: [], sources: [], minecraftMode: "copy" });
   const index = steps.indexOf(step);
@@ -66,13 +68,13 @@ export function FirstLaunchSetup(props: SetupProps) {
   };
 
   const finish = () => props.onFinish(selection.games, selection.sources, selection.minecraftMode);
-  const nextLabel = step === "welcome" ? "Get started" : last ? (selection.games.length ? `Import ${selection.games.length} and finish` : "Finish") : "Next";
+  const nextLabel = step === "welcome" ? t("Get started") : last ? (selection.games.length ? `Import ${selection.games.length} and finish` : t("Finish")) : t("Next");
 
   return (
     <div className="setup-shell">
       <div className="setup-orbit setup-orbit-one" />
       <div className="setup-orbit setup-orbit-two" />
-      <div className="setup-panel setup-panel-wide" role="dialog" aria-label="Welcome to Mochi setup">
+      <div className="setup-panel setup-panel-wide" role="dialog" aria-label={t("Welcome to Mochi setup")}>
         <div className="setup-progress" role="progressbar" aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={index + 1} aria-valuetext={`Step ${index + 1} of ${steps.length}: ${stepLabels[step]}`}>
           {steps.map((item, position) => <span key={item} className={position <= index ? "active" : ""} />)}
         </div>
@@ -90,7 +92,7 @@ export function FirstLaunchSetup(props: SetupProps) {
           <button type="button" className="setup-nav setup-prev" onClick={() => hop(-1)} disabled={step === "welcome"}><ArrowLeft size={16} /> Back</button>
           <span className="setup-step-label">{stepLabels[step]} · {index + 1}/{steps.length}</span>
           <div className="setup-footer-actions">
-            {step !== "welcome" && step !== "account" && !last && <button type="button" className="setup-skip text-button" onClick={() => hop(1)} disabled={props.credentialBusy !== null}>Skip</button>}
+            {step !== "welcome" && step !== "account" && !last && <button type="button" className="setup-skip text-button" onClick={() => hop(1)} disabled={props.credentialBusy !== null}>{t("Skip")}</button>}
             <button type="button" className="setup-nav setup-next" onClick={last ? finish : () => hop(1)} disabled={props.credentialBusy !== null}>{nextLabel} <ArrowRight size={16} /></button>
           </div>
         </div>
