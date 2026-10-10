@@ -99,20 +99,20 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
   // Nexus and CurseForge both have incomplete or stale icon data. Resolve secondary artwork for
   // Nexus games and for CurseForge games with missing icons, prioritising games the user explicitly added.
   useEffect(() => {
-    if (!settings.nexus || !igdbConfigured || !client) { setIgdbIcons({}); return; }
+    if (!igdbConfigured || !client) { setIgdbIcons({}); return; }
     let cancelled = false;
     type IconCandidate = { lookupKey: string; name: string };
-    const storedNexus: IconCandidate[] = stored
+    const storedNexus: IconCandidate[] = settings.nexus ? stored
       .filter((entry): entry is Extract<StoredGame, { k: "nx" }> => entry.k === "nx")
-      .map((entry) => ({ lookupKey: entry.domain.toLocaleLowerCase(), name: entry.name ?? entry.domain }));
+       .map((entry) => ({ lookupKey: entry.domain.toLocaleLowerCase(), name: entry.name ?? entry.domain })) : [];
     const storedCurseForge: IconCandidate[] = stored
       .filter((entry): entry is Extract<StoredGame, { k: "cf" }> => entry.k === "cf")
       .flatMap((entry) => {
         const game = cfGames?.find((candidate) => candidate.id === entry.id);
         return game ? [{ lookupKey: `cf:${game.id}`, name: game.name }] : [];
       });
-    const liveNexus: IconCandidate[] = catalog.map((game) => ({ lookupKey: game.domainName.toLocaleLowerCase(), name: game.name }));
-    const knownNexus: IconCandidate[] = KNOWN_NEXUS_GAMES.map((game) => ({ lookupKey: game.domainName.toLocaleLowerCase(), name: game.name }));
+    const liveNexus: IconCandidate[] = settings.nexus ? catalog.map((game) => ({ lookupKey: game.domainName.toLocaleLowerCase(), name: game.name })) : [];
+    const knownNexus: IconCandidate[] = settings.nexus ? KNOWN_NEXUS_GAMES.map((game) => ({ lookupKey: game.domainName.toLocaleLowerCase(), name: game.name })) : [];
     const missingCurseForge: IconCandidate[] = (cfGames ?? [])
       .filter((game) => !game.assets?.iconUrl)
       .map((game) => ({ lookupKey: `cf:${game.id}`, name: game.name }));
