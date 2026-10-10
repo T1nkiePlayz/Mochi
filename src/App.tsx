@@ -17,7 +17,7 @@ import { installAccessibilityEnhancer } from "./lib/dialogs";
 import { installTruncationTitles } from "./lib/truncationTitles";
 import { Cloud } from "lucide-react";
 import { OfflineBanner } from "./components/OfflineBanner";
-import { useTranslation } from "./lib/i18n";
+import { useTranslation } from "./lib/useTranslation";
 
 // Dialogs only mount when opened, so their code (and the pickers/editors behind them) stays out of the entry chunk.
 const AddGameModals = lazy(() => import("./components/AddGameModals").then((m) => ({ default: m.AddGameModals })));
