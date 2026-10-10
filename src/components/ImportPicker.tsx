@@ -18,6 +18,7 @@ const manualSources: Array<{ id: ImportSourceId; name: string }> = [
 ];
 
 export function ImportPicker({ onClose, onImport, mode = "games" }: ImportPickerProps) {
+  const { lib } = useApp();
   const launchers = mode === "launchers";
   const [manual, setManual] = useState<"closed" | "form" | "results">("closed");
   const [platform, setPlatform] = useState<ImportSourceId | null>(null);
@@ -80,12 +81,14 @@ export function ImportPicker({ onClose, onImport, mode = "games" }: ImportPicker
             <SourceGamePicker
               key={`${platform}:${libraryPath}`}
               sources={manualSource}
+              existingLibrary={lib.library}
               scan={(id) => scanImportGames(id, libraryPath.trim())}
               renderAction={({ games, minecraftMode }) => <button type="button" className="play-button" disabled={!games.length} onClick={() => onImport(games, { minecraftMode })}>Import {games.length} {games.length === 1 ? "game" : "games"}</button>}
             />
           </>
         ) : (
           <SourceGamePicker
+            existingLibrary={lib.library}
             filter={launchers ? "launchers" : "all"}
             sidebarExtra={launchers ? undefined : sidebarExtra}
             renderAction={({ games, sources, minecraftMode }) => (
