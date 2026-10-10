@@ -10,7 +10,8 @@ const MOD = isMac ? "⌘" : "Ctrl";
 
 const groups: Array<{ title: string; items: Array<{ label: string; keys: string[] }> }> = [
   { title: "General", items: [
-    { label: "Search your library", keys: [MOD, "K"] },
+    { label: "Open the command palette (games and actions)", keys: [MOD, "K"] },
+    { label: "Show only actions in the palette", keys: [">"] },
     { label: "Show this shortcuts list", keys: ["?"] },
     { label: "Skip to main content", keys: ["Tab", "Enter"] },
   ] },

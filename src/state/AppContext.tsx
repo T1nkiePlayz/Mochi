@@ -97,17 +97,6 @@ function useAppController() {
   useDeepLinks(account, cliIntents.handle);
   useLibraryIndex(lib.library, storage.ready);
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        document.querySelector<HTMLInputElement>(".search-box input")?.focus();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
   const finishFirstLaunchSetup = (games: ImportedGame[], sources: ImportSourceId[], minecraftMode: MinecraftMode = "copy") => {
     writeString(storageKeys.setupComplete, "true");
     writeJson(storageKeys.importSources, sources);
