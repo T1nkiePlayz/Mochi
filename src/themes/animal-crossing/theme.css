@@ -82,3 +82,11 @@ html:not([data-nav-mode="drawer"])[data-mochi-shell="top"] .sidebar .sidebar-acc
 [data-mochi-theme="animal-crossing"] .mochi-select-popover { border-radius: 22px; border-width: 3px; }
 [data-mochi-theme="animal-crossing"] .mochi-select-option { border-radius: 999px; }
 [data-mochi-theme="animal-crossing"] .mochi-select-option.active { background: #e8f6d6; }
+
+
+/* Keep selection controls visibly selected against the cream island cards. */
+.game-card-check { border: 2px solid #356b56 !important; background: #fffdf2 !important; color: #174b3a !important; box-shadow: 0 1px 3px rgba(50, 72, 46, .3); }
+.game-card-check.on { background: #2fae8a !important; border-color: #176e58 !important; color: #fffdf2 !important; }
+.game-card.multi-selected { border-color: #2fae8a !important; box-shadow: 0 0 0 3px #2fae8a, 0 5px 0 #cfe6b2 !important; }
+/* Settings content uses the same centred column as the other app themes. */
+.settings-page { width: min(900px, calc(100% - 32px)); margin-inline: auto; }
