@@ -25,7 +25,7 @@ The practical impact is local and depends on a hostile or pre-existing filesyste
 - Generate a sibling temporary name using the process ID and an atomic counter.
 - Open it with `OpenOptions::create_new(true)`, which refuses existing files and symlinks rather than following or truncating them.
 - Retry up to 16 times when a candidate name already exists. This handles stale files from a reused process ID and simultaneous export attempts instead of failing on the first collision.
-- Write the complete contents before renaming the temporary file into place, and clean up after write/rename errors.
+- Write the complete contents, call `sync_all` before renaming the temporary file into place, and clean up after write/sync/rename errors. This flushes file data and metadata to the OS/device before publishing the completed file; it does not promise that the parent directory entry survives every possible power loss.
 
 ### 2. Private file permissions on Unix
 
@@ -33,7 +33,7 @@ Temporary export files are created with mode `0600` on Unix, so modpack contents
 
 ### 3. Regression tests
 
-Unix-only tests verify that a symlink at the temporary path is rejected without changing its target, and that successfully written modpack and library backup files have mode `0600`.
+Unix-only tests verify that a symlink at the temporary path is rejected without changing its target, existing exports/backups are replaced with the complete new contents (without leftover temporary files), and successfully written modpack and library backup files have mode `0600`.
 
 ## Verification and remaining work
 
