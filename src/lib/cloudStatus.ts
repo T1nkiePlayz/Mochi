@@ -50,8 +50,15 @@ export function isRetryableSyncError(error: unknown): boolean {
     details?: unknown;
     context?: { status?: unknown } | null;
   };
+  // Supabase Functions/PostgREST errors can expose HTTP status as either a
+  // number or a numeric string, including under FunctionsHttpError.context.
   const status = [value.status, value.statusCode, value.httpStatusCode, value.context?.status]
-    .find((candidate): candidate is number => typeof candidate === "number");
+    .map((candidate) => {
+      if (typeof candidate === "number" && Number.isFinite(candidate)) return candidate;
+      if (typeof candidate === "string" && /^\d{3}$/.test(candidate.trim())) return Number(candidate);
+      return undefined;
+    })
+    .find((candidate): candidate is number => candidate !== undefined);
 
   if (status !== undefined) {
     if (status === 408 || status === 425 || status === 429) return true;
