@@ -70,6 +70,7 @@ function Shell() {
         igdbClientId={credentials.igdbClientId} setIgdbClientId={credentials.setIgdbClientId}
         igdbClientSecret={credentials.igdbClientSecret} setIgdbClientSecret={credentials.setIgdbClientSecret}
         onSignIn={account.openSignIn} signedIn={Boolean(account.user)}
+        onAddUser={() => { app.storage.setMultipleAccountProfiles(true); account.openSignIn(); }}
         credentialStatus={credentials.status} credentialStatusLoaded={credentials.loaded}
         themes={themeEngine.themes} theme={themeEngine.theme} setTheme={themeEngine.setTheme}
         nexusApiKey={credentials.nexusApiKey} setNexusApiKey={credentials.setNexusApiKey}

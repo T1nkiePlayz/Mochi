@@ -37,6 +37,8 @@ export type Behavior = {
   watchFolders: boolean;
   /** Daily limits, break reminders and bedtime. Off by default. */
   playLimits: PlayLimits;
+  /** Ask for a PIN when switching to a saved account that has one. Off by default. */
+  accountPins: boolean;
   /** Show the Deals tab (free games, sales, price watch for the wishlist). Off by default. */
   showDeals: boolean;
   /** Check Steam news and mod updates for my games and list them in the Deals tab. Off by default. */
@@ -64,6 +66,7 @@ export const defaultBehavior: Behavior = {
   screenshotNotices: true,
   watchFolders: true,
   playLimits: defaultPlayLimits,
+  accountPins: false,
   showDeals: false,
   gameNews: false,
 };
@@ -102,6 +105,7 @@ export function normalizeBehavior(raw: unknown): Behavior {
     screenshotNotices: bool(stored.screenshotNotices, defaultBehavior.screenshotNotices),
     watchFolders: bool(stored.watchFolders, defaultBehavior.watchFolders),
     playLimits: normalizePlayLimits(stored.playLimits),
+    accountPins: bool(stored.accountPins, defaultBehavior.accountPins),
     // Graduated from experimental: people who had them switched on keep them on.
     showDeals: bool(stored.showDeals, ids(stored.experimental).includes("deal-alerts")),
     gameNews: bool(stored.gameNews, ids(stored.experimental).includes("game-news")),

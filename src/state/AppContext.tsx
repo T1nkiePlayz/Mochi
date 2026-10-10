@@ -33,12 +33,14 @@ import { useCliIntents } from "./useCliIntents";
 import { useLibraryIndex } from "./useLibraryIndex";
 import { useDeals } from "./useDeals";
 import { useLibraryWatcher } from "./useLibraryWatcher";
+import { checkAccountPin } from "../lib/accountPin";
 import { usePlayLimits } from "./usePlayLimits";
 import { useScreenshotNotifier } from "./useScreenshotNotifier";
 import { experimentalIds } from "../lib/experimental";
 import { CliChooser } from "../components/CliChooser";
 import { AchievementWatcher } from "../components/stats/AchievementWatcher";
 import { ConfirmHost } from "../components/ui/ConfirmHost";
+import { PinHost } from "../components/ui/PinHost";
 import { ConflictPromptHost } from "../components/mods/ConflictPromptHost";
 import { SelfInstallPrompt } from "../components/SelfInstallPrompt";
 import { confirmAction } from "../lib/confirm";
@@ -57,7 +59,9 @@ function useAppController() {
 
   const notifications = useNotifications(behavior);
   const { notify } = notifications;
-  const account = useAccount(notify);
+  const behaviorRef = useRef(behavior);
+  behaviorRef.current = behavior;
+  const account = useAccount(notify, (saved) => behaviorRef.current.accountPins ? checkAccountPin(saved.id, saved.username) : Promise.resolve(true));
   const { user } = account;
   const credentials = useCredentials(user, account.openSignIn);
   const sessions = useGameSessions();
@@ -183,7 +187,7 @@ export function AppStoreProvider({ controller, children }: { controller: AppCont
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const controller = useAppController();
-  return <AppStoreProvider controller={controller}><AppContext.Provider value={controller}><AchievementWatcher />{children}<ConfirmHost /><ConflictPromptHost /><SelfInstallPrompt />{controller.cliIntents.choice && <CliChooser {...controller.cliIntents.choice} onPick={controller.cliIntents.pick} onClose={controller.cliIntents.closeChoice} />}</AppContext.Provider></AppStoreProvider>;
+  return <AppStoreProvider controller={controller}><AppContext.Provider value={controller}><AchievementWatcher />{children}<ConfirmHost /><PinHost /><ConflictPromptHost /><SelfInstallPrompt />{controller.cliIntents.choice && <CliChooser {...controller.cliIntents.choice} onPick={controller.cliIntents.pick} onClose={controller.cliIntents.closeChoice} />}</AppContext.Provider></AppStoreProvider>;
 }
 
 export function useApp(): AppController {
