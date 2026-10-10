@@ -2,7 +2,7 @@ import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { Plus, X } from "lucide-react";
 import { GameAvatar } from "./GameAvatar";
 
-export type DiscoverTabItem = { id: string; label: string; iconUrl?: string; icon?: ReactNode; hint?: string; removable?: boolean };
+export type DiscoverTabItem = { id: string; label: string; iconUrl?: string; iconFallbackUrls?: string[]; icon?: ReactNode; hint?: string; removable?: boolean };
 
 type Props = { tabs: DiscoverTabItem[]; active: string; onSelect: (id: string) => void; onAdd?: () => void; onRemove?: (id: string) => void; label?: string };
 
@@ -30,7 +30,7 @@ export function DiscoverTabs({ tabs, active, onSelect, onAdd, onRemove, label = 
         const selected = tab.id === active;
         return <div key={tab.id} className="discover-game-tab-wrap">
           <button type="button" role="tab" id={`discover-tab-${tab.id}`} aria-selected={selected} tabIndex={selected ? 0 : -1} title={tab.hint ?? tab.label} className={`discover-game-tab${selected ? " active" : ""}${tab.removable ? " has-remove" : ""}`} onClick={() => onSelect(tab.id)}>
-          {tab.icon ? <span className="game-avatar game-avatar-glyph" aria-hidden="true">{tab.icon}</span> : <GameAvatar src={tab.iconUrl} name={tab.label} />}
+          {tab.icon ? <span className="game-avatar game-avatar-glyph" aria-hidden="true">{tab.icon}</span> : <GameAvatar src={tab.iconUrl} fallbackSrcs={tab.iconFallbackUrls} name={tab.label} />}
           <span className="discover-game-name">{tab.label}</span>
           </button>
           {tab.removable && onRemove && <button type="button" className="discover-game-remove" aria-label={`Remove ${tab.label} from Discover`} title={`Remove ${tab.label}`} onClick={(event) => { event.stopPropagation(); onRemove(tab.id); }}><X size={13} aria-hidden="true" /></button>}
