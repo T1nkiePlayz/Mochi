@@ -17,9 +17,9 @@ export function LanguageStep({ language, setLanguage }: { language: string; setL
     <p className="setup-description">Choose the language Mochi should use wherever a translation is available. Game news will automatically follow this choice. You can change it any time in Settings.</p>
     <label className="setup-language-search">
       <span className="sr-only">Search languages</span>
-      <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search languages…" autoComplete="off" />
+      <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Search languages…")} autoComplete="off" />
     </label>
-    <div className="setup-language-list" role="radiogroup" aria-label="Launcher language">
+    <div className="setup-language-list" role="radiogroup" aria-label={t("Language")}>
       {options.map((item) => {
         const active = item.code === selected;
         return <button type="button" role="radio" aria-checked={active} key={item.code} className={`setup-language-option${active ? " selected" : ""}`} onClick={() => setLanguage(item.code)}>
