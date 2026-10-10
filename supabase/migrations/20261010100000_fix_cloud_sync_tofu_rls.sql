@@ -9,27 +9,12 @@
 -- Keep the server's source-id constraint aligned with source ids currently
 -- emitted by src/lib/cloud.ts. In particular, legendary/nile otherwise make a
 -- whole-library RPC fail when a library contains one of those launchers.
-do $
-declare
-  c record;
-begin
-  -- Earlier migrations may have created this CHECK with an auto-generated name.
-  for c in
-    select con.conname
-    from pg_constraint con
-    where con.conrelid = 'public.pikos'::regclass
-      and con.contype = 'c'
-      and pg_get_constraintdef(con.oid) ilike '%source_id%'
-  loop
-    execute format('alter table public.pikos drop constraint %I', c.conname);
-  end loop;
-
-  alter table public.pikos add constraint pikos_source_id_check
-    check (source_id is null or source_id in (
-      'flatpak', 'heroic', 'steam', 'lutris', 'bottles', 'itch', 'apps',
-      'epic', 'whisky', 'battlenet', 'gog', 'prism', 'legendary', 'nile'
-    ));
-end $;
+alter table public.pikos drop constraint if exists pikos_source_id_check;
+alter table public.pikos add constraint pikos_source_id_check
+  check (source_id is null or source_id in (
+    'flatpak', 'heroic', 'steam', 'lutris', 'bottles', 'itch', 'apps',
+    'epic', 'whisky', 'battlenet', 'gog', 'prism', 'legendary', 'nile'
+  ));
 
 create or replace function public.sync_my_library(library jsonb)
 returns jsonb
