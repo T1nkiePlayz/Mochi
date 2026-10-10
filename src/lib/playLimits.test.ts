@@ -30,3 +30,19 @@ describe("play limits", () => {
     expect(formatClock(425)).toBe("07:05");
   });
 });
+
+import { breaksDue, minutesToday } from "./playLimits";
+describe("minutesToday and breaks", () => {
+  it("counts finished sessions after midnight and running ones, clipping at midnight", () => {
+    const midnight = 1000;
+    const { total, byGame } = minutesToday(
+      [{ gameId: "a", start: 940, seconds: 120, kind: "session" }, { gameId: "a", start: 0, seconds: 60, kind: "session" }, { gameId: "b", start: 1100, seconds: 600, kind: "daily" }],
+      [{ gameId: "b", startedAt: 1200 }], 1300, midnight);
+    expect(byGame.get("a")).toBeCloseTo(1); // only the 60s after midnight of the straddling session
+    expect(byGame.get("b")).toBeCloseTo(100 / 60);
+    expect(total).toBeCloseTo(1 + 100 / 60);
+  });
+  it("counts whole break intervals", () => {
+    expect([breaksDue({ ...defaultPlayLimits, enabled: true, breakEveryMinutes: 60 }, 125), breaksDue({ ...defaultPlayLimits, breakEveryMinutes: 60 }, 125), breaksDue({ ...defaultPlayLimits, enabled: true, breakEveryMinutes: 0 }, 125)]).toEqual([2, 0, 0]);
+  });
+});

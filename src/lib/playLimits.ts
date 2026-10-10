@@ -81,3 +81,20 @@ export function describeLimit(status: LimitStatus, gameName: string): { title: s
 
 export const formatClock = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 export const parseClock = (text: string): number | null => { const match = /^(\d{1,2}):(\d{2})$/.exec(text.trim()); return match && +match[1] < 24 && +match[2] < 60 ? +match[1] * 60 + +match[2] : null; };
+
+export type TodayRecord = { gameId: string; start: number; seconds: number; kind: string };
+export type TodayActive = { gameId: string; startedAt: number };
+
+export const localMidnight = (now: Date) => Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000);
+
+/** Minutes played since local midnight: finished sessions plus the part of running sessions that falls today. */
+export function minutesToday(records: TodayRecord[], active: TodayActive[], nowSec: number, midnightSec: number): { total: number; byGame: Map<string, number> } {
+  const byGame = new Map<string, number>();
+  const add = (id: string, seconds: number) => byGame.set(id, (byGame.get(id) ?? 0) + Math.max(0, seconds) / 60);
+  for (const record of records) if (record.kind === "session" && record.start + record.seconds > midnightSec) add(record.gameId, record.start + record.seconds - Math.max(record.start, midnightSec));
+  for (const session of active) add(session.gameId, nowSec - Math.max(session.startedAt, midnightSec));
+  return { total: [...byGame.values()].reduce((sum, value) => sum + value, 0), byGame };
+}
+
+/** Break reminders due for a session that has run `elapsedMinutes`: the number of whole intervals passed. 0 when off. */
+export const breaksDue = (limits: PlayLimits, elapsedMinutes: number) => (limits.enabled && limits.breakEveryMinutes > 0 ? Math.floor(elapsedMinutes / limits.breakEveryMinutes) : 0);

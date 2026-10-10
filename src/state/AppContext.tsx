@@ -33,6 +33,7 @@ import { useCliIntents } from "./useCliIntents";
 import { useLibraryIndex } from "./useLibraryIndex";
 import { useDeals } from "./useDeals";
 import { useLibraryWatcher } from "./useLibraryWatcher";
+import { usePlayLimits } from "./usePlayLimits";
 import { useScreenshotNotifier } from "./useScreenshotNotifier";
 import { experimentalIds } from "../lib/experimental";
 import { CliChooser } from "../components/CliChooser";
@@ -64,6 +65,7 @@ function useAppController() {
   const lib = useLibrary(playtime, sessions.isRunning);
   useSaveBackupOnExit(sessions.running, lib.library, notify);
   useQuickExitHints(sessions.sessions, lib.library, notify);
+  usePlayLimits(behavior.playLimits, sessions.sessions, lib.library, notify);
   useScreenshotNotifier(behavior.screenshotNotices, sessions.running, lib.library, behavior.screenshotFolders, notify);
   useGameTheme(behavior.gameThemes && activeNav === "Library", lib.library.find((piko) => piko.id === lib.gameDetailsId));
   const themeEngine = useThemeEngine();

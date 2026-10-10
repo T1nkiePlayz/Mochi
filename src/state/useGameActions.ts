@@ -1,3 +1,5 @@
+import { describeLimit, limitStatus } from "../lib/playLimits";
+import { playedToday } from "./usePlayLimits";
 import { confirmAction } from "../lib/confirm";
 import { useEffect, useRef, useState } from "react";
 import type { Piko } from "../models";
@@ -55,6 +57,13 @@ export function useGameActions({ lib, behavior, refreshPlaytime, refreshSessions
     const tofu = chosen ?? piko.tofus[0];
     if (piko.id === "__empty" || !launchTargetFor(piko, tofu)) { setLaunchError("This game does not have a launch target. Edit the game to set one."); return; }
     if (launching.current.has(piko.id)) return;
+    if (behavior.playLimits.enabled && behavior.playLimits.enforce === "confirm" && !options.skipConfirm) {
+      const now = new Date();
+      const today = await playedToday([], now);
+      const status = limitStatus(behavior.playLimits, piko.id, today.total, today.byGame.get(piko.id) ?? 0, now.getHours() * 60 + now.getMinutes());
+      const summary = status.kind === "reached" ? describeLimit(status, piko.name) : null;
+      if (summary && !await confirmAction({ title: summary.title, message: `${summary.message} Launch ${piko.name} anyway?`, confirmLabel: "Launch anyway" })) return;
+    }
     if (behavior.confirmLaunch && !options.skipConfirm && !await confirmAction({ title: `Launch ${piko.name}?`, message: "You can turn this question off under Settings → Data & privacy → Advanced settings.", confirmLabel: "Launch" })) return;
     setLaunchError("");
     launching.current.add(piko.id);
