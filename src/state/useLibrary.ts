@@ -1,5 +1,6 @@
 import { useHours } from "./hoursStore";
 import { useSavedFilters } from "./useSavedFilters";
+import { withRobloxCover } from "../lib/robloxCover";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { Piko, Tofu } from "../models";
 import { readJson, storageKeys, writeJson, writeString, readString } from "../lib/storage";
@@ -53,6 +54,8 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
   const selectedTofu = selectedPiko.tofus.find((tofu) => tofu.id === selectedTofuId) ?? selectedPiko.tofus[0];
 
   // One-time: a Minecraft instance that used to be its own Piko keeps its installed-mod records under its old Tofu id; copy them to the new Tofu id (nothing is deleted).
+  // Sober / Vinegar borrow Roblox's IGDB cover when the user has added Roblox.
+  useEffect(() => { setLibrary((current) => withRobloxCover(current)); }, [library]);
   useEffect(() => {
     const pending = library.flatMap((piko) => piko.tofus.filter((tofu) => tofu.legacyTofuId).map((tofu) => ({ pikoId: piko.id, id: tofu.id, from: tofu.legacyTofuId! })));
     if (!pending.length) return;

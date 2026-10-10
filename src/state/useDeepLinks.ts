@@ -1,6 +1,7 @@
 import { confirmAction } from "../lib/confirm";
 import { useEffect, useRef } from "react";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
+import { listen } from "@tauri-apps/api/event";
 import { supabase } from "../lib/supabase";
 import { verifyEmailToken } from "../lib/auth";
 import { parseAuthCallback } from "../lib/deepLinkAuth";
@@ -70,6 +71,11 @@ export function useDeepLinks(account: AccountState, onCliIntent: (intent: CliInt
       if (urls && !startupHandled) { startupHandled = true; void handle(urls); }
     }).catch((error) => console.warn("Mochi deep-link startup check failed", error));
     void onOpenUrl((urls) => void handle(urls)).then((remove) => { unlisten = remove; }).catch((error) => console.warn("Mochi deep-link listener failed", error));
-    return () => unlisten?.();
+    // The tray / menu-bar "Play recent" items: same path as `mochi launch <game>`.
+    let offTray: (() => void) | undefined;
+    let disposed = false;
+    void listen<string>("mochi-tray-launch", (event) => { if (typeof event.payload === "string" && event.payload) intentRef.current({ kind: "launch", query: event.payload }); })
+      .then((off) => { if (disposed) off(); else offTray = off; }).catch(() => {});
+    return () => { disposed = true; unlisten?.(); offTray?.(); };
   }, []);
 }

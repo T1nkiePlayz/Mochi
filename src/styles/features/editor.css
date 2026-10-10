@@ -110,9 +110,9 @@
 .protondb { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .protondb-badge { padding: 2px 10px; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-pill-radius, 999px); background: var(--mochi-surface); color: var(--mochi-text); font-size: 12px; cursor: pointer; }
 .protondb-badge:focus-visible { outline: 2px solid var(--mochi-focus-ring); outline-offset: 2px; }
-.protondb-native, .protondb-platinum { border-color: #4cc38a; }
-.protondb-gold { border-color: #e0b341; }
-.protondb-silver { border-color: #9aa5b1; }
-.protondb-bronze { border-color: #cd7f32; }
-.protondb-borked { border-color: #e5484d; }
+.protondb-native, .protondb-platinum { border-color: var(--mochi-success, var(--mochi-accent-strong)); }
+.protondb-gold { border-color: var(--mochi-warning, var(--mochi-accent-strong)); }
+.protondb-silver { border-color: var(--mochi-text-muted); }
+.protondb-bronze { border-color: var(--mochi-warning, var(--mochi-accent-strong)); }
+.protondb-borked { border-color: var(--mochi-danger); }
 .protondb-panel { font-size: 12px; color: var(--mochi-text-muted); max-width: 52ch; }
