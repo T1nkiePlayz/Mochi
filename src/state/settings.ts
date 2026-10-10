@@ -5,6 +5,8 @@ import { allSourcesOn, type ModSourceSettings } from "../lib/mods/resolveSources
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "../lib/languages";
 
 export type Behavior = {
+  /** Selected display language, stored with the user's launcher preferences. */
+  language: string;
   launchOnStartup: boolean;
   keepOpen: boolean;
   confirmLaunch: boolean;
@@ -49,6 +51,7 @@ export type Behavior = {
 };
 
 export const defaultBehavior: Behavior = {
+  language: DEFAULT_LANGUAGE,
   launchOnStartup: false,
   keepOpen: true,
   confirmLaunch: true,
@@ -85,6 +88,7 @@ export function normalizeBehavior(raw: unknown): Behavior {
   const provider = stored.metadataProvider;
   const modSources = (stored.modSources && typeof stored.modSources === "object" ? stored.modSources : {}) as Record<string, unknown>;
   return {
+    language: normalizeLanguage(stored.language),
     launchOnStartup: bool(stored.launchOnStartup, defaultBehavior.launchOnStartup),
     keepOpen: bool(stored.keepOpen, defaultBehavior.keepOpen),
     confirmLaunch: bool(stored.confirmLaunch, defaultBehavior.confirmLaunch),
