@@ -33,7 +33,7 @@ function normalizeGameName(value: string): string {
   return value.toLocaleLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-function lookupNexusGameIcon(client: SupabaseClient, game: NexusGame): Promise<string | null> {
+function lookupNexusGameIcon(client: SupabaseClient, game: Pick<NexusGame, "domainName" | "name">): Promise<string | null> {
   const key = game.domainName.toLocaleLowerCase();
   const cached = igdbIconLookupCache.get(key);
   if (cached) return cached;
