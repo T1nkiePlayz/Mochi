@@ -4,6 +4,10 @@ import type { NavId } from "../state/AppContext";
 import { toggleBigPicture } from "../bigpicture/mode";
 import { openShortcuts } from "../components/ShortcutsHelp";
 import { openExternalUrl } from "./platform";
+import { requestPicker } from "./pickerRequest";
+import { isNextUp } from "./backlog";
+import { selectLaunchProfile } from "./launchProfiles";
+import type { Piko } from "../models";
 import { gameSearchAvailable, gameSearchBackendOverride, openGameSearch } from "./gameSearch";
 
 const DOCS_URL = "https://github.com/T1nkiePlayz/Mochi/tree/main/docs";
@@ -48,6 +52,21 @@ export function registerBuiltinCommands(): () => void {
     const a = app();
     return a.behavior.experimental.includes("game-search") && (Boolean(gameSearchBackendOverride()) || gameSearchAvailable(a.credentials.status));
   }));
+  off.push(register("library.picker", "What should I play?", ["pick", "random", "suggest", "choose", "decide"], "Library", ({ app }) => { app().setActiveNav("Library"); requestPicker(); }, ({ app }) => app().lib.library.some((piko) => piko.kind !== "launcher")));
+  off.push(register("library.nextup", "Play next up game", ["backlog", "queue", "next"], "Library", async ({ app }) => {
+    const a = app(); const piko = a.lib.library.find(isNextUp);
+    if (piko) { a.lib.selectPiko(piko); await a.actions.launchGame(piko); }
+  }, ({ app }) => app().lib.library.some(isNextUp)));
+  off.push(register("library.resume", "Play last played game", ["resume", "continue", "recent"], "Library", async ({ app }) => {
+    const a = app(); const last = [...a.lib.playtimeById.values()].filter((entry) => entry.lastPlayed > 0 && a.lib.library.some((piko) => piko.id === entry.gameId)).sort((x, y) => y.lastPlayed - x.lastPlayed)[0];
+    const piko = last && a.lib.library.find((item) => item.id === last.gameId);
+    if (piko) { a.lib.selectPiko(piko); await a.actions.launchGame(piko); }
+  }, ({ app }) => app().lib.playtimeById.size > 0));
+  off.push(register("library.stop", "Stop running game", ["quit", "close", "kill"], "Library", async ({ app }) => {
+    const a = app(); for (const piko of a.lib.library.filter((item) => a.sessions.isRunning(item.id))) await a.actions.stopRunningGame(piko);
+  }, ({ app }) => app().sessions.sessions.length > 0));
+  off.push(register("downloads.toggle", "Pause or resume downloads", ["download", "pause", "resume", "queue"], "Mods", ({ app }) => { app().downloadPacing.setPrefs((current) => ({ ...current, paused: !current.paused })); }));
+  off.push(register("theme.gamethemes", "Toggle game themes", ["accent", "colour", "color", "cover"], "Theme", ({ app }) => { app().setBehavior((current) => ({ ...current, gameThemes: !current.gameThemes })); }));
   off.push(register("tofu.manage", "Open Tofu manager", ["tofu", "profile", "instance"], "Library", ({ app }) => app().setShowTofuManager(true), ({ app }) => app().lib.library.some((piko) => piko.id === app().lib.selectedPiko.id)));
   off.push(register("mods.snapshot", "Create snapshot of current Tofu", ["backup", "mods", "restore point"], "Mods", async ({ app }) => {
     const a = app(); const tofu = a.lib.selectedTofu;
@@ -71,5 +90,16 @@ export function registerBuiltinCommands(): () => void {
 /** One "Theme: <name>" command per available theme; call again when the list changes. */
 export function registerThemeCommands(themes: ReadonlyArray<{ id: string; name: string }>, setTheme: (id: string) => void): () => void {
   const off = themes.map((theme) => register(`theme.${theme.id}`, `Theme: ${theme.name}`, ["switch", "appearance", "colors", "dark", "light"], "Theme", () => setTheme(theme.id)));
+  return () => off.forEach((fn) => fn());
+}
+
+/** "Launch profile: <game> / <profile>" for every game that has profiles (and a way back to its default options). */
+export function registerLaunchProfileCommands(games: ReadonlyArray<Pick<Piko, "id" | "name" | "launchProfiles" | "activeLaunchProfile" | "launchOptions">>, setProfile: (gameId: string, profileId: string | undefined) => void): () => void {
+  const off: Array<() => void> = [];
+  for (const game of games) {
+    if (!game.launchProfiles?.length) continue;
+    off.push(register(`profile.${game.id}.default`, `Launch profile: ${game.name} / Default options`, ["profile", "launch", "runtime", "proton", "wine"], "Library", () => setProfile(game.id, undefined)));
+    for (const profile of game.launchProfiles) off.push(register(`profile.${game.id}.${profile.id}`, `Launch profile: ${game.name} / ${profile.name}`, ["profile", "launch", "runtime", "proton", "wine"], "Library", () => setProfile(game.id, selectLaunchProfile(game, profile.id))));
+  }
   return () => off.forEach((fn) => fn());
 }

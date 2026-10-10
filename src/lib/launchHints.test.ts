@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { launchHints, quickExits } from "./launchHints";
+import { launchHints, modUpdateHint, quickExits } from "./launchHints";
 import { buildDiagnostics, redact } from "./diagnostics";
 
 describe("launchHints", () => {
@@ -12,6 +12,15 @@ describe("launchHints", () => {
     const previous = new Map([["a", 100], ["b", 50]]);
     expect(quickExits(previous, new Set(), 105)).toEqual(["a"]);
     expect(quickExits(previous, new Set(["a"]), 105)).toEqual([]);
+  });
+});
+
+describe("modUpdateHint", () => {
+  it("points at a recent update snapshot only", () => {
+    const now = Date.parse("2026-05-01T12:00:00Z");
+    expect(modUpdateHint([{ createdAt: now / 1000 - 3600, reason: "Before updating 3 mods", isRestore: false }], now)).toMatch(/updated 1 hour ago/);
+    expect(modUpdateHint([{ createdAt: now / 1000 - 3 * 86400, reason: "Before updating 3 mods", isRestore: false }], now)).toBeNull();
+    expect(modUpdateHint([{ createdAt: now / 1000 - 60, reason: "Manual snapshot", isRestore: false }], now)).toBeNull();
   });
 });
 

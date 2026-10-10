@@ -1,9 +1,11 @@
+import { useHours } from "./hoursStore";
+import { useSavedFilters } from "./useSavedFilters";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { Piko, Tofu } from "../models";
 import { readJson, storageKeys, writeJson, writeString, readString } from "../lib/storage";
 import { pikoSearchMatcher } from "../lib/search";
 import type { PlaytimeEntry } from "../lib/platform";
-import { isExtra, sanitizeFilter, sanitizeLibrary, matchesFilter, mostPlayedIds, smartFilters, sourceLabel, sourceOf, toggleInList, withTag, type FilterContext, type LibraryFilter, type SmartFilterId } from "../lib/library";
+import { defaultFilter, isExtra, sanitizeFilter, sanitizeLibrary, matchesFilter, mostPlayedIds, smartFilters, sourceLabel, sourceOf, toggleInList, withTag, type FilterContext, type LibraryFilter, type SmartFilterId } from "../lib/library";
 import { placeholdersLast } from "../lib/fallbackArt";
 import { foldLegacyPlaytime } from "../lib/minecraftPiko";
 import { instanceTofus, visibleInstances } from "../lib/libraryInstances";
@@ -25,6 +27,8 @@ export const newTofu = (name: string): Tofu => ({ id: `tofu-${crypto.randomUUID(
 
 /** The Pikos (games) and Tofus (environments) in the library, plus what is selected and how it is searched/sorted. */
 export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string) => boolean = () => false) {
+  const hours = useHours();
+  const savedFilters = useSavedFilters();
   const [library, setLibrary] = useState<Piko[]>(() => {
     return sanitizeLibrary(readJson<unknown>(storageKeys.pikos, []));
   });
@@ -59,8 +63,12 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
   }, [library]);
 
   const playtimeById = useMemo(() => new Map(foldLegacyPlaytime(playtime, library).map((entry) => [entry.gameId, entry])), [playtime, library]);
-  const filterContext: FilterContext = useMemo(() => ({ playtime: playtimeById, installed, isRunning }), [playtimeById, installed, isRunning]);
+  const savedRules = useMemo(() => new Map(savedFilters.filters.map((item) => [item.id, item.rule])), [savedFilters.filters]);
+  const filterContext: FilterContext = useMemo(() => ({ playtime: playtimeById, installed, isRunning, saved: savedRules, hours }), [playtimeById, installed, isRunning, savedRules, hours]);
   const mostPlayed = useMemo(() => mostPlayedIds(library, playtimeById), [library, playtimeById]);
+
+  // A deleted saved filter must not leave the library stuck on an empty view.
+  useEffect(() => { if (filter.kind === "saved" && !savedRules.has(filter.id)) setFilter(defaultFilter); }, [filter, savedRules]);
 
   const deferredSearch = useDeferredValue(search);
   /** Search and tag filters applied; the primary filter is applied on top (chips show counts for this base). */
@@ -84,14 +92,15 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
     const smart = Object.fromEntries(smartFilters.map(({ id }) => [id, searchedPikos.filter((piko) => matchesFilter(piko, { kind: "smart", id }, filterContext, mostPlayed)).length])) as Record<SmartFilterId, number>;
     const sources = new Map<string, { label: string; count: number }>();
     const collections = new Map<string, number>();
+    const saved = new Map(savedFilters.filters.map((item) => [item.id, searchedPikos.filter((piko) => matchesFilter(piko, { kind: "saved", id: item.id }, filterContext, mostPlayed)).length]));
     searchedPikos.forEach((piko) => {
       if (isExtra(piko)) return;
       const id = sourceOf(piko);
       sources.set(id, { label: sourceLabel(piko), count: (sources.get(id)?.count ?? 0) + 1 });
       piko.collectionIds?.forEach((collectionId) => collections.set(collectionId, (collections.get(collectionId) ?? 0) + 1));
     });
-    return { smart, sources: [...sources.entries()].map(([id, value]) => ({ id, ...value })).sort((a, b) => a.label.localeCompare(b.label)), collections };
-  }, [searchedPikos, filterContext, mostPlayed]);
+    return { smart, saved, sources: [...sources.entries()].map(([id, value]) => ({ id, ...value })).sort((a, b) => a.label.localeCompare(b.label)), collections };
+  }, [searchedPikos, filterContext, mostPlayed, savedFilters.filters]);
 
   const groupedPikos = useMemo(() => {
     const byId = playtimeById;
@@ -184,7 +193,7 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
     library, setLibrary, selectedPikoId, setSelectedPikoId, selectedTofuId, setSelectedTofuId, gameDetailsId, setGameDetailsId,
     search, setSearch, librarySort, setLibrarySort, selectedPiko, selectedTofu, visiblePikos, extraPikos, groupedPikos, instancesByPiko, continuePlaying,
     selectPiko, updateGame, updateSelectedTofu, createTofu,
-    filter, setFilter, tagFilters, setTagFilters, toggleTagFilter, filterCounts, installed, playtimeById, searchedPikos,
+    savedFilters, hours, filter, setFilter, tagFilters, setTagFilters, toggleTagFilter, filterCounts, installed, playtimeById, searchedPikos,
     toggleFavorite, setFavorites, setCollectionMembership, addTagToGames, removeGames,
   };
 }

@@ -3,7 +3,8 @@ import type { Piko } from "../models";
 import type { ActiveSession } from "../lib/platform";
 import { getPlatformCapabilities } from "../lib/platform";
 import { listGameLogs, readGameLog } from "../lib/gameLogs";
-import { launchHints, quickExits } from "../lib/launchHints";
+import { launchHints, modUpdateHint, quickExits } from "../lib/launchHints";
+import { listTofuSnapshots } from "../lib/mods/snapshots";
 
 const LOG_TAIL_BYTES = 64 * 1024;
 
@@ -22,13 +23,17 @@ export function useQuickExitHints(sessions: ActiveSession[], library: Piko[], no
     for (const id of ended) {
       void (async () => {
         try {
-          const name = libraryRef.current.find((item) => item.id === id)?.name ?? "The game";
+          const piko = libraryRef.current.find((item) => item.id === id);
+          const name = piko?.name ?? "The game";
           let text: string | null = null;
           const list = await listGameLogs(id).catch(() => null);
           const newest = list?.sessions[0];
           if (newest?.direct) text = (await readGameLog(id, newest.id, undefined, LOG_TAIL_BYTES).catch(() => null))?.text ?? null;
           const platform = await getPlatformCapabilities().then((caps) => caps.platform).catch(() => "linux");
           const hints = launchHints(text, platform);
+          const snapshots = (await Promise.all((piko?.tofus ?? []).filter((tofu) => tofu.path).map((tofu) => listTofuSnapshots(tofu.id).catch(() => [])))).flat();
+          const rollback = modUpdateHint(snapshots, Date.now());
+          if (rollback) hints.unshift(rollback);
           notifyRef.current(`${name} closed right after starting`, hints.join(" "));
         } catch { /* browser/development mode */ }
       })();

@@ -6,6 +6,7 @@ import { formatArgs, parseArgs } from "../../../lib/launch";
 import { addEnvRow, duplicateEnvNames, envNameError, removeEnvRow, setEnvRow, updateLaunchOptions } from "../../../lib/launchOptionsState";
 import { launchTargetFor } from "../../../lib/minecraftPiko";
 import type { LaunchOptions } from "../../../models";
+import { activeLaunchProfile, addLaunchProfile, effectiveLaunchOptions, MAX_LAUNCH_PROFILES, removeLaunchProfile, renameLaunchProfile, selectLaunchProfile, withLaunchOptions } from "../../../lib/launchProfiles";
 import { Select } from "../../ui/Select";
 import { Switch } from "../../ui/Checkbox";
 import type { EditorContext } from "./types";
@@ -15,9 +16,11 @@ const empty: LaunchOptions = { env: [], args: [] };
 /** Environment, arguments, working directory, runtime and wrappers. The "Final command" is built by the launcher itself. */
 export function LaunchOptionsSection({ ctx }: { ctx: EditorContext }) {
   const { draft, patch, capabilities } = ctx;
-  const options = draft.launchOptions ?? empty;
+  const options = effectiveLaunchOptions(draft) ?? empty;
+  const profile = activeLaunchProfile(draft);
   const linux = capabilities?.platform !== "macos";
-  const set = (changes: Partial<LaunchOptions>) => patch({ launchOptions: updateLaunchOptions(draft.launchOptions, changes) });
+  const set = (changes: Partial<LaunchOptions>) => patch(withLaunchOptions(draft, updateLaunchOptions(effectiveLaunchOptions(draft), changes)));
+  const [newName, setNewName] = useState("");
   const [runtimes, setRuntimes] = useState<RuntimeInfo[]>([]);
   const [argsText, setArgsText] = useState(() => formatArgs(options.args));
   const [gamescopeText, setGamescopeText] = useState(() => formatArgs(options.gamescope?.args ?? []));
@@ -30,7 +33,7 @@ export function LaunchOptionsSection({ ctx }: { ctx: EditorContext }) {
   // The launcher builds the preview (debounced; a stale answer is dropped).
   const tofu = draft.tofus[0];
   const target = launchTargetFor(draft, tofu) ?? "";
-  const signature = JSON.stringify([target, draft.id, draft.launchOptions, tofu?.id, tofu?.launch]);
+  const signature = JSON.stringify([target, draft.id, effectiveLaunchOptions(draft), tofu?.id, tofu?.launch]);
   useEffect(() => {
     let cancelled = false;
     const timer = window.setTimeout(() => {
@@ -55,6 +58,21 @@ export function LaunchOptionsSection({ ctx }: { ctx: EditorContext }) {
 
   return <section className="launch-options" aria-label="Launch options">
     <div className="launch-options-heading"><h3>Launch options</h3><p>Applied each time Mochi starts this game. Tofu launch settings override them.</p></div>
+    <div className="editor-field launch-profiles"><span className="editor-field-label">Launch profile</span>
+      <div className="launch-profile-row">
+        <select aria-label="Launch profile in use" value={profile?.id ?? ""} onChange={(event) => patch({ activeLaunchProfile: selectLaunchProfile(draft, event.target.value || undefined) })}>
+          <option value="">Default options</option>
+          {(draft.launchProfiles ?? []).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+        </select>
+        {profile && <input aria-label="Rename profile" defaultValue={profile.name} key={profile.id} maxLength={40} onBlur={(event) => { if (event.target.value.trim()) patch({ launchProfiles: renameLaunchProfile(draft, profile.id, event.target.value) }); else event.target.value = profile.name; }} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} />}
+        {profile && <button type="button" className="icon-button" aria-label={`Delete profile ${profile.name}`} onClick={() => patch(removeLaunchProfile(draft, profile.id))}><Trash2 size={14} /></button>}
+      </div>
+      <div className="launch-profile-row">
+        <input aria-label="New profile name" value={newName} maxLength={40} placeholder="New profile, copied from the current options" disabled={(draft.launchProfiles?.length ?? 0) >= MAX_LAUNCH_PROFILES} onChange={(event) => setNewName(event.target.value)} />
+        <button type="button" className="secondary-button" disabled={!newName.trim() || (draft.launchProfiles?.length ?? 0) >= MAX_LAUNCH_PROFILES} onClick={() => { patch(addLaunchProfile(draft, newName)); setNewName(""); }}><Plus size={13} /> Add profile</button>
+      </div>
+      <small className="metadata-note">{profile ? `Editing “${profile.name}”: its options replace the default ones when the game starts.` : "Profiles hold alternative runtime, variables and arguments, switchable from the game page."}</small>
+    </div>
     {preview?.note && <p className="launch-hint launch-options-note" role="status">{preview.note}</p>}
 
     <div className="editor-field"><span className="editor-field-label">Environment variables</span>

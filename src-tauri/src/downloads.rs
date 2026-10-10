@@ -159,6 +159,23 @@ impl Drop for TempFile {
     fn drop(&mut self) { let _ = fs::remove_file(&self.0); }
 }
 
+/// Download pacing shared by every download: a pause switch and a total speed cap in bytes per second (0 = unlimited).
+static PAUSED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static LIMIT_BPS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+/// A paused download waits at most this long before it carries on, so a forgotten pause cannot hold a connection forever.
+const MAX_PAUSE: std::time::Duration = std::time::Duration::from_secs(30 * 60);
+
+/// Waits while downloads are paused, then sleeps long enough to keep the shared speed cap (split between running downloads).
+async fn pace(bytes: usize) {
+    let started = std::time::Instant::now();
+    while PAUSED.load(Ordering::Relaxed) && started.elapsed() < MAX_PAUSE { tokio::time::sleep(std::time::Duration::from_millis(250)).await; }
+    let limit = LIMIT_BPS.load(Ordering::Relaxed);
+    if limit > 0 {
+        let share = (limit / active_download_count().max(1) as u64).max(1024);
+        tokio::time::sleep(std::time::Duration::from_secs_f64(bytes as f64 / share as f64)).await;
+    }
+}
+
 /// Streams `url` into `destination` through a temp file, enforcing the size cap and the optional SHA-1.
 /// Nothing is left at `destination` unless every check passed. Returns the SHA-1 of what was written.
 pub(crate) async fn fetch_to_file(
@@ -183,6 +200,7 @@ pub(crate) async fn fetch_to_file(
         while let Some(chunk) = response.chunk().await.map_err(|e| format!("Unable to read download: {e}"))? {
             downloaded = downloaded.saturating_add(chunk.len() as u64);
             if downloaded > MAX_DOWNLOAD_BYTES { return Err(format!("{label} file exceeds Mochi's 250 MiB safety limit.")); }
+            pace(chunk.len()).await;
             hasher.update(&chunk);
             file.write_all(&chunk).map_err(|e| format!("Unable to write downloaded file: {e}"))?;
             progress(downloaded, total);
@@ -501,6 +519,14 @@ pub fn cancel_mod_download(id: String) -> Result<(), String> { cancel(&id) }
 
 #[tauri::command]
 pub fn clear_finished_downloads() { clear_finished() }
+
+/// Pauses or resumes every running download (they hold their place and carry on from where they stopped).
+#[tauri::command]
+pub fn set_downloads_paused(paused: bool) { PAUSED.store(paused, Ordering::Relaxed); }
+
+/// Caps the total download speed in KiB/s (0 removes the cap).
+#[tauri::command]
+pub fn set_download_limit(kib_per_second: u64) { LIMIT_BPS.store(kib_per_second.min(1_000_000).saturating_mul(1024), Ordering::Relaxed); }
 
 #[cfg(test)]
 mod tests {

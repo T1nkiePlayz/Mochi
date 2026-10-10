@@ -36,3 +36,17 @@ export function quickExits(previous: ReadonlyMap<string, number>, current: Reado
   for (const [id, startedAt] of previous) if (!current.has(id) && nowSeconds - startedAt < window) out.push(id);
   return out;
 }
+
+const UPDATE_WINDOW_MS = 24 * 3_600_000;
+
+/** When mods were updated in the last day (Mochi saves a snapshot first), a quick exit may be the update's fault: say how to go back. */
+export function modUpdateHint(snapshots: ReadonlyArray<{ createdAt: number; reason: string; isRestore: boolean }>, nowMs: number): string | null {
+  const recent = snapshots.filter((snapshot) => !snapshot.isRestore && /^Before updating/i.test(snapshot.reason))
+    .map((snapshot) => (snapshot.createdAt > 1e12 ? snapshot.createdAt : snapshot.createdAt * 1000))
+    .filter((at) => nowMs - at >= 0 && nowMs - at < UPDATE_WINDOW_MS)
+    .sort((a, b) => b - a)[0];
+  if (recent === undefined) return null;
+  const hours = Math.floor((nowMs - recent) / 3_600_000);
+  const ago = hours >= 1 ? `${hours} hour${hours === 1 ? "" : "s"} ago` : "less than an hour ago";
+  return `Mods were updated ${ago}. If that broke the game, restore the snapshot "Before updating…" in the game's Tofu manager (Snapshots) to roll back.`;
+}

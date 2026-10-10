@@ -575,3 +575,25 @@ footer { display:flex; justify-content:space-between; margin-top:50px; color:var
 .game-stats .path-text { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; }
 .game-workspace { margin-top: 8px; }
 .launch-error { margin: 12px 0 0 !important; }
+
+/* Session history, year in review, saved filters, launch profiles and download controls */
+.session-history { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 320px; overflow: auto; }
+.session-history li { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: baseline; font-size: 13px; }
+.session-history span { color: var(--mochi-text-muted); font-size: 12px; white-space: nowrap; }
+.year-review { display: grid; gap: 12px; }
+.year-review-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.year-review-summary { margin: 0; color: var(--mochi-text-muted); }
+.year-review-top { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.year-review-top li span { margin-left: 8px; color: var(--mochi-text-muted); }
+.year-review-months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; height: 90px; align-items: end; }
+.year-review-months > div { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; gap: 3px; }
+.year-review-months span { display: block; width: 100%; min-height: 2px; background: var(--mochi-accent); border-radius: 3px 3px 0 0; }
+.year-review-months small { font-size: 10px; color: var(--mochi-text-muted); }
+.launch-profile-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+.launch-profile-select { max-width: 180px; }
+.download-pacing { margin-bottom: 14px; }
+.download-pacing .download-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.download-pacing-field { display: inline-flex; gap: 6px; align-items: center; }
+.saved-filter-dialog { display: grid; gap: 12px; max-width: 520px; }
+.saved-filter-dialog .field { display: grid; gap: 4px; border: 0; padding: 0; margin: 0; }
+.saved-filter-dialog .filter-row label { display: inline-flex; gap: 6px; align-items: center; }

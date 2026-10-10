@@ -11,6 +11,7 @@ import { providerLabels } from "../../state/useCredentials";
 import type { ProviderId } from "../../lib/metadata/types";
 import { SettingsGroup, ToggleRow } from "./Section";
 import { SettingsTransfer } from "./SettingsTransfer";
+import { LibraryBackup } from "./LibraryBackup";
 
 export function DataSection() {
   const { behavior, setBehavior, account, credentials, lib, metadata, cloud, themeEngine, chooseConfigLocation } = useApp();
@@ -86,6 +87,7 @@ export function DataSection() {
     {cloud.cloudDataMessage && <p className="metadata-note settings-note" role="status">{cloud.cloudDataMessage}</p>}
     <div className="setting-row setting-location-row"><span><strong>Library location</strong><small>Your Mochi configuration, themes and launcher data are stored here.</small></span><span className="setting-location-value"><code>{themeEngine.configInfo?.configPath || "Default Mochi location"}</code><button type="button" className="secondary-button" onClick={() => void chooseConfigLocation()}>Change</button></span></div>
     <SettingsTransfer />
+    <LibraryBackup />
     <button className="setting-row setting-button" aria-expanded={showAdvanced} onClick={() => setShowAdvanced(!showAdvanced)}><span><strong>Advanced settings</strong><small>Diagnostics and launcher controls.</small></span><MochiIcon name="chevron" fallback={ChevronDown} className={showAdvanced ? "rotate" : ""} size={16} /></button>
     {showAdvanced && <div className="advanced-settings">
       <ToggleRow title="Confirm before launching" description="Ask before starting a game." checked={behavior.confirmLaunch} onChange={(confirmLaunch) => setBehavior((current) => ({ ...current, confirmLaunch }))} />

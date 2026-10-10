@@ -20,6 +20,8 @@ export type Behavior = {
   experimental: string[];
   /** Experimental feature ids the user has already been shown. */
   experimentalSeen: string[];
+  /** Lay a game's own accent colour over the theme while its page is open. */
+  gameThemes: boolean;
   /** Which mod sites Mochi may contact and list. Nexus Mods additionally needs a saved key. */
   modSources: ModSourceSettings;
   /** Update installed mods (SHA-1 verified, with a rollback copy) when a game is launched. Off by default. */
@@ -41,6 +43,7 @@ export const defaultBehavior: Behavior = {
   metadataProvider: "auto",
   experimental: [],
   experimentalSeen: [],
+  gameThemes: false,
   modSources: { ...allSourcesOn },
   autoUpdateMods: false,
   modAutoExtendBelow: DEFAULT_AUTO_EXTEND_BELOW,
@@ -68,6 +71,7 @@ export function normalizeBehavior(raw: unknown): Behavior {
     metadataProvider: provider === "igdb" || provider === "steamgriddb" ? provider : "auto",
     experimental: ids(stored.experimental).filter((id) => known.has(id)),
     experimentalSeen: ids(stored.experimentalSeen),
+    gameThemes: bool(stored.gameThemes, defaultBehavior.gameThemes),
     modSources: {
       modrinth: bool(modSources.modrinth, true),
       curseforge: bool(modSources.curseforge, true),

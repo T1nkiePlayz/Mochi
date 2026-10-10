@@ -5,6 +5,9 @@ import { supabase } from "../lib/supabase";
 import { useGameSessions } from "../hooks";
 import { useSaveBackupOnExit } from "./useSaveBackupOnExit";
 import { useQuickExitHints } from "./useQuickExitHints";
+import { useDownloadPacing } from "./useDownloadPacing";
+import { useGameTheme } from "./useGameTheme";
+import { useScheduledBackup } from "./useScheduledBackup";
 import { useThemeEngine } from "../lib/theme";
 import { getPlatformCapabilities, listRuntimes, type PlatformCapabilities, type RuntimeInfo } from "../lib/platform";
 import type { ImportedGame, ImportSourceId } from "../lib/sources";
@@ -59,6 +62,7 @@ function useAppController() {
   const lib = useLibrary(playtime, sessions.isRunning);
   useSaveBackupOnExit(sessions.running, lib.library, notify);
   useQuickExitHints(sessions.sessions, lib.library, notify);
+  useGameTheme(behavior.gameThemes && activeNav === "Library", lib.library.find((piko) => piko.id === lib.gameDetailsId));
   const themeEngine = useThemeEngine();
   const actions = useGameActions({ lib, behavior, refreshPlaytime, refreshSessions: sessions.refresh, notify });
   const metadata = useMetadata({
@@ -80,9 +84,11 @@ function useAppController() {
     },
   });
   useGameNewsPoller(behavior.experimental.includes("game-news"), lib.library, notify);
+  useScheduledBackup(storage.ready, notify);
   const collections = useCollections(storage.ownerKey, storage.ready, lib.setLibrary);
   const cloud = useCloudSync(user, lib.library, lib.setLibrary, storage.ready, storage.ownerKey);
   const downloads = useDownloads(activeNav === "Downloads", notify);
+  const downloadPacing = useDownloadPacing();
   useInstancePacks({ ready: storage.ready, library: lib.library, setLibrary: lib.setLibrary, sources: behavior.modSources });
 
   useEffect(() => { void listRuntimes().then(setRuntimes).catch(() => {}); }, []);
@@ -142,7 +148,7 @@ function useAppController() {
   return {
     behavior, setBehavior, activeNav, setActiveNav, showFirstLaunchSetup, finishFirstLaunchSetup,
     platformCapabilities, runtimes, showTofuManager, setShowTofuManager, editingGameId, setEditingGameId,
-    notifications, account, credentials, sessions, playtime, refreshPlaytime, lib, collections, themeEngine, actions, metadata, add, storage, cloud, downloads,
+    notifications, account, credentials, sessions, playtime, refreshPlaytime, lib, collections, themeEngine, actions, metadata, add, storage, cloud, downloads, downloadPacing,
     hasIgdb, chooseConfigLocation, resetLocalData, cliIntents, deals,
   };
 }

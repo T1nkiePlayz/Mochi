@@ -16,10 +16,22 @@ export const NOTE_MAX = 280;
 /** In the backlog = still to be played (wanted or in progress); finished and dropped games leave it. */
 export const isInBacklog = (piko: Piko) => piko.backlog?.status === "want" || piko.backlog?.status === "playing";
 
+/** Queued as "Next up": still to be played and marked by the user. */
+export const isNextUp = (piko: Piko) => isInBacklog(piko) && piko.backlog?.nextUp === true;
+
+/** Adds or removes the "Next up" mark. Needs an existing entry; a finished or dropped game cannot be queued. */
+export function withNextUp(current: Backlog | undefined, nextUp: boolean): Backlog | undefined {
+  if (!current) return current;
+  const { nextUp: _old, ...rest } = current;
+  return nextUp && (current.status === "want" || current.status === "playing") ? { ...rest, nextUp: true } : rest;
+}
+
 /** The next backlog value for a status change: `null` status clears it; the note and original add time are kept. */
 export function withBacklogStatus(current: Backlog | undefined, status: BacklogStatus | null, now = Date.now()): Backlog | undefined {
   if (!status) return undefined;
-  return { ...current, status, addedAt: current?.addedAt ?? now };
+  // Finished and dropped games leave the "Next up" queue.
+  const { nextUp, ...rest } = current ?? {};
+  return { ...rest, status, addedAt: current?.addedAt ?? now, ...(nextUp && (status === "want" || status === "playing") ? { nextUp: true } : {}) };
 }
 
 /** Updates the note (trimmed, capped); an empty note is removed. Needs an existing entry. */
@@ -32,7 +44,7 @@ export function withBacklogNote(current: Backlog | undefined, note: string, now 
 /** Load-time safety: a stored backlog value with an unknown status or bad fields is dropped. */
 export function sanitizeBacklog(value: unknown): Backlog | undefined {
   if (!value || typeof value !== "object") return undefined;
-  const { status, note, addedAt } = value as Record<string, unknown>;
+  const { status, note, addedAt, nextUp } = value as Record<string, unknown>;
   if (!backlogStatuses.some((item) => item.id === status)) return undefined;
-  return { status: status as BacklogStatus, ...(typeof note === "string" && note ? { note: note.slice(0, NOTE_MAX) } : {}), addedAt: typeof addedAt === "number" && Number.isFinite(addedAt) ? addedAt : 0 };
+  return { status: status as BacklogStatus, ...(typeof note === "string" && note ? { note: note.slice(0, NOTE_MAX) } : {}), addedAt: typeof addedAt === "number" && Number.isFinite(addedAt) ? addedAt : 0, ...(nextUp === true && (status === "want" || status === "playing") ? { nextUp: true } : {}) };
 }

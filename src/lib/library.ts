@@ -2,13 +2,14 @@ import type { Piko, Tofu } from "../models";
 import type { PlaytimeEntry } from "./platform";
 import { migrateMinecraftPikos } from "./minecraftPiko";
 import { launcherArt } from "./launcherArt";
-import { isInBacklog } from "./backlog";
+import { isInBacklog, isNextUp } from "./backlog";
+import { matchesRule, type SavedRule } from "./savedFilters";
 import { launcherForPiko } from "./launchers";
 import { applyPikoKindOverride, overrideKeyForPiko, readOverrides, type KindOverrides } from "./launcherOverrides";
 
-export type SmartFilterId = "all" | "favorites" | "installed" | "recent" | "unplayed" | "most-played" | "launchers" | "running" | "backlog";
+export type SmartFilterId = "all" | "favorites" | "installed" | "recent" | "unplayed" | "most-played" | "launchers" | "running" | "backlog" | "next-up";
 /** The one "primary" filter applied to the library: a smart filter, a source or a user collection. */
-export type LibraryFilter = { kind: "smart"; id: SmartFilterId } | { kind: "source"; id: string } | { kind: "collection"; id: string };
+export type LibraryFilter = { kind: "smart"; id: SmartFilterId } | { kind: "source"; id: string } | { kind: "collection"; id: string } | { kind: "saved"; id: string };
 
 export const smartFilters: Array<{ id: SmartFilterId; label: string }> = [
   { id: "all", label: "All" },
@@ -20,6 +21,7 @@ export const smartFilters: Array<{ id: SmartFilterId; label: string }> = [
   { id: "launchers", label: "Game launchers" },
   { id: "running", label: "Running" },
   { id: "backlog", label: "Backlog" },
+  { id: "next-up", label: "Next up" },
 ];
 
 export const defaultFilter: LibraryFilter = { kind: "smart", id: "all" };
@@ -39,6 +41,9 @@ export type FilterContext = {
   isRunning: (gameId: string) => boolean;
   /** Seconds since epoch; injectable for tests. */
   now?: number;
+  /** Saved filters by id and the remembered time-to-beat hours (for `kind: "saved"` filters). */
+  saved?: ReadonlyMap<string, SavedRule>;
+  hours?: ReadonlyMap<string, number>;
 };
 
 export function matchesSmartFilter(piko: Piko, id: SmartFilterId, context: FilterContext, mostPlayed?: Set<string>): boolean {
@@ -53,6 +58,7 @@ export function matchesSmartFilter(piko: Piko, id: SmartFilterId, context: Filte
     case "launchers": return isLauncher(piko);
     case "running": return context.isRunning(piko.id);
     case "backlog": return isInBacklog(piko);
+    case "next-up": return isNextUp(piko);
     default: return true;
   }
 }
@@ -67,6 +73,10 @@ export function matchesFilter(piko: Piko, filter: LibraryFilter, context: Filter
   if (isExtra(piko)) return false;
   if (filter.kind === "smart") return matchesSmartFilter(piko, filter.id, context, mostPlayed);
   if (filter.kind === "source") return sourceOf(piko) === filter.id;
+  if (filter.kind === "saved") {
+    const rule = context.saved?.get(filter.id);
+    return rule ? matchesRule(piko, rule, { playSeconds: (id) => context.playtime.get(id)?.seconds ?? 0, isInstalled: (item) => Boolean(item.executablePath) && context.installed.get(item.executablePath ?? "") !== false, hours: context.hours ?? new Map() }) : false;
+  }
   return Boolean(piko.collectionIds?.includes(filter.id));
 }
 
@@ -147,6 +157,6 @@ export function classifyLauncherEntry(piko: Piko, overrides: KindOverrides = {})
 export function sanitizeFilter(value: unknown): LibraryFilter {
   if (!isRecord(value) || typeof value.id !== "string") return defaultFilter;
   if (value.kind === "smart") return smartFilters.some((filter) => filter.id === value.id) ? { kind: "smart", id: value.id as SmartFilterId } : defaultFilter;
-  if (value.kind === "source" || value.kind === "collection") return { kind: value.kind, id: value.id };
+  if (value.kind === "source" || value.kind === "collection" || value.kind === "saved") return { kind: value.kind, id: value.id };
   return defaultFilter;
 }
