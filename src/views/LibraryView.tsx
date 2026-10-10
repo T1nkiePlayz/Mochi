@@ -34,6 +34,7 @@ import { lookupTimeToBeat } from "../lib/igdb";
 import { formatPlaytime, formatRelativeTime } from "../lib/format";
 import { useApp } from "../state/AppContext";
 import { usernameOf } from "../state/useAccount";
+import { useTranslation } from "../lib/useTranslation";
 
 function MinecraftInstancesGroup({ piko, instances, onOpen, onPlay, onShowAll }: {
   piko: Piko;
@@ -66,7 +67,7 @@ import type { LibrarySort } from "../state/useLibrary";
 
 const viewIcons: Record<LibraryViewMode, typeof LayoutGrid> = { grid: LayoutGrid, compact: Grid3x3, list: List, shelves: Rows3, large: Maximize2 };
 
-const greeting = () => { const hour = new Date().getHours(); return hour < 5 || hour >= 18 ? "Good evening" : hour < 12 ? "Good morning" : "Good afternoon"; };
+const greeting = (t: (message: string) => string) => { const hour = new Date().getHours(); return hour < 5 || hour >= 18 ? t("Good evening") : hour < 12 ? t("Good morning") : t("Good afternoon"); };
 
 /** IGDB time-to-beat (hours) keyed by Piko id, for pikos that have an IGDB id. */
 async function loadPickerHours(pikos: Piko[]): Promise<Map<string, number>> {
@@ -77,6 +78,7 @@ async function loadPickerHours(pikos: Piko[]): Promise<Map<string, number>> {
 }
 
 export function LibraryView() {
+  const t = useTranslation();
   const app = useApp();
   const { lib, actions, sessions, cloud, add, account, credentials, platformCapabilities, collections } = app;
   const { selectedPiko, selectedTofu, gameDetailsId, search } = lib;
@@ -145,7 +147,7 @@ export function LibraryView() {
   const playById = useCallback((id: string) => { const piko = lib.library.find((item) => item.id === id); if (piko) { selectPiko(piko); void launchRef.current(piko); } }, [lib.library, selectPiko]);
   const grid = useGridKeyboard({ ids: gridIds, names: gridNames, play: playById, toggleFavorite });
 
-  const addButton = <button className="secondary-button" onClick={() => add.setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> Add Piko</button>;
+  const addButton = <button className="secondary-button" onClick={() => add.setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> {t("Add Piko")}</button>;
 
   if (details) {
     return <GameDetails
@@ -203,7 +205,7 @@ export function LibraryView() {
 
   const user = account.user;
   const heading = <section className="page-heading">
-    <div><p className="eyebrow">Your collection</p><h1>{greeting()}{user ? ", " + usernameOf(user) : ""}.</h1></div>
+    <div><p className="eyebrow">{t("Your collection")}</p><h1>{greeting(t)}{user ? ", " + usernameOf(user) : ""}.</h1></div>
     {addButton}
   </section>;
 
@@ -214,7 +216,7 @@ export function LibraryView() {
   return <>
     {heading}
     {lib.continuePlaying.length > 0 && !search.trim() && <section className="continue-playing">
-      <div className="section-heading"><div><p className="eyebrow">Jump back in</p><h3>Continue playing</h3></div></div>
+      <div className="section-heading"><div><p className="eyebrow">Jump back in</p><h3>{t("Continue playing")}</h3></div></div>
       <div className="continue-grid">{lib.continuePlaying.map(({ piko, entry }) => <article className="continue-card" key={piko.id}>
         <button type="button" className="continue-main" onClick={() => { lib.selectPiko(piko); lib.setGameDetailsId(piko.id); }}>
           <GameArtwork className="continue-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} name={piko.name} kind={piko.kind} sourceId={piko.sourceId} />
@@ -241,9 +243,9 @@ export function LibraryView() {
           <span className="view-switcher-dots" aria-hidden="true">{viewModes.map((mode) => <i key={mode.id} className={mode.id === view ? "on" : ""} />)}</span>
         </button>
         <span className="library-view-announce" role="status" aria-live="polite">{`${viewModeLabel(view)} view`}</span>
-        <button type="button" className="secondary-button" onClick={() => setShowPicker(true)}><Dices size={14} /> What should I play?</button>
-        <button type="button" className={`secondary-button ${selecting ? "active" : ""}`} aria-pressed={selecting} onClick={() => (selecting ? endSelecting() : setSelecting(true))}><CheckSquare size={14} /> {selecting ? "Done selecting" : "Select"}</button>
-        <div className="library-sort"><span>Sort by</span><Select<LibrarySort> label="Sort by" value={lib.librarySort} onChange={lib.setLibrarySort} align="end" options={[{ value: "category", label: "Category" }, { value: "name", label: "Name" }, { value: "recent", label: "Recently played" }, { value: "playtime", label: "Most played" }]} /></div>
+        <button type="button" className="secondary-button" onClick={() => setShowPicker(true)}><Dices size={14} /> {t("What should I play?")}</button>
+        <button type="button" className={`secondary-button ${selecting ? "active" : ""}`} aria-pressed={selecting} onClick={() => (selecting ? endSelecting() : setSelecting(true))}><CheckSquare size={14} /> {selecting ? t("Done selecting") : t("Select")}</button>
+        <div className="library-sort"><span>{t("Sort by")}</span><Select<LibrarySort> label={t("Sort by")} value={lib.librarySort} onChange={lib.setLibrarySort} align="end" options={[{ value: "category", label: "Category" }, { value: "name", label: "Name" }, { value: "recent", label: "Recently played" }, { value: "playtime", label: "Most played" }]} /></div>
       </div>
     </section>
     {selecting && <BulkActionBar games={checkedGames} collections={collections.collections}
@@ -254,7 +256,7 @@ export function LibraryView() {
       onRemove={() => setRemoval(checkedGames)}
       onSelectAll={() => setChecked(new Set(lib.visiblePikos.map((piko) => piko.id)))}
       onDone={endSelecting} />}
-    {!lib.visiblePikos.length && <div className="empty-state library-no-match"><h2>No games match.</h2><p>Try another filter or clear the search.</p><button type="button" className="secondary-button" onClick={() => { lib.setFilter({ kind: "smart", id: "all" }); lib.setTagFilters([]); lib.setSearch(""); }}>Show everything</button></div>}
+    {!lib.visiblePikos.length && <div className="empty-state library-no-match"><h2>{t("No games match.")}</h2><p>Try another filter or clear the search.</p><button type="button" className="secondary-button" onClick={() => { lib.setFilter({ kind: "smart", id: "all" }); lib.setTagFilters([]); lib.setSearch(""); }}>Show everything</button></div>}
     <section className="library-grid-view" data-view={view} data-groups={lib.groupedPikos.length} key={view} {...grid.gridProps}>
       {lib.groupedPikos.map(([category, games]) => <div className="library-category" key={category}>
         <div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div>
