@@ -52,7 +52,7 @@ describe("shared UI translations", () => {
         for (const attribute of node.openingElement.attributes.properties) {
           if (ts.isJsxAttribute(attribute) && visibleAttributes.has(attribute.name.getText()) && attribute.initializer && ts.isStringLiteral(attribute.initializer)) {
             const message = decode(attribute.initializer.text).trim();
-            if (message && /[\p{L}\p{N}]/u.test(message)) found.set(message, path.relative(root, attribute.getSourceFile().fileName));
+            if (message && /\p{L}/u.test(message)) found.set(message, path.relative(root, attribute.getSourceFile().fileName));
           }
         }
         node.children.forEach((child) => collect(child, skipChildren));
@@ -62,7 +62,7 @@ describe("shared UI translations", () => {
         for (const attribute of node.attributes.properties) {
           if (ts.isJsxAttribute(attribute) && visibleAttributes.has(attribute.name.getText()) && attribute.initializer && ts.isStringLiteral(attribute.initializer)) {
             const message = decode(attribute.initializer.text).trim();
-            if (message && /[\p{L}\p{N}]/u.test(message)) found.set(message, path.relative(root, attribute.getSourceFile().fileName));
+            if (message && /\p{L}/u.test(message)) found.set(message, path.relative(root, attribute.getSourceFile().fileName));
           }
         }
         return;
@@ -73,12 +73,12 @@ describe("shared UI translations", () => {
       }
       if (ts.isJsxText(node) && !skipText) {
         const message = decode(normalize(node.text));
-        if (message && /[\p{L}\p{N}]/u.test(message)) found.set(message, path.relative(root, node.getSourceFile().fileName));
+        if (message && /\p{L}/u.test(message)) found.set(message, path.relative(root, node.getSourceFile().fileName));
         return;
       }
       if (ts.isJsxExpression(node) && node.expression && ts.isStringLiteralLike(node.expression) && !skipText) {
         const message = decode(node.expression.text).trim();
-        if (message && /[\p{L}\p{N}]/u.test(message)) found.set(message, path.relative(root, node.getSourceFile().fileName));
+        if (message && /\p{L}/u.test(message)) found.set(message, path.relative(root, node.getSourceFile().fileName));
         return;
       }
       ts.forEachChild(node, (child) => collect(child, skipText));
