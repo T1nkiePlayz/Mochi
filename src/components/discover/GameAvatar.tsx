@@ -19,12 +19,12 @@ export function hueOf(name: string): number {
  * transparent PNG never shows up as a box. No image, or one that fails to load, becomes initials.
  */
 export function GameAvatar({ src, fallbackSrcs = [], name, className = "" }: { src?: string; fallbackSrcs?: string[]; name: string; className?: string }) {
-  const [fallbackIndex, setFallbackIndex] = useState(-1);
+  const [fallbackIndex, setFallbackIndex] = useState(src ? -1 : 0);
   const [failed, setFailed] = useState(false);
   const fallbacks = fallbackSrcs.filter((url, index, all) => Boolean(url) && url !== src && all.indexOf(url) === index);
   const fallbackKey = fallbacks.join("\n");
   // Depend on URL values rather than array identity; callers may build an equivalent array during render.
-  useEffect(() => { setFallbackIndex(-1); setFailed(false); }, [src, fallbackKey]);
+  useEffect(() => { setFallbackIndex(src ? -1 : 0); setFailed(false); }, [src, fallbackKey]);
   const activeSrc = fallbackIndex < 0 ? src : fallbacks[fallbackIndex];
   const style = { "--game-hue": hueOf(name) } as React.CSSProperties;
   const onError = () => {
