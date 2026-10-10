@@ -6,6 +6,7 @@ import type { DetectedImportSource, ImportSourceId, ImportedGame } from "../lib/
 import { scanImportGames } from "../lib/sources";
 import type { MinecraftMode } from "../lib/minecraftCopy";
 import { SourceGamePicker } from "./import/SourceGamePicker";
+import { useApp } from "../state/AppContext";
 
 type ImportPickerProps = {
   onClose: () => void;
