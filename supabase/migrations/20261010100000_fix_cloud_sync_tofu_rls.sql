@@ -6,6 +6,16 @@
 -- policy's subquery. Keep invoker rights and the ownership RLS policies intact;
 -- run each stage as a separate SQL command within this function's transaction.
 
+-- Keep the server's source-id constraint aligned with source ids currently
+-- emitted by src/lib/cloud.ts. In particular, legendary/nile otherwise make a
+-- whole-library RPC fail when a library contains one of those launchers.
+alter table public.pikos drop constraint if exists pikos_source_id_check;
+alter table public.pikos add constraint pikos_source_id_check
+  check (source_id is null or source_id in (
+    'flatpak', 'heroic', 'steam', 'lutris', 'bottles', 'itch', 'apps',
+    'epic', 'whisky', 'battlenet', 'gog', 'prism', 'legendary', 'nile'
+  ));
+
 create or replace function public.sync_my_library(library jsonb)
 returns jsonb
 language plpgsql
