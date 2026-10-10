@@ -7,6 +7,8 @@ import { applyKindOverride, applyKindOverrides, readOverrides, setOverride, over
 import { filterItems, type PickerFilter } from "./filterItems";
 import { MinecraftModeChooser } from "./MinecraftModeChooser";
 import type { MinecraftMode } from "../../lib/minecraftCopy";
+import type { Piko } from "../../models";
+import { excludeLibraryImports } from "../../lib/importFiltering";
 import { detectImportSources, scanImportGames, type DetectedImportSource, type ImportSourceId, type ImportedGame } from "../../lib/sources";
 
 // The "Minecraft instances" source tile shows the game logo rather than the Prism launcher mark.
@@ -46,7 +48,7 @@ function TriCheckbox({ checked, indeterminate, label, onChange }: { checked: boo
   return <input ref={ref} type="checkbox" className="sgp-check" checked={checked} aria-label={label} onChange={onChange} />;
 }
 
-export function SourceGamePicker({ onSelectionChange, renderAction, sources: fixedSources, scan, sidebarExtra, emptyHint, filter = "all" }: Props) {
+export function SourceGamePicker({ onSelectionChange, renderAction, sources: fixedSources, scan, sidebarExtra, emptyHint, existingLibrary = [], filter = "all" }: Props) {
   const [detected, setDetected] = useState<DetectedImportSource[] | null>(fixedSources ?? null);
   const [detectError, setDetectError] = useState(false);
   const [data, setData] = useState<Record<string, SourceState>>({});
@@ -58,7 +60,7 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
   const initialised = useRef<Set<string>>(new Set());
 
   // The single place scanned items enter the picker: everything downstream sees only the filtered list.
-  const scanSource = (id: ImportSourceId) => (scan ? scan(id) : scanImportGames(id)).then((items) => filterItems(applyKindOverrides(items, readOverrides()), filter));
+  const scanSource = (id: ImportSourceId) => (scan ? scan(id) : scanImportGames(id)).then((items) => excludeLibraryImports(filterItems(applyKindOverrides(items, readOverrides()), filter), existingLibrary));
   const launchersOnly = filter === "launchers";
 
   // Detect installed sources, hiding any with nothing to import.
@@ -108,22 +110,27 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
     }).catch(() => setData((current) => ({ ...current, [id]: { status: "error", games: [] } })));
   };
 
+  const visibleDetected = useMemo(() => (detected ?? []).filter((source) => {
+    const state = data[source.id];
+    return state?.status !== "ready" || state.games.length > 0;
+  }), [detected, data]);
+
   const selection = useMemo<PickerSelection>(() => {
     const games: ImportedGame[] = [];
     const ids: ImportSourceId[] = [];
-    for (const source of detected ?? []) {
+    for (const source of visibleDetected) {
       const picked = (data[source.id]?.games ?? []).filter((game) => selected.has(keyOf(game)));
       if (picked.length) { games.push(...picked); ids.push(source.id); }
     }
     return { games, sources: ids, minecraftMode };
-  }, [detected, data, selected, minecraftMode]);
+  }, [visibleDetected, data, selected, minecraftMode]);
 
   const onChangeRef = useRef(onSelectionChange);
   onChangeRef.current = onSelectionChange;
   useEffect(() => { onChangeRef.current?.(selection); }, [selection]);
 
   const current = active ? data[active] : undefined;
-  const activeSource = detected?.find((source) => source.id === active);
+  const activeSource = visibleDetected.find((source) => source.id === active);
 
   const rows = useMemo<Row[]>(() => {
     const needle = query.trim().toLowerCase();
@@ -256,7 +263,7 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
     );
   }
 
-  if (!detected.length) {
+  if (!visibleDetected.length) {
     return (
       <div className="sgp sgp-empty-all">
         <div className="sgp-empty" role={detectError ? "alert" : "status"}>
@@ -274,7 +281,7 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
   return (
     <div className="sgp">
       <div className="sgp-sources" role="list" aria-label="Detected game sources">
-        {detected.map((source) => {
+        {visibleDetected.map((source) => {
           const state = data[source.id];
           const games = state?.games ?? [];
           const picked = games.filter((game) => selected.has(keyOf(game))).length;
