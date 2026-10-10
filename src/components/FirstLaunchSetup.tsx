@@ -15,7 +15,7 @@ import { AccountStep } from "./setup/AccountStep";
 import { ServicesStep } from "./setup/ServicesStep";
 import { ImportStep } from "./setup/ImportStep";
 import { CloudImportStep } from "./setup/CloudImportStep";
-import { useTranslation } from "../lib/i18n";
+import { useTranslation } from "../lib/useTranslation";
 
 type SetupProps = {
   igdbClientId: string;
