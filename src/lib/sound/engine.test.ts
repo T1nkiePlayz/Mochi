@@ -90,3 +90,18 @@ describe("sound engine", () => {
     expect(console.warn).toHaveBeenCalled();
   });
 });
+
+describe("sound engine pack chain", () => {
+  it("falls back per sound, skips a pack that cannot load, and only reads what is missing", async () => {
+    installFake();
+    const read = vi.fn(async (id: string) => { if (id === "broken") throw new Error("bad"); return new ArrayBuffer(4); });
+    vi.doMock("./packs", () => ({ readSoundPackFile: read }));
+    const engine = await load();
+    const pack = (id: string, events: string[]) => ({ id, installed: { id, name: id, version: "1", author: "", description: "", events, volume: 1, sizeBytes: 1 } as never });
+    (window.AudioContext.prototype as unknown as { decodeAudioData: unknown }).decodeAudioData = async () => ({ duration: 1 });
+    const result = await engine.loadChain([pack("broken", ["select", "back"]), pack("partial", ["select"])]);
+    expect(result.failed).toEqual(["broken"]);
+    expect(read.mock.calls.map((call) => call[0])).toEqual(["broken", "broken", "partial"]);
+    vi.doUnmock("./packs");
+  });
+});

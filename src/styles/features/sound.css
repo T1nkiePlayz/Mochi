@@ -15,3 +15,10 @@
 @media (max-width: 640px) {
   .sound-preview, .sound-pack-actions { justify-content: flex-start; }
 }
+.sound-fallbacks { align-items: start; flex-wrap: wrap; }
+.sound-fallbacks-body { display: grid; gap: .5rem; justify-items: end; min-width: min(20rem, 100%); }
+.sound-fallbacks-list { display: grid; gap: .35rem; width: 100%; margin: 0; padding: 0; list-style: none; }
+.sound-fallback { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .4rem .7rem; border: 1px solid var(--mochi-border); border-radius: var(--mochi-radius-md); background: var(--mochi-surface); }
+.sound-fallback-name { color: var(--mochi-text-strong); overflow-wrap: anywhere; }
+.sound-fallback.is-missing .sound-fallback-name, .sound-fallbacks-empty { color: var(--mochi-text-muted); }
+.sound-fallback-button { display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; min-height: 2rem; padding: 0; }

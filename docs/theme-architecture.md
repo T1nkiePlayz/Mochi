@@ -206,6 +206,8 @@ Manifest sections map to CSS variables by camelCase-to-kebab-case (`components.p
 
 `"soundPack"` (optional) names the interface sound pack the theme suggests: a built-in pack (`mochi`, `chiptune`, `glass`) or the id of an installed sound pack. It applies while the user's Sound setting is "Match theme" (the default); unknown ids fall back to `mochi`. See `docs/sound-packs.md`.
 
+`"soundFallbacks"` (optional) is an ordered array of up to 5 more pack ids, tried after `soundPack` when a pack is not installed or fails to load. Ids use the same format as `soundPack` (letters, numbers, `-`, `_`; repeats are ignored). Built-in themes may only list built-in packs (`npm run check:themes` enforces it). A user theme that names packs the user does not have still imports normally; Mochi just moves down the list. The full order is described in `docs/sound-packs.md`.
+
 ## Built-in themes
 
 Built-in themes are real theme folders under `src/themes/`; every folder is discovered automatically at build time (`"order"` sorts the picker). Each uses a different shell and a different visual language:

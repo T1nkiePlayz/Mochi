@@ -17,11 +17,23 @@ export type SoundSettings = {
   movement: MovementSounds;
   /** A built-in or installed pack id, or "theme" to use the active theme's pack. */
   pack: string;
+  /** User-level ordered fallback packs, tried when the theme names none or its packs are missing or fail. */
+  fallbacks: string[];
 };
 
-export const defaultSoundSettings: SoundSettings = { bigPicture: true, launcher: false, volume: 0.6, muted: false, movement: "auto", pack: "theme" };
+export const defaultSoundSettings: SoundSettings = { bigPicture: true, launcher: false, volume: 0.6, muted: false, movement: "auto", pack: "theme", fallbacks: [] };
 
 const packPattern = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
+
+export const MAX_SOUND_FALLBACKS = 5;
+
+/** Valid pack ids only (never "theme"), without repeats, at most MAX_SOUND_FALLBACKS. */
+export function normalizeSoundFallbacks(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const id of raw) if (typeof id === "string" && id !== "theme" && packPattern.test(id) && !out.includes(id)) out.push(id);
+  return out.slice(0, MAX_SOUND_FALLBACKS);
+}
 
 export function normalizeSoundSettings(raw: unknown): SoundSettings {
   const stored = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
@@ -34,6 +46,7 @@ export function normalizeSoundSettings(raw: unknown): SoundSettings {
     muted: bool(stored.muted, false),
     movement: stored.movement === "always" || stored.movement === "never" ? stored.movement : "auto",
     pack: typeof stored.pack === "string" && packPattern.test(stored.pack) ? stored.pack : "theme",
+    fallbacks: normalizeSoundFallbacks(stored.fallbacks),
   };
 }
 
