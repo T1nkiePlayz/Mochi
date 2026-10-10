@@ -98,7 +98,8 @@ export function moveFocus(direction: Direction): boolean {
   if (direction === "up" || direction === "down") {
     const parent = scrollParent(active);
     const before = parent.scrollTop;
-    parent.scrollBy({ top: direction === "down" ? 160 : -160, behavior: reducedMotion() ? "auto" : "smooth" });
+    const inBigPicture = Boolean(active.closest("[data-bp-root]"));
+    parent.scrollBy({ top: direction === "down" ? 160 : -160, behavior: inBigPicture || reducedMotion() ? "auto" : "smooth" });
     return parent.scrollTop !== before || parent.scrollHeight > parent.clientHeight;
   }
   return false;
