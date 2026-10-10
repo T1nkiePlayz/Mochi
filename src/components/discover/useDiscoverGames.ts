@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cfAllGames, type CfGame } from "../../lib/curseforge";
 import { KNOWN_NEXUS_GAMES, SEED_GAMES, visibleSeedGames } from "../../lib/mods/gameCatalog";
 import { bestNameMatch } from "../../lib/mods/gameMatch";
@@ -74,6 +74,8 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
   const [cfLoading, setCfLoading] = useState(false);
   const [catalog, setCatalog] = useState<NexusGame[]>([]);
   const [igdbIcons, setIgdbIcons] = useState<Record<string, string>>({});
+  const igdbIconsRef = useRef(igdbIcons);
+  igdbIconsRef.current = igdbIcons;
   const [stored, setStored] = useState<StoredGame[]>(readStored);
   const [reload, setReload] = useState(0);
   const nexusOn = settings.nexus;
@@ -131,7 +133,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
     for (const game of candidates) {
       if (!byKey.has(game.lookupKey)) byKey.set(game.lookupKey, game);
     }
-    const missing = [...byKey.values()].filter((game) => !igdbIcons[game.lookupKey]).slice(0, 64);
+    const missing = [...byKey.values()].filter((game) => !igdbIconsRef.current[game.lookupKey]).slice(0, 64);
 
     void (async () => {
       const resolved: Array<readonly [string, string]> = [];
