@@ -127,7 +127,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
         const batch = await Promise.all(missing.slice(offset, offset + 4).map(async (game) => {
           try {
             const url = await lookupNexusGameIcon(client, game);
-            return url ? [game.domainName, url] as const : null;
+            return url ? [game.domainName.toLocaleLowerCase(), url] as const : null;
           } catch { return null; }
         }));
         resolved.push(...batch.filter((entry): entry is readonly [string, string] => entry !== null));
@@ -154,7 +154,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
       const name = info?.name ?? fallbackName;
       const onCf = settings.curseforge && cfGames ? bestNameMatch(name, cfGames) : null;
       if (onCf) return cfGame(onCf, domain);
-      return { key: `nx:${domain}`, name, iconUrl: info?.iconUrl ?? igdbIcons[domain], source: "nexus", nexusDomain: domain };
+      return { key: `nx:${domain}`, name, iconUrl: info?.iconUrl ?? igdbIcons[domain.toLocaleLowerCase()], source: "nexus", nexusDomain: domain };
     };
     for (const { seed, cf } of visibleSeedGames(SEED_GAMES, cfGames, nexusOn && nexusKey, settings.curseforge)) {
       if (cf) put(cfGame(cf, seed.nexusDomain));
