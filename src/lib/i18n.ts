@@ -25,6 +25,7 @@ import { accessibilityMessages } from "./i18nAccessibility";
 import { bigPictureMessages } from "./i18nBigPicture";
 import { commonExtraMessages } from "./i18nCoreExtra";
 import { uiExtraMessages } from "./i18nUiExtra";
+import { footerMessages } from "./i18nFooter";
 
 /**
  * Shared UI message catalogue. Keys are stable English source strings so missing
@@ -113,11 +114,11 @@ export function translate(message: string, language: unknown = getTranslationLoc
 export function hasTranslation(message: string, language: unknown): boolean {
   const normalized = normalizeLanguage(language);
   if (navLabel(message, normalized) !== message) return true;
-  return Boolean(messages[message]?.[normalized] || setupMessages[message]?.[normalized] || setupCopyMessages[message]?.[normalized] || setupCopyExtraMessages[message]?.[normalized] || cloudSetupMessages[message]?.[normalized] || accountSetupMessages[message]?.[normalized] || serviceSetupMessages[message]?.[normalized] || chromeMessages[message]?.[normalized] || settingsMessages[message]?.[normalized] || downloadMessages[message]?.[normalized] || dealMessages[message]?.[normalized] || dealExtraMessages[message]?.[normalized] || libraryMessages[message]?.[normalized] || systemMessages[message]?.[normalized] || libraryExtraMessages[message]?.[normalized] || commonMessages[message]?.[normalized] || settingsTitleMessages[message]?.[normalized] || settingsTitleExtraMessages[message]?.[normalized] || accessibilitySettingsCopy[message]?.[normalized] || settingsSubtitleMessages[message]?.[normalized] || settingsSubtitleExtraMessages[message]?.[normalized] || accessibilityMessages[message]?.[normalized] || bigPictureMessages[message]?.[normalized] || commonExtraMessages[message]?.[normalized] || uiExtraMessages[message]?.[normalized]);
+  return Boolean(messages[message]?.[normalized] || setupMessages[message]?.[normalized] || setupCopyMessages[message]?.[normalized] || setupCopyExtraMessages[message]?.[normalized] || cloudSetupMessages[message]?.[normalized] || accountSetupMessages[message]?.[normalized] || serviceSetupMessages[message]?.[normalized] || chromeMessages[message]?.[normalized] || settingsMessages[message]?.[normalized] || downloadMessages[message]?.[normalized] || dealMessages[message]?.[normalized] || dealExtraMessages[message]?.[normalized] || libraryMessages[message]?.[normalized] || systemMessages[message]?.[normalized] || libraryExtraMessages[message]?.[normalized] || commonMessages[message]?.[normalized] || settingsTitleMessages[message]?.[normalized] || settingsTitleExtraMessages[message]?.[normalized] || accessibilitySettingsCopy[message]?.[normalized] || settingsSubtitleMessages[message]?.[normalized] || settingsSubtitleExtraMessages[message]?.[normalized] || accessibilityMessages[message]?.[normalized] || bigPictureMessages[message]?.[normalized] || commonExtraMessages[message]?.[normalized] || uiExtraMessages[message]?.[normalized] || footerMessages[message]?.[normalized]);
 }
 
 /** All explicitly catalogued messages, useful for coverage checks and tooling. */
 export function getTranslationMessages(): string[] {
-  const catalogs = [messages, setupMessages, setupCopyMessages, setupCopyExtraMessages, cloudSetupMessages, accountSetupMessages, serviceSetupMessages, chromeMessages, settingsMessages, downloadMessages, dealMessages, dealExtraMessages, libraryMessages, systemMessages, libraryExtraMessages, commonMessages, settingsTitleMessages, settingsTitleExtraMessages, accessibilitySettingsCopy, settingsSubtitleMessages, settingsSubtitleExtraMessages, accessibilityMessages, bigPictureMessages, commonExtraMessages, uiExtraMessages];
+  const catalogs = [messages, setupMessages, setupCopyMessages, setupCopyExtraMessages, cloudSetupMessages, accountSetupMessages, serviceSetupMessages, chromeMessages, settingsMessages, downloadMessages, dealMessages, dealExtraMessages, libraryMessages, systemMessages, libraryExtraMessages, commonMessages, settingsTitleMessages, settingsTitleExtraMessages, accessibilitySettingsCopy, settingsSubtitleMessages, settingsSubtitleExtraMessages, accessibilityMessages, bigPictureMessages, commonExtraMessages, uiExtraMessages, footerMessages];
   return [...new Set(catalogs.flatMap((catalog) => Object.keys(catalog)))];
 }
