@@ -49,7 +49,7 @@ export function LibraryFilterBar({ lib, collections, tags, onManageCollections, 
 
   return <section className="library-filters" aria-label="Library filters">
     <div className="filter-row" role="group" aria-label="Smart filters">
-      {smartFilters.map(({ id, label }) => chip({ kind: "smart", id }, label, filterCounts.smart[id] ?? 0, `smart-${id}`))}
+      {smartFilters.map(({ id, label }) => chip({ kind: "smart", id }, t(label), filterCounts.smart[id] ?? 0, `smart-${id}`))}
     </div>
     {savedFilters.filters.length > 0 && <div className="filter-row" role="group" aria-label="Saved filters">
       {savedFilters.filters.map((item) => chip({ kind: "saved", id: item.id }, item.name, filterCounts.saved.get(item.id) ?? 0, `saved-${item.id}`))}
