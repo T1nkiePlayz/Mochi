@@ -15,6 +15,8 @@ export type ExperimentalFeature = {
   since: string;
 };
 
-export const experimentalFeatures: ExperimentalFeature[] = [];
+export const experimentalFeatures: ExperimentalFeature[] = [
+  { id: "plugins", name: "Plugins", description: "Run small plugins from the plugins folder that add command palette commands. Plugins run in a restricted sandbox without network access, but only install plugins you trust.", since: "1.0" },
+];
 
 export const experimentalIds = () => experimentalFeatures.map((feature) => feature.id);

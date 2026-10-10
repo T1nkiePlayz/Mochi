@@ -17,6 +17,7 @@ import { PlayLimitsSection } from "./PlayLimitsSection";
 import { AccountPinSection } from "./AccountPinSection";
 import { DealsSection } from "./DealsSection";
 import { StorageSection } from "./StorageSection";
+import { PluginsSection } from "./PluginsSection";
 
 /**
  * Settings sections in display order. To add one, create a component in this folder
@@ -41,5 +42,6 @@ export const settingsSections: Array<{ id: string; Section: ComponentType }> = [
   { id: "librarytools", Section: LibraryToolsSection },
   { id: "storage", Section: StorageSection },
   { id: "experimental", Section: ExperimentalSection },
+  { id: "plugins", Section: PluginsSection },
   { id: "help", Section: HelpSection },
 ];

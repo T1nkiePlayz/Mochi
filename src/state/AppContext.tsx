@@ -32,6 +32,8 @@ import { useDeepLinks } from "./useDeepLinks";
 import { useCliIntents } from "./useCliIntents";
 import { useLibraryIndex } from "./useLibraryIndex";
 import { useDeals } from "./useDeals";
+import { usePlugins } from "./usePlugins";
+import { experimentalFeatures } from "../lib/experimental";
 import { useLibraryWatcher } from "./useLibraryWatcher";
 import { checkAccountPin } from "../lib/accountPin";
 import { usePlayLimits } from "./usePlayLimits";
@@ -120,6 +122,7 @@ function useAppController() {
   useDeepLinks(account, cliIntents.handle);
   useLibraryIndex(lib.library, storage.ready);
   const deals = useDeals(behavior.showDeals, lib.library, notify);
+  const plugins = usePlugins({ active: experimentalFeatures.some((feature) => feature.id === "plugins") && behavior.experimental.includes("plugins"), enabled: behavior.enabledPlugins, library: lib.library, notify });
 
   const finishFirstLaunchSetup = (games: ImportedGame[], sources: ImportSourceId[], minecraftMode: MinecraftMode = "copy") => {
     writeString(storageKeys.setupComplete, "true");
@@ -160,7 +163,7 @@ function useAppController() {
     behavior, setBehavior, activeNav, setActiveNav, showFirstLaunchSetup, finishFirstLaunchSetup,
     platformCapabilities, runtimes, showTofuManager, setShowTofuManager, editingGameId, setEditingGameId,
     notifications, account, credentials, sessions, playtime, refreshPlaytime, lib, collections, themeEngine, actions, metadata, add, storage, cloud, downloads, downloadPacing,
-    hasIgdb, chooseConfigLocation, resetLocalData, cliIntents, deals,
+    hasIgdb, chooseConfigLocation, resetLocalData, cliIntents, deals, plugins,
   };
 }
 

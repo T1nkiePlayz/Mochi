@@ -33,6 +33,7 @@ mod sources;
 mod soundpacks;
 mod steam_achievements;
 mod hooks;
+mod plugins;
 mod protondb;
 mod screenshots;
 mod steam_news;
@@ -342,7 +343,7 @@ fn main() {
             game_artwork::prepare_artwork_preview, game_artwork::save_custom_artwork, game_artwork::delete_game_artwork, icon_cover::cache_icon_cover, platform::check_launch_targets,
             modrinth::get_public_api, modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::apply_mod_profile,
             deals::get_epic_free_games, deals::get_cheapshark_deals, deals::get_price_info, deals::get_steam_price,
-            steam_store::get_steam_store_details, steam_news::get_steam_news, protondb::get_protondb_summary, screenshots::scan_screenshots, screenshots::make_screenshot_thumbs, steam_achievements::get_steam_achievements, steam_achievements::get_steam_achievement_totals,
+            steam_store::get_steam_store_details, steam_news::get_steam_news, protondb::get_protondb_summary, plugins::list_plugins, plugins::plugins_folder, screenshots::scan_screenshots, screenshots::make_screenshot_thumbs, steam_achievements::get_steam_achievements, steam_achievements::get_steam_achievement_totals,
             steam_achievements::clear_steam_achievements_cache, steam_store::clear_steam_store_cache,
             modrinth::delete_mod_file, modrinth::start_modrinth_download, downloads::start_mod_download, modrinth::update_mod_file, modrinth::analyze_mod_files,
             downloads::cancel_mod_download, downloads::clear_finished_downloads, downloads::set_downloads_paused, downloads::set_download_limit,

@@ -34,6 +34,9 @@
         "script-src": [
           "'self'"
         ],
+        "worker-src": [
+          "blob:"
+        ],
         "style-src": [
           "'self'",
           "'unsafe-inline'",

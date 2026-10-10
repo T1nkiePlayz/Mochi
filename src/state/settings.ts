@@ -43,6 +43,8 @@ export type Behavior = {
   showDeals: boolean;
   /** Check Steam news and mod updates for my games and list them in the Deals tab. Off by default. */
   gameNews: boolean;
+  /** Ids of plugins the user switched on (plugins are off until enabled one by one). */
+  enabledPlugins: string[];
 };
 
 export const defaultBehavior: Behavior = {
@@ -69,6 +71,7 @@ export const defaultBehavior: Behavior = {
   accountPins: false,
   showDeals: false,
   gameNews: false,
+  enabledPlugins: [],
 };
 
 const bool = (value: unknown, fallback: boolean) => (typeof value === "boolean" ? value : fallback);
@@ -109,5 +112,6 @@ export function normalizeBehavior(raw: unknown): Behavior {
     // Graduated from experimental: people who had them switched on keep them on.
     showDeals: bool(stored.showDeals, ids(stored.experimental).includes("deal-alerts")),
     gameNews: bool(stored.gameNews, ids(stored.experimental).includes("game-news")),
+    enabledPlugins: ids(stored.enabledPlugins),
   };
 }
