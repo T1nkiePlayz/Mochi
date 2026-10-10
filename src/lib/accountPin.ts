@@ -1,4 +1,5 @@
 import { readJson, writeJson } from "./storage";
+import { askPin } from "./pinPrompt";
 
 /**
  * Optional PINs that protect switching to a saved account on a shared computer. They live only on this device
@@ -57,7 +58,6 @@ export async function verifyPin(accountId: string, pin: string): Promise<boolean
 /** Asks for the account's PIN (a few tries) before switching to it. True when there is no PIN, or it was entered correctly. */
 export async function checkAccountPin(accountId: string, name: string): Promise<boolean> {
   if (!hasPin(accountId)) return true;
-  const { askPin } = await import("./pinPrompt");
   let error: string | undefined;
   for (let attempt = 0; attempt < MAX_PIN_TRIES; attempt++) {
     const pin = await askPin({ title: "Enter PIN", message: `${name} is protected with a PIN.`, error });
