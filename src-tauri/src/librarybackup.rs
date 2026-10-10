@@ -18,54 +18,7 @@ fn extension_of(path: &Path) -> String { path.extension().and_then(|value| value
 fn write_atomic(target: &Path, content: &str) -> Result<(), String> {
     if content.len() as u64 > MAX_BYTES { return Err("The backup is too large to save.".into()); }
     if target.is_dir() { return Err("Choose a file name, not a folder.".into()); }
-    write_atomic_to(target, content)
-}
-
-static TEMP_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-
-fn temp_path(target: &Path) -> PathBuf {
-    let mut temp = target.as_os_str().to_os_string();
-    temp.push(format!(".part-{}-{}", std::process::id(), TEMP_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed)));
-    PathBuf::from(temp)
-}
-
-/// Retry stale-name collisions and keep backup contents private to the current user.
-fn write_atomic_to(target: &Path, content: &str) -> Result<(), String> {
-    for _ in 0..16 {
-        let temp = temp_path(target);
-        match write_atomic_file(target, content, &temp) {
-            Ok(()) => return Ok(()),
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(error) => return Err(format!("Could not save the backup: {error}")),
-        }
-    }
-    Err("Could not save the backup: could not allocate a unique temporary file.".into())
-}
-
-/// Exclusive creation prevents symlink redirection; mode 0600 avoids leaking backup contents on Unix.
-fn write_atomic_file(target: &Path, content: &str, temp: &Path) -> std::io::Result<()> {
-    use std::io::Write;
-    let mut options = fs::OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    let mut file = options.open(temp)?;
-    if let Err(error) = file.write_all(content.as_bytes()) {
-        drop(file);
-        let _ = fs::remove_file(temp);
-        return Err(error);
-    }
-    // Flush file contents before publishing the completed export at its final path.
-    if let Err(error) = file.sync_all() {
-        drop(file);
-        let _ = fs::remove_file(temp);
-        return Err(error);
-    }
-    drop(file);
-    fs::rename(temp, target).inspect_err(|_| { let _ = fs::remove_file(temp); })
+    crate::util::fsio::write_atomic_private(target, content.as_bytes()).map_err(|error| format!("Could not save the backup: {error}"))
 }
 
 pub(crate) fn write_backup(path: &Path, content: &str) -> Result<PathBuf, String> {
@@ -163,23 +116,6 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn refuses_a_precreated_symlink_as_the_temporary_file() {
-        use std::os::unix::fs::symlink;
-        let dir = temp("symlink-temp");
-        let target = dir.join("export.mochibackup");
-        let victim = dir.join("victim.txt");
-        let temp = dir.join("export.mochibackup.part");
-        fs::write(&victim, "keep me").unwrap();
-        symlink(&victim, &temp).unwrap();
-
-        assert!(write_atomic_file(&target, "overwrite", &temp).is_err());
-        assert_eq!(fs::read_to_string(&victim).unwrap(), "keep me");
-        assert!(fs::symlink_metadata(&temp).unwrap().file_type().is_symlink());
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[cfg(unix)]
-    #[test]
     fn replaces_an_existing_backup_without_leaving_partial_contents() {
         let dir = temp("replace-existing");
         let target = dir.join("existing.mochibackup");
@@ -187,7 +123,7 @@ mod tests {
         write_backup(&target, r#"{"new":true}"#).unwrap();
         assert_eq!(fs::read_to_string(&target).unwrap(), r#"{"new":true}"#);
         let leftovers: Vec<_> = fs::read_dir(&dir).unwrap().flatten()
-            .filter(|entry| entry.file_name().to_string_lossy().contains(".part-"))
+            .filter(|entry| entry.file_name().to_string_lossy().starts_with('.'))
             .collect();
         assert!(leftovers.is_empty(), "temporary backup files should be cleaned up");
         let _ = fs::remove_dir_all(&dir);

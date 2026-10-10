@@ -18,56 +18,8 @@ pub(crate) fn write_pack(path: &Path, content: &str) -> Result<PathBuf, String> 
     let mut target = path.to_path_buf();
     if extension_of(&target) != "mochipack" { target.set_extension("mochipack"); }
     if target.is_dir() { return Err("Choose a file name, not a folder.".into()); }
-    write_atomic(&target, content, "pack")?;
+    crate::util::fsio::write_atomic_private(&target, content.as_bytes()).map_err(|error| format!("Could not save the pack: {error}"))?;
     Ok(target)
-}
-
-static TEMP_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-
-fn temp_path(target: &Path) -> PathBuf {
-    let mut temp = target.as_os_str().to_os_string();
-    temp.push(format!(".part-{}-{}", std::process::id(), TEMP_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed)));
-    PathBuf::from(temp)
-}
-
-/// Retry stale-name collisions, while refusing to follow pre-existing files or symlinks.
-fn write_atomic(target: &Path, content: &str, label: &str) -> Result<(), String> {
-    for _ in 0..16 {
-        let temp = temp_path(target);
-        match write_atomic_file(target, content, &temp) {
-            Ok(()) => return Ok(()),
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(error) => return Err(format!("Could not save the {label}: {error}")),
-        }
-    }
-    Err(format!("Could not save the {label}: could not allocate a unique temporary file."))
-}
-
-/// Exclusively creates a private sibling file, then renames the completed file into place.
-fn write_atomic_file(target: &Path, content: &str, temp: &Path) -> std::io::Result<()> {
-    use std::io::Write;
-    let mut options = fs::OpenOptions::new();
-    options.write(true).create_new(true);
-    // Library/pack contents may be private; do not expose them to other local users.
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    let mut file = options.open(temp)?;
-    if let Err(error) = file.write_all(content.as_bytes()) {
-        drop(file);
-        let _ = fs::remove_file(temp);
-        return Err(error);
-    }
-    // Flush file contents before publishing the completed export at its final path.
-    if let Err(error) = file.sync_all() {
-        drop(file);
-        let _ = fs::remove_file(temp);
-        return Err(error);
-    }
-    drop(file);
-    fs::rename(temp, target).inspect_err(|_| { let _ = fs::remove_file(temp); })
 }
 
 pub(crate) fn read_pack(path: &Path) -> Result<String, String> {
@@ -127,23 +79,6 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn refuses_a_precreated_symlink_as_the_temporary_file() {
-        use std::os::unix::fs::symlink;
-        let dir = temp_dir("symlink-temp");
-        let target = dir.join("export.mochipack");
-        let victim = dir.join("victim.txt");
-        let temp = dir.join("export.mochipack.part");
-        fs::write(&victim, "keep me").unwrap();
-        symlink(&victim, &temp).unwrap();
-
-        assert!(write_atomic_file(&target, "overwrite", &temp).is_err());
-        assert_eq!(fs::read_to_string(&victim).unwrap(), "keep me");
-        assert!(fs::symlink_metadata(&temp).unwrap().file_type().is_symlink());
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[cfg(unix)]
-    #[test]
     fn replaces_an_existing_export_without_leaving_partial_contents() {
         let dir = temp_dir("replace-existing");
         let target = dir.join("existing.mochipack");
@@ -151,7 +86,7 @@ mod tests {
         write_pack(&target, r#"{"new":true}"#).unwrap();
         assert_eq!(fs::read_to_string(&target).unwrap(), r#"{"new":true}"#);
         let leftovers: Vec<_> = fs::read_dir(&dir).unwrap().flatten()
-            .filter(|entry| entry.file_name().to_string_lossy().contains(".part-"))
+            .filter(|entry| entry.file_name().to_string_lossy().starts_with('.'))
             .collect();
         assert!(leftovers.is_empty(), "temporary export files should be cleaned up");
         let _ = fs::remove_dir_all(&dir);

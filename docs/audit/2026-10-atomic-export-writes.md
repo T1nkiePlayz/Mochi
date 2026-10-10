@@ -21,22 +21,21 @@ The practical impact is local and depends on a hostile or pre-existing filesyste
 
 ## Improvements in this PR
 
-### 1. Exclusive creation and unique sibling files
+### 1. One shared writer (`util/fsio.rs`)
 
-- Mod downloads now allocate their sibling temporary file with `create_new(true)` and retry up to 16 name collisions, just like the export/backup writers. The cleanup guard is only created after exclusive creation succeeds, so a failed attempt cannot accidentally remove a pre-existing symlink.
+The shared atomic writer now creates its sibling temporary file with `create_new(true)` (an existing file or symlink is refused, never followed or truncated) and retries up to 16 times on a name collision. Every caller of `write_atomic`, `write_atomic_durable` and the new `write_atomic_private` gets this, including config, themes, playtime and artwork writes.
 
-- Generate a sibling temporary name using the process ID and an atomic counter.
-- Open it with `OpenOptions::create_new(true)`, which refuses existing files and symlinks rather than following or truncating them.
-- Retry up to 16 times when a candidate name already exists. This handles stale files from a reused process ID and simultaneous export attempts instead of failing on the first collision.
-- Write the complete contents, call `sync_all` before renaming the temporary file into place, and clean up after write/sync/rename errors. This flushes file data and metadata to the OS/device before publishing the completed file; it does not promise that the parent directory entry survives every possible power loss.
+- `write_atomic_private` also calls `sync_all` before the rename and creates the file with mode `0600` on Unix. `.mochipack` exports and `.mochibackup` manual/scheduled backups use it, so the library contents are not readable by other local users. On other platforms the inherited ACLs apply.
+- `sync_all` flushes the file data before it is published; it does not promise that the parent directory entry survives every possible power loss.
+- Temporary names start with `.`, so scheduled-backup listing and pruning never see them.
 
-### 2. Private file permissions on Unix
+### 2. Downloads
 
-Temporary export files are created with mode `0600` on Unix, so modpack contents and library backups are not exposed to other local users through permissive directory defaults. The mode is retained when the completed temporary file is renamed into place. On non-Unix platforms, the platform's normal inherited ACL behavior remains in effect.
+`fetch_to_file` allocates its `.mochi-download-N` temporary file with `create_new(true)` and the same retry. The cleanup guard is created only after exclusive creation succeeds, so a failed attempt can never delete a pre-existing symlink.
 
 ### 3. Regression tests
 
-Unix-only tests verify that a symlink at the download temporary path is rejected without changing its target. Export/backup tests verify existing files are replaced with complete new contents without leftover temporary files, and that successfully written modpack and library backup files have mode `0600`.
+Unix-only tests check that a planted symlink is refused and left untouched (shared writer and download temp), that replacing an existing export or backup leaves complete new contents and no temporary files, and that exports and backups have mode `0600`.
 
 ## Verification and remaining work
 
