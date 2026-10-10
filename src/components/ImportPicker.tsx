@@ -94,7 +94,7 @@ export function ImportPicker({ onClose, onImport, mode = "games" }: ImportPicker
             existingLibrary={lib.library}
             filter={launchers ? "launchers" : "all"}
             sidebarExtra={launchers ? undefined : sidebarExtra}
-            renderAction={({ games, sources, minecraftMode }) => (
+            renderAction={({ games, minecraftMode }) => (
               <button type="button" className="play-button" disabled={!games.length} onClick={() => onImport(games, { minecraftMode })}>
                 {launchers ? t("Import selected launchers") : t("Import selected games")} ({games.length})
               </button>
