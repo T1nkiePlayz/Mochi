@@ -1,5 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, ExternalLink, FolderOpen, FolderPlus, Heart, Pencil, Play, Square, Trash2 } from "lucide-react";
+import { ProtonDbBadge } from "./ProtonDbBadge";
 import { openExternalUrl, type PlatformCapabilities } from "../lib/platform";
 import { formatPlaytime, formatRelativeTime } from "../lib/format";
 import type { Collection, Piko } from "../models";
@@ -61,7 +62,7 @@ type Props = {
   onUnmerge?: (sourceId?: string) => void;
 };
 
-export function GameDetails({ game, cloudStatus, running, playtime, launchError, launching, workspace, mods, canStop, onBack, onPlay, onStop, onEdit, onRemove, onOpenFolder, onShortcutLocation, onShortcutSteam, collections, tagSuggestions, onToggleFavorite, onToggleCollection, onCreateCollection, onTagsChange, onBacklogChange, onLaunchProfileChange, onSourceChange, onUnmerge }: Props) {
+export function GameDetails({ game, capabilities, cloudStatus, running, playtime, launchError, launching, workspace, mods, canStop, onBack, onPlay, onStop, onEdit, onRemove, onOpenFolder, onShortcutLocation, onShortcutSteam, collections, tagSuggestions, onToggleFavorite, onToggleCollection, onCreateCollection, onTagsChange, onBacklogChange, onLaunchProfileChange, onSourceChange, onUnmerge }: Props) {
   const [playTrailer, setPlayTrailer] = useState(false);
   const online = useOnline();
   const [showCollections, setShowCollections] = useState(false);
@@ -83,7 +84,7 @@ export function GameDetails({ game, cloudStatus, running, playtime, launchError,
   const sources = launchSourcesOf(game);
   return <section className="game-details-page">
     <button type="button" className="text-button game-details-back" onClick={onBack}><ArrowLeft size={15}/> Back to library</button>
-    <div className={`game-details-hero${hasArtwork(game) ? "" : " no-art"}`}><GameArtwork className="game-details-cover" cacheKey={game.artworkCacheKey} fallback={game.artwork} name={game.name} kind={game.kind} sourceId={game.sourceId} /><div className="game-details-title"><p className="eyebrow">{game.platformCategory || "Game"}{game.sourceId ? ` · ${game.sourceId}` : ""}</p><h2>{game.name}<button type="button" className={`details-heart ${game.favorite ? "on" : ""}`} aria-pressed={Boolean(game.favorite)} aria-label={game.favorite ? "Remove from favourites" : "Add to favourites"} onClick={onToggleFavorite}><Heart size={18} fill={game.favorite ? "currentColor" : "none"} /></button></h2><div className="game-details-badges">{game.categories?.map((category) => <span key={category}>{category}</span>)}{game.backlog && <span className="backlog-badge">{backlogLabel(game.backlog.status)}</span>}{running && <span className="running-badge">Running</span>}<CloudBadge status={cloudStatus} label /></div><p>{game.description || "No description is available yet."}</p>
+    <div className={`game-details-hero${hasArtwork(game) ? "" : " no-art"}`}><GameArtwork className="game-details-cover" cacheKey={game.artworkCacheKey} fallback={game.artwork} name={game.name} kind={game.kind} sourceId={game.sourceId} /><div className="game-details-title"><p className="eyebrow">{game.platformCategory || "Game"}{game.sourceId ? ` · ${game.sourceId}` : ""}</p><h2>{game.name}<button type="button" className={`details-heart ${game.favorite ? "on" : ""}`} aria-pressed={Boolean(game.favorite)} aria-label={game.favorite ? "Remove from favourites" : "Add to favourites"} onClick={onToggleFavorite}><Heart size={18} fill={game.favorite ? "currentColor" : "none"} /></button></h2><div className="game-details-badges">{game.categories?.map((category) => <span key={category}>{category}</span>)}{game.backlog && <span className="backlog-badge">{backlogLabel(game.backlog.status)}</span>}{running && <span className="running-badge">Running</span>}<CloudBadge status={cloudStatus} label />{capabilities?.platform === "linux" && game.kind !== "launcher" && steamAppId !== null && <ProtonDbBadge appid={steamAppId} />}</div><p>{game.description || "No description is available yet."}</p>
       <div className="game-details-actions">
         {sources.length > 1 && onSourceChange && <div className="details-play-via"><span className="detail-label">Play via</span><Select<string> label="Play via" value={activeSource(game)?.id ?? ""} onChange={onSourceChange} options={sources.map((source) => ({ value: source.id, label: source.label }))} /></div>}
         {!running && game.launchProfiles?.length && onLaunchProfileChange ? <select className="launch-profile-select" aria-label="Launch profile" value={game.activeLaunchProfile ?? ""} onChange={(event) => onLaunchProfileChange(event.target.value || undefined)}><option value="">Default options</option>{game.launchProfiles.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select> : null}
