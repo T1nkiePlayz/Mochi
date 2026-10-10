@@ -232,7 +232,7 @@ Checks (the same ones CI runs):
     npm run typecheck:tests
     cd src-tauri && cargo clippy --all-targets -- -D warnings && cargo test
 
-`npm run tauri build` works locally without the updater signing key (updater artifacts are only enabled by the release workflow).
+`npm run tauri build` works locally without the updater signing key (updater artifacts are only enabled by the release workflow). On Linux the AppImage bundles GStreamer (for sound), so the build needs `patchelf` plus the GStreamer plugin packages (Arch: `sudo pacman -S patchelf gst-plugins-base gst-plugins-good`; Debian/Ubuntu: `patchelf gstreamer1.0-plugins-base gstreamer1.0-plugins-good`), otherwise linuxdeploy fails with "patchelf not found".
 
 **Supabase setup.** Migrations are in `supabase/migrations/` (apply in order; never edit an applied one). Edge functions: `store-provider-credentials` and `curseforge-proxy` (deploy with `--no-verify-jwt`; secret `CURSEFORGE_API_KEY`), see [docs/curseforge.md](docs/curseforge.md). Under Authentication > URL Configuration > Redirect URLs add **`mochi://auth/callback`** and **`mochi://auth/verify`**, otherwise sign-in links cannot return to the app.
 
