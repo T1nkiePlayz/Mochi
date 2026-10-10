@@ -58,6 +58,10 @@ function readStored(): StoredGame[] {
 
 const sameEntry = (a: StoredGame, b: StoredGame) => a.k === b.k && (a.k === "cf" ? a.id === (b as { id: number }).id : a.domain === (b as { domain: string }).domain);
 const nexusThumbnail = (game?: { id?: string; iconUrl?: string }) => game?.iconUrl ?? (game?.id && /^\d+$/.test(game.id) ? `https://images.nexusmods.com/images/games/v2/${game.id}/thumbnail.jpg` : undefined);
+const nexusIconFallbacks = (game?: { id?: string; iconUrl?: string }) => {
+  const numericThumbnail = game?.id && /^\d+$/.test(game.id) ? `https://images.nexusmods.com/images/games/v2/${game.id}/thumbnail.jpg` : undefined;
+  return [game?.iconUrl ? numericThumbnail : undefined].filter((url): url is string => Boolean(url));
+};
 
 /** The user's per-game site choice (Auto / CurseForge / Nexus Mods), remembered between runs. */
 export function useGameSourceChoice(gameKey: string): [GameSourceChoice, (choice: GameSourceChoice) => void] {
@@ -104,9 +108,10 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
       ...catalog,
       ...KNOWN_NEXUS_GAMES,
     ];
-    const iconned = new Set(candidates.filter((game) => game.iconUrl).map((game) => game.domainName.toLocaleLowerCase()));
+    // Look up IGDB even when Nexus already supplies a thumbnail: it is retained as a secondary source
+    // in case the primary URL is stale or returns an error.
     const missingByDomain = new Map(candidates
-      .filter((game) => !iconned.has(game.domainName.toLocaleLowerCase()))
+      .filter((game) => !igdbIcons[game.domainName.toLocaleLowerCase()])
       .map((game) => [game.domainName.toLocaleLowerCase(), game]));
     // Explicitly added games are first in the list; cover more of the live catalogue without an unbounded IGDB burst.
     const missing = [...missingByDomain.values()].slice(0, 64);
@@ -140,7 +145,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
       const nexusUrl = nexusThumbnail(info);
       const igdbUrl = domain ? igdbIcons[domain.toLocaleLowerCase()] : undefined;
       const iconUrl = game.assets?.iconUrl ?? nexusUrl ?? igdbUrl;
-      const iconFallbackUrls = [game.assets?.iconUrl ? nexusUrl : undefined, igdbUrl].filter((url): url is string => Boolean(url && url !== iconUrl));
+      const iconFallbackUrls = [...(game.assets?.iconUrl ? [nexusUrl] : nexusIconFallbacks(info)), igdbUrl].filter((url): url is string => Boolean(url && url !== iconUrl));
       return { key: `cf:${game.id}`, name: game.name, iconUrl, iconFallbackUrls, source: "curseforge", cf: game, nexusDomain: settings.nexus ? domain : undefined };
     };
     const nexusOnly = (domain: string, fallbackName: string): DiscoverGame | null => {
@@ -152,7 +157,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
       const nexusUrl = nexusThumbnail(info);
       const igdbUrl = igdbIcons[domain.toLocaleLowerCase()];
       const iconUrl = nexusUrl ?? igdbUrl;
-      return { key: `nx:${domain}`, name, iconUrl, iconFallbackUrls: [igdbUrl].filter((url): url is string => Boolean(url && url !== iconUrl)), source: "nexus", nexusDomain: domain };
+      return { key: `nx:${domain}`, name, iconUrl, iconFallbackUrls: [...nexusIconFallbacks(info), igdbUrl].filter((url): url is string => Boolean(url && url !== iconUrl)), source: "nexus", nexusDomain: domain };
     };
     for (const { seed, cf } of visibleSeedGames(SEED_GAMES, cfGames, nexusOn && nexusKey, settings.curseforge)) {
       if (cf) put(cfGame(cf, seed.nexusDomain));
