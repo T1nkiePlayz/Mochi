@@ -288,6 +288,20 @@ pub(crate) fn list_with_records(dir: &Path, records: &[ModRecord], subdir: &str)
     list_with_owners(dir, records, &HashSet::new(), subdir)
 }
 
+/// Minecraft launch/runtime components are dependencies, not user-installed mods. Some imported launcher
+/// instances place these jars alongside mods; showing them as ordinary mods offers misleading enable/disable controls.
+fn is_minecraft_loader_runtime(name: &str) -> bool {
+    let base = base_name(name).to_ascii_lowercase();
+    if !base.ends_with(".jar") { return false; }
+    let stem = base.strip_suffix(".jar").unwrap_or(&base);
+    [
+        "fabric-loader-", "quilt-loader-", "modlauncher-", "bootstraplauncher-",
+        "securejarhandler-", "fmlloader-", "javafmllanguage-", "lowcodelanguage-",
+        "mclanguage-", "neoforge-",
+    ].iter().any(|prefix| stem.starts_with(prefix))
+        || (stem.starts_with("forge-") && stem.ends_with("-universal"))
+}
+
 /// Like `list_with_records`, marking files that only other Tofus (`others`: base names) own.
 pub(crate) fn list_with_owners(dir: &Path, records: &[ModRecord], others: &HashSet<String>, subdir: &str) -> Result<Vec<InstanceMod>, String> {
     let mut out = Vec::new();
@@ -295,7 +309,7 @@ pub(crate) fn list_with_owners(dir: &Path, records: &[ModRecord], others: &HashS
     for entry in fs::read_dir(dir).map_err(|e| e.to_string())?.flatten() {
         let Ok(meta) = entry.metadata() else { continue };
         let name = entry.file_name().to_string_lossy().into_owned();
-        if !meta.is_file() || name.starts_with('.') || !CONTENT_EXTENSIONS.contains(&content_extension(&name).as_str()) { continue; }
+        if !meta.is_file() || name.starts_with('.') || is_minecraft_loader_runtime(&name) || !CONTENT_EXTENSIONS.contains(&content_extension(&name).as_str()) { continue; }
         let record = records.iter().find(|record| record.subdir == subdir && record.file == base_name(&name)).cloned();
         let foreign = record.is_none() && others.contains(base_name(&name));
         out.push(InstanceMod { enabled: !name.ends_with(".disabled"), path: entry.path().to_string_lossy().into_owned(), size: meta.len(), modified_ms: mtime_ms(&meta), filename: name, record, foreign });
@@ -718,6 +732,16 @@ mod tests {
 
     fn request(store: &Path, game: &Path, tofu: &str) -> ModSyncRequest {
         ModSyncRequest { tofu_id: tofu.into(), store_dir: store.to_string_lossy().into(), game_dir: game.to_string_lossy().into(), content_root: None, adopt_unmanaged: false, tofus: Vec::new() }
+    }
+
+    #[test]
+    fn loader_runtime_jars_are_not_listed_as_user_mods() {
+        for name in ["fabric-loader-0.16.10.jar", "quilt-loader-0.26.4.jar", "modlauncher-10.2.4.jar", "securejarhandler-2.1.10.jar", "forge-1.20.1-47.3.0-universal.jar", "neoforge-21.1.1.jar.disabled"] {
+            assert!(is_minecraft_loader_runtime(name), "{name} should be recognised as a runtime component");
+        }
+        for name in ["fabric-api-0.110.0.jar", "sodium-fabric-0.6.0.jar", "jei-1.20.1.jar", "my-forge-addon.jar", "some-modlauncher-helper.jar"] {
+            assert!(!is_minecraft_loader_runtime(name), "{name} should remain visible as a mod");
+        }
     }
 
     #[test]

@@ -30,6 +30,6 @@ describe("keyless Nexus catalog", () => {
     vi.stubGlobal("fetch", fetchMock);
     const games = await getNexusGames(null, "stardew");
     expect(JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body)).variables.filter).toEqual({ name: { value: "stardew", op: "WILDCARD" } });
-    expect(games).toEqual([{ id: "1303", name: "Stardew Valley", domainName: "stardewvalley", iconUrl: "https://staticdelivery.nexusmods.com/images/games/cover_1303.jpg", modCount: 34410, genre: "Simulation" }]);
+    expect(games).toEqual([{ id: "1303", name: "Stardew Valley", domainName: "stardewvalley", modCount: 34410, genre: "Simulation" }]);
   });
 });

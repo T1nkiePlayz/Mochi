@@ -16,7 +16,21 @@ const errorText = (error: unknown) => (error instanceof Error ? error.message : 
 
 /** "Logs" button for a game page and the viewer it opens: per-session output of the game, tail/follow, copy, clear, open folder. */
 export function GameLogsButton({ game }: { game: Piko }) {
+  const { sessions } = useApp();
+  const running = sessions.isRunning(game.id);
   const [open, setOpen] = useState(false);
+  const [available, setAvailable] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void listGameLogs(game.id).then((logs) => {
+      if (!cancelled) setAvailable(running || logs.sessions.some((session) => session.direct));
+    }).catch(() => { if (!cancelled) setAvailable(running); });
+    return () => { cancelled = true; };
+  }, [game.id, running]);
+
+  // Do not advertise a logs viewer when this game has no captured sessions and is not running under Mochi.
+  if (!available) return null;
   return <>
     <button type="button" className="secondary-button" aria-haspopup="dialog" onClick={() => setOpen(true)}><ScrollText size={14} /> Logs</button>
     {open && <GameLogsModal game={game} onClose={() => setOpen(false)} />}

@@ -4,5 +4,5 @@ import { useApp } from "../state/AppContext";
 
 export function DiscoverView() {
   const { lib, playtime, credentials } = useApp();
-  return <ModrinthDiscover tofu={lib.selectedTofu} pikos={lib.library} playtime={playtime} supabase={supabase} nexusConfigured={credentials.status.nexus} />;
+  return <ModrinthDiscover tofu={lib.selectedTofu} pikos={lib.library} playtime={playtime} supabase={supabase} nexusConfigured={credentials.status.nexus} igdbConfigured={credentials.status.igdb} />;
 }

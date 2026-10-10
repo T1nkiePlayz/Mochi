@@ -29,7 +29,7 @@ export function GameArtwork({ className, cacheKey, fallback, name, kind, sourceI
     void loadArtwork(cacheKey).then((value) => { if (!cancelled && value) setCached(value); });
     return () => { cancelled = true; };
   }, [cacheKey, revision, near]);
-  const background = cached ? `linear-gradient(145deg, rgba(10,15,20,.12), rgba(11,15,20,.88)), ${cssUrl(cached)}` : artworkBackground(fallback);
+  const background = cached ? `linear-gradient(145deg, rgba(10,15,20,.02), rgba(11,15,20,.12)), ${cssUrl(cached)}` : artworkBackground(fallback);
   if (background || !name) return <div ref={ref} className={className} style={{ backgroundImage: background }} />;
   const art = generatedArt({ name, kind, sourceId });
   return <div ref={ref} className={`${className} generated-art${art.launcher ? " is-launcher" : ""}`} style={generatedStyle(art)} data-generated-art=""><GeneratedMarks art={art} /></div>;
