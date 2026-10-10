@@ -31,6 +31,8 @@ export type LaunchOptions = {
   mangohud?: boolean;
   /** Linux only: run the game inside gamescope with these arguments. */
   gamescope?: { enabled: boolean; args: string[] };
+  /** Commands (program and arguments, never run through a shell) to run before the game starts and after it closes. */
+  hooks?: { pre?: string; post?: string };
 };
 
 /** A named alternative set of launch options for one game (for example "Proton Experimental" or "Low graphics"). */

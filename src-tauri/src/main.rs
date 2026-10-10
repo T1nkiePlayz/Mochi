@@ -32,6 +32,7 @@ mod sharecard;
 mod sources;
 mod soundpacks;
 mod steam_achievements;
+mod hooks;
 mod protondb;
 mod steam_news;
 mod steam_store;
@@ -143,7 +144,8 @@ fn launch_game_tracked(app: tauri::AppHandle, request: LaunchRequest) -> Result<
         let _ = app.emit("mod-sync-result", serde_json::json!({ "tofuId": tofu_id, "report": outcome.as_ref().ok(), "error": outcome.as_ref().err() }));
     }
 
-    let request = playtime::StartRequest { game_id, name, target: target.clone(), install_path };
+    hooks::run_pre(&app, &game_id, &config.hooks);
+    let request = playtime::StartRequest { game_id, name, target: target.clone(), post_hook: config.hooks.post.clone(), install_path };
     playtime::start(app, request, move || platform::launch_game(&target, &config))
 }
 

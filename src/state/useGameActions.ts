@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Piko } from "../models";
 import { launchGame as startGame, openPath, removeGameShortcut, stopGame } from "../lib/platform";
 import { addPikoToSteam, createPikoShortcut, getShortcutTargets, runAddToSteam } from "../lib/shortcuts";
-import { describeModSync, subscribeNative, type ModSyncResult } from "../lib/nativeEvents";
+import { describeLaunchHook, describeModSync, subscribeNative, type LaunchHookResult, type ModSyncResult } from "../lib/nativeEvents";
 import { launchTargetFor } from "../lib/minecraftPiko";
 import { sourceInstallPathFor, sourceTargetFor } from "../lib/launchSources";
 import type { Behavior } from "./settings";
@@ -35,6 +35,11 @@ export function useGameActions({ lib, behavior, refreshPlaytime, refreshSessions
   useEffect(() => subscribeNative<ModSyncResult>("mod-sync-result", (result) => {
     const name = libraryRef.current.flatMap((piko) => piko.tofus).find((tofu) => tofu.id === result.tofuId)?.name ?? "Tofu";
     const summary = describeModSync(result, name);
+    if (summary) notifyRef.current(summary.title, summary.message);
+  }), []);
+
+  useEffect(() => subscribeNative<LaunchHookResult>("launch-hook-result", (result) => {
+    const summary = describeLaunchHook(result);
     if (summary) notifyRef.current(summary.title, summary.message);
   }), []);
 

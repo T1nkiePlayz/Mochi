@@ -22,3 +22,7 @@ export function describeModSync(result: ModSyncResult, tofuName: string): { titl
   if (!on && !off) return null;
   return { title: "Mods ready", message: `${tofuName}: ${on} added, ${off} removed.` };
 }
+
+export type LaunchHookResult = { gameId: string; phase: "pre" | "post"; ok: boolean; message: string };
+export const describeLaunchHook = (result: LaunchHookResult): { title: string; message: string } | null =>
+  result.ok ? null : { title: result.phase === "pre" ? "Before-launch command failed" : "After-close command failed", message: result.message };

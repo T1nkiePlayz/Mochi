@@ -29,7 +29,7 @@ describe("launch parsing", () => {
 describe("buildLaunchConfig", () => {
   const options: LaunchOptions = { env: [["A", "1"], ["B", "piko"]], args: ["-x"], workingDir: "/piko", runtime: { kind: "proton", id: "proton:/p/proton" }, gamemode: true, gamescope: { enabled: true, args: ["-f"] } };
   it("works without options", () => {
-    expect(buildLaunchConfig(undefined)).toEqual({ runtime: null, wrappers: [], args: [], env: {}, workingDir: null, gamescope: { enabled: false, args: [] } });
+    expect(buildLaunchConfig(undefined)).toEqual({ runtime: null, wrappers: [], args: [], env: {}, workingDir: null, gamescope: { enabled: false, args: [] }, hooks: { pre: [], post: [] } });
   });
   it("uses the Piko options", () => {
     const config = buildLaunchConfig(undefined, options);
@@ -78,5 +78,13 @@ describe("launch options editor state", () => {
     expect(envNameError("1bad")).not.toBeNull();
     expect(envNameError("a-b")).not.toBeNull();
     expect(duplicateEnvNames([["A", "1"], [" A ", "2"], ["B", "3"]])).toEqual(new Set(["A"]));
+  });
+});
+
+describe("launch hooks", () => {
+  it("splits hook commands into words and defaults to none", async () => {
+    const { buildLaunchConfig } = await import("./launch");
+    expect(buildLaunchConfig(undefined, undefined).hooks).toEqual({ pre: [], post: [] });
+    expect(buildLaunchConfig(undefined, { env: [], args: [], hooks: { pre: 'obs --profile "My Games"', post: "" } }).hooks).toEqual({ pre: ["obs", "--profile", "My Games"], post: [] });
   });
 });
