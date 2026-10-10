@@ -3,9 +3,10 @@ import { useApp } from "../state/AppContext";
 import { subscribeActions } from "../controller/manager";
 import { readAchievements } from "../state/useAchievements";
 import { playSound, useSoundSettings, type SoundEvent } from "../lib/sound";
-import { applyVolume, isAudioUnlocked, lastPlayedAt, loadPack, unlockAudio } from "../lib/sound/engine";
-import { resolveSoundPack } from "../lib/sound/resolve";
-import { useSoundPacks } from "../lib/sound/useSoundPacks";
+import { applyVolume, isAudioUnlocked, lastPlayedAt, loadChain, unlockAudio } from "../lib/sound/engine";
+import { fallbackNoticeOnce } from "../lib/sound/fallbackNotice";
+import { BUILTIN_PACKS } from "../lib/sound";
+import { useSoundChain } from "../lib/sound/useSoundChain";
 import { isBigPictureActive } from "./mode";
 
 const CLICKABLE = "button, a[href], summary, [role=button], [role=tab], [role=menuitem], [role=menuitemradio], [role=menuitemcheckbox], [role=option], [role=radio], [role=switch], input[type=checkbox], input[type=radio]";
@@ -35,20 +36,30 @@ const matchesPopup = (node: Node) => node instanceof Element && (node.matches(PO
 export function InterfaceSounds() {
   const { themeEngine, sessions, downloads, actions, notifications } = useApp();
   const [settings] = useSoundSettings();
-  const { packs } = useSoundPacks();
   const enabled = (settings.bigPicture || settings.launcher) && !settings.muted;
-  const themePack = useMemo(() => themeEngine.themes.find((theme) => theme.id === themeEngine.theme)?.soundPack, [themeEngine.themes, themeEngine.theme]);
-  const pack = resolveSoundPack(settings.pack, themePack, packs);
-  const packKey = pack.installed ? `${pack.id}:${pack.installed.version}:${pack.installed.sizeBytes}` : pack.id;
+  const theme = useMemo(() => themeEngine.themes.find((option) => option.id === themeEngine.theme), [themeEngine.themes, themeEngine.theme]);
+  const { chain, skipped, key: chainKey } = useSoundChain(theme);
+  const notifyRef = useRef(notifications.notify);
+  notifyRef.current = notifications.notify;
 
   useEffect(() => { applyVolume(settings); }, [settings]);
 
-  // Preload so the first sound is instant.
+  // Preload the resolved chain once per theme/pack change so the first sound is instant. Only packs that are
+  // needed are read; a missing or failing pack is skipped, and the user hears about the first one once per session.
   useEffect(() => {
     if (!enabled) return;
-    void loadPack(pack.id, pack.installed).catch(() => {});
+    let current = true;
+    void loadChain(chain).then(({ failed }) => {
+      if (!current) return;
+      const name = (id: string) => chain.find((pack) => pack.id === id)?.installed?.name ?? id;
+      const lost = [...skipped, ...failed.map(name)];
+      const using = chain.find((pack) => !failed.includes(pack.id));
+      const text = fallbackNoticeOnce(lost, using?.installed?.name ?? BUILTIN_PACKS.find((pack) => pack.id === using?.id)?.name ?? "Mochi");
+      if (text) notifyRef.current("Sound pack unavailable", text);
+    }).catch(() => {});
+    return () => { current = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, packKey]);
+  }, [enabled, chainKey, skipped.join(",")]);
 
   // Autoplay policy: audio can only start inside a real user gesture.
   useEffect(() => {

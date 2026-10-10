@@ -9,6 +9,18 @@ Mochi plays short interface sounds in Big Picture (on by default) and, optionall
 `src/lib/sound/synth.ts`: no audio files ship with Mochi and every sound is original. Themes pick one with
 `"soundPack"` in `theme.json` (see `docs/theme-architecture.md`); the user's "Match theme" setting follows it.
 
+## Fallbacks
+
+A pack is skipped when it is not installed or when it fails to load (a file cannot be read or decoded). Sounds are resolved in this order, once per theme or pack change (the result is cached, and only packs that are still needed are read):
+
+1. the user's own pack, when Settings > Sound > Sound pack is not "Match theme";
+2. the theme's `"soundPack"`;
+3. the theme's `"soundFallbacks"`, in order (optional, up to 5 ids);
+4. the user's "Fallback sound packs" list in Settings > Sound (built-in or installed packs, reordered with the up/down buttons);
+5. the application default, `mochi`, which has every sound.
+
+This also works per sound: if the chosen pack has no sound for an event, the next pack in the chain that has one plays it. If everything fails Mochi uses the default pack. Mochi shows one small notice per session naming the pack that could not be used. Code: `src/lib/sound/resolve.ts` (`resolveSoundPackChain`, `buildSoundChain`) and `loadChain` in `src/lib/sound/engine.ts`.
+
 ## Pack format
 
 A `.zip`, or a folder, with `manifest.json` at its root (or inside one top-level folder of the zip):

@@ -71,6 +71,9 @@ pub struct ThemeManifest {
     /// Interface sound pack this theme suggests (a built-in or installed pack id).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sound_pack: Option<String>,
+    /// Ordered sound pack ids tried after `sound_pack` when it is missing or fails to load.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sound_fallbacks: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -84,6 +87,8 @@ pub struct UserThemeDescriptor {
     pub source: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sound_pack: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub sound_fallbacks: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -214,6 +219,10 @@ fn validate_manifest(manifest: &ThemeManifest) -> Result<(), String> {
     }
     if manifest.sound_pack.as_deref().is_some_and(|pack| !crate::soundpacks::valid_pack_id(pack)) {
         return Err("A theme's soundPack must be a sound pack id.".into());
+    }
+    // Which packs are installed is not the theme's business: a missing pack only means falling back at runtime.
+    if manifest.sound_fallbacks.len() > 5 || manifest.sound_fallbacks.iter().any(|pack| !crate::soundpacks::valid_pack_id(pack)) {
+        return Err("A theme's soundFallbacks must be at most 5 sound pack ids.".into());
     }
     if manifest.scheme.as_deref().is_some_and(|scheme| scheme != "light" && scheme != "dark") {
         return Err("A theme's scheme must be \"light\" or \"dark\".".into());
@@ -413,6 +422,7 @@ pub fn list_user_themes(app: AppHandle) -> Result<Vec<UserThemeDescriptor>, Stri
                 description: manifest.description,
                 source: "user".into(),
                 sound_pack: manifest.sound_pack,
+                sound_fallbacks: manifest.sound_fallbacks,
             }),
             Err(error) => eprintln!("Ignoring invalid Mochi theme '{}': {error}", path.display()),
         }
@@ -528,6 +538,7 @@ pub fn import_theme(app: AppHandle, source_path: String) -> Result<UserThemeDesc
         description: manifest.description,
         source: "user".into(),
         sound_pack: manifest.sound_pack,
+        sound_fallbacks: manifest.sound_fallbacks,
     })
 }
 

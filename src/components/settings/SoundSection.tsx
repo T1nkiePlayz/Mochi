@@ -3,10 +3,12 @@ import { Download, FolderOpen, Play, Trash2, Upload } from "lucide-react";
 import { Select, type SelectOption } from "../ui/Select";
 import { useApp } from "../../state/AppContext";
 import { BUILTIN_PACKS, SOUND_EVENTS, SOUND_LABELS, useSoundSettings, type MovementSounds, type SoundEvent } from "../../lib/sound";
-import { AUDIO_UNAVAILABLE_MESSAGE, loadPack, play, resumeAudio, unlockAudio } from "../../lib/sound/engine";
+import { AUDIO_UNAVAILABLE_MESSAGE, loadChain, play, resumeAudio, unlockAudio } from "../../lib/sound/engine";
 import { announceSoundPacksChanged, exportSoundPack, importSoundPack, removeSoundPack, type SoundPackInfo } from "../../lib/sound/packs";
 import { resolveSoundPack, type ResolvedPack } from "../../lib/sound/resolve";
 import { useSoundPacks } from "../../lib/sound/useSoundPacks";
+import { useSoundChain } from "../../lib/sound/useSoundChain";
+import { SoundFallbacks } from "./SoundFallbacks";
 import { confirmAction } from "../../lib/confirm";
 import { formatBytes } from "../../lib/format";
 import { SettingsGroup, ToggleRow } from "./Section";
@@ -41,7 +43,8 @@ export function SoundSection() {
   const [status, setStatus] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const theme = themeEngine.themes.find((option) => option.id === themeEngine.theme);
-  const resolved = resolveSoundPack(settings.pack, theme?.soundPack, packs);
+  const { chain } = useSoundChain(theme);
+  const resolved = chain[0];
   const resolvedName = packName(resolved);
 
   const packOptions = useMemo<Array<SelectOption<string>>>(() => [
@@ -53,7 +56,7 @@ export function SoundSection() {
   const [audioProblem, setAudioProblem] = useState(false);
   const preview = async (event: SoundEvent) => {
     unlockAudio(); // this click is the user gesture that lets audio start; it must run before any await
-    const [running] = await Promise.all([resumeAudio(), loadPack(resolved.id, resolved.installed).catch(() => {})]);
+    const [running] = await Promise.all([resumeAudio(), loadChain(chain).catch(() => {})]);
     setAudioProblem(!running);
     play(event, { force: true });
   };
@@ -88,6 +91,7 @@ export function SoundSection() {
         <Select<MovementSounds> label="Movement sounds" value={settings.movement} options={MOVEMENT} onChange={(movement) => update({ movement })} align="end" /></div>
       <div className="setting-row"><span><strong>Sound pack</strong><small>Now playing: {resolvedName}. Themes can suggest a pack; “Match theme” follows it.</small></span>
         <Select<string> label="Sound pack" value={settings.pack} options={packOptions} onChange={(pack) => update({ pack })} align="end" /></div>
+      <SoundFallbacks fallbacks={settings.fallbacks} packs={packs} loaded={loaded} onChange={(fallbacks) => update({ fallbacks })} />
       {audioProblem && <p className="sound-pack-status is-error" role="alert">{AUDIO_UNAVAILABLE_MESSAGE}</p>}
       <div className="setting-row sound-preview-row"><span><strong>Preview</strong><small>Hear each sound of {resolvedName}.</small></span>
         <div className="sound-preview" role="group" aria-label="Preview sounds" data-sound="none">

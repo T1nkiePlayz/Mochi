@@ -28,6 +28,8 @@ export type ThemeManifest = {
   scheme?: "light" | "dark";
   /** Interface sound pack this theme suggests: a built-in pack (mochi, chiptune, glass) or an installed pack id. */
   soundPack?: string;
+  /** Ordered sound pack ids tried after `soundPack` when it is not installed or fails to load (max 5). */
+  soundFallbacks?: string[];
   /** Sort position in theme pickers; built-in themes only. */
   order?: number;
 };

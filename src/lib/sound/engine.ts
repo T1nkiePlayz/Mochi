@@ -15,7 +15,7 @@ const AudioCtor = (): Ctor | undefined => (typeof window === "undefined" ? undef
 let context: AudioContext | null = null;
 let master: GainNode | null = null;
 let buffers = new Map<SoundEvent, AudioBuffer>();
-let packGain = 1;
+let soundGains = new Map<SoundEvent, number>();
 let loadedKey = "";
 let loading: Promise<void> | null = null;
 let wantedKey = "";
@@ -104,36 +104,61 @@ function synthesise(ctx: AudioContext, packId: string): Map<SoundEvent, AudioBuf
   return map;
 }
 
+export type PackChoice = { id: string; installed?: SoundPackInfo };
+export type LoadResult = { /** Installed packs in the chain that could not be loaded at all (fetch/decode errors). */ failed: string[] };
+
+const packKey = (pack: PackChoice) => (pack.installed ? `user:${pack.installed.id}:${pack.installed.version}:${pack.installed.sizeBytes}` : `builtin:${isBuiltinPack(pack.id) ? pack.id : DEFAULT_PACK_ID}`);
+let loadedResult: LoadResult = { failed: [] };
+
 /**
- * Makes `packId` the active pack: a built-in id, or an installed pack (`installed` describes it). Sounds a user pack
- * does not provide, or cannot be decoded here (Ogg on older macOS, for one), fall back to Mochi's own.
+ * Makes the first pack of `chain` the active one, with the rest as per-sound fallbacks: a sound the first pack lacks
+ * (or cannot decode here: Ogg on older macOS, for one) comes from the next pack that has it, ending with Mochi's own
+ * default. Later packs are only read for sounds still missing, so a complete first pack costs nothing extra.
+ * A pack "fails" when it offers sounds this chain needed and none could be read or decoded. The result is cached per chain.
  */
-export function loadPack(packId: string, installed?: SoundPackInfo): Promise<void> {
-  const key = installed ? `user:${installed.id}:${installed.version}:${installed.sizeBytes}` : `builtin:${isBuiltinPack(packId) ? packId : DEFAULT_PACK_ID}`;
+export function loadChain(chain: readonly PackChoice[]): Promise<LoadResult> {
+  const full = chain.some((pack) => !pack.installed && pack.id === DEFAULT_PACK_ID) ? [...chain] : [...chain, { id: DEFAULT_PACK_ID }];
+  const key = full.map(packKey).join("|");
   wantedKey = key;
-  if (key === loadedKey) return Promise.resolve();
+  if (key === loadedKey) return Promise.resolve(loadedResult);
   const ctx = ensureContext();
-  if (!ctx) return Promise.resolve();
-  const run = (async () => {
-    let fallback: Map<SoundEvent, AudioBuffer>;
-    try { fallback = synthesise(ctx, installed ? DEFAULT_PACK_ID : isBuiltinPack(packId) ? packId : DEFAULT_PACK_ID); }
-    catch (error) { warnOnce("could not synthesise the sound pack", error); throw error; }
-    let gain = 1;
-    if (installed) {
-      gain = installed.volume;
-      await Promise.all(installed.events.map(async (event) => {
-        try { fallback.set(event, await decode(ctx, await readSoundPackFile(installed.id, event))); } catch { /* keep the built-in sound */ }
+  if (!ctx) return Promise.resolve({ failed: [] });
+  const run = (async (): Promise<LoadResult> => {
+    const next = new Map<SoundEvent, AudioBuffer>();
+    const gains = new Map<SoundEvent, number>();
+    const failed: string[] = [];
+    for (const pack of full) {
+      const missing = SOUND_EVENTS.filter((event) => !next.has(event));
+      if (missing.length === 0) break;
+      if (!pack.installed) {
+        let synthesised: Map<SoundEvent, AudioBuffer>;
+        try { synthesised = synthesise(ctx, isBuiltinPack(pack.id) ? pack.id : DEFAULT_PACK_ID); }
+        catch (error) { warnOnce("could not synthesise the sound pack", error); throw error; }
+        for (const event of missing) next.set(event, synthesised.get(event)!);
+        continue;
+      }
+      const wanted = missing.filter((event) => pack.installed!.events.includes(event));
+      let loaded = 0;
+      await Promise.all(wanted.map(async (event) => {
+        try { next.set(event, await decode(ctx, await readSoundPackFile(pack.installed!.id, event))); gains.set(event, pack.installed!.volume); loaded += 1; } catch { /* the next pack in the chain covers it */ }
       }));
+      if (wanted.length > 0 && loaded === 0) failed.push(pack.id);
     }
-    if (wantedKey !== key) return; // a newer choice won
-    buffers = fallback;
-    packGain = gain;
+    if (wantedKey !== key) return { failed }; // a newer choice won
+    buffers = next;
+    soundGains = gains;
     loadedKey = key;
+    loadedResult = { failed };
+    return { failed };
   })();
-  loading = run.finally(() => { if (loading === run) loading = null; });
-  loading.catch(() => {}); // callers handle `run`; don't leave a second unhandled rejection
+  const tracked: Promise<void> = run.then(() => undefined).finally(() => { if (loading === tracked) loading = null; });
+  loading = tracked;
+  tracked.catch(() => {}); // callers handle `run`; don't leave a second unhandled rejection
   return run;
 }
+
+/** Single-pack form of `loadChain` (the pack, then Mochi's default). */
+export const loadPack = (packId: string, installed?: SoundPackInfo): Promise<void> => loadChain([{ id: packId, installed }]).then(() => undefined);
 
 export const soundsReady = () => loadedKey !== "" && !loading;
 
@@ -161,7 +186,7 @@ export function play(event: SoundEvent, options: { force?: boolean; volume?: num
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     const gain = ctx.createGain();
-    gain.gain.value = packGain * (options.volume ?? 1);
+    gain.gain.value = (soundGains.get(event) ?? 1) * (options.volume ?? 1);
     source.connect(gain).connect(out);
     voices += 1;
     source.onended = () => { voices = Math.max(0, voices - 1); source.disconnect(); gain.disconnect(); };
