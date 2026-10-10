@@ -20,6 +20,12 @@ create temporary table legacy_schema_fixture (
   constraint unrelated_name_check check (char_length(name) > 0)
 );
 
+create temporary table narrow_source_fixture (
+  name text not null,
+  source_id text,
+  constraint source_id_must_be_steam check (source_id is null or source_id = 'steam')
+);
+
 -- Apply the same catalog-based selection used by the migration to both
 -- fixtures. The source-id allowlist is replaced, not every CHECK that happens
 -- to mention source_id, and unrelated checks must survive.
@@ -31,7 +37,8 @@ declare
 begin
   foreach target_table in array array[
     'pg_temp.expected_schema_fixture'::regclass,
-    'pg_temp.legacy_schema_fixture'::regclass
+    'pg_temp.legacy_schema_fixture'::regclass,
+    'pg_temp.narrow_source_fixture'::regclass
   ]
   loop
     select attnum into source_id_attnum
@@ -68,7 +75,7 @@ begin
 end
 $$;
 
-select plan(9);
+select plan(10);
 
 select lives_ok(
   $$insert into expected_schema_fixture (name, source_id) values ('Legendary', 'legendary')$$,
@@ -103,6 +110,10 @@ select ok(
 select ok(
   exists (select 1 from pg_constraint where conrelid = 'pg_temp.legacy_schema_fixture'::regclass and conname = 'unrelated_name_check'),
   'unrelated CHECK constraints are preserved'
+);
+select ok(
+  exists (select 1 from pg_constraint where conrelid = 'pg_temp.narrow_source_fixture'::regclass and conname = 'source_id_must_be_steam'),
+  'a narrow source_id-specific CHECK is not mistaken for the old allowlist'
 );
 select throws_ok(
   $$insert into legacy_schema_fixture (name, source_id) values ('', 'steam')$$,
