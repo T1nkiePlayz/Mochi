@@ -8,8 +8,7 @@ export function WelcomeStep() {
   return (
     <section className="setup-welcome setup-page">
       <div className="setup-logo"><img src="/mochi-mark.png" alt="Mochi" /></div>
-      <p className="setup-welcome-line">{t("Welcome")}</p>
-      <p className="setup-to">to</p>
+      <p className="setup-welcome-line">{t("Welcome to")}</p>
       <h1 className="mochi-wordmark">Mochi</h1>
       <p className="setup-subtitle">{t("Your games, your way.")}</p>
       <div className="setup-platform-strip" aria-label="Supported game platforms">
