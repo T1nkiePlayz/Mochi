@@ -31,13 +31,51 @@ export const confirmedAfterPull = (cloud: Pick<Piko, "id">[]): Set<string> => ne
 /** After clearing the cloud nothing is confirmed. */
 export const confirmedAfterClear = (): Set<string> => new Set();
 
-/** HTTP client errors usually need a code/configuration fix, not an automatic retry loop. */
+/**
+ * Classifies errors in the shapes returned by Supabase/PostgREST as well as
+ * fetch/network exceptions. Unknown exceptions remain retryable defensively;
+ * known permanent HTTP/SQL errors stop the automatic retry loop.
+ */
 export function isRetryableSyncError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return true;
-  const status = "status" in error ? (error as { status?: unknown }).status : undefined;
-  if (typeof status !== "number") return true;
-  if (status === 408 || status === 425 || status === 429) return true;
-  if (status >= 400 && status < 500) return false;
+  if (!error || typeof error !== "object") {
+    return /failed to fetch|network|timeout|timed out/i.test(String(error ?? ""));
+  }
+
+  const value = error as {
+    status?: unknown;
+    statusCode?: unknown;
+    httpStatusCode?: unknown;
+    code?: unknown;
+    message?: unknown;
+    details?: unknown;
+    context?: { status?: unknown } | null;
+  };
+  const status = [value.status, value.statusCode, value.httpStatusCode, value.context?.status]
+    .find((candidate): candidate is number => typeof candidate === "number");
+
+  if (status !== undefined) {
+    if (status === 408 || status === 425 || status === 429) return true;
+    if (status >= 400 && status < 500) return false;
+    if (status >= 500) return true;
+  }
+
+  const code = typeof value.code === "string" ? value.code.toUpperCase() : "";
+  // SQLSTATE connection, transaction rollback, resource and shutdown classes
+  // are commonly transient; integrity, auth, and SQL/access errors are not.
+  if (/^(08|40|53|57)/.test(code)) return true;
+  if (/^(22|23|28|3D|3F|42)/.test(code)) return false;
+
+  const message = [value.message, value.details]
+    .filter((part): part is string => typeof part === "string")
+    .join(" ");
+  if (/failed to fetch|networkerror|network request failed|load failed|fetch failed|timed out|timeout|connection reset|connection refused/i.test(message)) {
+    return true;
+  }
+  if (/row-level security|row level security|permission denied|violates (?:check|foreign key|unique|not-null) constraint|invalid input syntax|authentication required|cloud sync is not enabled|library must be a json array|library is too large/i.test(message)) {
+    return false;
+  }
+
+  // Unexpected error shapes should not silently disable recovery.
   return true;
 }
 
