@@ -27,7 +27,7 @@ static RECENT_NAMES: Mutex<Vec<String>> = Mutex::new(Vec::new());
 /// The most recently played games, newest first; entries never played (no timestamp) are left out.
 fn recent_games(games: &[playtime::PlaytimeEntry], count: usize) -> Vec<&playtime::PlaytimeEntry> {
     let mut played: Vec<_> = games.iter().filter(|game| game.last_played > 0).collect();
-    played.sort_by(|a, b| b.last_played.cmp(&a.last_played));
+    played.sort_by_key(|game| std::cmp::Reverse(game.last_played));
     played.truncate(count);
     played
 }
