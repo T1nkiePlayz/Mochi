@@ -41,6 +41,11 @@ describe("eligibility and confirmed sets", () => {
     expect(isRetryableSyncError({ code: "PGRST301", message: "JWT expired" })).toBe(false);
     expect(isRetryableSyncError({ status: 408, code: "PGRST000", message: "Request timed out" })).toBe(true);
     expect(isRetryableSyncError({ status: 429, code: "PGRST003", message: "Too many requests" })).toBe(true);
+    expect(isRetryableSyncError({ status: "403", message: "Forbidden" })).toBe(false);
+    expect(isRetryableSyncError({ status: "503", message: "Service unavailable" })).toBe(true);
+    expect(isRetryableSyncError({ context: { status: "429" }, message: "Too many requests" })).toBe(true);
+    expect(isRetryableSyncError({ context: { status: "401" }, message: "Unauthorized" })).toBe(false);
+    expect(isRetryableSyncError({ context: { status: 503 }, message: "Service unavailable" })).toBe(true);
     expect(isRetryableSyncError({ status: 503, code: "PGRST000", message: "Service unavailable" })).toBe(true);
     expect(isRetryableSyncError({ code: "40001", message: "serialization failure" })).toBe(true);
     expect(isRetryableSyncError({ message: "new row violates row-level security policy" })).toBe(false);
