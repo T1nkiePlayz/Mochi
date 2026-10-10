@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Piko } from "../models";
-import { canPoll, dueApps, emptyNewsState, markChecked, mergeNews, modUpdateNews, takeUnseen, type ModUpdateNews, type NewsItem } from "../lib/gameNews";
+import { canPoll, dueApps, emptyNewsState, markChecked, mergeNews, modUpdateNews, steamNewsLanguage, takeUnseen, type ModUpdateNews, type NewsItem } from "../lib/gameNews";
 import { isOnline, markNetworkFailure, markNetworkOk } from "../lib/offline";
 import { steamAppIdOf } from "../lib/metadata/merge";
 import { getNewsSnapshot, setModNews, setNews } from "./gameNewsStore";
@@ -13,12 +13,6 @@ type RawResult = { status: "ok" | "offline" | "error"; items: RawItem[] };
 
 const TICK_MS = 10 * 60 * 1000;
 
-/** Converts the current UI/OS locale to Steam's language names; a future language setting can supply its locale here. */
-export function steamNewsLanguage(locale: string): string {
-  const code = locale.toLowerCase().split(/[-_]/, 1)[0];
-  const names: Record<string, string> = { ar: "arabic", bg: "bulgarian", zh: "schinese", cs: "czech", da: "danish", nl: "dutch", en: "english", fi: "finnish", fr: "french", de: "german", el: "greek", hu: "hungarian", id: "indonesian", it: "italian", ja: "japanese", ko: "koreana", no: "norwegian", pl: "polish", pt: "portuguese", ro: "romanian", ru: "russian", es: "spanish", sv: "swedish", th: "thai", tr: "turkish", uk: "ukrainian", vi: "vietnamese", "zh-tw": "tchinese" };
-  return names[code] ?? "english";
-}
 const FIRST_DELAY_MS = 20_000;
 const STAGGER_MS = 1500;
 
