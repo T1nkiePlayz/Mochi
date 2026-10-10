@@ -30,7 +30,7 @@ export function AddGameModals() {
 
     {add.showCustomGame && <div className="modal-backdrop" onClick={() => add.reset()}>
       <div className={`modal igdb-selection-modal add-game-modal step-${add.step}`} role="dialog" aria-modal="true" aria-label="Add custom game" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === "Escape" && !event.defaultPrevented) add.reset(); }}>
-        <div className="modal-header"><div><p className="eyebrow">{add.step === "igdb" ? "Step 2 · Confirm game identity" : add.step === "cover" ? `Step ${add.hasIgdb ? 3 : 2} · Cover` : "Local library"}</p><h2>{add.step === "igdb" ? "Is this the right game?" : add.step === "cover" ? "Choose a cover" : "Add custom game"}</h2></div><button className="icon-button" type="button" aria-label="Close" onClick={() => add.reset()}><MochiIcon name="close" fallback={X} size={17} /></button></div>
+        <div className="modal-header"><div><p className="eyebrow">{add.step === "igdb" ? t("Step 2 · Confirm game identity") : add.step === "cover" ? t("Step {number} · Cover").replace("{number}", String(add.hasIgdb ? 3 : 2)) : t("Local library")}</p><h2>{add.step === "igdb" ? t("Is this the right game?") : add.step === "cover" ? t("Choose a cover") : t("Add custom game")}</h2></div><button className="icon-button" type="button" aria-label="Close" onClick={() => add.reset()}><MochiIcon name="close" fallback={X} size={17} /></button></div>
         {add.step === "form" && <form onSubmit={(event) => void add.submitCustom(event)} noValidate>
           <p className="modal-description">Choose how Mochi should launch this game. File selection uses the native file dialog.</p>
           <div className="form-fields">
@@ -49,7 +49,7 @@ export function AddGameModals() {
           <button className="play-button form-submit" type="submit" disabled={add.igdbBusy}>{add.igdbBusy ? <><MochiIcon name="refresh" fallback={RefreshCw} size={16} className="spin" /> {t("Searching IGDB…")}</> : <>Next <MochiIcon name="chevron" fallback={ChevronDown} size={16} /></>}</button>
         </form>}
         {add.step === "igdb" && <>
-          <p className="modal-description">{add.pendingGame?.candidates.length ? "Mochi found these matches. Approve the best match to use its artwork, description and categories." : "Mochi could not find a confident match. Search again or add the game without IGDB metadata."}</p>
+          <p className="modal-description">{add.pendingGame?.candidates.length ? t("Mochi found these matches. Approve the best match to use its artwork, description and categories.") : t("Mochi could not find a confident match. Search again or add the game without IGDB metadata.")}</p>
           <form className="artwork-search-bar" onSubmit={(event) => { event.preventDefault(); void add.searchIgdbAgain(searchText); }}>
             <label className="artwork-search-input"><Search size={14} aria-hidden="true" /><input value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Search IGDB again" aria-label="Search IGDB again" /></label>
             <button type="submit" className="secondary-button" disabled={add.igdbBusy || !searchText.trim()}>{add.igdbBusy ? "Searching…" : "Search"}</button>
@@ -68,7 +68,7 @@ export function AddGameModals() {
           <div className="igdb-selection-actions">
             <button type="button" className="secondary-button" onClick={() => add.setStep(add.hasIgdb ? "igdb" : "form")} disabled={add.adding}>Back</button>
             <button type="button" className="secondary-button" onClick={() => void add.finishAdd(false)} disabled={add.adding}>Skip cover</button>
-            <button type="button" className="play-button" onClick={() => void add.finishAdd(true)} disabled={add.adding || !add.cover}><MochiIcon name="plus" fallback={Plus} size={16} /> {add.adding ? "Adding…" : "Add game"}</button>
+            <button type="button" className="play-button" onClick={() => void add.finishAdd(true)} disabled={add.adding || !add.cover}><MochiIcon name="plus" fallback={Plus} size={16} /> {add.adding ? t("Adding…") : t("Add game")}</button>
           </div>
         </>}
       </div>
