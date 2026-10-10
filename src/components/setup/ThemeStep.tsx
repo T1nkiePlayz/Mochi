@@ -28,7 +28,7 @@ export function ThemeStep({ themes, theme, setTheme }: Props) {
                 </span>
                 <span className="setup-theme-copy">
                   <strong>{option.name}{option.source === "user" ? " (yours)" : ""}</strong>
-                  <small>{option.description ?? (option.scheme === "light" ? "Light" : "Dark")}</small>
+                  <small>{option.description ?? (option.scheme === "light" ? t("Light") : t("Dark"))}</small>
                 </span>
                 {selected && <span className="setup-theme-check" aria-hidden="true"><Check size={13} /></span>}
               </button>
