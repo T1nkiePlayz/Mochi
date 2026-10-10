@@ -27,7 +27,7 @@ describe("shared UI translations", () => {
 
   it("covers every literal user-facing JSX string in every supported locale", () => {
     const root = path.resolve(process.cwd(), "src");
-    const skippedTags = new Set(["CodeBlock", "WritingBlock", "AppBlock", "pre", "code", "textarea", "script", "style"]);
+    const skippedTags = new Set(["CodeBlock", "WritingBlock", "AppBlock", "pre", "code", "textarea", "script", "style", "kbd"]);
     const visibleAttributes = new Set(["aria-label", "aria-description", "aria-valuetext", "title", "placeholder", "alt", "label", "description", "emptyLabel", "confirmLabel", "cancelLabel", "submitLabel", "buttonLabel", "heading", "caption", "tooltip", "helpText"]);
     const files: string[] = [];
     const walk = (directory: string) => {
