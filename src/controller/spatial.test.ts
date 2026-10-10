@@ -52,7 +52,7 @@ describe("focusElement scrolling", () => {
     const scrollBy = vi.fn();
     Object.defineProperty(root, "scrollBy", { configurable: true, value: scrollBy });
     const button = document.createElement("button");
-    button.getClientRects = () => [{ } as DOMRect];
+    button.getClientRects = () => [{ } as DOMRect] as unknown as DOMRectList;
     root.append(button);
     document.body.append(root);
     button.focus();
