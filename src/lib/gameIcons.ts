@@ -12,7 +12,8 @@ const MISS_TTL_MS = 30_000;
  * a user types, while successful artwork stays cached for the lifetime of the app.
  */
 export function lookupGameIcon(client: SupabaseClient, cacheKey: string, name: string): Promise<string | null> {
-  const normalizedName = name.trim().toLocaleLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();\n  const key = `${cacheKey.trim().toLocaleLowerCase()}|${normalizedName}`;
+  const normalizedName = name.trim().toLocaleLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  const key = `${cacheKey.trim().toLocaleLowerCase()}|${normalizedName}`;
   const cached = iconLookups.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.promise;
   if (cached) iconLookups.delete(key);
