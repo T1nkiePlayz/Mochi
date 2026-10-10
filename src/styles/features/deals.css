@@ -29,7 +29,7 @@
 .deals-store-option:focus-within { outline: 2px solid var(--mochi-accent-strong); outline-offset: 2px; }
 .deals-store-check { display: grid; place-items: center; flex: 0 0 17px; width: 17px; height: 17px; border: 1px solid var(--mochi-input-border); border-radius: 5px; background: var(--mochi-input-background); }
 .deals-store-option input:checked + .deals-store-check { border-color: var(--mochi-accent-strong); background: var(--mochi-accent-strong); }
-.deals-store-option input:checked + .deals-store-check::after { content: ""; width: 7px; height: 4px; border: solid white; border-width: 0 0 2px 2px; transform: rotate(-45deg) translateY(-1px); }
+.deals-store-option input:checked + .deals-store-check::after { content: ""; width: 7px; height: 4px; border: solid var(--mochi-accent-text); border-width: 0 0 2px 2px; transform: rotate(-45deg) translateY(-1px); }
 .deals-store-option > span:last-child { display: grid; gap: 3px; min-width: 0; }
 .deals-store-option strong { color: var(--mochi-text); font-size: 12px; font-weight: 600; }
 .deals-store-option small { color: var(--mochi-text-muted); font-size: 10px; }
