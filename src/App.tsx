@@ -10,6 +10,7 @@ import { AppProvider, shallowEqual, useApp, useAppSelector } from "./state/AppCo
 import { BigPictureGate } from "./bigpicture/BigPictureGate";
 import { ControllerRuntime } from "./controller/ControllerRuntime";
 import { ShortcutsHelp } from "./components/ShortcutsHelp";
+import { CommandPalette } from "./components/CommandPalette";
 import { AccessibilityProvider } from "./state/accessibility";
 import { installAccessibilityEnhancer } from "./lib/dialogs";
 import { installTruncationTitles } from "./lib/truncationTitles";
@@ -109,5 +110,5 @@ function Shell() {
 export default function App() {
   useEffect(() => installAccessibilityEnhancer(), []);
   useEffect(() => installTruncationTitles(), []);
-  return <AccessibilityProvider><AppProvider><ControllerRuntime /><BigPictureGate><Shell /></BigPictureGate><ShortcutsHelp /></AppProvider></AccessibilityProvider>;
+  return <AccessibilityProvider><AppProvider><ControllerRuntime /><BigPictureGate><Shell /></BigPictureGate><ShortcutsHelp /><CommandPalette /></AppProvider></AccessibilityProvider>;
 }

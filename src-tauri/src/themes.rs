@@ -12,12 +12,12 @@ use crate::util::{fsio::write_atomic_durable, valid_id as valid_segment, MutexEx
 use tauri::{AppHandle, Manager};
 
 const CONFIG_FILE: &str = "config.json";
-const MAX_THEME_ASSET_BYTES: usize = 10 * 1024 * 1024;
+pub(crate) const MAX_THEME_ASSET_BYTES: usize = 10 * 1024 * 1024;
 const THEMES_DIR: &str = "themes";
 const LOCATION_FILE: &str = ".mochi-location";
-const MAX_MANIFEST_BYTES: u64 = 1024 * 1024;
+pub(crate) const MAX_MANIFEST_BYTES: u64 = 1024 * 1024;
 const MAX_THEME_CSS_BYTES: u64 = 1024 * 1024;
-const MAX_THEME_ASSETS: usize = 64;
+pub(crate) const MAX_THEME_ASSETS: usize = 64;
 const MAX_THEME_ASSET_TOTAL_BYTES: u64 = 48 * 1024 * 1024;
 
 /// Serialises every read-modify-write of config.json (theme switches can race with startup or a location move).
@@ -135,7 +135,7 @@ pub fn initialize_config(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-fn themes_dir(app: &AppHandle) -> Result<PathBuf, String> {
+pub(crate) fn themes_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let root = config_dir(app)?;
     let themes = root.join(THEMES_DIR);
     fs::create_dir_all(&themes)
@@ -191,7 +191,7 @@ fn write_json_atomic(path: &Path, value: &Value) -> Result<(), String> {
     write_atomic_durable(path, format!("{content}\n").as_bytes()).map_err(|error| format!("Unable to write Mochi config: {error}"))
 }
 
-fn valid_id(id: &str) -> bool { valid_segment(id, 80) }
+pub(crate) fn valid_id(id: &str) -> bool { valid_segment(id, 80) }
 
 fn validate_manifest(manifest: &ThemeManifest) -> Result<(), String> {
     if manifest.schema_version != 1 {
@@ -221,7 +221,7 @@ fn validate_manifest(manifest: &ThemeManifest) -> Result<(), String> {
     Ok(())
 }
 
-fn safe_relative_path(path: &str) -> Result<PathBuf, String> {
+pub(crate) fn safe_relative_path(path: &str) -> Result<PathBuf, String> {
     let candidate = Path::new(path);
     if candidate.is_absolute() {
         return Err("Theme asset paths must be relative.".into());
@@ -303,14 +303,14 @@ fn read_limited(path: &Path, limit: u64) -> std::io::Result<Vec<u8>> {
     Ok(bytes)
 }
 
-fn read_manifest(path: &Path) -> Result<ThemeManifest, String> {
+pub(crate) fn read_manifest(path: &Path) -> Result<ThemeManifest, String> {
     let label = path.file_name().and_then(|name| name.to_str()).unwrap_or("theme.json");
     let bytes = read_limited(path, MAX_MANIFEST_BYTES)
         .map_err(|error| format!("Unable to read theme manifest '{label}': {error}"))?;
     parse_manifest(&bytes, label)
 }
 
-fn parse_manifest(bytes: &[u8], label: &str) -> Result<ThemeManifest, String> {
+pub(crate) fn parse_manifest(bytes: &[u8], label: &str) -> Result<ThemeManifest, String> {
     let manifest = serde_json::from_slice::<ThemeManifest>(bytes)
         .map_err(|error| format!("Theme manifest '{label}' is invalid JSON: {error}"))?;
     validate_manifest(&manifest)?;

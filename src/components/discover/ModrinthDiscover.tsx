@@ -1,3 +1,4 @@
+import { DISCOVER_QUERY_EVENT } from "../../lib/discoverQuery";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Layers, RefreshCw, WifiOff } from "lucide-react";
 import { getModrinthProject, type ModrinthProject, type ModrinthProjectDetails, type ModrinthProjectType } from "../../lib/modrinth";
@@ -58,6 +59,7 @@ export function ModrinthDiscover({ tofu, pikos, supabase, nexusConfigured }: Pro
   const [cfLoader, setCfLoader] = useState("");
   const [pendingKey, setPendingKey] = useState("");
   const install = useModInstall();
+  useEffect(() => { const toAll = () => setTab({ kind: "all" }); window.addEventListener(DISCOVER_QUERY_EVENT, toAll); return () => window.removeEventListener(DISCOVER_QUERY_EVENT, toAll); }, []);
 
   const minecraftSources = resolveSources({ minecraft: true }, settings);
   const nothingOn = !settings.modrinth && !settings.curseforge && !settings.nexus;

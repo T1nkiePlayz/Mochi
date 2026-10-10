@@ -37,6 +37,13 @@ export function setOverride(key: string, kind: KindOverride | null): void {
   listeners.forEach((listener) => listener());
 }
 
+/** Replaces every override (settings import) and notifies subscribers. */
+export function replaceOverrides(next: KindOverrides): void {
+  cache = sanitizeOverrides(next);
+  writeJson(storageKeys.launcherOverrides, cache);
+  listeners.forEach((listener) => listener());
+}
+
 export function subscribeOverrides(listener: () => void): () => void {
   listeners.add(listener);
   return () => { listeners.delete(listener); };

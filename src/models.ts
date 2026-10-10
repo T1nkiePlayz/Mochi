@@ -101,6 +101,9 @@ export type Tofu = {
 export type TrailerVideo = { name: string; thumbnail?: string; mp4?: string; webm?: string; hls?: string };
 export type ContentType = "game" | "soundtrack" | "extra";
 
+/** One way to start a game that was found in several places (Steam, Heroic, Flatpak...); see `src/lib/duplicates.ts`. `id` is the id of the Piko it came from. */
+export type LaunchSource = { id: string; label: string; sourceId?: ImportSourceId; executablePath: string; installPath?: string; importKey?: string };
+
 export type Piko = {
   id: string;
   name: string;
@@ -155,6 +158,12 @@ export type Piko = {
   };
   /** Save-backup settings of this device (folder paths never leave it). `auto` unset means the default: on for Minecraft, off otherwise. */
   saveBackup?: { auto?: boolean; folders?: string[] };
+  /** Set when several copies of the same game were merged: every way to start it (the primary included). Local to this device (not part of the cloud schema). */
+  launchSources?: LaunchSource[];
+  /** The `launchSources` id "Play" uses; the first source when unset. */
+  preferredSource?: string;
+  /** Hidden, exact copies of the Pikos merged into this one, so Unmerge restores them untouched. Local to this device. */
+  mergedFrom?: Piko[];
   tofus: Tofu[];
 };
 

@@ -1,3 +1,4 @@
+import { DISCOVER_QUERY_EVENT, clearDiscoverQuery, peekDiscoverQuery } from "../../lib/discoverQuery";
 import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -34,8 +35,10 @@ type Props = {
  * to add. Typing in the search box swaps the sections for one list across every game. Primary site per game only, so it stays light.
  */
 export function AllGamesFeed({ games, cfGames, pikos, supabase, settings, refreshKey, onSeeAll, onAddGame }: Props) {
-  const [text, setText] = useState("");
-  const [query, setQuery] = useState("");
+  const [text, setText] = useState(peekDiscoverQuery);
+  const [query, setQuery] = useState(() => text.trim());
+  // "Install mod <name>" from the command palette prefills the search, also when Discover is already open.
+  useEffect(() => { clearDiscoverQuery(); const onQuery = () => { setText(peekDiscoverQuery()); clearDiscoverQuery(); }; window.addEventListener(DISCOVER_QUERY_EVENT, onQuery); return () => window.removeEventListener(DISCOVER_QUERY_EVENT, onQuery); }, []);
   useEffect(() => { const timer = window.setTimeout(() => setQuery(text.trim()), 300); return () => window.clearTimeout(timer); }, [text]);
   const searching = text.trim() !== "" && query !== "";
 

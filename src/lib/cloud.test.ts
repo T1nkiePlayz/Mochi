@@ -19,4 +19,10 @@ describe("mergeCloudLibrary", () => {
   it("keeps device-only games after the cloud ones", () => {
     expect(mergeCloudLibrary([piko("x"), piko("a")], [piko("a"), piko("b")]).map((p) => p.id)).toEqual(["a", "b", "x"]);
   });
+  it("keeps merge data local and does not bring back a game that was merged into another", () => {
+    const local = [piko("a", { launchSources: [{ id: "a", label: "Steam", executablePath: "s" }, { id: "b", label: "Heroic", executablePath: "h" }], preferredSource: "b", mergedFrom: [piko("b")] })];
+    const merged = mergeCloudLibrary(local, [piko("a"), piko("b")]);
+    expect(merged.map((p) => p.id)).toEqual(["a"]);
+    expect(merged[0]).toMatchObject({ preferredSource: "b", launchSources: [{ id: "a" }, { id: "b" }], mergedFrom: [{ id: "b" }] });
+  });
 });

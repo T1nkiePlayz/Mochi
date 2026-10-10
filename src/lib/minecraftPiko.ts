@@ -2,6 +2,7 @@ import type { ModLoader, Piko, Tofu } from "../models";
 import grassBlock from "../assets/minecraft-grass-block.svg";
 import { sanitizeKey } from "./metadata";
 import type { ImportedGame } from "./sources";
+import { mergedIds, sourceTargetFor } from "./launchSources";
 
 /** Minecraft is one Piko; every launcher instance (Prism, MultiMC, ...) is a Tofu of it. */
 export const MINECRAFT_PIKO_ID = "minecraft";
@@ -116,13 +117,14 @@ export function migrateMinecraftPikos(library: Piko[]): Piko[] {
   return [...before, merged, ...rest.slice(before.length)];
 }
 
-/** What to start for a Tofu: its own instance target, else the Piko's. */
-export const launchTargetFor = (piko: Pick<Piko, "executablePath">, tofu?: Pick<Tofu, "launchTarget">): string | undefined => tofu?.launchTarget || piko.executablePath;
+/** What to start for a Tofu: its own instance target, else the chosen launch source of a merged game, else the Piko's. */
+export const launchTargetFor = (piko: Pick<Piko, "executablePath"> & Partial<Pick<Piko, "launchSources" | "preferredSource">>, tofu?: Pick<Tofu, "launchTarget">): string | undefined => tofu?.launchTarget || sourceTargetFor(piko);
 
-/** Playtime of the Pikos that were merged into Minecraft counts for Minecraft: one entry per Piko with the sum and the latest play. */
+/** Playtime of the Pikos that were merged into another (Minecraft instances, duplicate sources) counts for that Piko: one entry per Piko with the sum and the latest play. */
 export function foldLegacyPlaytime<T extends { gameId: string; seconds: number; lastPlayed: number }>(entries: T[], library: Piko[]): T[] {
   const alias = new Map<string, string>();
   for (const piko of library) for (const tofu of piko.tofus) if (tofu.legacyPikoId && tofu.legacyPikoId !== piko.id) alias.set(tofu.legacyPikoId, piko.id);
+  for (const piko of library) for (const id of mergedIds(piko)) if (id !== piko.id) alias.set(id, piko.id);
   if (!alias.size) return entries;
   const out = new Map<string, T>();
   for (const entry of entries) {
