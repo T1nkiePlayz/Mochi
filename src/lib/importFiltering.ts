@@ -24,6 +24,9 @@ export function isImportedGameInLibrary(game: ImportedGame, library: Piko[]): bo
     // Minecraft instances are represented as Tofus under the shared Minecraft Piko.
     if (isInstanceTarget(game.launchTarget) && piko.tofus.some((tofu) => tofu.launchTarget === game.launchTarget)) return true;
 
+    // A shared executable can back both a launcher shortcut and a game entry; never conflate those kinds by path alone.
+    const sameKind = (piko.kind === "launcher") === (game.kind === "launcher");
+    if (!sameKind) return false;
     if (target && normalizeTarget(piko.executablePath) === target) return true;
     return (piko.launchSources ?? []).some((source) => target && normalizeTarget(source.executablePath) === target);
   });
