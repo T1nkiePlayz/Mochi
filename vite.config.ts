@@ -37,11 +37,11 @@ function jsxLocalizationPlugin() {
   const visibleAttributes = new Set(["aria-label", "aria-description", "aria-valuetext", "title", "placeholder", "alt", "label", "description", "emptyLabel", "confirmLabel", "cancelLabel", "submitLabel", "buttonLabel", "heading", "caption", "tooltip", "helpText"]);
 
   function normalizeText(value: string): string {
-    const lines = value.split(/\\r?\\n/);
+    const lines = value.split(/\r?\n/);
     const normalized = lines.map((line, index) => {
-      let part = line.replace(/\\t/g, " ");
-      if (index > 0) part = part.replace(/^\\s+/, "");
-      if (index < lines.length - 1) part = part.replace(/\\s+$/, "");
+      let part = line.replace(/\t/g, " ");
+      if (index > 0) part = part.replace(/^\s+/, "");
+      if (index < lines.length - 1) part = part.replace(/\s+$/, "");
       return part;
     }).filter((part) => part.length > 0);
     return normalized.join(" ");
@@ -55,8 +55,8 @@ function jsxLocalizationPlugin() {
     name: "mochi-jsx-localization",
     enforce: "pre" as const,
     transform(code: string, id: string) {
-      const filename = id.split("?")[0].replace(/\\\\/g, "/");
-      if (!filename.includes("/src/") || !filename.endsWith(".tsx") || filename.endsWith("/LocalizedText.tsx") || /\\.test\\.tsx$/.test(filename)) return null;
+      const filename = id.split("?")[0].replace(/\\/g, "/");
+      if (!filename.includes("/src/") || !filename.endsWith(".tsx") || filename.endsWith("/LocalizedText.tsx") || /\.test\.tsx$/.test(filename)) return null;
 
       const source = ts.createSourceFile(filename, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
       let changed = false;
@@ -98,7 +98,7 @@ function jsxLocalizationPlugin() {
         if (ts.isJsxText(node) && !skipText) {
           const normalized = normalizeText(node.text);
           const message = decodeEntities(normalized.trim());
-          if (!message || !/[\\p{L}\\p{N}]/u.test(message)) return node;
+          if (!message || !/[\p{L}\p{N}]/u.test(message)) return node;
           return localizedText(message, /^\\s/.test(normalized), /\\s$/.test(normalized));
         }
         if (ts.isJsxExpression(node) && node.expression && ts.isStringLiteralLike(node.expression) && !skipText) {
@@ -110,7 +110,7 @@ function jsxLocalizationPlugin() {
       const context = ts.nullTransformationContext;
       const statements = source.statements.map((statement) => visitNode(statement) as ts.Statement);
       if (!changed) return null;
-      const relative = path.relative(path.dirname(filename), path.resolve("src/components/LocalizedText")).replace(/\\\\/g, "/");
+      const relative = path.relative(path.dirname(filename), path.resolve("src/components/LocalizedText")).replace(/\\/g, "/");
       const importPath = relative.startsWith(".") ? relative : "./" + relative;
       const localizedImport = factory.createImportDeclaration(
         undefined,
@@ -121,7 +121,7 @@ function jsxLocalizationPlugin() {
       const translateImport = factory.createImportDeclaration(
         undefined,
         factory.createImportClause(false, undefined, factory.createNamedImports([factory.createImportSpecifier(false, undefined, factory.createIdentifier("translate"))])),
-        factory.createStringLiteral(path.relative(path.dirname(filename), path.resolve("src/lib/i18n")).replace(/\\\\/g, "/").replace(/^([^.]|$)/, "./$1")),
+        factory.createStringLiteral(path.relative(path.dirname(filename), path.resolve("src/lib/i18n")).replace(/\\/g, "/").replace(/^([^.]|$)/, "./$1")),
         undefined,
       );
       const transformed = factory.updateSourceFile(source, [localizedImport, translateImport, ...statements]);
