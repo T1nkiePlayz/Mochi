@@ -1,5 +1,6 @@
 // Lazy, memory-only changelog lookup for the Updates tab. Nothing here is written to disk (CurseForge terms).
 import type { ModUpdateItem } from "./updates";
+import { getModrinthVersion } from "../modrinth";
 
 export type Changelog = { kind: "markdown"; text: string } | { kind: "link"; url: string; label: string } | { kind: "none" };
 
@@ -51,4 +52,4 @@ export function createChangelogLoader(fetchModrinth: (versionId: string) => Prom
 
 let shared: ReturnType<typeof createChangelogLoader> | undefined;
 /** The app-wide loader (created on first use; the Modrinth client loads on demand). */
-export const loadChangelog = (item: ModUpdateItem) => (shared ??= createChangelogLoader(async (id) => (await import("../modrinth")).getModrinthVersion(id).then((version) => version.changelog))).load(item);
+export const loadChangelog = (item: ModUpdateItem) => (shared ??= createChangelogLoader(async (id) => getModrinthVersion(id).then((version) => version.changelog))).load(item);
