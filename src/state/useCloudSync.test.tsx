@@ -41,6 +41,7 @@ describe("useCloudSync account switch", () => {
 describe("useCloudSync initialization recovery", () => {
   it("retries initialization after a local library change following a permanent settings error", async () => {
     const settings = vi.mocked(getCloudAccountSettings);
+    settings.mockClear();
     settings.mockRejectedValueOnce({
       status: 403,
       code: "42501",
