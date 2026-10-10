@@ -14,6 +14,7 @@ import type { ImportedGame, ImportSourceId } from "../lib/sources";
 import type { MinecraftMode } from "../lib/minecraftCopy";
 import { discardPendingWrites, readJson, readString, storageKeys, writeJson, writeString } from "../lib/storage";
 import { normalizeBehavior, type Behavior } from "./settings";
+import { applyLauncherLanguage } from "../lib/languages";
 import { useNotifications } from "./useNotifications";
 import { useAccount } from "./useAccount";
 import { useCredentials } from "./useCredentials";
@@ -95,7 +96,8 @@ function useAppController() {
       notifications.setShowNotifications(false);
     },
   });
-  useGameNewsPoller(behavior.gameNews, lib.library, notify);
+  useEffect(() => { applyLauncherLanguage(behavior.language); }, [behavior.language]);
+  useGameNewsPoller(behavior.gameNews, lib.library, notify, behavior.language);
   useScheduledBackup(storage.ready, notify);
   useLibraryWatcher(behavior.watchFolders, storage.ready, lib.library, notify);
   const collections = useCollections(storage.ownerKey, storage.ready, lib.setLibrary);
