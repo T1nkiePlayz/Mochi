@@ -51,7 +51,7 @@ export const Sidebar = memo(function Sidebar() {
   const placed = Boolean(menuStyle);
   useEffect(() => { if (showAccountMenu && placed) { const menu = menuRef.current; if (menu && !menu.contains(document.activeElement)) menu.querySelector<HTMLElement>("[role='menuitem']")?.focus({ preventScroll: true }); } }, [showAccountMenu, placed]);
   return <aside className="sidebar" ref={ref}>
-    <div className="brand"><div className="brand-mark"><img src="/mochi-mark.png" alt="Mochi" /></div><div><strong>Mochi</strong><span>Your games, your way.</span></div></div>
+    <div className="brand"><div className="brand-mark"><img src="/mochi-mark.png" alt="Mochi" /></div><div><strong>Mochi</strong><span>{t("Your games, your way.")}</span></div></div>
     <div className="sidebar-account-wrap" ref={accountWrap}>
       <button className="sidebar-account" ref={triggerRef} title={usernameOf(user)} aria-label={`Account: ${usernameOf(user)}`} aria-haspopup="menu" aria-expanded={showAccountMenu} onClick={() => setShowAccountMenu(!showAccountMenu)}><AccountAvatar user={user} size={34} /><span><strong>{usernameOf(user)}</strong><small>{user ? t("Mochi account") : t("Sign in to Mochi")}</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={14} /></button>
       {showAccountMenu && menuStyle && createPortal(<div className="account-menu" ref={menuRef} style={menuStyle} role="menu" aria-label={t("Account")} onKeyDown={moveInMenu}>
@@ -61,7 +61,7 @@ export const Sidebar = memo(function Sidebar() {
         {user && <button type="button" role="menuitem" className="account-menu-add" onClick={() => { setShowAccountMenu(false); void getApp().account.signOut(); }}><span className="account-menu-avatar">↪</span><span><strong>{t("Sign out")}</strong><small>{t("Keep local Mochi data")}</small></span></button>}
       </div>, document.body)}
     </div>
-    <nav className="primary-nav" aria-label="Main navigation">
+    <nav className="primary-nav" aria-label={t("Main navigation")}>
       {navItems.filter(({ id }) => id !== "Deals" || showDeals).map(({ id, icon: Icon, iconName }) => (
         <button className={`nav-item ${activeNav === id ? "active" : ""}`} key={id} title={navLabel(id, language)} aria-label={navLabel(id, language)} aria-current={activeNav === id ? "page" : undefined} onClick={() => setActiveNav(id)}>
           <MochiIcon name={iconName} fallback={Icon} size={17} strokeWidth={1.8} />
