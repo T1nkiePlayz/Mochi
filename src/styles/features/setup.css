@@ -67,6 +67,22 @@
   width: min(480px, 100%); display: flex; flex-direction: column; align-items: stretch; gap: 18px; padding: 24px 28px;
   border: 1px solid var(--mochi-border); border-radius: 14px; background: var(--mochi-surface); text-align: left;
 }
+.setup-account-card.is-connected { gap: 16px; padding: 22px; border-color: color-mix(in srgb, var(--mochi-success) 34%, var(--mochi-border)); background: linear-gradient(145deg, color-mix(in srgb, var(--mochi-success) 7%, var(--mochi-surface)), var(--mochi-surface) 58%); box-shadow: var(--mochi-shadow-card); }
+.setup-account-profile { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.setup-account-avatar { flex: 0 0 auto; border: 2px solid color-mix(in srgb, var(--mochi-success) 38%, var(--mochi-border)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--mochi-success) 10%, transparent); }
+.setup-account-identity { display: grid; gap: 4px; min-width: 0; flex: 1; }
+.setup-account-identity strong { overflow: hidden; color: var(--mochi-text-strong); font-size: 16px; text-overflow: ellipsis; white-space: nowrap; }
+.setup-account-identity span { overflow: hidden; color: var(--mochi-text-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.setup-account-profile .setup-account-connected { flex: 0 0 auto; padding: 7px 10px; border-radius: 999px; font-size: 10px; }
+.setup-account-connected-details { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid color-mix(in srgb, var(--mochi-success) 20%, var(--mochi-border)); border-radius: 10px; color: var(--mochi-success); background: color-mix(in srgb, var(--mochi-success) 6%, transparent); }
+.setup-account-connected-details > svg { flex: 0 0 auto; margin-top: 1px; }
+.setup-account-connected-details span { display: grid; gap: 3px; }
+.setup-account-connected-details strong { color: var(--mochi-text-strong); font-size: 11px; }
+.setup-account-connected-details small { color: var(--mochi-text-muted); font-size: 10px; line-height: 1.45; }
+.setup-account-card.is-connected .setup-account-add { display: flex; align-items: center; gap: 14px; justify-content: space-between; padding-top: 14px; border-top: 1px solid var(--mochi-border); }
+.setup-account-card.is-connected .setup-account-add > div { display: grid; gap: 3px; }
+.setup-account-card.is-connected .setup-account-add > div strong { color: var(--mochi-text-strong); font-size: 11px; }
+.setup-account-card.is-connected .setup-account-add .secondary-button { flex: 0 0 auto; }
 .setup-account-benefits { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
 .setup-account-benefits li { display: flex; align-items: flex-start; gap: 12px; }
 .setup-account-benefit-icon {
@@ -81,3 +97,6 @@
   color: var(--mochi-accent-strong); background: var(--mochi-accent-soft); border: 1px solid var(--mochi-accent); font-size: 12px; font-weight: 600;
 }
 .setup-account-note { margin: 0; text-align: center; color: var(--mochi-text-muted); font-size: 11px; }
+@media (max-width: 700px) {
+  .setup-account-card.is-connected .setup-account-add { align-items: stretch; flex-direction: column; }
+}
