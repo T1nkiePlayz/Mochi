@@ -11,5 +11,13 @@ describe("format", () => {
     expect(ago(100)).toBe("1 minute ago");
     expect(ago(10)).toBe("just now");
   });
-  it("playtime", () => { expect(formatPlaytime(3700)).toBe("1h 1m"); });
+  it("playtime", () => { expect(formatPlaytime(3700, "en")).toBe("1h 1m"); });
+  it("formats relative time using the selected locale", () => {
+    expect(formatRelativeTime(Date.now() / 1000 - 120, "fr")).toContain("il y a");
+    expect(formatRelativeTime(Date.now() / 1000 - 120, "de")).toContain("vor");
+  });
+  it("localizes playtime units", () => {
+    expect(formatPlaytime(3700, "fr")).not.toBe("1h 1m");
+    expect(formatPlaytime(3700, "ja")).not.toBe("1h 1m");
+  });
 });
