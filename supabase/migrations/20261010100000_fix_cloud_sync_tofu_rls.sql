@@ -9,12 +9,44 @@
 -- Keep the server's source-id constraint aligned with source ids currently
 -- emitted by src/lib/cloud.ts. In particular, legendary/nile otherwise make a
 -- whole-library RPC fail when a library contains one of those launchers.
-alter table public.pikos drop constraint if exists pikos_source_id_check;
-alter table public.pikos add constraint pikos_source_id_check
-  check (source_id is null or source_id in (
-    'flatpak', 'heroic', 'steam', 'lutris', 'bottles', 'itch', 'apps',
-    'epic', 'whisky', 'battlenet', 'gog', 'prism', 'legendary', 'nile'
-  ));
+do $
+declare
+  source_id_attnum smallint;
+  constraint_row record;
+begin
+  select attnum into source_id_attnum
+  from pg_attribute
+  where attrelid = 'public.pikos'::regclass
+    and attname = 'source_id'
+    and not attisdropped;
+
+  if source_id_attnum is null then
+    raise exception 'public.pikos.source_id column is required for cloud sync';
+  end if;
+
+  -- Replace only allowlist checks that constrain source_id alone. Older
+  -- installs may have kept an auto-generated name, so matching by name alone
+  -- is insufficient. Other checks (size, kind, artwork, etc.) are untouched.
+  for constraint_row in
+    select c.conname
+    from pg_constraint c
+    where c.conrelid = 'public.pikos'::regclass
+      and c.contype = 'c'
+      and c.conkey = array[source_id_attnum]::smallint[]
+      and pg_get_constraintdef(c.oid) ~* 'source_id'
+      and pg_get_constraintdef(c.oid) ~* '(= any| in[[:space:]]*\\()'
+      and pg_get_constraintdef(c.oid) ~* '''(flatpak|heroic|steam|lutris|bottles|itch|apps|epic|whisky|battlenet|gog|prism|legendary|nile)'''
+  loop
+    execute format('alter table public.pikos drop constraint %I', constraint_row.conname);
+  end loop;
+
+  alter table public.pikos add constraint pikos_source_id_check
+    check (source_id is null or source_id in (
+      'flatpak', 'heroic', 'steam', 'lutris', 'bottles', 'itch', 'apps',
+      'epic', 'whisky', 'battlenet', 'gog', 'prism', 'legendary', 'nile'
+    ));
+end
+$;
 
 create or replace function public.sync_my_library(library jsonb)
 returns jsonb
