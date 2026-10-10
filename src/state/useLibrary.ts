@@ -121,8 +121,14 @@ export function useLibrary(playtime: PlaytimeEntry[], isRunning: (gameId: string
       if (group) group.push(piko); else groups.set(category, [piko]);
     });
     // Favourites are pinned to the top of their category, then games with metadata before placeholder-art games (both stable).
-    return [...groups.entries()].sort(([x], [y]) => x.localeCompare(y))
-      .map(([category, games]) => [category, [...placeholdersLast(games.filter((game) => game.favorite)), ...placeholdersLast(games.filter((game) => !game.favorite))]] as [string, Piko[]]);
+    // Keep Applications at the end of the main library, immediately before the separate Soundtracks & extras section.
+    // All other categories remain alphabetically ordered, regardless of whether Applications has any games.
+    return [...groups.entries()].sort(([x], [y]) => {
+      const xApplications = x.trim().toLocaleLowerCase() === "applications";
+      const yApplications = y.trim().toLocaleLowerCase() === "applications";
+      if (xApplications !== yApplications) return xApplications ? 1 : -1;
+      return x.localeCompare(y);
+    }).map(([category, games]) => [category, [...placeholdersLast(games.filter((game) => game.favorite)), ...placeholdersLast(games.filter((game) => !game.favorite))]] as [string, Piko[]]);
   }, [visiblePikos, librarySort, playtimeById]);
 
   /** Instance sub-entries per Piko id (Minecraft): all of them, or only the ones the search matches. */
