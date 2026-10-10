@@ -22,7 +22,9 @@ type SetupProps = {
   igdbClientSecret: string;
   setIgdbClientSecret: (value: string) => void;
   onSignIn: () => void;
-  user: User | null;\n  language: string;\n  setLanguage: (language: LauncherLanguage) => void;
+  user: User | null;
+  language: string;
+  setLanguage: (language: LauncherLanguage) => void;
   onAddUser?: () => void;
   credentialStatus: Record<ProviderCredential, boolean>;
   credentialStatusLoaded: boolean;
@@ -35,7 +37,12 @@ type SetupProps = {
   setSteamGridDbKey: (value: string) => void;
   saveCredential: (provider: ProviderCredential) => Promise<void>;
   credentialBusy: ProviderCredential | null;
-  onFinish: (games: ImportedGame[], sources: ImportSourceId[], minecraftMode: MinecraftMode) => void;\n  cloudSyncEnabled: boolean;\n  cloudSyncState: string;\n  cloudImportBusy: boolean;\n  cloudImportMessage: string;\n  onImportCloudData: () => Promise<void>;
+  onFinish: (games: ImportedGame[], sources: ImportSourceId[], minecraftMode: MinecraftMode) => void;
+  cloudSyncEnabled: boolean;
+  cloudSyncState: string;
+  cloudImportBusy: boolean;
+  cloudImportMessage: string;
+  onImportCloudData: () => Promise<void>;
 };
 
 const steps = ["welcome", "language", "theme", "accessibility", "account", "cloud", "services", "imports"] as const;
@@ -67,10 +74,12 @@ export function FirstLaunchSetup(props: SetupProps) {
           {steps.map((item, position) => <span key={item} className={position <= index ? "active" : ""} />)}
         </div>
         <div className="setup-body" key={step}>
-          {step === "welcome" && <WelcomeStep />}\n          {step === "language" && <LanguageStep language={props.language} setLanguage={props.setLanguage} />}
+          {step === "welcome" && <WelcomeStep />}
+          {step === "language" && <LanguageStep language={props.language} setLanguage={props.setLanguage} />}
           {step === "theme" && <ThemeStep themes={props.themes} theme={props.theme} setTheme={props.setTheme} />}
           {step === "accessibility" && <AccessibilityStep />}
-          {step === "account" && <AccountStep user={props.user} onSignIn={props.onSignIn} onAddUser={props.onAddUser} />}\n          {step === "cloud" && <CloudImportStep busy={props.cloudImportBusy} message={props.cloudImportMessage} syncEnabled={props.cloudSyncEnabled} syncState={props.cloudSyncState} onImport={props.onImportCloudData} />}
+          {step === "account" && <AccountStep user={props.user} onSignIn={props.onSignIn} onAddUser={props.onAddUser} />}
+          {step === "cloud" && <CloudImportStep busy={props.cloudImportBusy} message={props.cloudImportMessage} syncEnabled={props.cloudSyncEnabled} syncState={props.cloudSyncState} onImport={props.onImportCloudData} />}
           {step === "services" && <ServicesStep {...props} signedIn={Boolean(props.user)} />}
           {step === "imports" && <ImportStep onSelectionChange={setSelection} />}
         </div>
