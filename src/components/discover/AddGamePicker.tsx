@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Search, X } from "lucide-react";
 import type { CfGame } from "../../lib/curseforge";
 import { entryBadges, searchGameCatalog, type CatalogEntry } from "../../lib/mods/gameCatalog";
@@ -26,7 +26,7 @@ export function AddGamePicker({ cfGames, nexusGames, cfEnabled, nexusEnabled, on
     let cancelled = false;
     // Resolve artwork for the visible search results first, not the entire Nexus catalogue.
     // Shared lookup caching means opening Discover tabs and this picker never duplicate requests.
-    const candidates = rows.filter((entry) => entry.nexus && !entry.iconUrl && !resolvedIcons[entry.nexus.domain.toLocaleLowerCase()]).slice(0, 16);
+    const candidates = rows.filter((entry) => entry.nexus && !entry.iconUrl && !resolvedIconsRef.current[entry.nexus.domain.toLocaleLowerCase()]).slice(0, 16);
     let nextIndex = 0;
     const worker = async () => {
       while (!cancelled) {
@@ -40,7 +40,7 @@ export function AddGamePicker({ cfGames, nexusGames, cfEnabled, nexusEnabled, on
     };
     void Promise.all(Array.from({ length: Math.min(6, candidates.length) }, () => worker()));
     return () => { cancelled = true; };
-  }, [rows, supabase, igdbConfigured, resolvedIcons]);
+  }, [rows, supabase, igdbConfigured]);
 
   return <ModalShell label="Add a game to Discover" className="tofu-picker-window nexus-game-picker-window" onClose={onClose}>
     <div className="modal-header"><div><p className="eyebrow">Discover</p><h2>Add a game</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button></div>
