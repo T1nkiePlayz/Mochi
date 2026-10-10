@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { focusElement } from "./spatial";
+import { focusElement, moveFocus } from "./spatial";
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -41,6 +41,41 @@ describe("focusElement scrolling", () => {
       inline: "nearest",
       behavior: "smooth",
     });
+  });
+
+  it("uses instant scrolling when controller navigation reaches the end of a Big Picture column", () => {
+    const root = document.createElement("div");
+    root.setAttribute("data-bp-root", "");
+    root.style.overflowY = "auto";
+    Object.defineProperty(root, "scrollHeight", { configurable: true, value: 500 });
+    Object.defineProperty(root, "clientHeight", { configurable: true, value: 100 });
+    const scrollBy = vi.fn();
+    Object.defineProperty(root, "scrollBy", { configurable: true, value: scrollBy });
+    const button = document.createElement("button");
+    button.getClientRects = () => [{ } as DOMRect];
+    root.append(button);
+    document.body.append(root);
+    button.focus();
+
+    expect(moveFocus("down")).toBe(true);
+    expect(scrollBy).toHaveBeenCalledWith({ top: 160, behavior: "instant" });
+  });
+
+  it("keeps smooth fallback scrolling in the regular launcher", () => {
+    const root = document.createElement("div");
+    root.style.overflowY = "auto";
+    Object.defineProperty(root, "scrollHeight", { configurable: true, value: 500 });
+    Object.defineProperty(root, "clientHeight", { configurable: true, value: 100 });
+    const scrollBy = vi.fn();
+    Object.defineProperty(root, "scrollBy", { configurable: true, value: scrollBy });
+    const button = document.createElement("button");
+    button.getClientRects = () => [{ } as DOMRect];
+    root.append(button);
+    document.body.append(root);
+    button.focus();
+
+    expect(moveFocus("down")).toBe(true);
+    expect(scrollBy).toHaveBeenCalledWith({ top: 160, behavior: "smooth" });
   });
 
   it("honours reduced-motion settings outside Big Picture", () => {
