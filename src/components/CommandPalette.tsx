@@ -5,6 +5,7 @@ import { commandsVersion, listCommands, subscribeCommands } from "../lib/command
 import { registerBuiltinCommands, registerLaunchProfileCommands, registerThemeCommands } from "../lib/builtinCommands";
 import { OPEN_PALETTE_EVENT, parsePaletteQuery, paletteShortcutLabel, rankPalette, readRecents, rememberAction, type PaletteItem } from "../lib/palette";
 import { useBigPictureActive } from "../bigpicture/mode";
+import { useTranslation } from "../lib/useTranslation";
 
 /**
  * Ctrl/Cmd+K command palette: games and actions in one list. ">" shows actions only. Rows are real buttons, so keyboard,
@@ -39,6 +40,7 @@ export function CommandPalette() {
 }
 
 function PaletteDialog({ getApp, platform, onClose }: { getApp: ReturnType<typeof useAppGetter>; platform?: string; onClose: () => void }) {
+  const t = useTranslation();
   const [raw, setRaw] = useState("");
   const deferred = useDeferredValue(raw);
   const [recents] = useState(readRecents);
@@ -84,7 +86,7 @@ function PaletteDialog({ getApp, platform, onClose }: { getApp: ReturnType<typeo
     <div className="modal palette-modal" role="dialog" aria-modal="true" aria-label="Command palette" onKeyDown={onKeyDown}>
       <div className="palette-search">
         <Search size={16} aria-hidden="true" />
-        <input ref={input} data-autofocus value={raw} onChange={(event) => setRaw(event.target.value)} placeholder={mode === "actions" ? "Run an action…" : "Search games and actions, or type > for actions"} aria-label="Search games and actions" role="combobox" aria-expanded="true" aria-controls="palette-list" autoComplete="off" spellCheck={false} />
+        <input ref={input} data-autofocus value={raw} onChange={(event) => setRaw(event.target.value)} placeholder={mode === "actions" ? t("Run an action…") : t("Search games and actions, or type > for actions")} aria-label="Search games and actions" role="combobox" aria-expanded="true" aria-controls="palette-list" autoComplete="off" spellCheck={false} />
         <kbd>{paletteShortcutLabel(platform)}</kbd>
         <button type="button" className="icon-button" aria-label="Close command palette" onClick={onClose}><X size={15} aria-hidden="true" /></button>
       </div>
