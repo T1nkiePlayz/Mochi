@@ -37,16 +37,18 @@ type Props = {
   supabase: SupabaseClient | null;
   /** The user saved a Nexus key: only then are the built-in Nexus-only seed games listed (added games are always browsable). */
   nexusConfigured: boolean;
+  /** IGDB credentials are stored server-side; this flag only reports whether a key is configured. */
+  igdbConfigured: boolean;
 };
 
 const loaderOptions = [{ value: "", label: "Any loader" }, { value: "fabric", label: "Fabric" }, { value: "forge", label: "Forge" }, { value: "neoforge", label: "NeoForge" }, { value: "quilt", label: "Quilt" }];
 const cfLabels: Record<ModrinthProjectType, string> = { mod: "mods", modpack: "modpacks", resourcepack: "resource packs", shader: "shaders" };
 const tabId = (tab: DiscoveryTab) => tab.kind === "game" ? tab.key : tab.kind;
 
-export function ModrinthDiscover({ tofu, pikos, supabase, nexusConfigured }: Props) {
+export function ModrinthDiscover({ tofu, pikos, supabase, nexusConfigured, igdbConfigured }: Props) {
   const { behavior, setActiveNav } = useApp();
   const settings = behavior.modSources;
-  const discover = useDiscoverGames(settings, nexusConfigured);
+  const discover = useDiscoverGames(settings, nexusConfigured, igdbConfigured, supabase);
   const [tab, setTab] = useState<DiscoveryTab>({ kind: "all" });
   const [refreshKey, setRefreshKey] = useState(0);
   const [showPicker, setShowPicker] = useState(false);
