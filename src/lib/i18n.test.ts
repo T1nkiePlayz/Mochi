@@ -45,6 +45,7 @@ describe("shared UI translations", () => {
       return part;
     }).filter(Boolean).join(" ").trim();
     const found = new Map<string, string>();
+    const untranslatedByDesign = new Set(["Mochi", "Mochi v", "Mochi Cloud", "GitHub", "Google", "CheapShark", "Epic Games Store", "U", "you@example.com", "org.company.game"]);
     const collect = (node: ts.Node, skipText = false) => {
       if (ts.isJsxElement(node)) {
         const tag = node.openingElement.tagName.getText();
@@ -90,6 +91,7 @@ describe("shared UI translations", () => {
     }
     const missing = new Map<string, { file: string; languages: string[] }>();
     for (const [message, file] of found) {
+      if (untranslatedByDesign.has(message)) continue;
       const languages = launcherLanguages.filter((language) => language.code !== "en" && !hasTranslation(message, language.code)).map((language) => language.code);
       if (languages.length) missing.set(message, { file, languages });
     }
