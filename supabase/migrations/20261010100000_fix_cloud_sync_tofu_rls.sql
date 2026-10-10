@@ -9,7 +9,7 @@
 -- Keep the server's source-id constraint aligned with source ids currently
 -- emitted by src/lib/cloud.ts. In particular, legendary/nile otherwise make a
 -- whole-library RPC fail when a library contains one of those launchers.
-do $
+do $source_check$
 declare
   source_id_attnum smallint;
   constraint_row record;
@@ -46,7 +46,7 @@ begin
       'epic', 'whisky', 'battlenet', 'gog', 'prism', 'legendary', 'nile'
     ));
 end
-$;
+$source_check$;
 
 create or replace function public.sync_my_library(library jsonb)
 returns jsonb
