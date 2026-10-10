@@ -1,8 +1,10 @@
 import { Check, Languages } from "lucide-react";
 import { useMemo, useState } from "react";
 import { launcherLanguages, normalizeLanguage, type LauncherLanguage } from "../../lib/languages";
+import { useTranslation } from "../../lib/useTranslation";
 
 export function LanguageStep({ language, setLanguage }: { language: string; setLanguage: (language: LauncherLanguage) => void }) {
+  const t = useTranslation();
   const [query, setQuery] = useState("");
   const options = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
@@ -11,7 +13,7 @@ export function LanguageStep({ language, setLanguage }: { language: string; setL
   const selected = normalizeLanguage(language);
   return <section className="setup-page setup-language-page">
     <div className="setup-icon"><Languages size={22} /></div>
-    <h1>Choose your language.</h1>
+    <h1>{t("Choose your language.")}</h1>
     <p className="setup-description">Choose the language Mochi should use wherever a translation is available. Game news will automatically follow this choice. You can change it any time in Settings.</p>
     <label className="setup-language-search">
       <span className="sr-only">Search languages</span>
