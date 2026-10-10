@@ -5,7 +5,7 @@ import { bestNameMatch } from "../../lib/mods/gameMatch";
 import { isSourceChoice, type GameSourceChoice } from "../../lib/mods/gameSources";
 import type { ModSourceSettings } from "../../lib/mods/resolveSources";
 import { getNexusGames, type NexusGame } from "../../lib/nexus";
-import { igdbIconFor, lookupIgdbGames } from "../../lib/igdb";
+import { lookupGameIcon } from "../../lib/gameIcons";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { readJson, writeJson } from "../../lib/storage";
 import { supabase } from "../../lib/supabase";
@@ -27,27 +27,6 @@ const STORE = "mochi:discover-games";
 const LEGACY_NEXUS = "mochi:nexus-discovery-games";
 const CHOICES = "mochi:discover-source-choice";
 
-// Cache in-flight and completed lookups across effect restarts when the Nexus catalog finishes loading.
-const igdbIconLookupCache = new Map<string, Promise<string | null>>();
-
-function lookupNexusGameIcon(client: SupabaseClient, game: Pick<NexusGame, "domainName" | "name">): Promise<string | null> {
-  const key = game.domainName.toLocaleLowerCase();
-  const cached = igdbIconLookupCache.get(key);
-  if (cached) return cached;
-
-  const request = (async (): Promise<string | null> => {
-    const matches = await lookupIgdbGames(client, game.name);
-    return igdbIconFor(game.name, matches);
-  })();
-
-  igdbIconLookupCache.set(key, request);
-  // Cache successful URLs, but allow transient failures and empty searches to be retried later.
-  void request.then(
-    (url) => { if (!url && igdbIconLookupCache.get(key) === request) igdbIconLookupCache.delete(key); },
-    () => { if (igdbIconLookupCache.get(key) === request) igdbIconLookupCache.delete(key); },
-  );
-  return request;
-}
 
 function readStored(): StoredGame[] {
   const stored = readJson<unknown>(STORE, null);
@@ -136,18 +115,22 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
     const missing = [...byKey.values()].filter((game) => !igdbIconsRef.current[game.lookupKey]).slice(0, 64);
 
     void (async () => {
-      const resolved: Array<readonly [string, string]> = [];
-      for (let offset = 0; offset < missing.length; offset += 4) {
-        const batch = await Promise.all(missing.slice(offset, offset + 4).map(async (game) => {
+      // Run a small worker pool rather than waiting for every 4-icon batch to finish in sequence.
+      // Publish each successful result immediately, so the visible tabs gain art without waiting
+      // for unrelated games or the full catalogue to finish.
+      let nextIndex = 0;
+      const worker = async () => {
+        while (!cancelled) {
+          const index = nextIndex++;
+          const game = missing[index];
+          if (!game) return;
           try {
-            const url = await lookupNexusGameIcon(client, { domainName: game.lookupKey, name: game.name });
-            return url ? [game.lookupKey, url] as const : null;
-          } catch { return null; }
-        }));
-        resolved.push(...batch.filter((entry): entry is readonly [string, string] => entry !== null));
-        if (cancelled) return;
-      }
-      if (!cancelled) setIgdbIcons((current) => ({ ...current, ...Object.fromEntries(resolved) }));
+            const url = await lookupGameIcon(client, game.lookupKey, game.name);
+            if (url && !cancelled) setIgdbIcons((current) => current[game.lookupKey] ? current : { ...current, [game.lookupKey]: url });
+          } catch { /* Keep the initials fallback and allow the shared lookup cache to retry later. */ }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(8, missing.length) }, () => worker()));
     })();
     return () => { cancelled = true; };
   }, [catalog, stored, cfGames, settings.nexus, igdbConfigured, client]);
