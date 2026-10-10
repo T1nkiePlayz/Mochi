@@ -5,7 +5,7 @@ import { bestNameMatch } from "../../lib/mods/gameMatch";
 import { isSourceChoice, type GameSourceChoice } from "../../lib/mods/gameSources";
 import type { ModSourceSettings } from "../../lib/mods/resolveSources";
 import { getNexusGames, type NexusGame } from "../../lib/nexus";
-import { lookupIgdbGames } from "../../lib/igdb";
+import { igdbIconFor, lookupIgdbGames } from "../../lib/igdb";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { readJson, writeJson } from "../../lib/storage";
 import { supabase } from "../../lib/supabase";
@@ -29,10 +29,6 @@ const CHOICES = "mochi:discover-source-choice";
 // Cache in-flight and completed lookups across effect restarts when the Nexus catalog finishes loading.
 const igdbIconLookupCache = new Map<string, Promise<string | null>>();
 
-function normalizeGameName(value: string): string {
-  return value.toLocaleLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
-}
-
 function lookupNexusGameIcon(client: SupabaseClient, game: Pick<NexusGame, "domainName" | "name">): Promise<string | null> {
   const key = game.domainName.toLocaleLowerCase();
   const cached = igdbIconLookupCache.get(key);
@@ -40,17 +36,7 @@ function lookupNexusGameIcon(client: SupabaseClient, game: Pick<NexusGame, "doma
 
   const request = (async (): Promise<string | null> => {
     const matches = await lookupIgdbGames(client, game.name);
-    const needle = normalizeGameName(game.name);
-    // Exact normalized matches avoid assigning a sequel or spin-off's art to another game.
-    const match = matches.find((candidate) => normalizeGameName(candidate.name) === needle);
-    const raw = match?.cover?.url ?? match?.artworks?.[0]?.url;
-    if (!raw) return null;
-    const url = raw.startsWith("//") ? `https:${raw}` : raw;
-    let parsed: URL;
-    try { parsed = new URL(url); } catch { return null; }
-    if (parsed.protocol !== "https:" || parsed.hostname !== "images.igdb.com") return null;
-    parsed.pathname = parsed.pathname.replace(/\bt_[a-z0-9_]+\./i, "t_cover_big.");
-    return parsed.toString();
+    return igdbIconFor(game.name, matches);
   })();
 
   igdbIconLookupCache.set(key, request);

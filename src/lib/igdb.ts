@@ -43,3 +43,18 @@ export async function lookupTimeToBeat(client: SupabaseClient, gameIds: number[]
   }
   return hours;
 }
+
+const normalizeTitle = (value: string) => value.toLocaleLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+
+/** A safe IGDB image URL for the result whose title equals `name` (so a sequel's art is never used), or null. */
+export function igdbIconFor(name: string, matches: IgdbGame[]): string | null {
+  const needle = normalizeTitle(name);
+  const match = matches.find((candidate) => normalizeTitle(candidate.name) === needle);
+  const raw = match?.cover?.url ?? match?.artworks?.[0]?.url;
+  if (!raw) return null;
+  let parsed: URL;
+  try { parsed = new URL(raw.startsWith("//") ? `https:${raw}` : raw); } catch { return null; }
+  if (parsed.protocol !== "https:" || parsed.hostname !== "images.igdb.com") return null;
+  parsed.pathname = parsed.pathname.replace(/\/t_[a-z0-9_]+\//i, "/t_cover_big/");
+  return parsed.toString();
+}
