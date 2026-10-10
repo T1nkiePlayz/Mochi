@@ -321,6 +321,15 @@ Not promises or dates.
 - [ ] Stable release
 - [ ] Theme marketplace / in-app theme gallery (browse and one-click install of community themes)
 - [ ] Theme creator (live-edit colours, fonts and hooks, export a theme file)
+- [x] Copy debug info (Settings > Data) and likely-cause hints when a game closes right after starting
+- [ ] Saved smart collections (for example "unplayed under 8 hours" or "co-op") built on cached IGDB data
+- [ ] Backlog and wishlist view with a "next up" queue that feeds "What should I play?"
+- [ ] Per-game launch profiles (Wine/Proton version, environment variables, arguments, pre and post scripts)
+- [ ] Shareable mod profiles (export and import) with rollback when a mod update breaks the game
+- [ ] Library backup and restore in one file, with an optional scheduled copy to a folder
+- [ ] Session history, a playtime timeline and a year-in-review card
+- [ ] Download manager (queue, pause and resume, bandwidth cap, scheduled downloads)
+- [ ] More command-palette actions (launch, switch profile, run the picker)
 - [ ] Per-game automatic themes (the launcher takes on a game's look when you open it, e.g. Hades)
 
 ## Documentation index
