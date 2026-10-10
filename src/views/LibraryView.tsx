@@ -235,11 +235,11 @@ export function LibraryView() {
     <section className="library-toolbar">
       <span className="library-count">{lib.visiblePikos.length} game{lib.visiblePikos.length === 1 ? "" : "s"}{search.trim() ? ` matching “${search.trim()}”` : ""}{(() => { if (lib.filter.kind !== "smart" || (lib.filter.id !== "backlog" && lib.filter.id !== "next-up")) return ""; const left = remainingHours(lib.visiblePikos.map((piko) => piko.id), lib.hours); return left.known ? ` · about ${left.total} h to beat (${left.known} with data)` : ""; })()}</span>
       <div className="library-toolbar-actions">
-        <button type="button" className="secondary-button view-switcher" title={`View: ${viewModeLabel(view)}. Click for the next view, Shift+click for the previous.`}
-          aria-label={`Library view: ${viewModeLabel(view)}. Activate to switch to ${viewModeLabel(cycleViewMode(view))}.`}
+        <button type="button" className="secondary-button view-switcher" title={t("View: {view}. Click for the next view, Shift+click for the previous.").replace("{view}", t(viewModeLabel(view)))}
+          aria-label={t("Library view: {view}. Activate to switch to {nextView}.").replace("{view}", t(viewModeLabel(view))).replace("{nextView}", t(viewModeLabel(cycleViewMode(view))))}
           onClick={(event) => changeView(event.shiftKey ? -1 : 1)}
           onKeyDown={(event) => { if (event.key === "ArrowLeft" || event.key === "ArrowUp") { event.preventDefault(); changeView(-1); } else if (event.key === "ArrowRight" || event.key === "ArrowDown") { event.preventDefault(); changeView(1); } }}>
-          <span className="view-switcher-icon" key={view}><ViewIcon size={14} /></span> <span className="view-switcher-label">{viewModeLabel(view)}</span>
+          <span className="view-switcher-icon" key={view}><ViewIcon size={14} /></span> <span className="view-switcher-label">{t(viewModeLabel(view))}</span>
           <span className="view-switcher-dots" aria-hidden="true">{viewModes.map((mode) => <i key={mode.id} className={mode.id === view ? "on" : ""} />)}</span>
         </button>
         <span className="library-view-announce" role="status" aria-live="polite">{`${t(viewModeLabel(view))} view`}</span>
