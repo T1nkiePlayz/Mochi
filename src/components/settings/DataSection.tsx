@@ -78,6 +78,7 @@ export function DataSection() {
         </div>;
       })}
     </div>
+    <div className="setting-row"><span><strong>Find missing covers</strong><small>{(() => { const missing = metadata.missingCovers(lib.library).length; return missing ? `${missing} game${missing === 1 ? "" : "s"} show a generated cover. Mochi looks each one up once (Steam games need no keys).` : "Every game that can have a cover already has one."; })()}</small></span><button type="button" className="secondary-button" disabled={metadata.refreshBusy || metadata.missingCovers(lib.library).length === 0} onClick={() => void metadata.findMissingCovers(lib.library)}>{metadata.refreshBusy ? "Working…" : "Find covers"}</button></div>
     <div className="data-source-footer">
       <small className="metadata-note">Clearing removes saved lookups and downloaded covers from this device only. Games stay in your library and Mochi shows generated covers until you refresh.</small>
       <button type="button" className="secondary-button danger-outline" disabled={busy !== null} onClick={() => void run("all")}>{busy === "all" ? "Clearing…" : "Clear all cached data"}</button>

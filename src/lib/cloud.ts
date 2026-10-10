@@ -7,7 +7,7 @@ import { mergedIds } from "./launchSources";
  * Source ids the `pikos_source_id_check` constraint accepts (see 20261009150000_more_import_sources.sql).
  * Others are synced as null and the source filter falls back to the platform label.
  */
-const CLOUD_SOURCE_IDS = new Set<string>(["flatpak", "heroic", "steam", "lutris", "bottles", "itch", "apps", "epic", "whisky", "battlenet", "gog", "prism"]);
+const CLOUD_SOURCE_IDS = new Set<string>(["flatpak", "heroic", "steam", "lutris", "bottles", "itch", "apps", "epic", "whisky", "battlenet", "gog", "prism", "legendary", "nile"]);
 
 const PIKO_COLUMNS = "local_id, name, description, accent, artwork, artwork_url, executable_path, source, source_id, platform_category, igdb_id, categories, screenshots, trailer_id, first_release_date, favorite, tags, artwork_source, kind";
 

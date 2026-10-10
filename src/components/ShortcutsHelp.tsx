@@ -14,6 +14,17 @@ const groups: Array<{ title: string; items: Array<{ label: string; keys: string[
     { label: "Show only actions in the palette", keys: [">"] },
     { label: "Show this shortcuts list", keys: ["?"] },
     { label: "Skip to main content", keys: ["Tab", "Enter"] },
+    { label: "Search your library", keys: ["/"] },
+  ] },
+  { title: "Library", items: [
+    { label: "Move between games (the grid is one Tab stop)", keys: ["←", "↑", "↓", "→"] },
+    { label: "First or last game", keys: ["Home", "End"] },
+    { label: "A screen up or down", keys: ["Page Up", "Page Down"] },
+    { label: "Jump to a game by typing its name", keys: ["A–Z"] },
+    { label: "Open the game page", keys: ["Enter"] },
+    { label: "Play the game", keys: ["Shift", "Enter"] },
+    { label: "Favourite or unfavourite", keys: [MOD, "D"] },
+    { label: "Actions menu for the game", keys: ["Menu"] },
   ] },
   { title: "Moving around", items: [
     { label: "Next control", keys: ["Tab"] },
@@ -38,6 +49,11 @@ export function ShortcutsHelp() {
   useEffect(() => {
     const show = () => setOpen(true);
     const onKey = (event: KeyboardEvent) => {
+      if (event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey && !isTyping(event.target)) {
+        const search = document.querySelector<HTMLInputElement>(".search-box input");
+        if (search) { event.preventDefault(); search.focus(); search.select(); }
+        return;
+      }
       if (event.key === "?" && !event.ctrlKey && !event.metaKey && !event.altKey && !isTyping(event.target)) { event.preventDefault(); setOpen((v) => !v); }
     };
     window.addEventListener(OPEN_EVENT, show);

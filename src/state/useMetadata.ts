@@ -12,6 +12,7 @@ import {
 } from "../lib/metadata/index";
 import type { Piko } from "../models";
 import { applyLauncherLogos } from "../lib/iconCover";
+import { hasArtwork } from "../lib/fallbackArt";
 import { createPacer } from "../lib/throttle";
 
 type Params = {
@@ -185,6 +186,30 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
   /** How many library games each provider could refresh right now (0 means its button stays disabled). */
   const refreshableCount = (library: Piko[], only: ProviderId) => library.filter((piko) => piko.kind !== "launcher" && anyProvider(piko, only)).length;
 
+  /** Games that show generated art and may still get a real cover (not launchers, not hand-picked art). */
+  const missingCovers = (library: Piko[]) => library.filter((piko) => piko.kind !== "launcher" && !hasArtwork(piko) && piko.artworkSource !== "custom" && !(piko.lockedFields ?? []).includes("artwork") && anyProvider(piko, undefined, true));
+
+  /** One pass over the games without a cover: looks each up (Steam games need no keys) and keeps what it finds. */
+  const findMissingCovers = async (library: Piko[]): Promise<number> => {
+    if (busyRef.current) return 0;
+    const targets = missingCovers(library);
+    if (!targets.length) { notify("No covers to find", "Every game that can have a cover already has one, or no metadata source is ready."); return 0; }
+    busyRef.current = true;
+    setRefreshBusy(true);
+    const jobId = startProgress("Finding covers", `Looking for covers for ${targets.length} games…`, targets.length);
+    try {
+      const updated = await run(targets, { includeSteam: true }, (done) => updateProgress(jobId, { value: done, total: targets.length }, `Looking for covers: ${done} of ${targets.length}`));
+      commit(updated);
+      const found = [...updated.values()].filter((piko) => hasArtwork(piko)).length;
+      updateProgress(jobId, { value: targets.length, total: targets.length }, `Found ${found} cover${found === 1 ? "" : "s"}.`);
+      notify("Cover search finished", found ? `Found covers for ${found} of ${targets.length} games.` : `No cover was found for ${targets.length === 1 ? "that game" : `those ${targets.length} games`}. You can pick one by hand in the game's artwork tab.`);
+      return found;
+    } catch (error) {
+      notify("Cover search failed", error instanceof Error ? error.message : "Could not look up covers.");
+      return 0;
+    } finally { busyRef.current = false; setRefreshBusy(false); }
+  };
+
   /** Launchers are not games: instead of a game lookup (which would bring a trailer and a wrong name) they get their company's IGDB logo. */
   const refreshLauncherLogos = async (pikos: Piko[]): Promise<number> => {
     if (!supabase || !ready.igdb) return 0;
@@ -211,7 +236,7 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
     }
   };
 
-  return { enrich, enrichImported, refreshAll, refreshGame, refreshBusy, refreshableCount, ready };
+  return { enrich, enrichImported, refreshAll, refreshGame, findMissingCovers, missingCovers, refreshBusy, refreshableCount, ready };
 }
 
 /** Applies only the metadata fields from a fresh result onto the live Piko, so edits made while it ran are kept. */

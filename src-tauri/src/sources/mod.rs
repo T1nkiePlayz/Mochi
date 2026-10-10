@@ -342,6 +342,48 @@ fn scan_heroic(roots: &[PathBuf]) -> Vec<ImportedGame> {
 }
 
 // ---------------------------------------------------------------------------
+// Command-line Epic and Amazon stores (Legendary / Rare, Nile): the same install lists Heroic keeps
+// ---------------------------------------------------------------------------
+
+/// Legendary's config folders: the command-line tool and Rare (native and Flatpak), which shares it.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub fn legendary_roots(home: &Path) -> Vec<PathBuf> {
+    vec![home.join(".config/legendary"), home.join(".var/app/io.github.dummerle.rare/config/legendary")]
+}
+
+/// Nile's config folder (Amazon Games on Linux).
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub fn nile_roots(home: &Path) -> Vec<PathBuf> { vec![home.join(".config/nile")] }
+
+/// Installed games from a `legendary`/`nile` config folder. `target_scheme` is the launch target Mochi starts through
+/// the tool (`legendary://launch/<id>`); ids that could not be passed safely on the command line are skipped.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+fn scan_store_cli(roots: &[PathBuf], source: &str, runner: &str, loose: bool, target_scheme: &str) -> Vec<ImportedGame> {
+    let mut out = Vec::new();
+    let mut seen = HashSet::new();
+    for root in roots.iter().filter(|root| root.is_dir()) {
+        let mut installs = Vec::new();
+        if let Some(value) = json(&root.join("installed.json")) { heroic_installs(&value, runner, loose, 0, &mut installs); }
+        for install in installs {
+            let safe = !install.id.is_empty() && install.id.len() <= 128 && install.id.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | ':'));
+            if !safe || !Path::new(&install.path).is_dir() { continue; }
+            let title = install.title
+                .or_else(|| json(&root.join("metadata").join(format!("{}.json", install.id))).and_then(|meta| string(&meta, &["app_title", "title"])))
+                .or_else(|| Path::new(&install.path).file_name().map(|name| name.to_string_lossy().into_owned()))
+                .unwrap_or_else(|| install.id.clone());
+            let key = format!("{source}:{}", install.id);
+            if seen.insert(key.clone()) { out.push(make(key, title, source, format!("{target_scheme}{}", install.id), Some(install.path))); }
+        }
+    }
+    sort_games(out)
+}
+
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+fn scan_legendary(roots: &[PathBuf]) -> Vec<ImportedGame> { scan_store_cli(roots, "legendary", "legendary", false, "legendary://launch/") }
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+fn scan_nile(roots: &[PathBuf]) -> Vec<ImportedGame> { scan_store_cli(roots, "nile", "nile", true, "nile://launch/") }
+
+// ---------------------------------------------------------------------------
 // Epic Games Launcher (macOS keeps one `.item` manifest per installed game)
 // ---------------------------------------------------------------------------
 
@@ -486,6 +528,8 @@ fn scan(source: &str, home: &Path) -> Vec<ImportedGame> {
         "steam" => scan_steam(&os::steam_roots(home), os::is_installed("steam", home)),
         "heroic" => scan_heroic(&os::heroic_roots(home)),
         "itch" => scan_itch(&os::itch_roots(home)),
+        "legendary" => scan_legendary(&legendary_roots(home)),
+        "nile" => scan_nile(&nile_roots(home)),
         "prism" => prism::scan_instances(&os::instance_roots(home)),
         other => os::scan_extra(other, home),
     }
@@ -548,6 +592,8 @@ pub fn scan_import_games(source: &str, library_path: Option<String>) -> Vec<Impo
         ("steam", Some(path)) => scan_steam_path(&path),
         ("heroic", Some(path)) => scan_heroic(&[path]),
         ("itch", Some(path)) => scan_itch(&[path]),
+        ("legendary", Some(path)) => scan_legendary(&[path]),
+        ("nile", Some(path)) => scan_nile(&[path]),
         // A portable MultiMC/Prism folder (the one holding `instances`).
         ("prism", Some(path)) => prism::INSTANCE_LAUNCHERS.iter().find(|launcher| path.join(launcher.config).is_file())
             .map(|launcher| prism::scan_instances(&[(path.clone(), launcher)]))
@@ -565,6 +611,31 @@ mod tests {
     fn write(path: &Path, text: &str) {
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(path, text).unwrap();
+    }
+
+    #[test]
+    fn legendary_and_nile_installs_are_imported_with_their_own_launch_targets() {
+        let home = temp_dir("store-cli");
+        let (game_a, game_b, gone) = (home.join("Games/Celeste"), home.join("Games/Dredge"), home.join("Games/Missing"));
+        fs::create_dir_all(&game_a).unwrap();
+        fs::create_dir_all(&game_b).unwrap();
+        let legendary = home.join(".config/legendary");
+        write(&legendary.join("installed.json"), &format!(r#"{{
+            "Sugar": {{"app_name":"Sugar","title":"Celeste","install_path":"{}"}},
+            "Gone": {{"app_name":"Gone","title":"Missing","install_path":"{}"}},
+            "bad id;rm": {{"app_name":"bad id;rm","title":"Evil","install_path":"{}"}},
+            "Dlc": {{"app_name":"Dlc","title":"Celeste DLC","install_path":"{}","is_dlc":true}}
+        }}"#, game_a.display(), gone.display(), game_a.display(), game_a.display()));
+        let found = scan_legendary(&legendary_roots(&home));
+        assert_eq!(found.iter().map(|g| (g.id.as_str(), g.name.as_str(), g.launch_target.as_str())).collect::<Vec<_>>(), [("legendary:Sugar", "Celeste", "legendary://launch/Sugar")]);
+        assert_eq!(found[0].install_path.as_deref(), game_a.to_str());
+
+        let nile = home.join(".config/nile");
+        write(&nile.join("installed.json"), &format!(r#"[{{"id":"amzn1.adg.product.abc","path":"{}"}}]"#, game_b.display()));
+        let found = scan_nile(&nile_roots(&home));
+        assert_eq!(found.iter().map(|g| (g.id.as_str(), g.name.as_str(), g.launch_target.as_str())).collect::<Vec<_>>(), [("nile:amzn1.adg.product.abc", "Dredge", "nile://launch/amzn1.adg.product.abc")]);
+        assert!(scan_legendary(&[home.join("nothing")]).is_empty());
+        let _ = fs::remove_dir_all(home);
     }
 
     #[test]

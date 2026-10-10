@@ -169,6 +169,15 @@ pub fn prepare_launch(target: &str, config: &LaunchConfig) -> Result<Prepared, S
         });
     }
     if target.starts_with("heroic://") || target.starts_with("bottles:run/") { return handoff(opener(target)); }
+    for (scheme, program, name) in [("legendary://launch/", "legendary", "Legendary"), ("nile://launch/", "nile", "Nile")] {
+        if let Some(id) = target.strip_prefix(scheme) {
+            let id = safe_launch_id(id)?;
+            let path = command_path(program).ok_or_else(|| format!("{name} is not installed (the `{program}` command was not found), so this game cannot be started from here."))?;
+            let mut command = Command::new(path);
+            command.args(["launch", id]);
+            return handoff(command);
+        }
+    }
     if let Some(id) = target.strip_prefix("lutris:rungameid/") {
         let uri = format!("lutris:rungameid/{}", safe_launch_id(id)?);
         return handoff(if command_exists("lutris") {
