@@ -14,6 +14,7 @@ import { AccessibilityStep } from "./setup/AccessibilityStep";
 import { AccountStep } from "./setup/AccountStep";
 import { ServicesStep } from "./setup/ServicesStep";
 import { ImportStep } from "./setup/ImportStep";
+import { CloudImportStep } from "./setup/CloudImportStep";
 
 type SetupProps = {
   igdbClientId: string;
@@ -34,12 +35,12 @@ type SetupProps = {
   setSteamGridDbKey: (value: string) => void;
   saveCredential: (provider: ProviderCredential) => Promise<void>;
   credentialBusy: ProviderCredential | null;
-  onFinish: (games: ImportedGame[], sources: ImportSourceId[], minecraftMode: MinecraftMode) => void;
+  onFinish: (games: ImportedGame[], sources: ImportSourceId[], minecraftMode: MinecraftMode) => void;\n  cloudSyncEnabled: boolean;\n  cloudSyncState: string;\n  cloudImportBusy: boolean;\n  cloudImportMessage: string;\n  onImportCloudData: () => Promise<void>;
 };
 
-const steps = ["welcome", "language", "theme", "accessibility", "account", "services", "imports"] as const;
+const steps = ["welcome", "language", "theme", "accessibility", "account", "cloud", "services", "imports"] as const;
 type Step = typeof steps[number];
-const stepLabels: Record<Step, string> = { welcome: "Welcome", language: "Language", theme: "Theme", accessibility: "Accessibility", account: "Account", services: "Game services", imports: "Find your games" };
+const stepLabels: Record<Step, string> = { welcome: "Welcome", language: "Language", theme: "Theme", accessibility: "Accessibility", account: "Account", cloud: "Cloud library", services: "Game services", imports: "Find your games" };
 
 export function FirstLaunchSetup(props: SetupProps) {
   const [step, setStep] = useState<Step>("welcome");
@@ -50,7 +51,7 @@ export function FirstLaunchSetup(props: SetupProps) {
   // The services step is only useful when signed in, so signed-out users skip straight past it.
   const hop = (direction: 1 | -1) => {
     let next = index + direction;
-    while (steps[next] && !props.user && steps[next] === "services") next += direction;
+    while (steps[next] && !props.user && (steps[next] === "cloud" || steps[next] === "services")) next += direction;
     if (next >= 0 && next < steps.length) setStep(steps[next]);
   };
 
@@ -69,7 +70,7 @@ export function FirstLaunchSetup(props: SetupProps) {
           {step === "welcome" && <WelcomeStep />}\n          {step === "language" && <LanguageStep language={props.language} setLanguage={props.setLanguage} />}
           {step === "theme" && <ThemeStep themes={props.themes} theme={props.theme} setTheme={props.setTheme} />}
           {step === "accessibility" && <AccessibilityStep />}
-          {step === "account" && <AccountStep user={props.user} onSignIn={props.onSignIn} onAddUser={props.onAddUser} />}
+          {step === "account" && <AccountStep user={props.user} onSignIn={props.onSignIn} onAddUser={props.onAddUser} />}\n          {step === "cloud" && <CloudImportStep busy={props.cloudImportBusy} message={props.cloudImportMessage} syncEnabled={props.cloudSyncEnabled} syncState={props.cloudSyncState} onImport={props.onImportCloudData} />}
           {step === "services" && <ServicesStep {...props} signedIn={Boolean(props.user)} />}
           {step === "imports" && <ImportStep onSelectionChange={setSelection} />}
         </div>
