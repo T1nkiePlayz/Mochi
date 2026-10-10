@@ -9,6 +9,8 @@ export const NEWS_MAX_SEEN = 1500;
 
 export type NewsItem = { gid: string; appid: number; game: string; title: string; url: string; feedLabel: string; date: number; summary: string };
 export type NewsState = {
+  /** Steam news language used for this cache; a language change invalidates the old feed. */
+  language: string;
   /** Last time each appid was fetched (ms). */
   checked: Record<string, number>;
   /** Ids already shown or notified (news gids and `mod:` keys), oldest first. */
@@ -18,7 +20,7 @@ export type NewsState = {
   readAt: number;
 };
 
-export const emptyNewsState = (): NewsState => ({ checked: {}, seen: [], items: [], readAt: 0 });
+export const emptyNewsState = (language = "english"): NewsState => ({ language, checked: {}, seen: [], items: [], readAt: 0 });
 
 /** Appids due for a fetch: never or >= interval ago (or clock moved back), oldest first, at most `cap`. */
 export function dueApps(appids: readonly number[], checked: Readonly<Record<string, number>>, now: number, interval = NEWS_INTERVAL_MS, cap = NEWS_CYCLE_CAP): number[] {
@@ -80,5 +82,5 @@ export function parseNewsState(raw: unknown): NewsState {
   const checked: Record<string, number> = {};
   if (value.checked && typeof value.checked === "object") for (const [key, at] of Object.entries(value.checked)) if (typeof at === "number" && Number.isFinite(at)) checked[key] = at;
   const items = Array.isArray(value.items) ? value.items.filter((item): item is NewsItem => !!item && typeof item.gid === "string" && typeof item.title === "string" && typeof item.url === "string" && typeof item.appid === "number" && typeof item.date === "number").slice(0, NEWS_MAX_ITEMS) : [];
-  return { checked, seen: Array.isArray(value.seen) ? value.seen.filter((id): id is string => typeof id === "string").slice(-NEWS_MAX_SEEN) : [], items, readAt: typeof value.readAt === "number" ? value.readAt : 0 };
+  return { language: typeof value.language === "string" && /^[a-z-]{2,24}$/.test(value.language) ? value.language : "english", checked, seen: Array.isArray(value.seen) ? value.seen.filter((id): id is string => typeof id === "string").slice(-NEWS_MAX_SEEN) : [], items, readAt: typeof value.readAt === "number" ? value.readAt : 0 };
 }
