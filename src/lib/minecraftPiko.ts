@@ -26,6 +26,26 @@ export function instanceTofuId(target: string): string {
   return parts ? `mc-${sanitizeKey(parts.launcher)}-${sanitizeKey(parts.id)}`.slice(0, 120) : `mc-${sanitizeKey(target)}`.slice(0, 120);
 }
 
+/** Compares instance names without the suffixes Mochi adds when it creates a managed copy. */
+export function normalizeMinecraftInstanceName(name: string): string {
+  return name.trim().replace(/(?:\s+\(Mochi(?:\s+\d+)?\))+\s*$/i, "").replace(/\s+/g, " ").toLowerCase();
+}
+
+/** Filters instances that are already present by stable target or normalized display name. */
+export function unimportedInstances(library: Piko[], games: ImportedGame[]): ImportedGame[] {
+  const current = library.find((piko) => piko.id === MINECRAFT_PIKO_ID)?.tofus ?? [];
+  const targets = new Set(current.map((tofu) => tofu.launchTarget).filter((target): target is string => Boolean(target)));
+  const names = new Set(current.map((tofu) => normalizeMinecraftInstanceName(tofu.name)).filter(Boolean));
+  return games.filter((game) => {
+    if (!isInstanceTarget(game.launchTarget)) return true;
+    const name = normalizeMinecraftInstanceName(game.name);
+    if (targets.has(game.launchTarget) || !name || names.has(name)) return false;
+    targets.add(game.launchTarget);
+    names.add(name);
+    return true;
+  });
+}
+
 /** The Tofu of one scanned Minecraft instance. Its mods folder is the instance's own `mods` folder. */
 export function instanceTofu(game: ImportedGame): Tofu {
   const instance = game.minecraft;
@@ -50,7 +70,10 @@ export const newMinecraftPiko = (tofus: Tofu[] = []): Piko => ({
 /** Adds an instance Tofu, or refreshes the scanned facts (version, loader, targets, folders) of the one with the same id. The user's own edits stay. */
 function upsertTofu(tofus: Tofu[], next: Tofu): Tofu[] {
   const index = tofus.findIndex((tofu) => tofu.id === next.id);
-  if (index < 0) return [...tofus, next];
+  if (index < 0) {
+    if (tofus.some((tofu) => normalizeMinecraftInstanceName(tofu.name) === normalizeMinecraftInstanceName(next.name))) return tofus;
+    return [...tofus, next];
+  }
   const old = tofus[index];
   const merged: Tofu = { ...old, version: next.version, loader: next.loader, launchTarget: next.launchTarget, installPath: next.installPath ?? old.installPath,
     ...(next.pack ? { pack: next.pack } : {}), // what the launcher recorded beats a name match and refreshes the version
