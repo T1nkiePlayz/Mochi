@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cloudStatusFor, confirmedAfterClear, confirmedAfterPull, confirmedAfterPush, createSyncScheduler, eligibleForPush, isCloudEligible, loadConfirmedCache, saveConfirmedCache, CLOUD_MAX_PIKOS } from "./cloudStatus";
+import { cloudStatusFor, confirmedAfterClear, confirmedAfterPull, confirmedAfterPush, createSyncScheduler, eligibleForPush, isCloudEligible, isRetryableSyncError, loadConfirmedCache, saveConfirmedCache, CLOUD_MAX_PIKOS } from "./cloudStatus";
 
 const p = (id: string, name = id) => ({ id, name });
 
@@ -23,6 +23,13 @@ describe("eligibility and confirmed sets", () => {
     expect(cloudStatusFor(p("a"), { enabled: true, confirmed: confirmedAfterClear(), syncState: "empty" })).toBe("pending");
     expect(cloudStatusFor(p("a"), { enabled: false, confirmed, syncState: "offline" })).toBe("none");
     expect(cloudStatusFor(p("z", ""), { enabled: true, confirmed, syncState: "synced" })).toBe("none");
+  });
+  it("retries transient server failures but not permanent client errors", () => {
+    expect(isRetryableSyncError({ status: 403, code: "42501" })).toBe(false);
+    expect(isRetryableSyncError({ status: 400 })).toBe(false);
+    expect(isRetryableSyncError({ status: 429 })).toBe(true);
+    expect(isRetryableSyncError({ status: 503 })).toBe(true);
+    expect(isRetryableSyncError(new Error("network unavailable"))).toBe(true);
   });
   it("round-trips the per-user cache", () => {
     saveConfirmedCache("u1", new Set(["a", "b"]));
@@ -59,6 +66,14 @@ describe("createSyncScheduler", () => {
     await vi.advanceTimersByTimeAsync(1); expect(run).toHaveBeenCalledTimes(2);
     await vi.advanceTimersByTimeAsync(2000); expect(run).toHaveBeenCalledTimes(3);
     await vi.advanceTimersByTimeAsync(60000); expect(run).toHaveBeenCalledTimes(3);
+  });
+  it("does not schedule repeated retries for permanent client errors", async () => {
+    const run = vi.fn(async () => { throw { status: 403, code: "42501" }; });
+    const s = createSyncScheduler(run, { debounceMs: 100, retryBaseMs: 1000, shouldRetry: isRetryableSyncError });
+    s.notify(); await vi.advanceTimersByTimeAsync(100);
+    expect(run).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(run).toHaveBeenCalledTimes(1);
   });
   it("never overlaps runs and re-runs for changes made mid-flight; cancel stops everything", async () => {
     let release!: () => void; let active = 0; let maxActive = 0;
