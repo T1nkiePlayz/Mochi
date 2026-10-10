@@ -1,18 +1,20 @@
 import { Check, Palette } from "lucide-react";
 import type { ThemeDescriptor } from "../../lib/theme";
+import { useTranslation } from "../../lib/useTranslation";
 
 type Props = { themes: ThemeDescriptor[]; theme: string; setTheme: (themeId: string) => Promise<void> };
 
 const swatch = (value: string | undefined, fallback: string) => value ?? fallback;
 
 export function ThemeStep({ themes, theme, setTheme }: Props) {
+  const t = useTranslation();
   return (
     <section className="setup-page setup-theme-page">
       <div className="setup-icon"><Palette size={22} /></div>
-      <h1>Choose your theme.</h1>
+      <h1>{t("Choose your theme.")}</h1>
       <p className="setup-description">Themes restyle the whole launcher and apply as soon as you pick one. Change it any time in Settings, where you can also install your own.</p>
       <div className="setup-theme-scroll">
-        <div className="setup-theme-grid" role="radiogroup" aria-label="Theme">
+        <div className="setup-theme-grid" role="radiogroup" aria-label={t("Theme")}>
           {themes.map((option) => {
             const colors = option.colors ?? {};
             const selected = theme === option.id;
