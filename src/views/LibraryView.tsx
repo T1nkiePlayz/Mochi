@@ -210,7 +210,7 @@ export function LibraryView() {
   </section>;
 
   if (!lib.library.length) {
-    return <>{heading}<div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>Your Mochi library is empty.</h2><p>Mochi starts clean. Add a game when you are ready.</p>{addButton}</div></>;
+    return <>{heading}<div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>{t("Your Mochi library is empty.")}</h2><p>{t("Mochi starts clean. Add a game when you are ready.")}</p>{addButton}</div></>;
   }
 
   return <>
