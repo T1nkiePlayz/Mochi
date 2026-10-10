@@ -53,6 +53,7 @@ describe("focusElement scrolling", () => {
     Object.defineProperty(root, "scrollBy", { configurable: true, value: scrollBy });
     const button = document.createElement("button");
     button.getClientRects = () => [{ } as DOMRect] as unknown as DOMRectList;
+    button.checkVisibility = () => true;
     root.append(button);
     document.body.append(root);
     button.focus();
