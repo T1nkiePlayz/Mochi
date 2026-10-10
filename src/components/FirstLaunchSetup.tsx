@@ -75,7 +75,7 @@ export function FirstLaunchSetup(props: SetupProps) {
       <div className="setup-orbit setup-orbit-one" />
       <div className="setup-orbit setup-orbit-two" />
       <div className="setup-panel setup-panel-wide" role="dialog" aria-label={t("Welcome to Mochi setup")}>
-        <div className="setup-progress" role="progressbar" aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={index + 1} aria-valuetext={`Step ${index + 1} of ${steps.length}: ${stepLabels[step]}`}>
+        <div className="setup-progress" role="progressbar" aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={index + 1} aria-valuetext={`Step ${index + 1} of ${steps.length}: ${t(stepLabels[step])}`}>
           {steps.map((item, position) => <span key={item} className={position <= index ? "active" : ""} />)}
         </div>
         <div className="setup-body" key={step}>
@@ -90,7 +90,7 @@ export function FirstLaunchSetup(props: SetupProps) {
         </div>
         <div className="setup-footer">
           <button type="button" className="setup-nav setup-prev" onClick={() => hop(-1)} disabled={step === "welcome"}><ArrowLeft size={16} /> Back</button>
-          <span className="setup-step-label">{stepLabels[step]} · {index + 1}/{steps.length}</span>
+          <span className="setup-step-label">{t(stepLabels[step])} · {index + 1}/{steps.length}</span>
           <div className="setup-footer-actions">
             {step !== "welcome" && step !== "account" && !last && <button type="button" className="setup-skip text-button" onClick={() => hop(1)} disabled={props.credentialBusy !== null}>{t("Skip")}</button>}
             <button type="button" className="setup-nav setup-next" onClick={last ? finish : () => hop(1)} disabled={props.credentialBusy !== null}>{nextLabel} <ArrowRight size={16} /></button>
