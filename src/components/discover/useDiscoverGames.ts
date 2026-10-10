@@ -26,6 +26,40 @@ const STORE = "mochi:discover-games";
 const LEGACY_NEXUS = "mochi:nexus-discovery-games";
 const CHOICES = "mochi:discover-source-choice";
 
+// Cache in-flight and completed lookups across effect restarts when the Nexus catalog finishes loading.
+const igdbIconLookupCache = new Map<string, Promise<string | null>>();
+
+function normalizeGameName(value: string): string {
+  return value.toLocaleLowerCase().normalize("NFKD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function lookupNexusGameIcon(client: SupabaseClient, game: NexusGame): Promise<string | null> {
+  const key = game.domainName.toLocaleLowerCase();
+  const cached = igdbIconLookupCache.get(key);
+  if (cached) return cached;
+
+  const request = (async (): Promise<string | null> => {
+    const matches = await lookupIgdbGames(client, game.name);
+    const needle = normalizeGameName(game.name);
+    // Exact normalized matches avoid assigning a sequel or spin-off's art to another game.
+    const match = matches.find((candidate) => normalizeGameName(candidate.name) === needle);
+    const raw = match?.cover?.url ?? match?.artworks?.[0]?.url;
+    if (!raw) return null;
+    const url = raw.startsWith("//") ? `https:${raw}` : raw;
+    let parsed: URL;
+    try { parsed = new URL(url); } catch { return null; }
+    if (parsed.protocol !== "https:" || parsed.hostname !== "images.igdb.com") return null;
+    parsed.pathname = parsed.pathname.replace(/\\bt_[a-z0-9_]+\\./i, "t_cover_big.");
+    return parsed.toString();
+  })();
+
+  igdbIconLookupCache.set(key, request);
+  void request.catch(() => {
+    if (igdbIconLookupCache.get(key) === request) igdbIconLookupCache.delete(key);
+  });
+  return request;
+}
+
 function readStored(): StoredGame[] {
   const stored = readJson<unknown>(STORE, null);
   if (Array.isArray(stored)) return stored.filter((entry): entry is StoredGame => Boolean(entry) && typeof entry === "object" && ((entry as StoredGame).k === "cf" || (entry as StoredGame).k === "nx"));
@@ -68,30 +102,22 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
     return () => { cancelled = true; };
   }, [nexusOn]);
 
-  // Nexus can omit game icons. If the user has configured IGDB, use the authenticated server-side lookup as a fallback.
+  // Nexus can omit game icons. Use IGDB only when configured and avoid duplicate lookups.
   useEffect(() => {
     if (!igdbConfigured || !client) { setIgdbIcons({}); return; }
     let cancelled = false;
-    const missingByDomain = new Map([...KNOWN_NEXUS_GAMES, ...catalog].filter((game) => !game.iconUrl).map((game) => [game.domainName, game]));
+    const missingByDomain = new Map([...KNOWN_NEXUS_GAMES, ...catalog]
+      .filter((game) => !game.iconUrl)
+      .map((game) => [game.domainName, game]));
     const missing = [...missingByDomain.values()].slice(0, 32);
+
     void (async () => {
       const resolved: Array<readonly [string, string]> = [];
-      // Keep provider traffic bounded; these are only fallback lookups for games with no Nexus icon.
       for (let offset = 0; offset < missing.length; offset += 4) {
         const batch = await Promise.all(missing.slice(offset, offset + 4).map(async (game) => {
           try {
-            const matches = await lookupIgdbGames(client, game.name);
-            const normalize = (value: string) => value.toLocaleLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, " ").trim();
-            const needle = normalize(game.name);
-            const match = matches.find((candidate) => normalize(candidate.name) === needle) ?? matches.find((candidate) => {
-              const name = normalize(candidate.name);
-              return name.length > 2 && (name.includes(needle) || needle.includes(name));
-            });
-            const raw = match?.cover?.url ?? match?.artworks?.[0]?.url;
-            if (!raw) return null;
-            const url = raw.startsWith("//") ? `https:${raw}` : raw;
-            if (!/^https:\/\//i.test(url) || !/images\.igdb\.com\//i.test(url)) return null;
-            return [game.domainName, url.replace(/t_[a-z0-9]+\./i, "t_cover_big.")] as const;
+            const url = await lookupNexusGameIcon(client, game);
+            return url ? [game.domainName, url] as const : null;
           } catch { return null; }
         }));
         resolved.push(...batch.filter((entry): entry is readonly [string, string] => entry !== null));
