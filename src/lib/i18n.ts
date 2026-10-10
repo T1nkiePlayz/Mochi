@@ -26,6 +26,7 @@ import { bigPictureMessages } from "./i18nBigPicture";
 import { commonExtraMessages } from "./i18nCoreExtra";
 import { uiExtraMessages } from "./i18nUiExtra";
 import { footerMessages } from "./i18nFooter";
+import { extendedUiMessages } from "./i18nExtendedUi";
 
 /**
  * Shared UI message catalogue. Keys are stable English source strings so missing
@@ -106,7 +107,7 @@ export function translate(message: string, language: unknown = getTranslationLoc
   const normalized = normalizeLanguage(language);
   const navigation = navLabel(message, normalized);
   if (navigation !== message) return navigation;
-  return messages[message]?.[normalized] ?? setupMessages[message]?.[normalized] ?? setupCopyMessages[message]?.[normalized] ?? setupCopyExtraMessages[message]?.[normalized] ?? cloudSetupMessages[message]?.[normalized] ?? accountSetupMessages[message]?.[normalized] ?? serviceSetupMessages[message]?.[normalized] ?? chromeMessages[message]?.[normalized] ?? settingsMessages[message]?.[normalized] ?? downloadMessages[message]?.[normalized] ?? dealMessages[message]?.[normalized] ?? dealExtraMessages[message]?.[normalized] ?? libraryMessages[message]?.[normalized] ?? systemMessages[message]?.[normalized] ?? libraryExtraMessages[message]?.[normalized] ?? commonMessages[message]?.[normalized] ?? settingsTitleMessages[message]?.[normalized] ?? settingsTitleExtraMessages[message]?.[normalized] ?? accessibilitySettingsCopy[message]?.[normalized] ?? settingsSubtitleMessages[message]?.[normalized] ?? settingsSubtitleExtraMessages[message]?.[normalized] ?? accessibilityMessages[message]?.[normalized] ?? bigPictureMessages[message]?.[normalized] ?? commonExtraMessages[message]?.[normalized] ?? uiExtraMessages[message]?.[normalized] ?? footerMessages[message]?.[normalized] ?? message;
+  return messages[message]?.[normalized] ?? setupMessages[message]?.[normalized] ?? setupCopyMessages[message]?.[normalized] ?? setupCopyExtraMessages[message]?.[normalized] ?? cloudSetupMessages[message]?.[normalized] ?? accountSetupMessages[message]?.[normalized] ?? serviceSetupMessages[message]?.[normalized] ?? chromeMessages[message]?.[normalized] ?? settingsMessages[message]?.[normalized] ?? downloadMessages[message]?.[normalized] ?? dealMessages[message]?.[normalized] ?? dealExtraMessages[message]?.[normalized] ?? libraryMessages[message]?.[normalized] ?? systemMessages[message]?.[normalized] ?? libraryExtraMessages[message]?.[normalized] ?? commonMessages[message]?.[normalized] ?? settingsTitleMessages[message]?.[normalized] ?? settingsTitleExtraMessages[message]?.[normalized] ?? accessibilitySettingsCopy[message]?.[normalized] ?? settingsSubtitleMessages[message]?.[normalized] ?? settingsSubtitleExtraMessages[message]?.[normalized] ?? accessibilityMessages[message]?.[normalized] ?? bigPictureMessages[message]?.[normalized] ?? commonExtraMessages[message]?.[normalized] ?? uiExtraMessages[message]?.[normalized] ?? extendedUiMessages[message]?.[normalized] ?? footerMessages[message]?.[normalized] ?? message;
 }
 
 
