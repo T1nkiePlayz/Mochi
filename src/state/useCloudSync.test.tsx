@@ -12,6 +12,7 @@ vi.mock("../lib/cloud", async (original) => ({
   pushLibrary: (...args: unknown[]) => (pushLibrary as (...a: unknown[]) => Promise<undefined>)(...args),
 }));
 
+import { getCloudAccountSettings } from "../lib/cloud";
 import { useCloudSync } from "./useCloudSync";
 
 const user = (id: string) => ({ id }) as never;
@@ -34,5 +35,36 @@ describe("useCloudSync account switch", () => {
     release();
     await act(async () => { await vi.advanceTimersByTimeAsync(10); });
     settingsGate = Promise.resolve();
+  });
+});
+
+describe("useCloudSync initialization recovery", () => {
+  it("retries initialization after a local library change following a permanent settings error", async () => {
+    const settings = vi.mocked(getCloudAccountSettings);
+    settings.mockRejectedValueOnce({
+      status: 403,
+      code: "42501",
+      message: "Cloud sync is not enabled for this account",
+    });
+
+    const setLibrary = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ library }) => useCloudSync(user("A"), library, setLibrary, true, "shared"),
+      { initialProps: { library: lib } },
+    );
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(result.current.syncState).toBe("error");
+    expect(settings).toHaveBeenCalledTimes(1);
+
+    // A user edit is an explicit recovery signal; permanent failures should
+    // not spin on a timer, but should not require an app restart either.
+    await act(async () => { await vi.advanceTimersByTimeAsync(60000); });
+    expect(settings).toHaveBeenCalledTimes(1);
+
+    rerender({ library: [{ ...lib[0], name: "Edited locally" }] as never });
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(settings).toHaveBeenCalledTimes(2);
+    expect(result.current.syncState).not.toBe("error");
   });
 });
