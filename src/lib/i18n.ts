@@ -20,6 +20,7 @@ import { settingsTitleMessages } from "./i18nSettingsTitles";
 import { settingsTitleExtraMessages } from "./i18nSettingsTitlesExtra";
 import { accessibilitySettingsCopy } from "./i18nAccessibilitySettings";
 import { settingsSubtitleMessages } from "./i18nSettingsSubtitles";
+import { settingsSubtitleExtraMessages } from "./i18nSettingsSubtitlesExtra";
 
 /**
  * Shared UI message catalogue. Keys are stable English source strings so missing
@@ -100,7 +101,7 @@ export function translate(message: string, language: unknown = getTranslationLoc
   const normalized = normalizeLanguage(language);
   const navigation = navLabel(message, normalized);
   if (navigation !== message) return navigation;
-  return messages[message]?.[normalized] ?? setupMessages[message]?.[normalized] ?? setupCopyMessages[message]?.[normalized] ?? setupCopyExtraMessages[message]?.[normalized] ?? cloudSetupMessages[message]?.[normalized] ?? accountSetupMessages[message]?.[normalized] ?? serviceSetupMessages[message]?.[normalized] ?? chromeMessages[message]?.[normalized] ?? settingsMessages[message]?.[normalized] ?? downloadMessages[message]?.[normalized] ?? dealMessages[message]?.[normalized] ?? dealExtraMessages[message]?.[normalized] ?? libraryMessages[message]?.[normalized] ?? systemMessages[message]?.[normalized] ?? libraryExtraMessages[message]?.[normalized] ?? commonMessages[message]?.[normalized] ?? settingsTitleMessages[message]?.[normalized] ?? settingsTitleExtraMessages[message]?.[normalized] ?? accessibilitySettingsCopy[message]?.[normalized] ?? settingsSubtitleMessages[message]?.[normalized] ?? message;
+  return messages[message]?.[normalized] ?? setupMessages[message]?.[normalized] ?? setupCopyMessages[message]?.[normalized] ?? setupCopyExtraMessages[message]?.[normalized] ?? cloudSetupMessages[message]?.[normalized] ?? accountSetupMessages[message]?.[normalized] ?? serviceSetupMessages[message]?.[normalized] ?? chromeMessages[message]?.[normalized] ?? settingsMessages[message]?.[normalized] ?? downloadMessages[message]?.[normalized] ?? dealMessages[message]?.[normalized] ?? dealExtraMessages[message]?.[normalized] ?? libraryMessages[message]?.[normalized] ?? systemMessages[message]?.[normalized] ?? libraryExtraMessages[message]?.[normalized] ?? commonMessages[message]?.[normalized] ?? settingsTitleMessages[message]?.[normalized] ?? settingsTitleExtraMessages[message]?.[normalized] ?? accessibilitySettingsCopy[message]?.[normalized] ?? settingsSubtitleMessages[message]?.[normalized] ?? settingsSubtitleExtraMessages[message]?.[normalized] ?? message;
 }
 
 
@@ -108,5 +109,5 @@ export function translate(message: string, language: unknown = getTranslationLoc
 export function hasTranslation(message: string, language: unknown): boolean {
   const normalized = normalizeLanguage(language);
   if (navLabel(message, normalized) !== message) return true;
-  return Boolean(messages[message]?.[normalized] || setupMessages[message]?.[normalized] || setupCopyMessages[message]?.[normalized] || setupCopyExtraMessages[message]?.[normalized] || cloudSetupMessages[message]?.[normalized] || accountSetupMessages[message]?.[normalized] || serviceSetupMessages[message]?.[normalized] || chromeMessages[message]?.[normalized] || settingsMessages[message]?.[normalized] || downloadMessages[message]?.[normalized] || dealMessages[message]?.[normalized] || dealExtraMessages[message]?.[normalized] || libraryMessages[message]?.[normalized] || systemMessages[message]?.[normalized] || libraryExtraMessages[message]?.[normalized] || commonMessages[message]?.[normalized] || settingsTitleMessages[message]?.[normalized] || settingsTitleExtraMessages[message]?.[normalized] || accessibilitySettingsCopy[message]?.[normalized] || settingsSubtitleMessages[message]?.[normalized]);
+  return Boolean(messages[message]?.[normalized] || setupMessages[message]?.[normalized] || setupCopyMessages[message]?.[normalized] || setupCopyExtraMessages[message]?.[normalized] || cloudSetupMessages[message]?.[normalized] || accountSetupMessages[message]?.[normalized] || serviceSetupMessages[message]?.[normalized] || chromeMessages[message]?.[normalized] || settingsMessages[message]?.[normalized] || downloadMessages[message]?.[normalized] || dealMessages[message]?.[normalized] || dealExtraMessages[message]?.[normalized] || libraryMessages[message]?.[normalized] || systemMessages[message]?.[normalized] || libraryExtraMessages[message]?.[normalized] || commonMessages[message]?.[normalized] || settingsTitleMessages[message]?.[normalized] || settingsTitleExtraMessages[message]?.[normalized] || accessibilitySettingsCopy[message]?.[normalized] || settingsSubtitleMessages[message]?.[normalized] || settingsSubtitleExtraMessages[message]?.[normalized]);
 }
