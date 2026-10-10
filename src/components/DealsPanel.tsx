@@ -25,8 +25,8 @@ export function DealsPanel() {
   return <section className="deals-panel" aria-label={t("Deals")}>
     <header className="deals-section-head">
       <div className="deals-section-icon"><Tag size={19} aria-hidden="true" /></div>
-      <div className="deals-section-title"><h3>Free games &amp; deals</h3><p>Find something new to play, without leaving Mochi.</p></div>
-      <button type="button" className="secondary-button deals-refresh" onClick={deals.refresh} disabled={checking} aria-label={t("Refresh")}><RefreshCw size={14} className={checking ? "deals-refresh-spin" : ""} aria-hidden="true" /> {checking ? "Checking…" : "Refresh"}</button>
+      <div className="deals-section-title"><h3>{t("Free games & deals")}</h3><p>Find something new to play, without leaving Mochi.</p></div>
+      <button type="button" className="secondary-button deals-refresh" onClick={deals.refresh} disabled={checking} aria-label={t("Refresh")}><RefreshCw size={14} className={checking ? "deals-refresh-spin" : ""} aria-hidden="true" /> {checking ? t("Checking…") : t("Refresh")}</button>
     </header>
     <div className="deals-status" role="status" aria-live="polite"><span className={deals.status === "error" || deals.status === "offline" ? "deals-status-dot muted" : "deals-status-dot"} />{status}</div>
     <section className="deals-preferences" aria-label="Deal sources">
@@ -52,7 +52,7 @@ export function DealsPanel() {
       {free.length > 0 ? <div className="deals-offer-list">{free.map((game) => <article className="deals-offer" key={game.id}>
         <div className="deals-offer-art free"><Store size={17} aria-hidden="true" /></div>
         <div className="deals-offer-copy"><strong><ExternalLink href={game.url}>{game.title}</ExternalLink></strong><small>Epic Games Store</small></div>
-        <div className="deals-offer-price"><span className={game.state === "free-now" ? "deals-free-now" : ""}>{game.state === "free-now" ? "Free now" : "Coming soon"}</span>{game.originalPrice && <small>Was {game.originalPrice}</small>}</div>
+        <div className="deals-offer-price"><span className={game.state === "free-now" ? "deals-free-now" : ""}>{game.state === "free-now" ? t("Free now") : t("Coming soon")}</span>{game.originalPrice && <small>Was {game.originalPrice}</small>}</div>
       </article>)}</div> : <div className="deals-empty-inline">{deals.stores.includes("epic") ? "No Epic giveaways available right now." : "Enable Epic Games Store above to see giveaways."}</div>}
     </section>
     {watched.length > 0 && <section className="deals-results">
