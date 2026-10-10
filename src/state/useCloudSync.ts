@@ -121,6 +121,10 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
   /** Explicit setup import: fetch the account's cloud library and merge it with local data without deleting local-only games. */
   const importCloudLibrary = async () => {
     if (!storageReady || !supabase || !user || cloudDataBusy) return;
+    if (!cloudDataAccessAllowed) {
+      setCloudDataMessage("Cloud library access is disabled for this account. Enable cloud metadata access in Settings before importing.");
+      return;
+    }
     setCloudDataBusy(true);
     setCloudDataMessage("");
     try {
