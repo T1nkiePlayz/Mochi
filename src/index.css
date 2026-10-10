@@ -353,7 +353,6 @@ footer { display:flex; justify-content:space-between; margin-top:50px; color:var
 .tofu-picker-row>div{display:grid;gap:3px;min-width:0;}
 .tofu-picker-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tofu-picker-row small{color:var(--mochi-text-muted);font-size: 11px;}
-.tofu-picker-row .secondary-button{width:36px;min-width:36px;padding:0;}
 @media(max-width:700px){.project-details-header{padding:17px}.project-details-header img,.project-details-header .discover-card-icon{width:56px;height:56px;flex-basis:56px}.project-info-grid{grid-template-columns:1fr}.project-overview,.project-version-list{padding:17px}.project-tabs{padding:0 17px;}.tofu-picker-window{padding:17px;}.discover-modal-backdrop{padding:14px;}}
 
 

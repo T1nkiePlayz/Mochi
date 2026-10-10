@@ -87,7 +87,7 @@
 .mod-game-label { color: var(--mochi-accent-strong); font-weight: 700; }
 
 /* Tofu picker rows with compatibility */
-.tofu-picker-row .secondary-button { width: auto; min-width: 0; padding: 0 12px; white-space: nowrap; }
+.tofu-picker-row .secondary-button { flex: 0 0 auto; width: auto; min-width: 112px; min-height: 38px; padding: 0 12px; white-space: nowrap; }
 .tofu-picker-row .compat-note { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .compat-badge { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border: 1px solid currentColor; border-radius: var(--mochi-pill-radius, 999px); font-size: 11px; font-weight: 700; white-space: nowrap; }
 .compat-compatible { color: var(--mochi-success); }
