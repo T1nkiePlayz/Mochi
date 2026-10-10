@@ -77,7 +77,6 @@ async fn fetch(appid: u32, language: &str) -> Result<String, (bool, String)> {
         .redirect(reqwest::redirect::Policy::none())
         .connect_timeout(Duration::from_secs(8)).timeout(Duration::from_secs(20)).build(), "Unable to prepare the Steam request")
         .map_err(|m| (false, m))?;
-    let language = language.as_deref().filter(|value| matches!(*value, "arabic" | "bulgarian" | "schinese" | "tchinese" | "czech" | "danish" | "dutch" | "english" | "finnish" | "french" | "german" | "greek" | "hungarian" | "indonesian" | "italian" | "japanese" | "koreana" | "norwegian" | "polish" | "portuguese" | "romanian" | "russian" | "spanish" | "swedish" | "thai" | "turkish" | "ukrainian" | "vietnamese")).unwrap_or("english");
     let url = format!("https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid={appid}&count=3&maxlength=300&language={language}&format=json");
     let mut response = client.get(url).send().await.map_err(|error| {
         if error.is_connect() || error.is_timeout() { (true, "Steam could not be reached.".to_string()) } else { (false, format!("Steam request failed: {error}")) }
