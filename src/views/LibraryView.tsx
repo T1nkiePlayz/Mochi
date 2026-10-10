@@ -179,7 +179,7 @@ export function LibraryView() {
       onShortcutSteam={(userId) => void actions.addToSteam(details, userId)}
       workspace={<>
         <section className="tofu-section">
-          <div className="section-heading"><div><p className="eyebrow">Environments</p><h3>Your Tofus</h3></div><button className="text-button" onClick={() => app.setShowTofuManager(true)}><MochiIcon name="manage" fallback={SlidersHorizontal} size={15} /> Manage</button></div>
+          <div className="section-heading"><div><p className="eyebrow">Environments</p><h3>{t("Your Tofus")}</h3></div><button className="text-button" onClick={() => app.setShowTofuManager(true)}><MochiIcon name="manage" fallback={SlidersHorizontal} size={15} /> {t("Manage")}</button></div>
           <div className="tofu-grid">
             {selectedPiko.tofus.map((tofu) => (
               <button className={`tofu-card ${selectedTofu.id === tofu.id ? "active" : ""}`} key={tofu.id} onClick={() => lib.setSelectedTofuId(tofu.id)}>
@@ -189,7 +189,7 @@ export function LibraryView() {
                 <span className="tofu-mods">{tofu.mods ? `${tofu.mods} mods installed` : "No mods installed"}</span>
               </button>
             ))}
-            <button className="new-tofu-card" onClick={() => { lib.createTofu(); app.setShowTofuManager(true); }}><MochiIcon name="plus" fallback={Plus} size={17} /><span>New Tofu</span><small>Set up another environment</small></button>
+            <button className="new-tofu-card" onClick={() => { lib.createTofu(); app.setShowTofuManager(true); }}><MochiIcon name="plus" fallback={Plus} size={17} /><span>{t("New Tofu")}</span><small>Set up another environment</small></button>
           </div>
         </section>
         <section className="details-strip">
@@ -216,7 +216,7 @@ export function LibraryView() {
   return <>
     {heading}
     {lib.continuePlaying.length > 0 && !search.trim() && <section className="continue-playing">
-      <div className="section-heading"><div><p className="eyebrow">Jump back in</p><h3>{t("Continue playing")}</h3></div></div>
+      <div className="section-heading"><div><p className="eyebrow">{t("Jump back in")}</p><h3>{t("Continue playing")}</h3></div></div>
       <div className="continue-grid">{lib.continuePlaying.map(({ piko, entry }) => <article className="continue-card" key={piko.id}>
         <button type="button" className="continue-main" onClick={() => { lib.selectPiko(piko); lib.setGameDetailsId(piko.id); }}>
           <GameArtwork className="continue-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} name={piko.name} kind={piko.kind} sourceId={piko.sourceId} />
@@ -256,10 +256,10 @@ export function LibraryView() {
       onRemove={() => setRemoval(checkedGames)}
       onSelectAll={() => setChecked(new Set(lib.visiblePikos.map((piko) => piko.id)))}
       onDone={endSelecting} />}
-    {!lib.visiblePikos.length && <div className="empty-state library-no-match"><h2>{t("No games match.")}</h2><p>Try another filter or clear the search.</p><button type="button" className="secondary-button" onClick={() => { lib.setFilter({ kind: "smart", id: "all" }); lib.setTagFilters([]); lib.setSearch(""); }}>Show everything</button></div>}
+    {!lib.visiblePikos.length && <div className="empty-state library-no-match"><h2>{t("No games match.")}</h2><p>Try another filter or clear the search.</p><button type="button" className="secondary-button" onClick={() => { lib.setFilter({ kind: "smart", id: "all" }); lib.setTagFilters([]); lib.setSearch(""); }}>{t("Show everything")}</button></div>}
     <section className="library-grid-view" data-view={view} data-groups={lib.groupedPikos.length} key={view} {...grid.gridProps}>
       {lib.groupedPikos.map(([category, games]) => <div className="library-category" key={category}>
-        <div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div>
+        <div className="section-heading"><div><p className="eyebrow">{t("Category")}</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div>
         <div className="game-card-grid">{games.map(cardWithInstances)}</div>
       </div>)}
     </section>
