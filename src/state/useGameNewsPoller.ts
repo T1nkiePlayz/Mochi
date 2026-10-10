@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Piko } from "../models";
-import { canPoll, dueApps, markChecked, mergeNews, modUpdateNews, takeUnseen, type ModUpdateNews, type NewsItem } from "../lib/gameNews";
+import { canPoll, dueApps, emptyNewsState, markChecked, mergeNews, modUpdateNews, takeUnseen, type ModUpdateNews, type NewsItem } from "../lib/gameNews";
 import { isOnline, markNetworkFailure, markNetworkOk } from "../lib/offline";
 import { steamAppIdOf } from "../lib/metadata/merge";
 import { getNewsSnapshot, setModNews, setNews } from "./gameNewsStore";
@@ -12,6 +12,13 @@ type RawItem = { gid: string; title: string; url: string; feedLabel: string; dat
 type RawResult = { status: "ok" | "offline" | "error"; items: RawItem[] };
 
 const TICK_MS = 10 * 60 * 1000;
+
+/** Converts the current UI/OS locale to Steam's language names; a future language setting can supply its locale here. */
+export function steamNewsLanguage(locale: string): string {
+  const code = locale.toLowerCase().split(/[-_]/, 1)[0];
+  const names: Record<string, string> = { ar: "arabic", bg: "bulgarian", zh: "schinese", cs: "czech", da: "danish", nl: "dutch", en: "english", fi: "finnish", fr: "french", de: "german", el: "greek", hu: "hungarian", id: "indonesian", it: "italian", ja: "japanese", ko: "koreana", no: "norwegian", pl: "polish", pt: "portuguese", ro: "romanian", ru: "russian", es: "spanish", sv: "swedish", th: "thai", tr: "turkish", uk: "ukrainian", vi: "vietnamese", "zh-tw": "tchinese" };
+  return names[code] ?? "english";
+}
 const FIRST_DELAY_MS = 20_000;
 const STAGGER_MS = 1500;
 
@@ -31,6 +38,9 @@ export function useGameNewsPoller(enabled: boolean, library: readonly Piko[], no
     if (!enabled) return;
     let cancelled = false;
     let running = false;
+    // Until Mochi has a language selector, follow the OS/webview locale.
+    const language = steamNewsLanguage(typeof navigator === "undefined" ? "en" : navigator.language);
+    if (getNewsSnapshot().news.language !== language) setNews(emptyNewsState(language));
     const timers = new Set<number>();
     const sleep = (ms: number) => new Promise<void>((resolve) => { const id = window.setTimeout(() => { timers.delete(id); resolve(); }, ms); timers.add(id); });
     const ok = () => canPoll({ enabled: !cancelled, online: isOnline(), visible: document.visibilityState !== "hidden" });
@@ -48,7 +58,7 @@ export function useGameNewsPoller(enabled: boolean, library: readonly Piko[], no
           if (!ok()) break;
           const game = names.get(appid) ?? `Steam app ${appid}`;
           let result: RawResult;
-          try { result = await invoke<RawResult>("get_steam_news", { appid }); } catch { continue; }
+          try { result = await invoke<RawResult>("get_steam_news", { appid, language }); } catch { continue; }
           if (cancelled) break;
           if (result.status === "offline") { markNetworkFailure(); break; }
           markNetworkOk();
