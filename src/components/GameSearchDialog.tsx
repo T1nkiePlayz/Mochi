@@ -6,6 +6,7 @@ import { RemoteImage } from "./RemoteImage";
 import { sameWish, useWishlist, type WishlistInput } from "../lib/wishlist";
 import { unwatchPrice, watchPrice } from "../lib/deals";
 import { openExternalUrl } from "../lib/platform";
+import { useTranslation } from "../lib/useTranslation";
 import {
   buildChart, createDebouncedSearch, createProviderBackend, dailyLowest, gameSearchAvailable, gameSearchBackendOverride, historyCaption, historyKey,
   observationsFromPrices, recordObservations, type GameDetails, type GameSearchBackend, type PriceObservation, type SearchHit,
@@ -41,6 +42,7 @@ function Gallery({ title, urls, wide }: { title: string; urls: Array<{ thumb: st
 }
 
 function Details({ game, onSearch }: { game: GameDetails; onSearch: (name: string) => void }) {
+  const t = useTranslation();
   const wishlist = useWishlist();
   const [observations, setObservations] = useState<PriceObservation[]>([]);
   const [target, setTarget] = useState("");
@@ -53,11 +55,11 @@ function Details({ game, onSearch }: { game: GameDetails; onSearch: (name: strin
   const current = [game.prices.steam ? game.prices.steam.final / 100 : null, game.prices.shark?.cheapestNow ?? null].filter((p): p is number => p !== null);
   const lowestNow = current.length ? Math.min(...current) : null;
   const wishInput = (): WishlistInput => ({ name: game.name, source: game.steamAppId ? "steam" : "igdb", externalId: game.steamAppId ? String(game.steamAppId) : undefined, coverUrl: game.coverUrl?.startsWith("https://") ? game.coverUrl : undefined });
-  const addWish = () => { setNote(wishlist.add(wishInput()) ? "On your wishlist." : "Could not add it to the wishlist."); };
+  const addWish = () => { setNote(wishlist.add(wishInput()) ? t("On your wishlist.") : t("Could not add it to the wishlist.")); };
   const watch = () => {
     const value = Number(target.replace(",", "."));
-    if (!(value > 0)) { setNote("Enter a target price above 0."); return; }
-    setNote(watchPrice(wishInput(), value) ? `Watching for ${money(value)} or less. Deal alerts check every few hours.` : "Could not start the price watch.");
+    if (!(value > 0)) { setNote(t("Enter a target price above 0.")); return; }
+    setNote(watchPrice(wishInput(), value) ? t("Watching for {price} or less. Deal alerts check every few hours.").replace("{price}", money(value)) : t("Could not start the price watch."));
   };
   const stored = wishlist.items.find((item) => sameWish(item, wishInput()));
   const ever = game.prices.shark?.cheapestEver ?? null;
@@ -66,15 +68,15 @@ function Details({ game, onSearch }: { game: GameDetails; onSearch: (name: strin
     <header className="game-search-title">
       {game.coverUrl && <RemoteImage className="game-search-cover" src={game.coverUrl} alt="" referrerPolicy="no-referrer" />}
       <div><h3>{game.name}</h3>
-        <p className="game-search-muted">{[game.releaseDate ? fullDate(game.releaseDate) : "", game.developers.join(", ")].filter(Boolean).join(" · ") || "No release or developer info"}</p>
+        <p className="game-search-muted">{[game.releaseDate ? fullDate(game.releaseDate) : "", game.developers.join(", ")].filter(Boolean).join(" · ") || t("No release or developer info")}</p>
         {game.rating && <p><strong>{game.rating.score}</strong>/100 on IGDB{game.rating.count ? ` (${game.rating.count} ratings)` : ""}</p>}
       </div>
     </header>
     <div className="game-search-actions">
-      <button type="button" className="secondary-button" onClick={addWish} disabled={Boolean(stored)}><Gift size={14} aria-hidden="true" /> {stored ? "On wishlist" : "Add to wishlist"}</button>
-      <label className="game-search-target">Alert me at <input className="compact-input" inputMode="decimal" placeholder={lowestNow ? (lowestNow * 0.8).toFixed(2) : "9.99"} value={target} onChange={(event) => setTarget(event.target.value)} aria-label="Target price in USD" /> USD</label>
-      <button type="button" className="secondary-button" onClick={watch}><Bell size={14} aria-hidden="true" /> Watch price</button>
-      {stored?.priceWatch?.targetPrice !== undefined && <button type="button" className="secondary-button" onClick={() => { unwatchPrice(stored.id); setNote("Price watch removed."); }}><BellOff size={14} aria-hidden="true" /> Stop watching ({money(stored.priceWatch.targetPrice)})</button>}
+      <button type="button" className="secondary-button" onClick={addWish} disabled={Boolean(stored)}><Gift size={14} aria-hidden="true" /> {stored ? t("On wishlist") : t("Add to wishlist")}</button>
+      <label className="game-search-target">{t("Alert me at")} <input className="compact-input" inputMode="decimal" placeholder={lowestNow ? (lowestNow * 0.8).toFixed(2) : "9.99"} value={target} onChange={(event) => setTarget(event.target.value)} aria-label={t("Target price in USD")} /> {t("USD")}</label>
+      <button type="button" className="secondary-button" onClick={watch}><Bell size={14} aria-hidden="true" /> {t("Watch price")}</button>
+      {stored?.priceWatch?.targetPrice !== undefined && <button type="button" className="secondary-button" onClick={() => { unwatchPrice(stored.id); setNote(t("Price watch removed.")); }}><BellOff size={14} aria-hidden="true" /> {t("Stop watching ({price})").replace("{price}", money(stored.priceWatch.targetPrice))}</button>}
     </div>
     <p className="game-search-muted" role="status" aria-live="polite">{note}</p>
     {game.description && <p className="game-search-description">{game.description}</p>}
