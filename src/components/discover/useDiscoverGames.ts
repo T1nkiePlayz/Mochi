@@ -118,7 +118,17 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
       .filter((game) => Boolean(game.assets?.iconUrl))
       .map((game) => ({ lookupKey: `cf:${game.id}`, name: game.name }));
     const byKey = new Map<string, IconCandidate>();
-    for (const game of [...storedNexus, ...storedCurseForge, ...liveNexus, ...knownNexus, ...missingCurseForge, ...otherCurseForge]) {
+    // Bound each source so a large Nexus catalogue cannot consume the entire IGDB budget before
+    // missing CurseForge icons are considered. Explicitly added games always take priority.
+    const candidates = [
+      ...storedNexus,
+      ...storedCurseForge,
+      ...liveNexus.slice(0, 12),
+      ...knownNexus,
+      ...missingCurseForge.slice(0, 32),
+      ...otherCurseForge.slice(0, 16),
+    ];
+    for (const game of candidates) {
       if (!byKey.has(game.lookupKey)) byKey.set(game.lookupKey, game);
     }
     const missing = [...byKey.values()].filter((game) => !igdbIcons[game.lookupKey]).slice(0, 64);
