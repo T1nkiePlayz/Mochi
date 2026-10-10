@@ -259,7 +259,7 @@ export function LibraryView() {
     {!lib.visiblePikos.length && <div className="empty-state library-no-match"><h2>{t("No games match.")}</h2><p>Try another filter or clear the search.</p><button type="button" className="secondary-button" onClick={() => { lib.setFilter({ kind: "smart", id: "all" }); lib.setTagFilters([]); lib.setSearch(""); }}>{t("Show everything")}</button></div>}
     <section className="library-grid-view" data-view={view} data-groups={lib.groupedPikos.length} key={view} {...grid.gridProps}>
       {lib.groupedPikos.map(([category, games]) => <div className="library-category" key={category}>
-        <div className="section-heading"><div><p className="eyebrow">{t("Category")}</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div>
+        <div className="section-heading"><div><p className="eyebrow">{t("Category")}</p><h3>{category}</h3></div><span className="category-count">{t(games.length === 1 ? "{count} game" : "{count} games").replace("{count}", String(games.length))}</span></div>
         <div className="game-card-grid">{games.map(cardWithInstances)}</div>
       </div>)}
     </section>
