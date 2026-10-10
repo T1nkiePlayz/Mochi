@@ -116,8 +116,9 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
       ...catalog,
       ...KNOWN_NEXUS_GAMES,
     ];
+    const iconned = new Set(candidates.filter((game) => game.iconUrl).map((game) => game.domainName.toLocaleLowerCase()));
     const missingByDomain = new Map(candidates
-      .filter((game) => !game.iconUrl)
+      .filter((game) => !iconned.has(game.domainName.toLocaleLowerCase()))
       .map((game) => [game.domainName.toLocaleLowerCase(), game]));
     const missing = [...missingByDomain.values()].slice(0, 32);
 
