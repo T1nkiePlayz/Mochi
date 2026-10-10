@@ -1,0 +1,9 @@
+{"data":{"Catalog":{"searchStore":{"elements":[
+{"title":"Free Now Game","id":"a1","productSlug":"free-now-game/home","offerMappings":[{"pageSlug":"free-now-game","pageType":"productHome"}],"price":{"totalPrice":{"fmtPrice":{"originalPrice":"$19.99"}}},
+ "promotions":{"promotionalOffers":[{"promotionalOffers":[{"startDate":"2026-10-09T15:00:00.000Z","endDate":"2026-10-16T15:00:00.000Z","discountSetting":{"discountType":"PERCENTAGE","discountPercentage":0}}]}],"upcomingPromotionalOffers":[]}},
+{"title":"Next Week Game","id":"a2","productSlug":null,"urlSlug":"next-week-game","offerMappings":null,"price":{"totalPrice":{"fmtPrice":{"originalPrice":"$9.99"}}},
+ "promotions":{"promotionalOffers":[],"upcomingPromotionalOffers":[{"promotionalOffers":[{"startDate":"2026-10-16T15:00:00.000Z","endDate":"2026-10-23T15:00:00.000Z","discountSetting":{"discountType":"PERCENTAGE","discountPercentage":0}}]}]}},
+{"title":"Twenty Percent Off","id":"a3","urlSlug":"twenty","price":{"totalPrice":{"fmtPrice":{"originalPrice":"$39.99"}}},
+ "promotions":{"promotionalOffers":[],"upcomingPromotionalOffers":[{"promotionalOffers":[{"startDate":"2026-12-10T17:00:00.000Z","endDate":"2027-01-07T23:59:00.000Z","discountSetting":{"discountType":"PERCENTAGE","discountPercentage":20}}]}]}},
+{"title":"Not Promoted","id":"a4","urlSlug":"plain","promotions":null}
+]}}}}

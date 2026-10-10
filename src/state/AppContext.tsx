@@ -16,6 +16,7 @@ import { useCredentials } from "./useCredentials";
 import { useLibrary } from "./useLibrary";
 import { usePlaytime } from "./usePlaytime";
 import { useCollections } from "./useCollections";
+import { useGameNewsPoller } from "./useGameNewsPoller";
 import { useProfileStorage } from "./useProfileStorage";
 import { useCloudSync } from "./useCloudSync";
 import { useDownloads } from "./useDownloads";
@@ -26,6 +27,8 @@ import { useGameActions } from "./useGameActions";
 import { useDeepLinks } from "./useDeepLinks";
 import { useCliIntents } from "./useCliIntents";
 import { useLibraryIndex } from "./useLibraryIndex";
+import { useDeals } from "./useDeals";
+import { experimentalIds } from "../lib/experimental";
 import { CliChooser } from "../components/CliChooser";
 import { AchievementWatcher } from "../components/stats/AchievementWatcher";
 import { ConfirmHost } from "../components/ui/ConfirmHost";
@@ -74,6 +77,7 @@ function useAppController() {
       notifications.setShowNotifications(false);
     },
   });
+  useGameNewsPoller(behavior.experimental.includes("game-news"), lib.library, notify);
   const collections = useCollections(storage.ownerKey, storage.ready, lib.setLibrary);
   const cloud = useCloudSync(user, lib.library, lib.setLibrary, storage.ready, storage.ownerKey);
   const downloads = useDownloads(activeNav === "Downloads", notify);
@@ -96,6 +100,7 @@ function useAppController() {
   });
   useDeepLinks(account, cliIntents.handle);
   useLibraryIndex(lib.library, storage.ready);
+  const deals = useDeals(behavior.experimental.includes("deal-alerts") && experimentalIds().includes("deal-alerts"), lib.library, notify);
 
   const finishFirstLaunchSetup = (games: ImportedGame[], sources: ImportSourceId[], minecraftMode: MinecraftMode = "copy") => {
     writeString(storageKeys.setupComplete, "true");
@@ -136,7 +141,7 @@ function useAppController() {
     behavior, setBehavior, activeNav, setActiveNav, showFirstLaunchSetup, finishFirstLaunchSetup,
     platformCapabilities, runtimes, showTofuManager, setShowTofuManager, editingGameId, setEditingGameId,
     notifications, account, credentials, sessions, playtime, refreshPlaytime, lib, collections, themeEngine, actions, metadata, add, storage, cloud, downloads,
-    hasIgdb, chooseConfigLocation, resetLocalData, cliIntents,
+    hasIgdb, chooseConfigLocation, resetLocalData, cliIntents, deals,
   };
 }
 

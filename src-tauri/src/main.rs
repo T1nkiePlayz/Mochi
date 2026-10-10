@@ -4,6 +4,7 @@ use tauri::{Emitter, Manager, WindowEvent};
 mod fonts;
 mod bigpicture;
 mod cli;
+mod deals;
 mod dirsize;
 mod game_artwork;
 mod icon_cover;
@@ -25,9 +26,11 @@ mod shortcuts;
 mod playtime;
 mod process;
 mod savebackup;
+mod sharecard;
 mod sources;
 mod soundpacks;
 mod steam_achievements;
+mod steam_news;
 mod steam_store;
 mod settings_zip;
 mod storage;
@@ -325,14 +328,15 @@ fn main() {
             launch_game_tracked, stop_game, get_active_sessions, get_playtime, get_playtime_history, get_dir_size, get_downloads,
             list_flatpaks, list_runtimes, list_launch_runtimes, preview_launch_command, get_platform_capabilities, create_game_shortcut, remove_game_shortcut, shortcuts::get_shortcut_targets, shortcuts::create_piko_shortcut, shortcuts::add_piko_to_steam,
             detect_import_sources, scan_import_games, copy_minecraft_instance, read_minecraft_pack,
-            bigpicture::get_system_status, bigpicture::suspend_system, bigpicture::power_action, bigpicture::get_power_capabilities, soundpacks::list_sound_packs, soundpacks::import_sound_pack, soundpacks::remove_sound_pack, soundpacks::export_sound_pack, soundpacks::read_sound_pack_file, bigpicture::quit_mochi, gamepad::get_gamepads, gamepad::gamepad_rumble,
+            bigpicture::get_system_status, bigpicture::suspend_system, bigpicture::power_action, bigpicture::get_power_capabilities, soundpacks::list_sound_packs, soundpacks::import_sound_pack, soundpacks::remove_sound_pack, soundpacks::export_sound_pack, sharecard::write_share_card, soundpacks::read_sound_pack_file, bigpicture::quit_mochi, gamepad::get_gamepads, gamepad::gamepad_rumble,
             get_mochi_config_info, move_mochi_config, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
             fonts::cache_theme_fonts, settings_zip::export_settings_zip, settings_zip::read_settings_zip, settings_zip::install_themes_from_settings_zip,
             storage::scan_storage, storage::cancel_storage_scan, storage::clear_storage_location,
             game_artwork::cache_game_artwork, game_artwork::get_cached_game_artwork, game_artwork::get_cached_game_artwork_path, game_artwork::clear_game_artwork_cache,
             game_artwork::prepare_artwork_preview, game_artwork::save_custom_artwork, game_artwork::delete_game_artwork, icon_cover::cache_icon_cover, platform::check_launch_targets,
             modrinth::get_public_api, modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::apply_mod_profile,
-            steam_store::get_steam_store_details, steam_achievements::get_steam_achievements, steam_achievements::get_steam_achievement_totals,
+            deals::get_epic_free_games, deals::get_cheapshark_deals, deals::get_price_info,
+            steam_store::get_steam_store_details, steam_news::get_steam_news, steam_achievements::get_steam_achievements, steam_achievements::get_steam_achievement_totals,
             steam_achievements::clear_steam_achievements_cache, steam_store::clear_steam_store_cache,
             modrinth::delete_mod_file, modrinth::start_modrinth_download, downloads::start_mod_download, modrinth::update_mod_file, modrinth::analyze_mod_files,
             downloads::cancel_mod_download, downloads::clear_finished_downloads,

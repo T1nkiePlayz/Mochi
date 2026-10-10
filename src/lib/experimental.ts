@@ -15,6 +15,10 @@ export type ExperimentalFeature = {
   since: string;
 };
 
-export const experimentalFeatures: ExperimentalFeature[] = [];
+export const experimentalFeatures: ExperimentalFeature[] = [
+  { id: "game-news", name: "Game news", description: "A News tab in the notification centre with the latest Steam news for your Steam games and updates for your installed mods. Checks at most every 6 hours while Mochi is open.", since: "0.1.0" },
+  { id: "deal-alerts", name: "Deal alerts", description: "Free games and sales for the stores you use (Epic, CheapShark), plus price-watch alerts for wishlist games. Metadata only, checked at most every 6 hours.", since: "0.1.0" },
+  { id: "share-card", name: "Share card", description: "Stats > Share card makes a PNG of your top games, playtime and achievements to save or copy. Built locally; you choose what it shows.", since: "0.1.0" },
+];
 
 export const experimentalIds = () => experimentalFeatures.map((feature) => feature.id);

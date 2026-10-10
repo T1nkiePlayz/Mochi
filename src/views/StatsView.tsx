@@ -10,6 +10,10 @@ import { readJson, readString, storageKeys, writeString } from "../lib/storage";
 import { isExtra } from "../lib/library";
 import { Segmented } from "../components/stats/Segmented";
 import { Composition, Heatmap, HourHistogram, StackedBars, TopGames, WeekdayPattern } from "../components/stats/Charts";
+import { ShareCardDialog } from "../components/stats/ShareCardDialog";
+import { useExperimental } from "../state/useExperimental";
+import { usernameOf } from "../state/useAccount";
+import { Share2 } from "lucide-react";
 import { AchievementsPanel, RecentAchievements } from "../components/stats/AchievementsPanel";
 
 const RANGES = [{ value: 7, label: "7 days" }, { value: 30, label: "30 days" }, { value: 90, label: "90 days" }, { value: 365, label: "Year" }] as const;
@@ -24,7 +28,9 @@ function Card({ title, id, children, wide }: { title: string; id: string; childr
 }
 
 export function StatsView() {
-  const { lib, playtime, sessions, setActiveNav } = useApp();
+  const { lib, playtime, sessions, setActiveNav, account } = useApp();
+  const shareEnabled = useExperimental("share-card");
+  const [sharing, setSharing] = useState(false);
   const [tab, setTab] = useState<"overview" | "achievements">("overview");
   const [range, setRange] = useState<RangeDays>(() => { const v = Number(readString(RANGE_KEY)); return v === 7 || v === 90 || v === 365 ? v : 30; });
   const [records, setRecords] = useState<SessionRecord[] | null>(null);
@@ -83,6 +89,7 @@ export function StatsView() {
             <>
               <div className="stats-toolbar">
                 <Segmented label="Time range" value={range} options={RANGES.map((r) => ({ ...r }))} onChange={changeRange} />
+                {shareEnabled && <button type="button" className="secondary-button" onClick={() => setSharing(true)}><Share2 size={14} /> Share card</button>}
                 {analysis.historicSeconds > 0 && <span className="stats-muted">Plus {formatHours(analysis.historicSeconds)} played before Mochi kept history.</span>}
               </div>
               <div className="stats-kpis">
@@ -106,6 +113,7 @@ export function StatsView() {
           )}
         </div>
       )}
+      {sharing && shareEnabled && <ShareCardDialog records={data} library={lib.library} unlocked={progress.filter((item) => item.met).length} totalAchievements={progress.length} username={usernameOf(account.user)} onClose={() => setSharing(false)} />}
     </div>
   );
 }

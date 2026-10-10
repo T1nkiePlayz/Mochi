@@ -168,6 +168,11 @@ code, .mfa-setup-card code, .theme-config-path code, .setting-location-value cod
   border-radius: var(--mochi-card-radius); box-shadow: var(--mochi-modal-shadow);
 }
 .notification-item { border-radius: 0; border-width: 0 0 var(--mochi-border-width); background: transparent; }
+.notification-tabs { padding: 4px 8px 0; border-bottom: var(--mochi-border-width) solid var(--mochi-border); }
+.notification-news { max-height: 340px; overflow-y: auto; }
+.notification-news-item { width: 100%; text-align: left; cursor: pointer; color: inherit; }
+.notification-news-item:hover { background: var(--mochi-nav-hover-background); }
+.notification-news-item small { color: var(--mochi-text-muted); font-size: 10px; }
 .notification-heading { background: transparent; border-bottom: var(--mochi-border-width) solid var(--mochi-border); }
 .account-menu button { border-radius: var(--mochi-button-radius); }
 .account-menu button:hover, .account-menu button.selected { background: var(--mochi-nav-hover-background); }
