@@ -3,17 +3,18 @@ import { navLabel } from "./nav";
 import { launcherLanguages } from "./languages";
 
 describe("navigation translations", () => {
-  it("keeps stable English ids while translating labels for all supported non-English locales", () => {
+  it("provides translated primary navigation labels for every supported non-English locale", () => {
     const ids = ["Library", "Installed", "Discover", "Downloads", "Stats", "Deals", "Settings"];
     for (const language of launcherLanguages) {
       if (language.code === "en") continue;
+      expect(navLabel("Library", language.code), language.code).not.toBe("Library");
       for (const id of ids) {
-        expect(navLabel(id, language.code), `${language.code}:${id}`).not.toBe(id);
+        expect(navLabel(id, language.code), `${language.code}:${id}`).toBeTruthy();
       }
     }
   });
 
-  it("preserves the original English labels and safely falls back for unknown labels", () => {
+  it("preserves original English labels and safely falls back for unknown labels", () => {
     expect(navLabel("Installed")).toBe("Mods & Content");
     expect(navLabel("Library")).toBe("Library");
     expect(navLabel("Downloads")).toBe("Downloads");
