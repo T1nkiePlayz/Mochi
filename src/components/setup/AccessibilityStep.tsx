@@ -1,7 +1,6 @@
 import { Accessibility } from "lucide-react";
 import { AccessibilityQuickSetup } from "../AccessibilityQuickSetup";
 import { useTranslation } from "../../lib/useTranslation";
-import { useTranslation } from "../../lib/useTranslation";
 
 export function AccessibilityStep() {
   const t = useTranslation();
