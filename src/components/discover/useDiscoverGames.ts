@@ -75,7 +75,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
   const [catalog, setCatalog] = useState<NexusGame[]>([]);
   const [igdbIcons, setIgdbIcons] = useState<Record<string, string>>({});
   const igdbIconsRef = useRef(igdbIcons);
-  igdbIconsRef.current = igdbIcons;
+  useEffect(() => { igdbIconsRef.current = igdbIcons; }, [igdbIcons]);
   const [stored, setStored] = useState<StoredGame[]>(readStored);
   const [reload, setReload] = useState(0);
   const nexusOn = settings.nexus;
