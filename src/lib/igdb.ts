@@ -30,3 +30,16 @@ export async function lookupIgdbGames(client: SupabaseClient, name: string): Pro
   const data = await invokeProviderFunction<{ games?: IgdbGame[] }>(client, { action: "igdb-search", query: name.trim(), limit: 6 });
   return data.games ?? [];
 }
+
+/** Hours to finish the main story per IGDB game id (`normally`, else `hastily`). Missing games are omitted. */
+export async function lookupTimeToBeat(client: SupabaseClient, gameIds: number[]): Promise<Map<number, number>> {
+  const ids = [...new Set(gameIds)].slice(0, 100);
+  const hours = new Map<number, number>();
+  if (!ids.length) return hours;
+  const data = await invokeProviderFunction<{ times?: Array<{ game_id?: number; hastily?: number; normally?: number }> }>(client, { action: "igdb-time-to-beat", gameIds: ids });
+  for (const row of data.times ?? []) {
+    const seconds = row.normally ?? row.hastily;
+    if (typeof row.game_id === "number" && typeof seconds === "number" && seconds > 0) hours.set(row.game_id, seconds / 3600);
+  }
+  return hours;
+}
