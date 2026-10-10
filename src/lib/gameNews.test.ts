@@ -10,6 +10,8 @@ describe("steamNewsLanguage", () => {
     expect(steamNewsLanguage("fr-FR")).toBe("french");
     expect(steamNewsLanguage("en-AU")).toBe("english");
     expect(steamNewsLanguage("zh-TW")).toBe("tchinese");
+    expect(steamNewsLanguage("zh-Hant")).toBe("tchinese");
+    expect(steamNewsLanguage("zh-Hans")).toBe("schinese");
     expect(steamNewsLanguage("zh-CN")).toBe("schinese");
     expect(steamNewsLanguage("pt-BR")).toBe("brazilian");
     expect(steamNewsLanguage("xx-YY")).toBe("english");
