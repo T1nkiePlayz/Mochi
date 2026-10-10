@@ -99,6 +99,14 @@ describe("shared UI translations", () => {
     expect(missingMessages, `Missing literal UI translations (${missingMessages.length} strings):\n${missingMessages.slice(0, 200).join("\n")}`).toEqual([]);
   });
 
+  it("resolves translations from every supplemental catalogue", () => {
+    expect(translate("Playtime", "fr")).toBe("Temps de jeu");
+    expect(translate("Search games", "ja")).toBe("ゲームを検索");
+    expect(translate("Add a Piko", "de")).toBe("Piko hinzufügen");
+    expect(translate("Local-first by design", "es")).toBe("Diseñado para priorizar el uso local");
+    expect(translate("Cloud sync active", "de")).toBe("Cloud-Synchronisierung aktiv");
+  });
+
   it("falls back to the original text for unknown messages and unsupported locales", () => {
     expect(translate("A new string")).toBe("A new string");
     expect(translate("Loading…", "not-a-language")).toBe("Loading…");
