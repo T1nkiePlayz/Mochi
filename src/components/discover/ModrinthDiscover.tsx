@@ -151,7 +151,7 @@ export function ModrinthDiscover({ tofu, pikos, supabase, nexusConfigured, igdbC
     {picker && <TofuPicker title={picker.project.title} pikos={pikos} ecosystem={{ source: "modrinth" }} gameName="Minecraft"
       metas={picker.file ? [metaFromModFile(picker.file)] : metasOfItem(modrinthItem(picker.project))} onClose={() => setPicker(null)}
       onInstall={(target, _piko, force) => { const { project, file } = picker; setPicker(null); installModrinth(project, file, target, force); }} />}
-    {showPicker && <AddGamePicker cfGames={discover.cfGames} nexusGames={discover.nexusCatalog} cfEnabled={settings.curseforge} nexusEnabled={settings.nexus}
+    {showPicker && <AddGamePicker cfGames={discover.cfGames} nexusGames={discover.nexusCatalog} cfEnabled={settings.curseforge} nexusEnabled={settings.nexus} supabase={supabase} igdbConfigured={igdbConfigured}
       onClose={() => setShowPicker(false)} onChoose={(entry) => { discover.add(entry); setShowPicker(false); setPendingKey(entry.k === "cf" ? `cf:${entry.id}` : `nx:${entry.domain}`); }} />}
   </>;
 }

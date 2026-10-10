@@ -294,6 +294,32 @@ pub fn prepare_linux_webview_environment() {
     if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() && Path::new("/proc/driver/nvidia").exists() {
         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
     }
+
+    // WebKitGTK's GStreamer integration launches gst-plugin-scanner as a helper process.
+    // AppImages can contain the scanner outside the host distribution's usual path, so
+    // GStreamer may otherwise emit "External plugin loader failed" on startup.
+    if std::env::var_os("GST_PLUGIN_SCANNER").as_deref().is_some_and(|value| Path::new(value).is_file()) {
+        return;
+    }
+    let mut candidates = Vec::new();
+    if let Some(appdir) = std::env::var_os("APPDIR") {
+        let appdir = Path::new(&appdir);
+        candidates.extend([
+            appdir.join("usr/lib/gstreamer-1.0/gst-plugin-scanner"),
+            appdir.join("usr/lib/x86_64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
+            appdir.join("usr/lib/aarch64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
+            appdir.join("usr/libexec/gstreamer-1.0/gst-plugin-scanner"),
+        ]);
+    }
+    candidates.extend([
+        PathBuf::from("/usr/lib/gstreamer-1.0/gst-plugin-scanner"),
+        PathBuf::from("/usr/lib/x86_64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
+        PathBuf::from("/usr/lib/aarch64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
+        PathBuf::from("/usr/libexec/gstreamer-1.0/gst-plugin-scanner"),
+    ]);
+    if let Some(scanner) = candidates.into_iter().find(|path| path.is_file()) {
+        std::env::set_var("GST_PLUGIN_SCANNER", scanner);
+    }
 }
 
 /// Whether the OS shows tray / menu-bar icons Mochi can hide its window behind.
