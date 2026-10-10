@@ -36,7 +36,8 @@ export function GameDiscoverTab({ game, pikos, supabase, settings, below, refres
   const [choice, setChoice] = useGameSourceChoice(game.key);
   const sources = resolveGameSources({ onCurseforge: Boolean(game.cf), onNexus: Boolean(game.nexusDomain), choice }, settings);
   const [info, setInfo] = useState<ExtendInfo | null>(null);
-  useEffect(() => setInfo(null), [game.key, sources.primary, sources.extras.join(), below, refreshKey]);
+  const extrasKey = sources.extras.join();
+  useEffect(() => setInfo(null), [game.key, sources.primary, extrasKey, below, refreshKey]);
 
   const source = useMemo<ModSource | null>(() => {
     const make = (id: SourceId): ModSource | null => {

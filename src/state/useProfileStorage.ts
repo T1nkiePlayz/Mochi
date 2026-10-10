@@ -33,12 +33,15 @@ export function useProfileStorage(params: Params) {
   const scoped = (key: string) => (multipleAccountsEnabled ? profileStorageKey(activeProfileId, key) : `mochi:${key}`);
   const ready = owner === ownerKey;
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- saved when the library or the owner changes
   useEffect(() => { if (ready) writeJsonDebounced(scoped("pikos"), library); }, [library, ready, ownerKey]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- saved when the notifications or the owner changes
   useEffect(() => { if (ready) writeJsonDebounced(scoped("notifications"), notifications); }, [notifications, ready, ownerKey]);
   useEffect(() => {
     if (!ready) return;
     if (multipleAccountsEnabled) writeJsonDebounced(scoped("settings"), { ...behavior, theme });
     else writeJsonDebounced(storageKeys.settings, { ...behavior, multipleAccountsEnabled });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- saved when the settings or the owner change
   }, [behavior, theme, multipleAccountsEnabled, ready, ownerKey]);
 
   // Startup happens before any profile loads, so the active profile's choice is mirrored device-wide.
@@ -71,6 +74,7 @@ export function useProfileStorage(params: Params) {
     onProfileLoaded(nextLibrary);
     if (multipleAccountsEnabled) void setTheme(typeof nextSettings.theme === "string" && themeIds.includes(nextSettings.theme) ? nextSettings.theme : "mochi");
     setOwner(ownerKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the profile loads when the account, the profile mode or the owner changes
   }, [user?.id, multipleAccountsEnabled, owner, ownerKey]);
 
   const setMultipleAccountProfiles = (enabled: boolean) => {

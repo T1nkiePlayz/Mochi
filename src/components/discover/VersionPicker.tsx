@@ -46,10 +46,12 @@ export function VersionPicker({ value, onChange, versions, loading, label = "Min
       capped.forEach((version, index) => result.push({ id: `v-${version.id}`, value: version.id, label: version.id, heading: index === 0 ? group.title : undefined }));
     }
     return result;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `open` restarts the list each time the menu opens
   }, [versions, query, snapshots, latest, open]);
 
   useDismiss(root, open, () => setOpen(false));
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- re-centre on the chosen row only when the menu opens or the filter changes, not on every keystroke of the highlight
   useEffect(() => { if (open) setActive(Math.max(0, rows.findIndex((row) => row.value === value && row.id !== "latest"))); }, [open, query, snapshots]);
   useEffect(() => { if (open) list.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" }); }, [active, open]);
 

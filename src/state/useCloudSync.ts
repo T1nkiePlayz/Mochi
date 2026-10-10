@@ -82,6 +82,7 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
         setSyncState("error");
       });
     return () => { cancelled = true; schedulerRef.current?.cancel(); schedulerRef.current = null; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- a new sync starts only for a different account or storage, not when callbacks change identity
   }, [user?.id, storageReady, storageKey]);
 
   // Any library change (import, enrichment, edits) asks the scheduler for a push; it debounces with a max wait and retries with backoff.
@@ -90,6 +91,7 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
     if (!storageReady || !supabase || !user || !cloudSyncEnabled || !initialized.current || !schedulerRef.current) return;
     setSyncState("syncing");
     schedulerRef.current.notify();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by the account id, not the user object
   }, [library, user?.id, cloudSyncEnabled, storageReady, storageKey]);
 
   const clearCloudData = async () => {

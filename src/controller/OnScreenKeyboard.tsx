@@ -55,6 +55,7 @@ export function OnScreenKeyboard({ initial = "", label, password, onChange, onSu
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the key handler is installed once and reads the latest text through `textRef`
   }, []);
 
   const rows = symbols ? SYMBOLS : LETTERS;
