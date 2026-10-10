@@ -85,5 +85,6 @@ export function buildLaunchConfig(config: TofuLaunchConfig | undefined, options?
     env: Object.fromEntries([...rows, ...Object.entries(parseEnv(config?.env ?? ""))]) as Record<string, string>,
     workingDir: config?.workingDir || options?.workingDir || null,
     gamescope: { enabled: !!options?.gamescope?.enabled, args: options?.gamescope?.args ?? [] },
+    hooks: { pre: parseArgs(options?.hooks?.pre ?? ""), post: parseArgs(options?.hooks?.post ?? "") },
   };
 }

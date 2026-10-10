@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { RemoteImage } from "../RemoteImage";
-import { BarChart3, ChevronDown, Download, Grid2X2, Library, Plus, Settings, Sparkles } from "lucide-react";
+import { BarChart3, ChevronDown, Download, Grid2X2, Library, Plus, Settings, Sparkles, Tag } from "lucide-react";
 import { AccountAvatar } from "../AccountAvatar";
 import { MochiIcon } from "../MochiIcon";
 import { shallowEqual, useAppGetter, useAppSelector, type NavId } from "../../state/AppContext";
@@ -18,6 +18,7 @@ export const navItems: Array<{ id: NavId; icon: typeof Library; iconName: string
   { id: "Discover", icon: Sparkles, iconName: "discover" },
   { id: "Downloads", icon: Download, iconName: "downloads" },
   { id: "Stats", icon: BarChart3, iconName: "stats" },
+  { id: "Deals", icon: Tag, iconName: "deals" },
 ];
 
 /** Arrow keys move between a menu's items (Tab still leaves it). */
@@ -30,9 +31,9 @@ function moveInMenu(event: KeyboardEvent<HTMLElement>) {
 }
 
 export const Sidebar = memo(function Sidebar() {
-  const { user, showAccountMenu, setShowAccountMenu, savedAccounts, openSignIn, activeNav, setActiveNav, multipleAccountsEnabled } = useAppSelector((app) => ({
+  const { user, showAccountMenu, setShowAccountMenu, savedAccounts, openSignIn, activeNav, setActiveNav, multipleAccountsEnabled, showDeals } = useAppSelector((app) => ({
     user: app.account.user, showAccountMenu: app.account.showAccountMenu, setShowAccountMenu: app.account.setShowAccountMenu, savedAccounts: app.account.savedAccounts,
-    openSignIn: app.account.openSignIn, activeNav: app.activeNav, setActiveNav: app.setActiveNav, multipleAccountsEnabled: app.storage.multipleAccountsEnabled,
+    openSignIn: app.account.openSignIn, activeNav: app.activeNav, setActiveNav: app.setActiveNav, multipleAccountsEnabled: app.storage.multipleAccountsEnabled, showDeals: app.behavior.showDeals,
   }), shallowEqual);
   // switchAccount/signOut change identity every render, so handlers read the latest at click time.
   const getApp = useAppGetter();
@@ -59,7 +60,7 @@ export const Sidebar = memo(function Sidebar() {
       </div>, document.body)}
     </div>
     <nav className="primary-nav" aria-label="Main navigation">
-      {navItems.map(({ id, icon: Icon, iconName }) => (
+      {navItems.filter(({ id }) => id !== "Deals" || showDeals).map(({ id, icon: Icon, iconName }) => (
         <button className={`nav-item ${activeNav === id ? "active" : ""}`} key={id} title={navLabel(id)} aria-label={navLabel(id)} aria-current={activeNav === id ? "page" : undefined} onClick={() => setActiveNav(id)}>
           <MochiIcon name={iconName} fallback={Icon} size={17} strokeWidth={1.8} />
           <span>{navLabel(id)}</span>

@@ -131,11 +131,20 @@ Settings > Accessibility covers text and interface size (85-150%), high contrast
 ### Updates
 Background check 10 seconds after start and every 6 hours (Settings > Updates > Auto-update), never installing without you pressing **Install & restart**. Updates are verified against an embedded public key. **Opening a newer build.** When you open a newer AppImage, or a `Mochi.app` outside `/Applications`, Mochi checks it against a signed `install-hashes.json` from that version's GitHub release. If it cannot verify the build it warns you; if you continue, it installs the build and restarts from the installed location. See [docs/updates.md](docs/updates.md) and [docs/release.md](docs/release.md).
 
+### More library features
+- **ProtonDB** tier badge on Steam games (Linux), fetched on demand and never blocking.
+- **Tray / menu bar quick launch**: your most played and recently played games launch straight from the tray menu (Linux and macOS).
+- **Launch hooks**: optional pre- and post-launch commands per game, run as plain arguments (never through a shell) with a time limit; failures only notify.
+- **Screenshots** per game from Steam, other launchers and shared folders, with notices for new ones (toggle in Settings > Library tools).
+- **Live folder watching** (off by default) tells you about new installs and games whose files are gone.
+- **Play limits** (off by default): daily and per-game limits, quiet hours and warn/confirm modes.
+- **Account PIN** (off by default) to protect switching to a saved account; after sign-in the welcome screen offers to add another user.
+- **Deals tab** (off by default, Settings > Deals & news): free games, sales and wishlist price watches. Notifications are only sent for wishlisted games, and the notification tray shows notifications only.
+- **Game news** (off by default), **share card** and **game search** are now regular features ([docs/news.md](docs/news.md), [docs/deals.md](docs/deals.md), [docs/share-card.md](docs/share-card.md), [docs/game-search.md](docs/game-search.md)).
+- Roblox via Sober/Vinegar uses the IGDB cover when you have added one.
+
 ### Experimental (Settings > Experimental, off by default)
-- **Game news**: a News tab in the notification centre with Steam news for your Steam games and mod updates, checked at most every 6 hours ([docs/news.md](docs/news.md)).
-- **Deal alerts**: free Epic games, sales and wishlist price-watch alerts for the stores you use, metadata only, deals by CheapShark ([docs/deals.md](docs/deals.md)).
-- **Share card**: a locally generated PNG of your top games, playtime and achievements with privacy toggles ([docs/share-card.md](docs/share-card.md)).
-- **Game search**: search any game (needs IGDB or SteamGridDB keys) with details, artwork, prices and a price history built from CheapShark and local observations ([docs/game-search.md](docs/game-search.md)).
+- **Plugins**: small folders with a `plugin.json` and `main.js` that add command palette commands, run in a restricted worker with explicit permissions ([docs/plugins.md](docs/plugins.md)).
 
 ### Linux and macOS integration
 Application-menu shortcuts (`mochi://launch/<id>`), start at login, tray icon, managed AppImage copy and `mochi://` handler on Linux; LaunchAgent, Dock reopen and menu-bar hiding on macOS. Experimental opt-in features live in Settings > Experimental ([docs/experimental-features.md](docs/experimental-features.md)).
@@ -272,6 +281,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [x] Per-game launch options and launch profiles, Wine/Proton prefix tools, crash hints and suspected-mod helpers
 - [x] Library/settings backups, storage manager, download controls, keyboard-first navigation and command palette
 - [x] Per-game notes and links, a one-click "Clear all" in the storage manager and a redesigned Edit game window
+- [x] ProtonDB badges, tray quick launch, launch hooks, screenshot manager, live folder watching, play limits, account PINs and an optional Deals tab
 - [x] Game themes that use each game's cover colour as the accent on its page
 - [x] Accounts, optional metadata-only cloud sync, TOTP MFA, provider credential management and offline library use
 - [x] Linux packages, universal macOS DMG, update verification and release checksums/signatures/attestations
@@ -282,11 +292,10 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] Stable release
 - [ ] Theme marketplace / in-app theme gallery for browsing and installing community themes
 - [ ] Theme creator with live editing of colours, fonts and hooks, plus theme export
-- [ ] Pre-launch and post-exit scripts in per-game launch profiles
 
 ## Documentation index
 
-[security audit follow-up](docs/audit/2026-10-atomic-export-writes.md), [accessibility](docs/accessibility.md), [controller](docs/controller.md), [Steam Deck and Big Picture](docs/steam-deck.md), [macOS](docs/macos.md), [metadata](docs/metadata.md), [mods](docs/mods.md), [CurseForge backend](docs/curseforge.md), [offline and fonts](docs/offline.md), [updates](docs/updates.md), [release](docs/release.md), [CSP](docs/security-csp.md), [platform architecture](docs/platform-architecture.md), [themes](docs/theme-architecture.md), [experimental features](docs/experimental-features.md), [sound packs](docs/sound-packs.md), [achievements](docs/improvements/achievements.md).
+[security audit follow-up](docs/audit/2026-10-atomic-export-writes.md), [accessibility](docs/accessibility.md), [controller](docs/controller.md), [Steam Deck and Big Picture](docs/steam-deck.md), [macOS](docs/macos.md), [metadata](docs/metadata.md), [mods](docs/mods.md), [CurseForge backend](docs/curseforge.md), [offline and fonts](docs/offline.md), [updates](docs/updates.md), [release](docs/release.md), [CSP](docs/security-csp.md), [platform architecture](docs/platform-architecture.md), [themes](docs/theme-architecture.md), [experimental features](docs/experimental-features.md), [plugins](docs/plugins.md), [sound packs](docs/sound-packs.md), [achievements](docs/improvements/achievements.md).
 
 ## Development
 

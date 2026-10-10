@@ -37,7 +37,7 @@ export function sanitizeSavedAccounts(value: unknown): SavedAccount[] {
 }
 
 /** Everything about who is signed in: sessions, the sign-in modal, saved accounts and security settings. */
-export function useAccount(notify: (title: string, message: string) => void) {
+export function useAccount(notify: (title: string, message: string) => void, requireAccountPin?: (account: SavedAccount) => Promise<boolean>) {
   const [user, setUser] = useState<User | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
@@ -107,6 +107,8 @@ export function useAccount(notify: (title: string, message: string) => void) {
   const switchAccount = async (account: SavedAccount) => {
     if (!supabase || account.id === user?.id) { setShowAccountMenu(false); return; }
     if (authBusy) return;
+    setShowAccountMenu(false);
+    if (requireAccountPin && !await requireAccountPin(account)) return;
     setAuthBusy(true);
     try {
       const { data, error } = await supabase.auth.refreshSession({ refresh_token: account.refreshToken });

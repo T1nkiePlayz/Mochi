@@ -31,6 +31,8 @@ export type LaunchOptions = {
   mangohud?: boolean;
   /** Linux only: run the game inside gamescope with these arguments. */
   gamescope?: { enabled: boolean; args: string[] };
+  /** Commands (program and arguments, never run through a shell) to run before the game starts and after it closes. */
+  hooks?: { pre?: string; post?: string };
 };
 
 /** A named alternative set of launch options for one game (for example "Proton Experimental" or "Low graphics"). */
@@ -136,6 +138,8 @@ export type Piko = {
   platformCategory?: string;
   /** The user's own notes (build, mod load order, ...); plain text. Included in library backups. */
   notes?: string;
+  /** Folders (absolute) that hold this game's screenshots, besides Steam's own. */
+  screenshotFolders?: string[];
   /** Web links the user attached (walkthroughs, wikis); http(s) only. */
   links?: GameLink[];
   executablePath?: string;

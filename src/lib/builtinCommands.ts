@@ -19,6 +19,7 @@ const NAV: Array<[NavId, string, string[]]> = [
   ["Installed", "Go to Mods & Content", ["installed", "mods", "tofus"]],
   ["Downloads", "Go to Downloads", ["queue", "transfers"]],
   ["Stats", "Go to Stats", ["playtime", "achievements", "statistics"]],
+  ["Deals", "Go to Deals", ["price", "sale", "free", "wishlist", "news"]],
   ["Settings", "Go to Settings", ["preferences", "options"]],
 ];
 
@@ -50,7 +51,7 @@ export function registerBuiltinCommands(): () => void {
   off.push(register("mods.discover", "Install mod…", ["install", "mod", "search", "discover", "download"], "Mods", async ({ app }) => { const { openDiscoverWithQuery } = await import("./discoverQuery"); openDiscoverWithQuery("", app().setActiveNav); }));
   off.push(register("games.search", "Search all games", ["find", "lookup", "price", "wishlist", "igdb", "steamgriddb", "discover"], "Discover", () => { openGameSearch(); }, ({ app }) => {
     const a = app();
-    return a.behavior.experimental.includes("game-search") && (Boolean(gameSearchBackendOverride()) || gameSearchAvailable(a.credentials.status));
+    return Boolean(gameSearchBackendOverride()) || gameSearchAvailable(a.credentials.status);
   }));
   off.push(register("library.picker", "What should I play?", ["pick", "random", "suggest", "choose", "decide"], "Library", ({ app }) => { app().setActiveNav("Library"); requestPicker(); }, ({ app }) => app().lib.library.some((piko) => piko.kind !== "launcher")));
   off.push(register("library.covers", "Find missing covers", ["artwork", "cover", "images", "metadata", "fetch"], "Library", ({ app }) => { const a = app(); void a.metadata.findMissingCovers(a.lib.library); }, ({ app }) => { const a = app(); return !a.metadata.refreshBusy && a.metadata.missingCovers(a.lib.library).length > 0; }));

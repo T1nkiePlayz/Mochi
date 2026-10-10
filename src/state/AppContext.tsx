@@ -32,15 +32,21 @@ import { useDeepLinks } from "./useDeepLinks";
 import { useCliIntents } from "./useCliIntents";
 import { useLibraryIndex } from "./useLibraryIndex";
 import { useDeals } from "./useDeals";
-import { experimentalIds } from "../lib/experimental";
+import { usePlugins } from "./usePlugins";
+import { experimentalFeatures } from "../lib/experimental";
+import { useLibraryWatcher } from "./useLibraryWatcher";
+import { checkAccountPin } from "../lib/accountPin";
+import { usePlayLimits } from "./usePlayLimits";
+import { useScreenshotNotifier } from "./useScreenshotNotifier";
 import { CliChooser } from "../components/CliChooser";
 import { AchievementWatcher } from "../components/stats/AchievementWatcher";
 import { ConfirmHost } from "../components/ui/ConfirmHost";
+import { PinHost } from "../components/ui/PinHost";
 import { ConflictPromptHost } from "../components/mods/ConflictPromptHost";
 import { SelfInstallPrompt } from "../components/SelfInstallPrompt";
 import { confirmAction } from "../lib/confirm";
 
-export type NavId = "Library" | "Installed" | "Discover" | "Downloads" | "Stats" | "Settings";
+export type NavId = "Library" | "Installed" | "Discover" | "Downloads" | "Stats" | "Deals" | "Settings";
 
 function useAppController() {
   // Read synchronously: effects (launch on startup, Big Picture on startup) must never see defaults first.
@@ -52,9 +58,13 @@ function useAppController() {
   const [showTofuManager, setShowTofuManager] = useState(false);
   const [editingGameId, setEditingGameId] = useState("");
 
+  // The Deals tab is optional: turning it off while it is open returns to the library.
+  useEffect(() => { if (!behavior.showDeals) setActiveNav((current) => (current === "Deals" ? "Library" : current)); }, [behavior.showDeals]);
   const notifications = useNotifications(behavior);
   const { notify } = notifications;
-  const account = useAccount(notify);
+  const behaviorRef = useRef(behavior);
+  behaviorRef.current = behavior;
+  const account = useAccount(notify, (saved) => behaviorRef.current.accountPins ? checkAccountPin(saved.id, saved.username) : Promise.resolve(true));
   const { user } = account;
   const credentials = useCredentials(user, account.openSignIn);
   const sessions = useGameSessions();
@@ -62,6 +72,8 @@ function useAppController() {
   const lib = useLibrary(playtime, sessions.isRunning);
   useSaveBackupOnExit(sessions.running, lib.library, notify);
   useQuickExitHints(sessions.sessions, lib.library, notify);
+  usePlayLimits(behavior.playLimits, sessions.sessions, lib.library, notify);
+  useScreenshotNotifier(behavior.screenshotNotices, sessions.running, lib.library, behavior.screenshotFolders, notify);
   useGameTheme(behavior.gameThemes && activeNav === "Library", lib.library.find((piko) => piko.id === lib.gameDetailsId));
   const themeEngine = useThemeEngine();
   const actions = useGameActions({ lib, behavior, refreshPlaytime, refreshSessions: sessions.refresh, notify });
@@ -83,8 +95,9 @@ function useAppController() {
       notifications.setShowNotifications(false);
     },
   });
-  useGameNewsPoller(behavior.experimental.includes("game-news"), lib.library, notify);
+  useGameNewsPoller(behavior.gameNews, lib.library, notify);
   useScheduledBackup(storage.ready, notify);
+  useLibraryWatcher(behavior.watchFolders, storage.ready, lib.library, notify);
   const collections = useCollections(storage.ownerKey, storage.ready, lib.setLibrary);
   const cloud = useCloudSync(user, lib.library, lib.setLibrary, storage.ready, storage.ownerKey);
   const downloads = useDownloads(activeNav === "Downloads", notify);
@@ -108,7 +121,8 @@ function useAppController() {
   });
   useDeepLinks(account, cliIntents.handle);
   useLibraryIndex(lib.library, storage.ready);
-  const deals = useDeals(behavior.experimental.includes("deal-alerts") && experimentalIds().includes("deal-alerts"), lib.library, notify);
+  const deals = useDeals(behavior.showDeals, lib.library, notify);
+  const plugins = usePlugins({ active: experimentalFeatures.some((feature) => feature.id === "plugins") && behavior.experimental.includes("plugins"), enabled: behavior.enabledPlugins, library: lib.library, notify });
 
   const finishFirstLaunchSetup = (games: ImportedGame[], sources: ImportSourceId[], minecraftMode: MinecraftMode = "copy") => {
     writeString(storageKeys.setupComplete, "true");
@@ -149,7 +163,7 @@ function useAppController() {
     behavior, setBehavior, activeNav, setActiveNav, showFirstLaunchSetup, finishFirstLaunchSetup,
     platformCapabilities, runtimes, showTofuManager, setShowTofuManager, editingGameId, setEditingGameId,
     notifications, account, credentials, sessions, playtime, refreshPlaytime, lib, collections, themeEngine, actions, metadata, add, storage, cloud, downloads, downloadPacing,
-    hasIgdb, chooseConfigLocation, resetLocalData, cliIntents, deals,
+    hasIgdb, chooseConfigLocation, resetLocalData, cliIntents, deals, plugins,
   };
 }
 
@@ -177,7 +191,7 @@ export function AppStoreProvider({ controller, children }: { controller: AppCont
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const controller = useAppController();
-  return <AppStoreProvider controller={controller}><AppContext.Provider value={controller}><AchievementWatcher />{children}<ConfirmHost /><ConflictPromptHost /><SelfInstallPrompt />{controller.cliIntents.choice && <CliChooser {...controller.cliIntents.choice} onPick={controller.cliIntents.pick} onClose={controller.cliIntents.closeChoice} />}</AppContext.Provider></AppStoreProvider>;
+  return <AppStoreProvider controller={controller}><AppContext.Provider value={controller}><AchievementWatcher />{children}<ConfirmHost /><PinHost /><ConflictPromptHost /><SelfInstallPrompt />{controller.cliIntents.choice && <CliChooser {...controller.cliIntents.choice} onPick={controller.cliIntents.pick} onClose={controller.cliIntents.closeChoice} />}</AppContext.Provider></AppStoreProvider>;
 }
 
 export function useApp(): AppController {

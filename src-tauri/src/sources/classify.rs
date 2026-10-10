@@ -128,6 +128,7 @@ pub fn is_non_game(ids: &[&str], name: &str) -> bool {
 
 /// The program an `Exec=` line runs, as a lowercase base name. Understands
 /// `env VAR=x`, `flatpak run [--opt] APP-ID` and absolute paths.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub fn exec_program(exec: &str) -> Option<String> {
     let mut tokens = exec.split_whitespace().map(|t| t.trim_matches('"'));
     let mut first = tokens.next()?;

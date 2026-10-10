@@ -73,6 +73,8 @@ pub struct LaunchConfig {
     pub working_dir: Option<String>,
     /// Linux only: run the game inside gamescope.
     pub gamescope: GamescopeConfig,
+    /// Commands to run before the game starts and after it closes.
+    pub hooks: crate::hooks::HooksConfig,
     #[serde(skip)]
     pub prefix_dir: Option<PathBuf>,
     /// Where this game's session logs go; output is captured when set.

@@ -174,3 +174,12 @@ export async function runDealsCheck(deps: CheckDeps): Promise<CheckResult> {
   }
   return result;
 }
+
+const fold = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+/** Free-game and sale alerts only matter when the game is on the wishlist; everything else stays in the Deals tab. */
+export function wishlistedAlerts(alerts: DealAlert[], wishlistNames: string[]): DealAlert[] {
+  const wanted = wishlistNames.map(fold).filter(Boolean);
+  if (!wanted.length) return [];
+  return alerts.filter((alert) => { const name = fold(alert.item); return Boolean(name) && wanted.some((wish) => name === wish || name.includes(wish) || wish.includes(name)); });
+}

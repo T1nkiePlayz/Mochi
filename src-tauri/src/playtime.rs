@@ -163,6 +163,8 @@ struct TrackerState {
 }
 
 pub struct StartRequest {
+    /// Command to run once the game has closed (empty: none).
+    pub post_hook: Vec<String>,
     pub game_id: String,
     pub name: String,
     pub target: String,
@@ -529,6 +531,7 @@ fn monitor(app: AppHandle, request: StartRequest, token: u64, before: HashSet<u3
     }
     let _ = finish(id, Some(token), credit, idle_tail);
     notify(&app);
+    crate::hooks::run_post(app, request.game_id.clone(), request.post_hook.clone());
 }
 
 /// Ends a session. `idle_tail` seconds at the end (spent confirming the game had gone) are not credited.

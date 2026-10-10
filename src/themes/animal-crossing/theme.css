@@ -95,3 +95,10 @@ html:not([data-nav-mode="drawer"])[data-mochi-shell="top"] .sidebar .sidebar-acc
 @media (max-width: 720px) { [data-mochi-theme="animal-crossing"] .editor-tabs { border-width: 0 0 3px; padding-bottom: 8px; } }
 [data-mochi-theme="animal-crossing"] .editor-tabs button { border: 0; border-radius: 999px; color: #746553; font-weight: 600; }
 [data-mochi-theme="animal-crossing"] .editor-tabs button.active { background: #5cc9a7; color: #fff; box-shadow: 0 3px 0 #2fae8a; }
+
+/* Big Picture side menu (settings, power, display): the theme's sidebar tokens are transparent, which left the menu unreadable over the page. */
+[data-mochi-theme="animal-crossing"] .bp-menu { background: #fffdf2; border-right: 3px dotted #cfe6b2; border-radius: 0 28px 28px 0; box-shadow: 6px 0 0 #cfe6b2, 0 18px 50px rgba(70, 90, 60, .35); }
+[data-mochi-theme="animal-crossing"] .bp-menu-title, [data-mochi-theme="animal-crossing"] .bp-menu-item { color: #5b4636; }
+[data-mochi-theme="animal-crossing"] .bp-menu-item small, [data-mochi-theme="animal-crossing"] .bp-menu-subtitle { color: #746553; }
+[data-mochi-theme="animal-crossing"] .bp-menu-item:hover, [data-mochi-theme="animal-crossing"] .bp-menu-item:focus-visible { background: #5cc9a7; color: #fff; }
+[data-mochi-theme="animal-crossing"] .bp-menu-item:hover small, [data-mochi-theme="animal-crossing"] .bp-menu-item:focus-visible small { color: #fff; }

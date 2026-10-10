@@ -19,6 +19,7 @@ type SetupProps = {
   setIgdbClientSecret: (value: string) => void;
   onSignIn: () => void;
   signedIn: boolean;
+  onAddUser?: () => void;
   credentialStatus: Record<ProviderCredential, boolean>;
   credentialStatusLoaded: boolean;
   themes: ThemeDescriptor[];
@@ -65,7 +66,7 @@ export function FirstLaunchSetup(props: SetupProps) {
           {step === "welcome" && <WelcomeStep />}
           {step === "theme" && <ThemeStep themes={props.themes} theme={props.theme} setTheme={props.setTheme} />}
           {step === "accessibility" && <AccessibilityStep />}
-          {step === "account" && <AccountStep signedIn={props.signedIn} onSignIn={props.onSignIn} />}
+          {step === "account" && <AccountStep signedIn={props.signedIn} onSignIn={props.onSignIn} onAddUser={props.onAddUser} />}
           {step === "services" && <ServicesStep {...props} />}
           {step === "imports" && <ImportStep onSelectionChange={setSelection} />}
         </div>

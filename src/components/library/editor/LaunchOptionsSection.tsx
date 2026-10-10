@@ -96,6 +96,13 @@ export function LaunchOptionsSection({ ctx }: { ctx: EditorContext }) {
       <small className="launch-hint">Quotes group words and a backslash escapes the next character. Nothing is run through a shell.</small>
     </div>
 
+    <div className="editor-field"><span className="editor-field-label">Run before launch</span>
+      <input aria-label="Command to run before launch" value={options.hooks?.pre ?? ""} placeholder="obs --startreplaybuffer" spellCheck={false} autoComplete="off" disabled={!mayEdit} onChange={(event) => set({ hooks: { ...options.hooks, pre: event.target.value } })} />
+      <span className="editor-field-label">Run after the game closes</span>
+      <input aria-label="Command to run after the game closes" value={options.hooks?.post ?? ""} placeholder="/home/me/scripts/sync-saves.sh" spellCheck={false} autoComplete="off" disabled={!mayEdit} onChange={(event) => set({ hooks: { ...options.hooks, post: event.target.value } })} />
+      <small className="launch-hint">A program and its arguments, run directly (use <code>sh -c "..."</code> if you need a shell). The before-command is waited for up to 30 seconds; if either fails you get a notice and the game still launches. Works the same on macOS.</small>
+    </div>
+
     {full && <div className="editor-field"><span className="editor-field-label" id="launch-cwd-label">Working directory</span>
       <div className="flatpak-input-row">
         <input aria-labelledby="launch-cwd-label" value={options.workingDir ?? ""} placeholder="Default" onChange={(event) => set({ workingDir: event.target.value })} />

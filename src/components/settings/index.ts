@@ -12,7 +12,12 @@ import { UpdateSection } from "./UpdateSection";
 import { BigPictureSection, ControllerSection } from "./ControllerSection";
 import { ExperimentalSection } from "./ExperimentalSection";
 import { SoundSection } from "./SoundSection";
+import { LibraryToolsSection } from "./LibraryToolsSection";
+import { PlayLimitsSection } from "./PlayLimitsSection";
+import { AccountPinSection } from "./AccountPinSection";
+import { DealsSection } from "./DealsSection";
 import { StorageSection } from "./StorageSection";
+import { PluginsSection } from "./PluginsSection";
 
 /**
  * Settings sections in display order. To add one, create a component in this folder
@@ -28,10 +33,15 @@ export const settingsSections: Array<{ id: string; Section: ComponentType }> = [
   { id: "bigpicture", Section: BigPictureSection },
   { id: "sound", Section: SoundSection },
   { id: "security", Section: SecuritySection },
+  { id: "accountpin", Section: AccountPinSection },
   { id: "updates", Section: UpdateSection },
   { id: "achievements", Section: AchievementsSection },
   { id: "data", Section: DataSection },
+  { id: "deals", Section: DealsSection },
+  { id: "playlimits", Section: PlayLimitsSection },
+  { id: "librarytools", Section: LibraryToolsSection },
   { id: "storage", Section: StorageSection },
   { id: "experimental", Section: ExperimentalSection },
+  { id: "plugins", Section: PluginsSection },
   { id: "help", Section: HelpSection },
 ];
