@@ -52,17 +52,14 @@ function normalizeNexusGame(value: any): NexusGame | null {
   ].find((candidate) => typeof candidate === "string" && candidate.trim());
 
   const modCount = Number(value.modCount ?? value.mod_count ?? value.file_count ?? 0);
-  const resolvedIconUrl = iconUrl
-    ? String(iconUrl)
-    : id
-      ? `https://staticdelivery.nexusmods.com/images/games/cover_${encodeURIComponent(id)}.jpg`
-      : undefined;
+  // Do not invent a cover URL from the GraphQL id: Nexus game ids are not guaranteed to be the
+  // numeric filename used by its static image CDN. Missing icon data is handled by the configured IGDB fallback.
 
   return {
     id,
     name,
     domainName,
-    ...(resolvedIconUrl ? { iconUrl: resolvedIconUrl } : {}),
+    ...(iconUrl ? { iconUrl: String(iconUrl) } : {}),
     ...(Number.isFinite(modCount) && modCount > 0 ? { modCount } : {}),
     ...(typeof value.genre === "string" && value.genre.trim() ? { genre: value.genre.trim() } : {}),
   };
