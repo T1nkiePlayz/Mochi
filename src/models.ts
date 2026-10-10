@@ -138,6 +138,8 @@ export type Piko = {
   platformCategory?: string;
   /** The user's own notes (build, mod load order, ...); plain text. Included in library backups. */
   notes?: string;
+  /** Folders (absolute) that hold this game's screenshots, besides Steam's own. */
+  screenshotFolders?: string[];
   /** Web links the user attached (walkthroughs, wikis); http(s) only. */
   links?: GameLink[];
   executablePath?: string;

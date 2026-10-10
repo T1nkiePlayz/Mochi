@@ -1,5 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, ExternalLink, FolderOpen, FolderPlus, Heart, Pencil, Play, Square, Trash2 } from "lucide-react";
+import { GameScreenshots } from "./GameScreenshots";
 import { ProtonDbBadge } from "./ProtonDbBadge";
 import { openExternalUrl, type PlatformCapabilities } from "../lib/platform";
 import { formatPlaytime, formatRelativeTime } from "../lib/format";
@@ -110,6 +111,7 @@ export function GameDetails({ game, capabilities, cloudStatus, running, playtime
         <div><dt>Launch target</dt><dd className="path-text" title={launchTarget}>{launchTarget || "Not set"}</dd></div>
       </dl></div></div>
     <div className="game-details-content game-details-primary">
+      {game.kind !== "launcher" && <GameScreenshots game={game} />}
       {(game.notes || game.links?.length) && <section className="game-details-section game-details-notes" aria-label={`Your notes on ${game.name}`}><div className="discover-section-heading"><div><h3>Your notes</h3><p>Only on this device and in your backups.</p></div></div>{game.notes && <p className="game-details-description" style={{ whiteSpace: "pre-wrap" }}>{game.notes}</p>}{game.links?.length ? <ul className="game-details-links">{game.links.map((link) => <li key={link.url}><button type="button" className="link-button" title={link.url} onClick={() => void openExternalUrl(link.url).catch(() => {})}>{link.label}</button></li>)}</ul> : null}</section>}
       <section className="game-details-section game-details-about" aria-label={`About ${game.name}`}><div className="discover-section-heading"><div><h3>Game information</h3><p>{infoCredit}</p></div></div><div className="game-details-info">{game.categories?.length ? <div><small>Genres</small><strong>{game.categories.join(", ")}</strong></div> : null}{game.firstReleaseDate ? <div><small>First released</small><strong>{new Date(game.firstReleaseDate * 1000).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</strong></div> : null}<div><small>Platform</small><strong>{game.platformCategory || game.sourceId || "Custom"}</strong></div>{coverCredit ? <div><small>Cover art</small><strong>{coverCredit}</strong></div> : null}</div>{game.description && <p className="game-details-description">{game.description}</p>}</section>
       {screenshots.length ? <section className="game-details-section game-details-screenshots"><div className="discover-section-heading"><div><h3>Screenshots</h3><p>{screenshotCredit ?? "Images from several sources."}</p></div></div><ScreenshotGallery urls={screenshots} gameName={game.name} /></section> : null}

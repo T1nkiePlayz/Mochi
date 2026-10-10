@@ -12,6 +12,7 @@ import { UpdateSection } from "./UpdateSection";
 import { BigPictureSection, ControllerSection } from "./ControllerSection";
 import { ExperimentalSection } from "./ExperimentalSection";
 import { SoundSection } from "./SoundSection";
+import { LibraryToolsSection } from "./LibraryToolsSection";
 import { StorageSection } from "./StorageSection";
 
 /**
@@ -31,6 +32,7 @@ export const settingsSections: Array<{ id: string; Section: ComponentType }> = [
   { id: "updates", Section: UpdateSection },
   { id: "achievements", Section: AchievementsSection },
   { id: "data", Section: DataSection },
+  { id: "librarytools", Section: LibraryToolsSection },
   { id: "storage", Section: StorageSection },
   { id: "experimental", Section: ExperimentalSection },
   { id: "help", Section: HelpSection },

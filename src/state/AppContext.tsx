@@ -32,6 +32,8 @@ import { useDeepLinks } from "./useDeepLinks";
 import { useCliIntents } from "./useCliIntents";
 import { useLibraryIndex } from "./useLibraryIndex";
 import { useDeals } from "./useDeals";
+import { useLibraryWatcher } from "./useLibraryWatcher";
+import { useScreenshotNotifier } from "./useScreenshotNotifier";
 import { experimentalIds } from "../lib/experimental";
 import { CliChooser } from "../components/CliChooser";
 import { AchievementWatcher } from "../components/stats/AchievementWatcher";
@@ -62,6 +64,7 @@ function useAppController() {
   const lib = useLibrary(playtime, sessions.isRunning);
   useSaveBackupOnExit(sessions.running, lib.library, notify);
   useQuickExitHints(sessions.sessions, lib.library, notify);
+  useScreenshotNotifier(behavior.screenshotNotices, sessions.running, lib.library, behavior.screenshotFolders, notify);
   useGameTheme(behavior.gameThemes && activeNav === "Library", lib.library.find((piko) => piko.id === lib.gameDetailsId));
   const themeEngine = useThemeEngine();
   const actions = useGameActions({ lib, behavior, refreshPlaytime, refreshSessions: sessions.refresh, notify });
@@ -85,6 +88,7 @@ function useAppController() {
   });
   useGameNewsPoller(behavior.experimental.includes("game-news"), lib.library, notify);
   useScheduledBackup(storage.ready, notify);
+  useLibraryWatcher(behavior.watchFolders, storage.ready, lib.library, notify);
   const collections = useCollections(storage.ownerKey, storage.ready, lib.setLibrary);
   const cloud = useCloudSync(user, lib.library, lib.setLibrary, storage.ready, storage.ownerKey);
   const downloads = useDownloads(activeNav === "Downloads", notify);
