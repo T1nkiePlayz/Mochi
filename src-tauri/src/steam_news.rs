@@ -93,7 +93,7 @@ async fn fetch(appid: u32, language: &str) -> Result<String, (bool, String)> {
 #[tauri::command]
 pub async fn get_steam_news(appid: u32, language: Option<String>) -> SteamNewsResult {
     if appid == 0 { return SteamNewsResult { status: "error", items: vec![], message: Some("Invalid Steam app id.".into()) }; }
-    let language = language.as_deref().filter(|value| matches!(*value, "arabic" | "bulgarian" | "schinese" | "tchinese" | "czech" | "danish" | "dutch" | "english" | "finnish" | "french" | "german" | "greek" | "hungarian" | "indonesian" | "italian" | "japanese" | "koreana" | "norwegian" | "polish" | "portuguese" | "romanian" | "russian" | "spanish" | "swedish" | "thai" | "turkish" | "ukrainian" | "vietnamese")).unwrap_or("english");
+    let language = language.as_deref().filter(|value| matches!(*value, "arabic" | "brazilian" | "bulgarian" | "schinese" | "tchinese" | "czech" | "danish" | "dutch" | "english" | "finnish" | "french" | "german" | "greek" | "hungarian" | "indonesian" | "italian" | "japanese" | "koreana" | "norwegian" | "polish" | "portuguese" | "romanian" | "russian" | "spanish" | "swedish" | "thai" | "turkish" | "ukrainian" | "vietnamese")).unwrap_or("english");
     match fetch(appid, language).await.and_then(|body| parse_news(&body).map_err(|m| (false, m))) {
         Ok(items) => SteamNewsResult { status: "ok", items, message: None },
         Err((offline, message)) => SteamNewsResult { status: if offline { "offline" } else { "error" }, items: vec![], message: Some(message) },
