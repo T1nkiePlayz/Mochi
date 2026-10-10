@@ -2,6 +2,7 @@ import { experimentalIds } from "../lib/experimental";
 import { DEFAULT_AUTO_EXTEND_BELOW, clampAutoExtendBelow } from "../lib/mods/autoExtend";
 import { defaultPlayLimits, normalizePlayLimits, type PlayLimits } from "../lib/playLimits";
 import { allSourcesOn, type ModSourceSettings } from "../lib/mods/resolveSources";
+import { DEFAULT_LANGUAGE, normalizeLanguage } from "../lib/languages";
 
 export type Behavior = {
   launchOnStartup: boolean;
