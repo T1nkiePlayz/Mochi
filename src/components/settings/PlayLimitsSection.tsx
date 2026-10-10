@@ -31,7 +31,7 @@ export function PlayLimitsSection() {
     <ToggleRow title="Bedtime (quiet hours)" description="Remind me when I am playing between these times." checked={limits.bedtimeEnabled} disabled={off} onChange={(bedtimeEnabled) => set({ bedtimeEnabled })} />
     {limits.bedtimeEnabled && <div className="setting-row"><span><strong>Bedtime window</strong><small>It may pass midnight, for example 22:00 to 07:00.</small></span>
       <span className="settings-number-wrap">
-        <input type="time" aria-label="Bedtime starts" value={formatClock(limits.bedtimeStart)} disabled={off} onChange={(event) => { const next = parseClock(event.target.value); if (next !== null) set({ bedtimeStart: next }); }} /> to
+        <input type="time" aria-label="Bedtime starts" value={formatClock(limits.bedtimeStart)} disabled={off} onChange={(event) => { const next = parseClock(event.target.value); if (next !== null) set({ bedtimeStart: next }); }} /><span aria-hidden="true">–</span>
         <input type="time" aria-label="Bedtime ends" value={formatClock(limits.bedtimeEnd)} disabled={off} onChange={(event) => { const next = parseClock(event.target.value); if (next !== null) set({ bedtimeEnd: next }); }} />
       </span></div>}
     <div className="setting-row"><span><strong>When a limit is reached</strong><small>"Only remind me" shows a notice. "Ask before launching" also asks for confirmation when you start a game over a limit; you can always continue.</small></span>
