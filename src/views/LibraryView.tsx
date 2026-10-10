@@ -14,6 +14,8 @@ import { tagCounts } from "../lib/library";
 import { useWishlist } from "../lib/wishlist";
 import { WishlistPanel } from "../components/library/WishlistPanel";
 import { PickerDialog } from "../components/library/PickerDialog";
+import { DuplicatesDialog, DuplicatesNotice } from "../components/library/DuplicatesDialog";
+import { useDuplicates } from "../state/useDuplicates";
 import type { Piko } from "../models";
 import { GameArtwork } from "../components/GameArtwork";
 import { GameDetails } from "../components/GameDetails";
@@ -33,7 +35,7 @@ const greeting = () => { const hour = new Date().getHours(); return hour < 5 || 
 
 export function LibraryView() {
   const app = useApp();
-  const { lib, actions, sessions, playtime, cloud, add, account, credentials, platformCapabilities, collections } = app;
+  const { lib, actions, sessions, cloud, add, account, credentials, platformCapabilities, collections } = app;
   const { selectedPiko, selectedTofu, gameDetailsId, search } = lib;
   const cloudCtx = { enabled: cloud.cloudSyncEnabled, confirmed: cloud.confirmedIds, syncState: cloud.syncState };
   const details = lib.library.find((piko) => piko.id === gameDetailsId);
@@ -43,6 +45,8 @@ export function LibraryView() {
   const [showCollections, setShowCollections] = useState(false);
   const [showWishlist, setShowWishlist] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [showDuplicates, setShowDuplicates] = useState(false);
+  const duplicates = useDuplicates(lib.library, lib.setLibrary);
   const wishlist = useWishlist();
   const [view, setView] = useState<LibraryViewMode>(readViewMode);
   const changeView = (step: number) => setView((current) => { const next = cycleViewMode(current, step); writeViewMode(next); return next; });
@@ -88,7 +92,7 @@ export function LibraryView() {
   if (details) {
     return <GameDetails
       game={details}
-      playtime={playtime.find((entry) => entry.gameId === gameDetailsId)}
+      playtime={lib.playtimeById.get(gameDetailsId)}
       launchError={actions.launchError}
       launching={actions.isLaunching}
       cloudStatus={cloudStatusFor(details, cloudCtx)}
@@ -107,6 +111,8 @@ export function LibraryView() {
       onCreateCollection={(name) => collections.createCollection(name)}
       onTagsChange={(tags) => lib.updateGame(details.id, { tags })}
       onBacklogChange={(backlog) => lib.updateGame(details.id, { backlog })}
+      onSourceChange={(sourceId) => lib.updateGame(details.id, { preferredSource: sourceId })}
+      onUnmerge={(sourceId) => duplicates.unmerge(details.id, sourceId)}
       onOpenFolder={() => actions.openGameFolder(details)}
       onShortcutLocation={(location) => void actions.createShortcut(details, location)}
       onShortcutSteam={(userId) => void actions.addToSteam(details, userId)}
@@ -161,6 +167,7 @@ export function LibraryView() {
       </article>)}</div>
       {actions.launchError && <p className="metadata-note">{actions.launchError}</p>}
     </section>}
+    <DuplicatesNotice count={duplicates.groups.length} onReview={() => setShowDuplicates(true)} />
     <LibraryFilterBar lib={lib} collections={collections.collections} tags={allTags} onManageCollections={() => setShowCollections(true)}
       wishlist={{ active: showWishlist, count: wishlist.items.length, onToggle: () => setShowWishlist((on) => !on) }} />
     {showWishlist ? <WishlistPanel /> : <>
@@ -217,6 +224,7 @@ export function LibraryView() {
       onRemove={() => setRemoval([menuGame])} />}
     {showPicker && <PickerDialog library={lib.library} context={{ playtime: lib.playtimeById, isInstalled: (piko) => Boolean(piko.executablePath) && lib.installed.get(piko.executablePath ?? "") !== false }}
       onPlay={(piko) => { lib.selectPiko(piko); void actions.launchGame(piko); }} onClose={() => setShowPicker(false)} />}
+    {showDuplicates && <DuplicatesDialog groups={duplicates.groups} onMerge={duplicates.merge} onDismiss={duplicates.dismiss} onClose={() => setShowDuplicates(false)} />}
     {showCollections && <CollectionManager state={collections} counts={collectionCounts} onClose={() => setShowCollections(false)} />}
     {removal && <ConfirmDialog title={removal.length === 1 ? `Remove ${removal[0].name}?` : `Remove ${removal.length} games?`} message="They are removed from your Mochi library only, with their Tofus, tags and collection memberships. Nothing is uninstalled and no game files are deleted." items={removal.map((game) => game.name)} confirmLabel={removal.length === 1 ? "Remove" : `Remove ${removal.length} games`} danger
       onCancel={() => setRemoval(null)}

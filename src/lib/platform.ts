@@ -4,6 +4,7 @@ import type { Piko, Tofu } from "../models";
 import { modSyncFor } from "./mods/targets";
 import { buildLaunchConfig } from "./launch";
 import { launchTargetFor } from "./minecraftPiko";
+import { sourceInstallPathFor } from "./launchSources";
 
 export type PlatformId = "linux" | "macos";
 export type LaunchMethodId = "file" | "app" | "flatpak" | "custom";
@@ -76,7 +77,7 @@ export function launchGame(piko: Piko, tofu: Tofu | undefined): Promise<void> {
       gameId: piko.id,
       name: piko.name,
       launchTarget,
-      installPath: tofu?.installPath ?? piko.installPath ?? null,
+      installPath: tofu?.installPath ?? sourceInstallPathFor(piko) ?? null,
       tofuId: tofu?.id ?? null,
       config: buildLaunchConfig(tofu?.launch, piko.launchOptions),
       // A Tofu with its own store is copied into the game folder, Tofus sharing a folder swap their mods; natively, right before starting.

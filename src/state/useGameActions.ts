@@ -5,6 +5,7 @@ import { launchGame as startGame, openPath, removeGameShortcut, stopGame } from 
 import { addPikoToSteam, createPikoShortcut, getShortcutTargets, runAddToSteam } from "../lib/shortcuts";
 import { describeModSync, subscribeNative, type ModSyncResult } from "../lib/nativeEvents";
 import { launchTargetFor } from "../lib/minecraftPiko";
+import { sourceInstallPathFor, sourceTargetFor } from "../lib/launchSources";
 import type { Behavior } from "./settings";
 import { updateBeforeLaunch } from "./modUpdates";
 import { askConflictChoice } from "../lib/mods/conflictPrompt";
@@ -100,7 +101,8 @@ export function useGameActions({ lib, behavior, refreshPlaytime, refreshSessions
   };
 
   const openGameFolder = (game: Piko) => {
-    const folder = game.installPath || (game.executablePath?.startsWith("/") ? game.executablePath : "");
+    const target = sourceTargetFor(game);
+    const folder = sourceInstallPathFor(game) || (target?.startsWith("/") ? target : "");
     if (folder) void openPath(folder).catch((error) => setLaunchError(shortError(error)));
   };
 

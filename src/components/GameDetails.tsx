@@ -23,6 +23,10 @@ import { steamAppIdOf } from "../lib/metadata/merge";
 import { ScreenshotGallery, singleCredit } from "./details/ScreenshotGallery";
 import { canPlayHlsNatively, pickTrailer } from "../lib/trailer";
 import { imageSourceLabels } from "../lib/imageSource";
+import { Select } from "./ui/Select";
+import { GameSources } from "./details/GameSources";
+import { activeSource, launchSourcesOf, sourceInstallPathFor } from "../lib/launchSources";
+import { launchTargetFor } from "../lib/minecraftPiko";
 
 type Props = {
   game: Piko;
@@ -51,9 +55,12 @@ type Props = {
   onCreateCollection: (name: string) => Collection | null;
   onTagsChange: (tags: string[]) => void;
   onBacklogChange: (backlog: Backlog | undefined) => void;
+  /** Merged games: choose the launcher "Play" uses, and undo the merge (one source, or all). */
+  onSourceChange?: (sourceId: string) => void;
+  onUnmerge?: (sourceId?: string) => void;
 };
 
-export function GameDetails({ game, cloudStatus, running, playtime, launchError, launching, workspace, mods, canStop, onBack, onPlay, onStop, onEdit, onRemove, onOpenFolder, onShortcutLocation, onShortcutSteam, collections, tagSuggestions, onToggleFavorite, onToggleCollection, onCreateCollection, onTagsChange, onBacklogChange }: Props) {
+export function GameDetails({ game, cloudStatus, running, playtime, launchError, launching, workspace, mods, canStop, onBack, onPlay, onStop, onEdit, onRemove, onOpenFolder, onShortcutLocation, onShortcutSteam, collections, tagSuggestions, onToggleFavorite, onToggleCollection, onCreateCollection, onTagsChange, onBacklogChange, onSourceChange, onUnmerge }: Props) {
   const [playTrailer, setPlayTrailer] = useState(false);
   const online = useOnline();
   const [showCollections, setShowCollections] = useState(false);
@@ -70,11 +77,14 @@ export function GameDetails({ game, cloudStatus, running, playtime, launchError,
   const textSources = [game.igdbId ? "IGDB" : "", steamAppId !== null ? "Steam" : ""].filter(Boolean);
   const infoCredit = game.lockedFields?.includes("description") ? "Description written by you." : textSources.length ? `Details from ${textSources.join(" and ")}.` : "Details you added.";
   const coverCredit = !game.artworkSource ? "" : game.artworkSource === "custom" ? "Chosen by you" : game.artworkSource === "icon" ? "Made from the app icon" : imageSourceLabels[game.artworkSource];
-  const folder = game.installPath || (game.executablePath?.startsWith("/") ? game.executablePath : "");
+  const launchTarget = launchTargetFor(game);
+  const folder = sourceInstallPathFor(game) || (launchTarget?.startsWith("/") ? launchTarget : "");
+  const sources = launchSourcesOf(game);
   return <section className="game-details-page">
     <button type="button" className="text-button game-details-back" onClick={onBack}><ArrowLeft size={15}/> Back to library</button>
     <div className={`game-details-hero${hasArtwork(game) ? "" : " no-art"}`}><GameArtwork className="game-details-cover" cacheKey={game.artworkCacheKey} fallback={game.artwork} name={game.name} kind={game.kind} sourceId={game.sourceId} /><div className="game-details-title"><p className="eyebrow">{game.platformCategory || "Game"}{game.sourceId ? ` · ${game.sourceId}` : ""}</p><h2>{game.name}<button type="button" className={`details-heart ${game.favorite ? "on" : ""}`} aria-pressed={Boolean(game.favorite)} aria-label={game.favorite ? "Remove from favourites" : "Add to favourites"} onClick={onToggleFavorite}><Heart size={18} fill={game.favorite ? "currentColor" : "none"} /></button></h2><div className="game-details-badges">{game.categories?.map((category) => <span key={category}>{category}</span>)}{game.backlog && <span className="backlog-badge">{backlogLabel(game.backlog.status)}</span>}{running && <span className="running-badge">Running</span>}<CloudBadge status={cloudStatus} label /></div><p>{game.description || "No description is available yet."}</p>
       <div className="game-details-actions">
+        {sources.length > 1 && onSourceChange && <div className="details-play-via"><span className="detail-label">Play via</span><Select<string> label="Play via" value={activeSource(game)?.id ?? ""} onChange={onSourceChange} options={sources.map((source) => ({ value: source.id, label: source.label }))} /></div>}
         {running ? <button type="button" className="play-button stop-button" onClick={onStop} disabled={!canStop} title={canStop ? "Quit this game" : "Close it from its own launcher"}><Square size={14} fill="currentColor"/> Stop</button> : <button type="button" className="play-button" onClick={onPlay} disabled={launching}><Play size={15} fill="currentColor"/> {launching ? "Launching…" : "Play"}</button>}
         <div className="details-popover-anchor" ref={collectionAnchor}>
           <button type="button" className="secondary-button" aria-expanded={showCollections} onClick={() => setShowCollections(!showCollections)}><FolderPlus size={14}/> Add to collection…</button>
@@ -94,12 +104,13 @@ export function GameDetails({ game, cloudStatus, running, playtime, launchError,
       <dl className="game-stats">
         <div><dt>Playtime</dt><dd>{playtime ? formatPlaytime(playtime.seconds) : "—"}</dd></div>
         <div><dt>Last played</dt><dd>{running ? "Playing now" : playtime?.lastPlayed ? formatRelativeTime(playtime.lastPlayed) : "Never"}</dd></div>
-        <div><dt>Launch target</dt><dd className="path-text" title={game.executablePath}>{game.executablePath || "Not set"}</dd></div>
+        <div><dt>Launch target</dt><dd className="path-text" title={launchTarget}>{launchTarget || "Not set"}</dd></div>
       </dl></div></div>
     <div className="game-details-content game-details-primary">
       <section className="game-details-section game-details-about" aria-label={`About ${game.name}`}><div className="discover-section-heading"><div><h3>Game information</h3><p>{infoCredit}</p></div></div><div className="game-details-info">{game.categories?.length ? <div><small>Genres</small><strong>{game.categories.join(", ")}</strong></div> : null}{game.firstReleaseDate ? <div><small>First released</small><strong>{new Date(game.firstReleaseDate * 1000).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</strong></div> : null}<div><small>Platform</small><strong>{game.platformCategory || game.sourceId || "Custom"}</strong></div>{coverCredit ? <div><small>Cover art</small><strong>{coverCredit}</strong></div> : null}</div>{game.description && <p className="game-details-description">{game.description}</p>}</section>
       {screenshots.length ? <section className="game-details-section game-details-screenshots"><div className="discover-section-heading"><div><h3>Screenshots</h3><p>{screenshotCredit ?? "Images from several sources."}</p></div></div><ScreenshotGallery urls={screenshots} gameName={game.name} /></section> : null}
     </div>
+    {onSourceChange && onUnmerge && <div className="game-details-content"><GameSources game={game} onUse={onSourceChange} onUnmerge={onUnmerge} /></div>}
     <div className="game-workspace">{workspace}</div>
     {(steamAppId !== null || choice.kind !== "none") && <div className="game-details-content">
       {steamAppId !== null && <SteamAchievements key={steamAppId} appid={steamAppId} gameName={game.name} />}

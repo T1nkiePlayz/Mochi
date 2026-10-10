@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Piko, Tofu } from "../models";
 import { eligibleForPush } from "./cloudStatus";
+import { mergedIds } from "./launchSources";
 
 /**
  * Source ids the `pikos_source_id_check` constraint accepts (see 20261009150000_more_import_sources.sql).
@@ -153,7 +154,9 @@ export async function getCloudAccountSettings(client: SupabaseClient, userId: st
 export function mergeCloudLibrary(local: Piko[], cloud: Piko[]): Piko[] {
   const localById = new Map(local.map((piko) => [piko.id, piko]));
   const cloudIds = new Set(cloud.map((piko) => piko.id));
-  const merged = cloud.map((remote) => {
+  // Games merged into another on this device (never synced) must not come back from a cloud copy made before the merge.
+  const folded = new Set(local.flatMap(mergedIds));
+  const merged = cloud.filter((remote) => !folded.has(remote.id)).map((remote) => {
     const mine = localById.get(remote.id);
     if (!mine) return remote;
     const tofuById = new Map(mine.tofus.map((tofu) => [tofu.id, tofu]));

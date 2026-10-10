@@ -175,7 +175,8 @@ export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: 
     // Minecraft instances are Tofus of the one Minecraft Piko; they are never deduplicated by name.
     const instances = games.filter((game) => isInstanceTarget(game.launchTarget));
     const others = games.filter((game) => !isInstanceTarget(game.launchTarget));
-    const known = new Set(lib.library.map((piko) => piko.name.trim().toLowerCase()));
+    // Games folded into another (duplicate merge) count as known, so a re-import does not bring them back.
+    const known = new Set(lib.library.flatMap((piko) => [piko, ...(piko.mergedFrom ?? [])]).map((piko) => piko.name.trim().toLowerCase()));
     const fresh = others.filter((game) => !known.has(game.name.trim().toLowerCase()));
     const created = fresh.map((game) => importedGameToPiko(game, now));
     const merged = mergeInstances(lib.library, instances);

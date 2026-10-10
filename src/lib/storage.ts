@@ -16,6 +16,8 @@ export const storageKeys = {
   wishlist: "mochi:wishlist",
   /** User corrections of game/launcher detection, keyed by import id. */
   launcherOverrides: "mochi:launcher-overrides",
+  /** Pairs of games the user said are not the same game (`src/lib/duplicates.ts`). */
+  duplicateDismissed: "mochi:duplicate-dismissed",
 } as const;
 
 export const igdbCacheKey = (userId?: string) => `mochi:igdb-cache:${userId || "local"}`;
