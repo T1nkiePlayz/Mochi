@@ -15,6 +15,7 @@ export type DiscoverGame = {
   key: string;
   name: string;
   iconUrl?: string;
+  iconFallbackUrls?: string[];
   source: "curseforge" | "nexus";
   cf?: CfGame;
   nexusDomain?: string;
@@ -107,7 +108,8 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
     const missingByDomain = new Map(candidates
       .filter((game) => !iconned.has(game.domainName.toLocaleLowerCase()))
       .map((game) => [game.domainName.toLocaleLowerCase(), game]));
-    const missing = [...missingByDomain.values()].slice(0, 32);
+    // Explicitly added games are first in the list; cover more of the live catalogue without an unbounded IGDB burst.
+    const missing = [...missingByDomain.values()].slice(0, 64);
 
     void (async () => {
       const resolved: Array<readonly [string, string]> = [];
@@ -134,7 +136,12 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
     const nexusInfo = (domain: string) => catalog.find((game) => game.domainName === domain) ?? KNOWN_NEXUS_GAMES.find((game) => game.domainName === domain);
     const cfGame = (game: CfGame, nexusDomain?: string): DiscoverGame => {
       const domain = nexusDomain ?? (settings.nexus ? bestNameMatch(game.name, catalog.map((entry) => ({ ...entry, slug: entry.domainName })))?.domainName : undefined);
-      return { key: `cf:${game.id}`, name: game.name, iconUrl: game.assets?.iconUrl, source: "curseforge", cf: game, nexusDomain: settings.nexus ? domain : undefined };
+      const info = domain ? nexusInfo(domain) : undefined;
+      const nexusUrl = nexusThumbnail(info);
+      const igdbUrl = domain ? igdbIcons[domain.toLocaleLowerCase()] : undefined;
+      const iconUrl = game.assets?.iconUrl ?? nexusUrl ?? igdbUrl;
+      const iconFallbackUrls = [game.assets?.iconUrl ? nexusUrl : undefined, igdbUrl].filter((url): url is string => Boolean(url && url !== iconUrl));
+      return { key: `cf:${game.id}`, name: game.name, iconUrl, iconFallbackUrls, source: "curseforge", cf: game, nexusDomain: settings.nexus ? domain : undefined };
     };
     const nexusOnly = (domain: string, fallbackName: string): DiscoverGame | null => {
       if (!settings.nexus) return null;
@@ -142,7 +149,10 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
       const name = info?.name ?? fallbackName;
       const onCf = settings.curseforge && cfGames ? bestNameMatch(name, cfGames) : null;
       if (onCf) return cfGame(onCf, domain);
-      return { key: `nx:${domain}`, name, iconUrl: nexusThumbnail(info) ?? igdbIcons[domain.toLocaleLowerCase()], source: "nexus", nexusDomain: domain };
+      const nexusUrl = nexusThumbnail(info);
+      const igdbUrl = igdbIcons[domain.toLocaleLowerCase()];
+      const iconUrl = nexusUrl ?? igdbUrl;
+      return { key: `nx:${domain}`, name, iconUrl, iconFallbackUrls: [igdbUrl].filter((url): url is string => Boolean(url && url !== iconUrl)), source: "nexus", nexusDomain: domain };
     };
     for (const { seed, cf } of visibleSeedGames(SEED_GAMES, cfGames, nexusOn && nexusKey, settings.curseforge)) {
       if (cf) put(cfGame(cf, seed.nexusDomain));
