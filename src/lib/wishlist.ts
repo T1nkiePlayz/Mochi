@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { readString, storageKeys, writeJson } from "./storage";
 
-/** Reserved for the later price-watch feature; nothing reads it yet. */
+/** Price watch (`watchPrice` in src/lib/deals.ts): alert when the price drops to `targetPrice`. */
 export type PriceWatch = { targetPrice?: number; currency?: string; lastPrice?: number; checkedAt?: number };
 export type WishlistItem = {
   id: string;

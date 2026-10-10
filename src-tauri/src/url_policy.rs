@@ -11,7 +11,7 @@ use url::Url;
 const TRUSTED_HOSTS: &[&str] = &[
     "github.com", "githubusercontent.com", "modrinth.com", "curseforge.com", "nexusmods.com",
     "steampowered.com", "steamcommunity.com", "youtube.com", "youtu.be", "youtube-nocookie.com",
-    "igdb.com", "steamgriddb.com", "supabase.co", "discord.gg", "discord.com", "ko-fi.com", "patreon.com",
+    "igdb.com", "steamgriddb.com", "cheapshark.com", "epicgames.com", "supabase.co", "discord.gg", "discord.com", "ko-fi.com", "patreon.com",
     "twitter.com", "x.com", "reddit.com", "wikipedia.org", "gitlab.com", "itch.io", "ashtontink.com", "mochi.ashtontink.com",
 ];
 

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createNotifyBatcher } from "./notifyBatch";
+import { createNotifyBatcher, summarise } from "./notifyBatch";
 
 describe("notifyBatch", () => {
   beforeEach(() => { vi.useFakeTimers(); });
@@ -68,5 +68,11 @@ describe("notifyBatch", () => {
     expect(emit).toHaveBeenCalledTimes(1);
     vi.advanceTimersByTime(5000);
     expect(emit).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("deals group", () => {
+  it("summarises a burst of deal alerts", () => {
+    expect(summarise("deals", [{ title: "A", message: "x", item: "A" }, { title: "B", message: "y", item: "B" }])).toEqual({ title: "2 new deals", message: "A, B" });
   });
 });

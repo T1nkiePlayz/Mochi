@@ -27,6 +27,8 @@ import { useGameActions } from "./useGameActions";
 import { useDeepLinks } from "./useDeepLinks";
 import { useCliIntents } from "./useCliIntents";
 import { useLibraryIndex } from "./useLibraryIndex";
+import { useDeals } from "./useDeals";
+import { experimentalIds } from "../lib/experimental";
 import { CliChooser } from "../components/CliChooser";
 import { AchievementWatcher } from "../components/stats/AchievementWatcher";
 import { ConfirmHost } from "../components/ui/ConfirmHost";
@@ -98,6 +100,7 @@ function useAppController() {
   });
   useDeepLinks(account, cliIntents.handle);
   useLibraryIndex(lib.library, storage.ready);
+  const deals = useDeals(behavior.experimental.includes("deal-alerts") && experimentalIds().includes("deal-alerts"), lib.library, notify);
 
   const finishFirstLaunchSetup = (games: ImportedGame[], sources: ImportSourceId[], minecraftMode: MinecraftMode = "copy") => {
     writeString(storageKeys.setupComplete, "true");
@@ -138,7 +141,7 @@ function useAppController() {
     behavior, setBehavior, activeNav, setActiveNav, showFirstLaunchSetup, finishFirstLaunchSetup,
     platformCapabilities, runtimes, showTofuManager, setShowTofuManager, editingGameId, setEditingGameId,
     notifications, account, credentials, sessions, playtime, refreshPlaytime, lib, collections, themeEngine, actions, metadata, add, storage, cloud, downloads,
-    hasIgdb, chooseConfigLocation, resetLocalData, cliIntents,
+    hasIgdb, chooseConfigLocation, resetLocalData, cliIntents, deals,
   };
 }
 

@@ -17,6 +17,7 @@ export type ExperimentalFeature = {
 
 export const experimentalFeatures: ExperimentalFeature[] = [
   { id: "game-news", name: "Game news", description: "A News tab in the notification centre with the latest Steam news for your Steam games and updates for your installed mods. Checks at most every 6 hours while Mochi is open.", since: "0.1.0" },
+  { id: "deal-alerts", name: "Deal alerts", description: "Free games and sales for the stores you use (Epic, CheapShark), plus price-watch alerts for wishlist games. Metadata only, checked at most every 6 hours.", since: "0.1.0" },
 ];
 
 export const experimentalIds = () => experimentalFeatures.map((feature) => feature.id);

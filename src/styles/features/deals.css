@@ -1,0 +1,8 @@
+.deals-panel { max-height: min(60vh, 520px); overflow-y: auto; border-top: var(--mochi-border-width) solid var(--mochi-border); }
+.deals-panel a { color: var(--mochi-accent-strong); text-decoration: none; }
+.deals-panel a:hover, .deals-panel a:focus-visible { text-decoration: underline; }
+.deals-refresh { display: inline-flex; align-items: center; gap: 4px; }
+.deals-refresh:disabled { opacity: .6; }
+.deals-stores { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 8px 13px; font-size: 11px; color: var(--mochi-text-muted); border-bottom: var(--mochi-border-width) solid var(--mochi-border); }
+.deals-stores label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.deals-row { display: grid; gap: 1px; }

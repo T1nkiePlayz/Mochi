@@ -104,6 +104,16 @@ const handlers: Record<string, Handler> = {
   clear_steam_achievements_cache: () => undefined,
   clear_steam_store_cache: () => undefined,
   get_steam_news: ({ appid }) => ({ status: "ok", message: null, items: [1, 2].map((n) => ({ gid: `${appid}-${n}`, title: `Patch notes ${n}`, url: "https://store.steampowered.com/news/", feedLabel: "Community Announcements", date: Math.floor(Date.now() / 1000) - n * 3600, summary: "Fixed a crash on startup and tuned a few things." })) }),
+  get_epic_free_games: () => ({ status: "ok", message: null, data: [
+    { id: "e1", title: "Mock Free Game", url: "https://store.epicgames.com/en-US/p/mock", state: "free-now", start: null, end: new Date(Date.now() + 5 * 86400000).toISOString(), originalPrice: "$19.99" },
+    { id: "e2", title: "Next Week Freebie", url: "https://store.epicgames.com/en-US/p/next", state: "upcoming", start: new Date(Date.now() + 7 * 86400000).toISOString(), end: null, originalPrice: "$9.99" },
+  ] }),
+  get_cheapshark_deals: () => ({ status: "ok", message: null, data: [
+    { dealId: "d1", storeId: "1", gameId: "1", title: "Silver Pines", salePrice: 22.26, normalPrice: 35.98, savings: 38.1, steamAppId: "2333000", link: "https://www.cheapshark.com/redirect?dealID=d1", lastChange: 1 },
+    { dealId: "d2", storeId: "7", gameId: "2", title: "The Knightling", salePrice: 4.79, normalPrice: 29.99, savings: 84, steamAppId: null, link: "https://www.cheapshark.com/redirect?dealID=d2", lastChange: 1 },
+    { dealId: "d3", storeId: "25", gameId: "3", title: "Not My Store Game", salePrice: 1, normalPrice: 10, savings: 90, steamAppId: null, link: "https://www.cheapshark.com/redirect?dealID=d3", lastChange: 1 },
+  ] }),
+  get_price_info: () => ({ status: "ok", message: null, data: { gameId: "1", title: "Mock", steamAppId: null, cheapestNow: 9.99, cheapestEver: 4.99, cheapestEverDate: 1759177295, deals: [] } }),
   get_steam_achievement_totals: () => [{ appid: 220, steamId: "76561197960287930", unlocked: 18, total: 33, fetchedAt: now }],
   get_steam_store_details: ({ appid }) => ({
     status: "ok", stale: false, fetchedAt: now, message: null,

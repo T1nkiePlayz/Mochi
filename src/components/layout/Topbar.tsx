@@ -10,10 +10,11 @@ import { useExperimental } from "../../state/useExperimental";
 import { markNewsRead, useGameNews } from "../../state/gameNewsStore";
 import { unreadCount } from "../../lib/gameNews";
 import { openExternalUrl } from "../../lib/platform";
+import { DealsPanel } from "../DealsPanel";
 
 export const Topbar = memo(function Topbar() {
-  const { activeNav, pikoName, search, setSearch, showBell, platform, notifications, showNotifications, setNotifications, setShowNotifications } = useAppSelector((app) => ({
-    activeNav: app.activeNav, pikoName: app.lib.selectedPiko.name, search: app.lib.search, setSearch: app.lib.setSearch,
+  const { activeNav, dealsEnabled, pikoName, search, setSearch, showBell, platform, notifications, showNotifications, setNotifications, setShowNotifications } = useAppSelector((app) => ({
+    activeNav: app.activeNav, dealsEnabled: app.deals.enabled, pikoName: app.lib.selectedPiko.name, search: app.lib.search, setSearch: app.lib.setSearch,
     showBell: app.behavior.notificationsEnabled && app.behavior.inAppNotifications, platform: app.platformCapabilities?.platform,
     notifications: app.notifications.notifications, showNotifications: app.notifications.showNotifications,
     setNotifications: app.notifications.setNotifications, setShowNotifications: app.notifications.setShowNotifications,
@@ -60,6 +61,7 @@ export const Topbar = memo(function Topbar() {
             {news.items.slice(0, 40).map((item) => <button type="button" className="notification-item notification-news-item" key={item.gid} onClick={() => void openExternalUrl(item.url).catch(() => {})}><strong>{item.game}: {item.title}</strong><span>{item.summary || item.feedLabel}</span><small>{new Date(item.date * 1000).toLocaleDateString()}{item.feedLabel ? ` · ${item.feedLabel}` : ""}</small></button>)}
             {!mods.length && !news.items.length && <div className="notification-empty">No news yet. Steam games are checked every few hours while Mochi is open.</div>}
           </div> : notifications.length ? notifications.map((item) => <div className="notification-item" key={item.id}><strong>{item.title}</strong><span>{item.message}</span>{item.progress && <progress max={item.progress.total} value={item.progress.value} />}</div>) : <div className="notification-empty">You’re all caught up.</div>}
+          {dealsEnabled && !showNews && <DealsPanel />}
         </div>}
       </div>}
     </div>
