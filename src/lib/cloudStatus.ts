@@ -71,7 +71,7 @@ export function isRetryableSyncError(error: unknown): boolean {
   if (/failed to fetch|networkerror|network request failed|load failed|fetch failed|timed out|timeout|connection reset|connection refused/i.test(message)) {
     return true;
   }
-  if (/row-level security|row level security|permission denied|violates (?:check|foreign key|unique|not-null) constraint|invalid input syntax|authentication required|cloud sync is not enabled|library must be a json array|library is too large/i.test(message)) {
+  if (/row-level security|row level security|permission denied|jwt expired|invalid jwt|invalid token|not authenticated|violates (?:check|foreign key|unique|not-null) constraint|invalid input syntax|authentication required|cloud sync is not enabled|library must be a json array|library is too large/i.test(message)) {
     return false;
   }
 
