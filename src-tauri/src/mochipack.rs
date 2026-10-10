@@ -48,7 +48,6 @@ fn write_atomic_to(target: &Path, content: &str, temp: &Path, label: &str) -> Re
         format!("Could not save the {label}: {error}")
     })
 }
-}
 
 pub(crate) fn read_pack(path: &Path) -> Result<String, String> {
     if !path.is_absolute() { return Err("Choose a modpack file.".into()); }
