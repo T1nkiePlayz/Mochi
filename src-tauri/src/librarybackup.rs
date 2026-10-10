@@ -18,8 +18,7 @@ fn extension_of(path: &Path) -> String { path.extension().and_then(|value| value
 fn write_atomic(target: &Path, content: &str) -> Result<(), String> {
     if content.len() as u64 > MAX_BYTES { return Err("The backup is too large to save.".into()); }
     if target.is_dir() { return Err("Choose a file name, not a folder.".into()); }
-    let temp = temp_path(target);
-    write_atomic_to(target, content, &temp)
+    write_atomic_to(target, content)
 }
 
 static TEMP_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
@@ -30,21 +29,37 @@ fn temp_path(target: &Path) -> PathBuf {
     PathBuf::from(temp)
 }
 
-/// Exclusive creation prevents an attacker-controlled symlink from redirecting a backup write.
-fn write_atomic_to(target: &Path, content: &str, temp: &Path) -> Result<(), String> {
+/// Retry stale-name collisions and keep backup contents private to the current user.
+fn write_atomic_to(target: &Path, content: &str) -> Result<(), String> {
+    for _ in 0..16 {
+        let temp = temp_path(target);
+        match write_atomic_file(target, content, &temp) {
+            Ok(()) => return Ok(()),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(format!("Could not save the backup: {error}")),
+        }
+    }
+    Err("Could not save the backup: could not allocate a unique temporary file.".into())
+}
+
+/// Exclusive creation prevents symlink redirection; mode 0600 avoids leaking backup contents on Unix.
+fn write_atomic_file(target: &Path, content: &str, temp: &Path) -> std::io::Result<()> {
     use std::io::Write;
-    let mut file = fs::OpenOptions::new().write(true).create_new(true).open(temp)
-        .map_err(|error| format!("Could not save the backup: {error}"))?;
+    let mut options = fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options.open(temp)?;
     if let Err(error) = file.write_all(content.as_bytes()) {
         drop(file);
         let _ = fs::remove_file(temp);
-        return Err(format!("Could not save the backup: {error}"));
+        return Err(error);
     }
     drop(file);
-    fs::rename(temp, target).map_err(|error| {
-        let _ = fs::remove_file(temp);
-        format!("Could not save the backup: {error}")
-    })
+    fs::rename(temp, target).inspect_err(|_| { let _ = fs::remove_file(temp); })
 }
 
 pub(crate) fn write_backup(path: &Path, content: &str) -> Result<PathBuf, String> {
@@ -151,9 +166,20 @@ mod tests {
         fs::write(&victim, "keep me").unwrap();
         symlink(&victim, &temp).unwrap();
 
-        assert!(write_atomic_to(&target, "overwrite", &temp).is_err());
+        assert!(write_atomic_file(&target, "overwrite", &temp).is_err());
         assert_eq!(fs::read_to_string(&victim).unwrap(), "keep me");
         assert!(fs::symlink_metadata(&temp).unwrap().file_type().is_symlink());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn backup_files_are_private_to_the_current_user() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = temp("private-mode");
+        let target = dir.join("private.mochibackup");
+        write_backup(&target, "{\"private\":true}").unwrap();
+        assert_eq!(fs::metadata(target).unwrap().permissions().mode() & 0o777, 0o600);
         let _ = fs::remove_dir_all(&dir);
     }
 
