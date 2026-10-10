@@ -89,7 +89,7 @@ export function FirstLaunchSetup(props: SetupProps) {
           {step === "imports" && <ImportStep onSelectionChange={setSelection} />}
         </div>
         <div className="setup-footer">
-          <button type="button" className="setup-nav setup-prev" onClick={() => hop(-1)} disabled={step === "welcome"}><ArrowLeft size={16} /> Back</button>
+          <button type="button" className="setup-nav setup-prev" onClick={() => hop(-1)} disabled={step === "welcome"}><ArrowLeft size={16} /> {t("Back")}</button>
           <span className="setup-step-label">{t(stepLabels[step])} · {index + 1}/{steps.length}</span>
           <div className="setup-footer-actions">
             {step !== "welcome" && step !== "account" && !last && <button type="button" className="setup-skip text-button" onClick={() => hop(1)} disabled={props.credentialBusy !== null}>{t("Skip")}</button>}
