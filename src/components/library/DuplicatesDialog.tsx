@@ -3,14 +3,16 @@ import { Copy, X } from "lucide-react";
 import type { DuplicateGroup } from "../../lib/duplicates";
 import { launchSourceOf } from "../../lib/duplicates";
 import { GameArtwork } from "../GameArtwork";
+import { useTranslation } from "../../lib/useTranslation";
 
 /** "2 games appear more than once": a quiet notice above the library. */
 export function DuplicatesNotice({ count, onReview }: { count: number; onReview: () => void }) {
+  const t = useTranslation();
   if (!count) return null;
   return <div className="duplicates-notice" role="status">
     <Copy size={16} aria-hidden="true" />
-    <span className="duplicates-notice-text"><strong>{count} game{count === 1 ? "" : "s"} appear{count === 1 ? "s" : ""} more than once.</strong> Merge them into one entry with a "Play via" choice. Nothing is deleted and you can undo it.</span>
-    <button type="button" className="secondary-button" onClick={onReview}>Review</button>
+    <span className="duplicates-notice-text"><strong>{t(count === 1 ? "{count} game appears more than once." : "{count} games appear more than once.").replace("{count}", String(count))}</strong> {t("Merge them into one entry with a \"Play via\" choice. Nothing is deleted and you can undo it.")}</span>
+    <button type="button" className="secondary-button" onClick={onReview}>{t("Review")}</button>
   </div>;
 }
 
