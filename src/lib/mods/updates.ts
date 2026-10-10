@@ -49,6 +49,8 @@ export type ModUpdateItem = {
   enabled: boolean;
   currentVersion: string;
   newVersion: string;
+  /** The mod's page on its site (for "changelog on ..." links). */
+  pageUrl?: string;
   /** Everything needed to record the new file after the update. */
   record: { source: "modrinth" | "curseforge" | "nexus"; projectId: string; fileId: string; version?: string; title?: string; iconUrl?: string; fileDate?: string };
   apply: UpdateApply;

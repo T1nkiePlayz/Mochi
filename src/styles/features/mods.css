@@ -138,3 +138,12 @@
 .conflict-actions { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 100%; padding-left: 25px; }
 .conflict-message { min-height: 1.2em; margin: 8px 0 0; color: var(--mochi-text-muted); font-size: 12px; }
 .conflict-check-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+/* Update changelogs and the review sheet */
+.update-changelog { margin-top: 4px; }
+.update-changelog-toggle { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px; border: 0; background: transparent; color: var(--mochi-accent); font: inherit; font-size: 11px; cursor: pointer; border-radius: 6px; }
+.update-changelog-toggle:hover { text-decoration: underline; }
+.update-changelog-body { margin-top: 6px; max-height: 220px; overflow: auto; padding: 8px 10px; border: 1px solid var(--mochi-border); border-radius: 8px; background: var(--mochi-surface); font-size: 12px; }
+.update-review-log { flex: 1 1 100%; }
+.update-changelog-text { overflow-wrap: anywhere; }
+.dep-warning.dep-note { color: var(--mochi-text-muted); }
+.update-review .dep-warning > span { flex: 1 1 auto; min-width: 0; }

@@ -117,6 +117,9 @@ export async function searchDiscover(query: DiscoverQuery): Promise<DiscoverPage
   return { hits, total: result.data.total_hits ?? hits.length, offset: result.data.offset ?? query.offset ?? 0, cached: result.cached, stale: result.stale, fetchedAt: result.fetchedAt };
 }
 
+/** One version by id (its changelog and dependencies). */
+export const getModrinthVersion = (versionId: string) => get<ModrinthVersion>(API + "/version/" + encodeURIComponent(versionId));
+
 export async function getModrinthVersions(projectId: string, gameVersion?: string, loader?: string): Promise<ModrinthVersion[]> {
   const all: ModrinthVersion[] = [];
   let offset = 0;
