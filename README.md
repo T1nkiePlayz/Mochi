@@ -292,7 +292,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] Stable release
 - [ ] Theme marketplace / in-app theme gallery for browsing and installing community themes
 - [ ] Theme creator with live editing of colours, fonts and hooks, plus theme export
-- [ ] Add language selector in welcome screen and settings menu
+- [x] Add launcher language selector in setup and Settings, with game news following the selected language
 
 ## Documentation index
 
