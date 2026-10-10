@@ -15,8 +15,11 @@ type Props = { cfGames: CfGame[] | null; nexusGames: NexusGame[]; cfEnabled: boo
 const toStored = (entry: CatalogEntry): StoredGame => entry.cf ? { k: "cf", id: entry.cf.id, slug: entry.cf.slug, nx: entry.nexus?.domain } : { k: "nx", domain: entry.nexus!.domain, name: entry.name };
 
 /** Search the games CurseForge and Nexus Mods list (one row per game, with a badge per site) and add one as a Discover tab. */
-export function AddGamePicker({ cfGames, nexusGames, cfEnabled, nexusEnabled, onChoose, onClose }: Props) {
+export function AddGamePicker({ cfGames, nexusGames, cfEnabled, nexusEnabled, supabase, igdbConfigured, onChoose, onClose }: Props) {
   const [search, setSearch] = useState("");
+  const [resolvedIcons, setResolvedIcons] = useState<Record<string, string>>({});
+  const resolvedIconsRef = useRef(resolvedIcons);
+  useEffect(() => { resolvedIconsRef.current = resolvedIcons; }, [resolvedIcons]);
   const rows = useMemo(() => searchGameCatalog(search,
     (cfGames ?? []).map((game) => ({ id: game.id, name: game.name, slug: game.slug, iconUrl: game.assets?.iconUrl })),
     nexusGames, { cfEnabled, nexusEnabled, limit: 60 }), [search, cfGames, nexusGames, cfEnabled, nexusEnabled]);
