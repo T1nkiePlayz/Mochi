@@ -128,7 +128,6 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
       const localIds = new Set(libraryRef.current.map((piko) => piko.id));
       const importedCount = cloudLibrary.filter((piko) => !localIds.has(piko.id)).length;
       setLibrary((local) => mergeCloudLibrary(local, cloudLibrary));
-      if (cloudSyncEnabled && schedulerRef.current) schedulerRef.current.notify();
       setCloudDataMessage(cloudLibrary.length
         ? `Imported/updated ${cloudLibrary.length} cloud games; ${importedCount} were new on this device. Local-only games were kept.`
         : "No games were found in your cloud library. Your local library was not changed.");
