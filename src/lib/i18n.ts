@@ -1,5 +1,6 @@
 import { navLabel } from "./nav";
 import { setupMessages } from "./i18nSetup";
+import { setupCopyMessages } from "./i18nSetupCopy";
 import { chromeMessages } from "./i18nChrome";
 import { settingsMessages } from "./i18nSettings";
 import { downloadMessages } from "./i18nDownloads";
@@ -89,6 +90,6 @@ export function translate(message: string, language: unknown = "en"): string {
   const normalized = normalizeLanguage(language);
   const navigation = navLabel(message, normalized);
   if (navigation !== message) return navigation;
-  return messages[message]?.[normalized] ?? setupMessages[message]?.[normalized] ?? chromeMessages[message]?.[normalized] ?? settingsMessages[message]?.[normalized] ?? downloadMessages[message]?.[normalized] ?? dealMessages[message]?.[normalized] ?? dealExtraMessages[message]?.[normalized] ?? libraryMessages[message]?.[normalized] ?? systemMessages[message]?.[normalized] ?? libraryExtraMessages[message]?.[normalized] ?? message;
+  return messages[message]?.[normalized] ?? setupMessages[message]?.[normalized] ?? setupCopyMessages[message]?.[normalized] ?? chromeMessages[message]?.[normalized] ?? settingsMessages[message]?.[normalized] ?? downloadMessages[message]?.[normalized] ?? dealMessages[message]?.[normalized] ?? dealExtraMessages[message]?.[normalized] ?? libraryMessages[message]?.[normalized] ?? systemMessages[message]?.[normalized] ?? libraryExtraMessages[message]?.[normalized] ?? message;
 }
 
