@@ -34,7 +34,7 @@ fn temp_path(target: &Path) -> PathBuf {
 fn write_atomic(target: &Path, content: &str, label: &str) -> Result<(), String> {
     for _ in 0..16 {
         let temp = temp_path(target);
-        match write_atomic_to(target, content, &temp) {
+        match write_atomic_file(target, content, &temp) {
             Ok(()) => return Ok(()),
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
             Err(error) => return Err(format!("Could not save the {label}: {error}")),
@@ -44,7 +44,7 @@ fn write_atomic(target: &Path, content: &str, label: &str) -> Result<(), String>
 }
 
 /// Exclusively creates a private sibling file, then renames the completed file into place.
-fn write_atomic_to(target: &Path, content: &str, temp: &Path) -> std::io::Result<()> {
+fn write_atomic_file(target: &Path, content: &str, temp: &Path) -> std::io::Result<()> {
     use std::io::Write;
     let mut options = fs::OpenOptions::new();
     options.write(true).create_new(true);
@@ -62,31 +62,6 @@ fn write_atomic_to(target: &Path, content: &str, temp: &Path) -> std::io::Result
     }
     drop(file);
     fs::rename(temp, target).inspect_err(|_| { let _ = fs::remove_file(temp); })
-}
-
-static TEMP_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-
-fn temp_path(target: &Path) -> PathBuf {
-    let mut temp = target.as_os_str().to_os_string();
-    temp.push(format!(".part-{}-{}", std::process::id(), TEMP_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed)));
-    PathBuf::from(temp)
-}
-
-/// The temp file is created exclusively (never follows a symlink), then renamed into place.
-fn write_atomic_to(target: &Path, content: &str, temp: &Path, label: &str) -> Result<(), String> {
-    use std::io::Write;
-    let mut file = fs::OpenOptions::new().write(true).create_new(true).open(temp)
-        .map_err(|error| format!("Could not save the {label}: {error}"))?;
-    if let Err(error) = file.write_all(content.as_bytes()) {
-        drop(file);
-        let _ = fs::remove_file(temp);
-        return Err(format!("Could not save the {label}: {error}"));
-    }
-    drop(file);
-    fs::rename(temp, target).map_err(|error| {
-        let _ = fs::remove_file(temp);
-        format!("Could not save the {label}: {error}")
-    })
 }
 
 pub(crate) fn read_pack(path: &Path) -> Result<String, String> {
@@ -155,7 +130,7 @@ mod tests {
         fs::write(&victim, "keep me").unwrap();
         symlink(&victim, &temp).unwrap();
 
-        assert!(write_atomic_to(&target, "overwrite", &temp, "pack").is_err());
+        assert!(write_atomic_file(&target, "overwrite", &temp).is_err());
         assert_eq!(fs::read_to_string(&victim).unwrap(), "keep me");
         assert!(fs::symlink_metadata(&temp).unwrap().file_type().is_symlink());
         let _ = fs::remove_dir_all(&dir);
