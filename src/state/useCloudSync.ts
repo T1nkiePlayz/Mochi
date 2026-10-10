@@ -120,7 +120,7 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
 
   /** Explicit setup import: fetch the account's cloud library and merge it with local data without deleting local-only games. */
   const importCloudLibrary = async () => {
-    if (!supabase || !user || cloudDataBusy) return;
+    if (!storageReady || !supabase || !user || cloudDataBusy) return;
     setCloudDataBusy(true);
     setCloudDataMessage("");
     try {
