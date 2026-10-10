@@ -4,20 +4,22 @@ import { useApp } from "../state/AppContext";
 import { DealsPanel } from "../components/DealsPanel";
 import { openExternalUrl } from "../lib/platform";
 import { useEffect } from "react";
+import { useTranslation } from "../lib/useTranslation";
 
 const dateLabel = (seconds: number) => Number.isFinite(seconds) && seconds > 0 ? new Date(seconds * 1000).toLocaleDateString() : "Recently";
 
 export function DealsView() {
+  const t = useTranslation();
   const { behavior } = useApp();
   const { news, mods } = useGameNews();
   useEffect(() => { if (behavior.gameNews) markNewsRead(); }, [behavior.gameNews, news.items]);
   return <div className="deals-view">
-    <div className="settings-intro"><h2>Deals</h2><p>Discover giveaways, sales and price watches for your wishlist, alongside updates for games in your library.</p></div>
+    <div className="settings-intro"><h2>{t("Deals")}</h2><p>Discover giveaways, sales and price watches for your wishlist, alongside updates for games in your library.</p></div>
     <DealsPanel />
     {behavior.gameNews && <section className="deals-panel deals-news-panel" aria-label="Game news">
       <header className="deals-section-head">
         <div className="deals-section-icon"><Newspaper size={19} aria-hidden="true" /></div>
-        <div className="deals-section-title"><h3>Game news</h3><p>Recent announcements for games in your library, using your current launcher locale.</p></div>
+        <div className="deals-section-title"><h3>{t("Game news")}</h3><p>Recent announcements for games in your library, using your current launcher locale.</p></div>
         <span className="deals-count">{news.items.length + mods.length}</span>
       </header>
       {mods.length > 0 && <section className="deals-results">
