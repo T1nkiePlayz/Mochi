@@ -27,7 +27,6 @@ import { commonExtraMessages } from "./i18nCoreExtra";
 import { uiExtraMessages } from "./i18nUiExtra";
 import { footerMessages } from "./i18nFooter";
 import { extendedUiMessages } from "./i18nExtendedUi";
-import { extendedUiMessages } from "./i18nExtendedUi";
 
 /**
  * Shared UI message catalogue. Keys are stable English source strings so missing
