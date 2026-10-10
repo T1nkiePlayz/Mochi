@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Piko } from "../models";
 import { useOnline } from "../lib/offline";
-import { CHECK_INTERVAL_MS, RETRY_MS, activeStores, detectStores, fetchDeals, fetchEpicFreeGames, getPriceInfo, readDealsState, readStoreChoices, runDealsCheck, watchQuery, watchedItems, writeDealsState, writeStoreChoices, type Deal, type EpicFreeGame, type StoreChoices, type StoreId } from "../lib/deals";
+import { CHECK_INTERVAL_MS, RETRY_MS, activeStores, detectStores, fetchDeals, fetchEpicFreeGames, getPriceInfo, readDealsState, readStoreChoices, runDealsCheck, watchQuery, watchedItems, wishlistedAlerts, writeDealsState, writeStoreChoices, type Deal, type EpicFreeGame, type StoreChoices, type StoreId } from "../lib/deals";
 import { historyKey, observationsFromPrices, recordObservations } from "../lib/gameSearch";
 import { readWishlist, updateWishlistItem } from "../lib/wishlist";
 
@@ -51,7 +51,7 @@ export function useDeals(enabled: boolean, library: Piko[], notify: Notify): Dea
       // A failed check keeps its old timestamp so it is retried at the next opportunity.
       const failed = result.offline || Boolean(result.error);
       writeDealsState({ checkedAt: failed ? stored.checkedAt : now, seen: result.seen });
-      for (const alert of [...result.alerts, ...result.watchAlerts]) live.current.notify(alert.title, alert.message, { group: "deals", item: alert.item });
+      for (const alert of [...wishlistedAlerts(result.alerts, readWishlist().map((item) => item.name)), ...result.watchAlerts]) live.current.notify(alert.title, alert.message, { group: "deals", item: alert.item });
       setState({ status: result.offline ? "offline" : result.error ? "error" : "ok", message: result.error ?? "", checkedAt: failed ? stored.checkedAt : now, epic: result.epic, deals: result.deals });
       return !failed;
     } finally { running.current = false; }

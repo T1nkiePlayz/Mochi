@@ -8,7 +8,7 @@ import { getControllerSettings } from "./settings";
 import { focusablesIn, moveFocus, navScope, scrollParent } from "./spatial";
 import type { Action, ActionEvent, Direction } from "./types";
 
-const NAV_ORDER: NavId[] = ["Library", "Installed", "Discover", "Downloads", "Stats", "Settings"];
+const NAV_ORDER: NavId[] = ["Library", "Installed", "Discover", "Downloads", "Stats", "Deals", "Settings"];
 const DIRECTIONS: Action[] = ["up", "down", "left", "right"];
 
 function pressKey(target: Element, key: string) {
@@ -116,8 +116,10 @@ export function ControllerRuntime() {
           return true;
         }
         if (inModal || inBigPicture) return false;
-        const index = NAV_ORDER.indexOf(current.activeNav);
-        current.setActiveNav(NAV_ORDER[(index + step + NAV_ORDER.length) % NAV_ORDER.length]);
+        // Deals is an optional tab: skip it while it is switched off.
+        const order = NAV_ORDER.filter((id) => id !== "Deals" || document.querySelector('.primary-nav [aria-label="Deals"]'));
+        const index = order.indexOf(current.activeNav);
+        current.setActiveNav(order[(index + step + order.length) % order.length]);
         return true;
       }
       case "triggerLeft":

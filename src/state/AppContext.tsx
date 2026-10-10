@@ -36,7 +36,6 @@ import { useLibraryWatcher } from "./useLibraryWatcher";
 import { checkAccountPin } from "../lib/accountPin";
 import { usePlayLimits } from "./usePlayLimits";
 import { useScreenshotNotifier } from "./useScreenshotNotifier";
-import { experimentalIds } from "../lib/experimental";
 import { CliChooser } from "../components/CliChooser";
 import { AchievementWatcher } from "../components/stats/AchievementWatcher";
 import { ConfirmHost } from "../components/ui/ConfirmHost";
@@ -45,7 +44,7 @@ import { ConflictPromptHost } from "../components/mods/ConflictPromptHost";
 import { SelfInstallPrompt } from "../components/SelfInstallPrompt";
 import { confirmAction } from "../lib/confirm";
 
-export type NavId = "Library" | "Installed" | "Discover" | "Downloads" | "Stats" | "Settings";
+export type NavId = "Library" | "Installed" | "Discover" | "Downloads" | "Stats" | "Deals" | "Settings";
 
 function useAppController() {
   // Read synchronously: effects (launch on startup, Big Picture on startup) must never see defaults first.
@@ -57,6 +56,8 @@ function useAppController() {
   const [showTofuManager, setShowTofuManager] = useState(false);
   const [editingGameId, setEditingGameId] = useState("");
 
+  // The Deals tab is optional: turning it off while it is open returns to the library.
+  useEffect(() => { if (!behavior.showDeals) setActiveNav((current) => (current === "Deals" ? "Library" : current)); }, [behavior.showDeals]);
   const notifications = useNotifications(behavior);
   const { notify } = notifications;
   const behaviorRef = useRef(behavior);
@@ -92,7 +93,7 @@ function useAppController() {
       notifications.setShowNotifications(false);
     },
   });
-  useGameNewsPoller(behavior.experimental.includes("game-news"), lib.library, notify);
+  useGameNewsPoller(behavior.gameNews, lib.library, notify);
   useScheduledBackup(storage.ready, notify);
   useLibraryWatcher(behavior.watchFolders, storage.ready, lib.library, notify);
   const collections = useCollections(storage.ownerKey, storage.ready, lib.setLibrary);
@@ -118,7 +119,7 @@ function useAppController() {
   });
   useDeepLinks(account, cliIntents.handle);
   useLibraryIndex(lib.library, storage.ready);
-  const deals = useDeals(behavior.experimental.includes("deal-alerts") && experimentalIds().includes("deal-alerts"), lib.library, notify);
+  const deals = useDeals(behavior.showDeals, lib.library, notify);
 
   const finishFirstLaunchSetup = (games: ImportedGame[], sources: ImportSourceId[], minecraftMode: MinecraftMode = "copy") => {
     writeString(storageKeys.setupComplete, "true");

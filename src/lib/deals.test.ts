@@ -99,3 +99,12 @@ describe("runDealsCheck", () => {
     expect(price).not.toHaveBeenCalled();
   });
 });
+
+describe("wishlistedAlerts", () => {
+  it("keeps only alerts for wishlisted games", async () => {
+    const { wishlistedAlerts } = await import("./deals");
+    const alerts = [{ key: "1", title: "Free", message: "m", item: "Hades II" }, { key: "2", title: "Sale", message: "m", item: "Some Other Game" }];
+    expect(wishlistedAlerts(alerts, ["hades ii"]).map((a) => a.key)).toEqual(["1"]);
+    expect(wishlistedAlerts(alerts, [])).toEqual([]);
+  });
+});

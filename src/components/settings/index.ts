@@ -15,6 +15,7 @@ import { SoundSection } from "./SoundSection";
 import { LibraryToolsSection } from "./LibraryToolsSection";
 import { PlayLimitsSection } from "./PlayLimitsSection";
 import { AccountPinSection } from "./AccountPinSection";
+import { DealsSection } from "./DealsSection";
 import { StorageSection } from "./StorageSection";
 
 /**
@@ -35,6 +36,7 @@ export const settingsSections: Array<{ id: string; Section: ComponentType }> = [
   { id: "updates", Section: UpdateSection },
   { id: "achievements", Section: AchievementsSection },
   { id: "data", Section: DataSection },
+  { id: "deals", Section: DealsSection },
   { id: "playlimits", Section: PlayLimitsSection },
   { id: "librarytools", Section: LibraryToolsSection },
   { id: "storage", Section: StorageSection },

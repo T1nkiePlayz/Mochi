@@ -31,6 +31,7 @@ const SettingsView = lazy(() => import("./views/SettingsView").then((m) => ({ de
 const DiscoverView = lazy(() => import("./views/DiscoverView").then((m) => ({ default: m.DiscoverView })));
 const DownloadsView = lazy(() => import("./views/DownloadsView").then((m) => ({ default: m.DownloadsView })));
 const InstalledView = lazy(() => import("./views/InstalledView").then((m) => ({ default: m.InstalledView })));
+const DealsView = lazy(() => import("./views/DealsView").then((m) => ({ default: m.DealsView })));
 const StatsView = lazy(() => import("./views/StatsView").then((m) => ({ default: m.StatsView })));
 
 function ViewFallback() {
@@ -46,6 +47,7 @@ function CurrentView() {
     case "Downloads": return <DownloadsView />;
     case "Installed": return <InstalledView />;
     case "Stats": return <StatsView />;
+    case "Deals": return <DealsView />;
     default: return <div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>Not found.</h2></div>;
   }
 }
