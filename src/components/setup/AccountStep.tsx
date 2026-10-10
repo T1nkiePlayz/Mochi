@@ -16,8 +16,8 @@ export function AccountStep({ user, onSignIn, onAddUser }: { user: User | null; 
   return (
     <section className="setup-page setup-account">
       <div className="setup-icon"><UserRound size={22} /></div>
-      <h1>{signedIn ? "Your account is ready." : "Connect your Mochi account."}</h1>
-      <p className="setup-description">{signedIn ? "Your account is connected. Provider keys can be saved securely, and cloud features are ready when you need them." : "Signing in lets you store provider keys securely and sync your library. Your installed games and files stay on this device."}</p>
+      <h1>{signedIn ? t("Your account is ready.") : t("Connect your Mochi account.")}</h1>
+      <p className="setup-description">{signedIn ? t("Your account is connected. Provider keys can be saved securely, and cloud features are ready when you need them.") : t("Signing in lets you store provider keys securely and sync your library. Your installed games and files stay on this device.")}</p>
       <div className={`setup-account-card${signedIn ? " is-connected" : ""}`}>
         {signedIn && user ? <div className="setup-account-profile">
           <AccountAvatar user={user} size={54} className="setup-account-avatar" />
