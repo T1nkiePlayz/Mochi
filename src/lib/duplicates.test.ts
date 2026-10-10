@@ -170,3 +170,12 @@ describe("playtime aliasing", () => {
     expect(foldLegacyPlaytime(entries, unmergeGame(merged, "a"))).toBe(entries);
   });
 });
+
+describe("storeKey for Legendary and Nile", () => {
+  it("matches the keys Heroic produces for the same store ids", async () => {
+    const { storeKey } = await import("./duplicates");
+    expect(storeKey("legendary://launch/Sugar")).toBe(storeKey("heroic://launch?appName=Sugar&runner=legendary"));
+    expect(storeKey("nile://launch/abc-1")).toBe(storeKey("heroic://launch?appName=abc-1&runner=nile"));
+    expect(storeKey("legendary://launch/")).toBeNull();
+  });
+});

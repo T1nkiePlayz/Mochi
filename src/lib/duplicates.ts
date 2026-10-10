@@ -41,6 +41,9 @@ export function storeKey(target: string | undefined): string | null {
     if (!app) return null;
     return `${runner === "legendary" ? "epic" : runner || "heroic"}:${app}`;
   }
+  // Legendary/Rare and Nile installs (same ids Heroic uses), so they join the Heroic/Epic copy of the same game.
+  const cli = /^(legendary|nile):\/\/launch\/([^/?#\s]+)/i.exec(text);
+  if (cli) { let id = cli[2]; try { id = decodeURIComponent(id); } catch { /* keep the raw id */ } return `${cli[1].toLowerCase() === "legendary" ? "epic" : "nile"}:${id}`; }
   const flatpak = /^flatpak:\/\/(.+)$/i.exec(text);
   return flatpak ? `flatpak:${flatpak[1].toLowerCase()}` : null;
 }
