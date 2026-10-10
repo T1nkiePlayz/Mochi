@@ -92,10 +92,9 @@ describe("createSyncScheduler", () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
   it("continues retrying transient fetch failures with backoff", async () => {
-    let fail = true;
+    let failuresRemaining = 1;
     const run = vi.fn(async () => {
-      if (fail) throw new TypeError("Failed to fetch");
-      fail = false;
+      if (failuresRemaining-- > 0) throw new TypeError("Failed to fetch");
     });
     const s = createSyncScheduler(run, { debounceMs: 100, retryBaseMs: 1000, shouldRetry: isRetryableSyncError });
     s.notify(); await vi.advanceTimersByTimeAsync(100);
