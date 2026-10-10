@@ -9,3 +9,66 @@
 .download-update-list { list-style: none; margin: 0; padding: 0 16px 14px; display: grid; gap: 6px; }
 .download-update-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; color: var(--mochi-text); font-size: 13px; }
 .download-update-list small { color: var(--mochi-text-muted); }
+
+/* Download pacing controls: use the shared input, button and surface tokens so
+   the controls inherit each theme instead of falling back to browser defaults. */
+.download-pacing { overflow: hidden; }
+.download-pacing .download-group-heading { align-items: center; gap: 12px; }
+.download-pacing .download-group-heading > span {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 24px; padding: 2px 9px;
+  border: var(--mochi-border-width) solid var(--mochi-card-border);
+  border-radius: var(--mochi-pill-radius);
+  background: var(--mochi-card-background); color: var(--mochi-text-muted);
+  font-size: 11px; line-height: 1.3; text-align: center;
+}
+.download-pacing .download-toolbar {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end; justify-content: stretch; gap: 12px;
+  padding: 14px 16px 12px;
+}
+.download-pacing .download-toolbar > .secondary-button {
+  grid-column: 1 / -1; justify-self: start; min-height: var(--mochi-button-height);
+}
+.download-pacing-field {
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 7px;
+  min-width: 0; color: var(--mochi-text-muted); font-size: 12px; font-weight: 600;
+}
+.download-pacing-field select,
+.download-pacing-field input[type="time"] {
+  box-sizing: border-box; width: 100%; min-width: 0; min-height: var(--mochi-input-height, 38px);
+  padding: 8px 10px; border: var(--mochi-border-width) solid var(--mochi-input-border);
+  border-radius: var(--mochi-input-radius); background: var(--mochi-input-background);
+  color: var(--mochi-text); box-shadow: var(--mochi-input-shadow);
+  font: inherit; color-scheme: inherit;
+  transition: border-color var(--mochi-transition), box-shadow var(--mochi-transition), opacity var(--mochi-transition);
+}
+.download-pacing-field select:focus-visible,
+.download-pacing-field input[type="time"]:focus-visible {
+  border-color: var(--mochi-input-focus-border); box-shadow: var(--mochi-focus-ring);
+}
+.download-pacing-field select:disabled,
+.download-pacing-field input[type="time"]:disabled { opacity: .45; cursor: not-allowed; }
+.download-pacing-field:has(input[type="checkbox"]) {
+  flex-direction: row; align-items: center; justify-content: flex-start;
+  align-self: stretch; min-height: var(--mochi-input-height, 38px); padding: 0 10px;
+  border: var(--mochi-border-width) solid var(--mochi-input-border);
+  border-radius: var(--mochi-input-radius); background: var(--mochi-input-background);
+  color: var(--mochi-text); box-shadow: var(--mochi-input-shadow);
+}
+.download-pacing-field input[type="checkbox"] {
+  flex: 0 0 auto; width: 16px; height: 16px; margin: 0; accent-color: var(--mochi-accent-strong);
+}
+.download-pacing .metadata-note { display: block; margin: 0; padding: 0 16px 14px; line-height: 1.55; }
+@media (min-width: 760px) {
+  .download-pacing .download-toolbar > .secondary-button { grid-column: auto; align-self: stretch; }
+}
+@media (max-width: 680px) {
+  .download-pacing .download-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px; }
+  .download-pacing .download-toolbar > .secondary-button { grid-column: 1 / -1; width: 100%; }
+  .download-pacing .download-group-heading { align-items: flex-start; }
+  .download-pacing .metadata-note { padding: 0 12px 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .download-pacing-field select, .download-pacing-field input[type="time"] { transition: none; }
+}
