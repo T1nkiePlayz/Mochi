@@ -35,7 +35,12 @@ begin
       and c.conkey = array[source_id_attnum]::smallint[]
       and pg_get_constraintdef(c.oid) ~* 'source_id'
       and pg_get_constraintdef(c.oid) ~* '= any'
-      and pg_get_constraintdef(c.oid) ~* '''(flatpak|heroic|steam|lutris|bottles|itch|apps|epic|whisky|battlenet|gog|prism|legendary|nile)'''
+      and (select count(distinct matched.source_id)
+        from regexp_matches(
+          pg_get_constraintdef(c.oid),
+          '''(flatpak|heroic|steam|lutris|bottles|itch|apps|epic|whisky|battlenet|gog|prism|legendary|nile)''',
+          'gi'
+        ) as matched(source_id)) >= 2
   loop
     execute format('alter table public.pikos drop constraint %I', constraint_row.conname);
   end loop;
