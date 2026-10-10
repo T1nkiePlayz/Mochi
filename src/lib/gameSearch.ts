@@ -5,7 +5,7 @@ import { resolveIgdbImage } from "./metadata";
 import { bestSgdbGame, sgdbAssets, sgdbSearch, type SgdbAsset, type SgdbGame } from "./metadata/steamgriddb";
 import { getSteamStoreDetails, type SteamStoreDetails } from "./metadata/steam";
 import { getPriceInfo, storeLabel, type PriceInfo } from "./deals";
-import { normalizeText } from "./search";
+import { bestIgdbMatch, normalizeText } from "./search";
 import { readJson, storageKeys, writeJson } from "./storage";
 
 /** Experimental "game-search": look up any game, with prices and a local price history. Docs: docs/game-search.md. */
@@ -286,7 +286,6 @@ export function createProviderBackend(client: SupabaseClient, ready: Readiness):
       const igdbJob = quiet((async () => {
         if (hit.igdb) return hit.igdb;
         if (!ready.igdb) return null;
-        const { bestIgdbMatch } = await import("./search");
         return bestIgdbMatch(hit.name, await lookupIgdbGames(client, hit.name));
       })(), null);
       const artJob = quiet((async () => {
