@@ -16,6 +16,7 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
   const [syncState, setSyncState] = useState<SyncState>("offline");
   const [cloudSyncEnabled, setCloudSyncEnabled] = useState(false);
   const [cloudDataAccessAllowed, setCloudDataAccessAllowed] = useState(false);
+  const [cloudSettingsReady, setCloudSettingsReady] = useState(false);
   const [cloudDataBusy, setCloudDataBusy] = useState(false);
   const [cloudDataMessage, setCloudDataMessage] = useState("");
   const [confirmedIds, setConfirmedIds] = useState<ReadonlySet<string>>(() => new Set());
@@ -45,7 +46,7 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
     if (!storageReady) return;
     if (!supabase || !user) {
       initialized.current = false; schedulerRef.current?.cancel(); schedulerRef.current = null;
-      setCloudSyncEnabled(false); setCloudDataAccessAllowed(false); setSyncState("offline"); setConfirmedIds(new Set());
+      setCloudSyncEnabled(false); setCloudDataAccessAllowed(false); setCloudSettingsReady(false); setSyncState("offline"); setConfirmedIds(new Set());
       return;
     }
     let cancelled = false;
@@ -53,7 +54,7 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
     const client = supabase;
     // A different account must never inherit the previous account's "ready to push" state while its own settings load.
     initialized.current = false; schedulerRef.current?.cancel(); schedulerRef.current = null;
-    setCloudSyncEnabled(false); setCloudDataAccessAllowed(false);
+    setCloudSyncEnabled(false); setCloudDataAccessAllowed(false); setCloudSettingsReady(false);
     setConfirmedIds(loadConfirmedCache(user.id));
     setSyncState("syncing");
     const retryWhenOnline = () => { retryAttempt.current = 0; setRetryToken((token) => token + 1); };
@@ -64,6 +65,7 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
         retryAttempt.current = 0;
         setCloudDataAccessAllowed(settings.metadataSyncAllowed);
         setCloudSyncEnabled(settings.syncEnabled);
+        setCloudSettingsReady(true);
         if (!settings.syncEnabled) { initialized.current = false; setSyncState("offline"); confirm(user.id, new Set()); return; }
         const scheduler = buildScheduler(client, user.id, () => cancelled);
         const cloudLibrary = await pullLibrary(client, user.id);
@@ -120,7 +122,7 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
 
   /** Explicit setup import: fetch the account's cloud library and merge it with local data without deleting local-only games. */
   const importCloudLibrary = async () => {
-    if (!storageReady || !supabase || !user || cloudDataBusy) return;
+    if (!storageReady || !supabase || !user || cloudDataBusy || !cloudSettingsReady) return;
     if (!cloudDataAccessAllowed) {
       setCloudDataMessage("Cloud library access is disabled for this account. Enable cloud metadata access in Settings before importing.");
       return;
@@ -163,5 +165,5 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
     } finally { setCloudDataBusy(false); }
   };
 
-  return { syncState, confirmedIds, cloudSyncEnabled, cloudDataAccessAllowed, cloudDataBusy, cloudDataMessage, clearCloudData, importCloudLibrary };
+  return { syncState, confirmedIds, cloudSyncEnabled, cloudDataAccessAllowed, cloudSettingsReady, cloudDataBusy, cloudDataMessage, clearCloudData, importCloudLibrary };
 }
