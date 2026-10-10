@@ -27,6 +27,8 @@ type Props = {
   /** Extra controls under the source list (e.g. "Platform not showing up?"). */
   sidebarExtra?: ReactNode;
   emptyHint?: ReactNode;
+  /** Existing library entries to hide from an add-to-library scan. */
+  existingLibrary?: Piko[];
   /** "launchers" lists, counts and selects only game launchers. */
   filter?: PickerFilter;
 };
@@ -131,6 +133,10 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
 
   const current = active ? data[active] : undefined;
   const activeSource = visibleDetected.find((source) => source.id === active);
+
+  useEffect(() => {
+    if (active && !visibleDetected.some((source) => source.id === active)) setActive(visibleDetected[0]?.id ?? null);
+  }, [active, visibleDetected]);
 
   const rows = useMemo<Row[]>(() => {
     const needle = query.trim().toLowerCase();
