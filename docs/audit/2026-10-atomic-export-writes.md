@@ -1,7 +1,7 @@
-# Security follow-up: atomic export temporary files
+# Security follow-up: safe temporary file creation
 
 **Audit date:** 2026-10-10  
-**Scope:** Rust file-writing paths for `.mochipack` exports and `.mochibackup` manual/scheduled backups. This is a targeted follow-up, not a claim that every line of the repository has been exhaustively re-audited in this change.
+**Scope:** Rust file-writing paths for `.mochipack` exports, `.mochibackup` manual/scheduled backups, and downloaded mod files. This is a targeted follow-up, not a claim that every line of the repository has been exhaustively re-audited in this change.
 
 ## Finding A-01 — predictable temporary files followed symlinks
 
@@ -11,16 +11,19 @@
 
 - `src-tauri/src/mochipack.rs` — `write_pack`
 - `src-tauri/src/librarybackup.rs` — `write_atomic`, used by manual and scheduled library backups
+- `src-tauri/src/downloads.rs` — `fetch_to_file`, which previously opened a predictable download temporary path with `File::create`
 
 ### What was wrong
 
-Both writers used a predictable temporary pathname by appending `.part` to the selected destination, then called `fs::write`. On Unix-like systems, `fs::write` opens an existing path for truncation and follows a symlink. If a symlink existed at that temporary pathname, saving a modpack or library backup could truncate and replace the symlink target instead of creating a temporary file. This bypassed the intended safety property of writing to a temporary file beside the destination.
+The export/backup writers used predictable temporary pathnames and `fs::write`; the downloader similarly used a predictable `.mochi-download-N` path and `File::create`. These open calls follow an existing symlink and truncate its target. A pre-created symlink at one of those temporary paths could therefore redirect an export, backup, or mod download into a different file writable by the current user, instead of creating a fresh temporary file.
 
 The practical impact is local and depends on a hostile or pre-existing filesystem entry; this is not a remote code-execution issue. It can nevertheless destroy user data or overwrite any file the current user can write.
 
 ## Improvements in this PR
 
 ### 1. Exclusive creation and unique sibling files
+
+- Mod downloads now allocate their sibling temporary file with `create_new(true)` and retry up to 16 name collisions, just like the export/backup writers. The cleanup guard is only created after exclusive creation succeeds, so a failed attempt cannot accidentally remove a pre-existing symlink.
 
 - Generate a sibling temporary name using the process ID and an atomic counter.
 - Open it with `OpenOptions::create_new(true)`, which refuses existing files and symlinks rather than following or truncating them.
@@ -33,7 +36,7 @@ Temporary export files are created with mode `0600` on Unix, so modpack contents
 
 ### 3. Regression tests
 
-Unix-only tests verify that a symlink at the temporary path is rejected without changing its target, existing exports/backups are replaced with the complete new contents (without leftover temporary files), and successfully written modpack and library backup files have mode `0600`.
+Unix-only tests verify that a symlink at the download temporary path is rejected without changing its target. Export/backup tests verify existing files are replaced with complete new contents without leftover temporary files, and that successfully written modpack and library backup files have mode `0600`.
 
 ## Verification and remaining work
 
