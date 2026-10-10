@@ -5,6 +5,8 @@ import { bestNameMatch } from "../../lib/mods/gameMatch";
 import { isSourceChoice, type GameSourceChoice } from "../../lib/mods/gameSources";
 import type { ModSourceSettings } from "../../lib/mods/resolveSources";
 import { getNexusGames, type NexusGame } from "../../lib/nexus";
+import { lookupIgdbGames } from "../../lib/igdb";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { readJson, writeJson } from "../../lib/storage";
 import { supabase } from "../../lib/supabase";
 
@@ -41,11 +43,12 @@ export function useGameSourceChoice(gameKey: string): [GameSourceChoice, (choice
   return [isSourceChoice(value) ? value : "auto", set];
 }
 
-export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean) {
+export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean, igdbConfigured: boolean, client: SupabaseClient | null) {
   const [cfGames, setCfGames] = useState<CfGame[] | null>(null);
   const [cfError, setCfError] = useState("");
   const [cfLoading, setCfLoading] = useState(false);
   const [catalog, setCatalog] = useState<NexusGame[]>([]);
+  const [igdbIcons, setIgdbIcons] = useState<Record<string, string>>({});
   const [stored, setStored] = useState<StoredGame[]>(readStored);
   const [reload, setReload] = useState(0);
   const nexusOn = settings.nexus;
@@ -65,6 +68,32 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean)
     return () => { cancelled = true; };
   }, [nexusOn]);
 
+  // Nexus can omit game icons. If the user has configured IGDB, use the authenticated server-side lookup as a fallback.
+  useEffect(() => {
+    if (!igdbConfigured || !client) { setIgdbIcons({}); return; }
+    let cancelled = false;
+    const missing = catalog.filter((game) => !game.iconUrl).slice(0, 80);
+    void Promise.all(missing.map(async (game) => {
+      try {
+        const matches = await lookupIgdbGames(client, game.name);
+        const normalize = (value: string) => value.toLocaleLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, " ").trim();
+        const needle = normalize(game.name);
+        const match = matches.find((candidate) => normalize(candidate.name) === needle) ?? matches.find((candidate) => {
+          const name = normalize(candidate.name);
+          return name.length > 2 && (name.includes(needle) || needle.includes(name));
+        });
+        const raw = match?.cover?.url ?? match?.artworks?.[0]?.url;
+        if (!raw) return null;
+        const url = raw.startsWith("//") ? `https:${raw}` : raw;
+        if (!/^https:\/\//i.test(url) || !/images\.igdb\.com\//i.test(url)) return null;
+        return [game.domainName, url.replace(/t_[a-z0-9]+\./i, "t_cover_big.")] as const;
+      } catch { return null; }
+    })).then((entries) => {
+      if (!cancelled) setIgdbIcons((current) => ({ ...current, ...Object.fromEntries(entries.filter((entry): entry is readonly [string, string] => entry !== null)) }));
+    });
+    return () => { cancelled = true; };
+  }, [catalog, igdbConfigured, client]);
+
   const games = useMemo<DiscoverGame[]>(() => {
     // Wait for CurseForge's list so a game on both sites never shows up first as Nexus-only and then jumps.
     if (settings.curseforge && !cfGames && !cfError) return [];
@@ -81,7 +110,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean)
       const name = info?.name ?? fallbackName;
       const onCf = settings.curseforge && cfGames ? bestNameMatch(name, cfGames) : null;
       if (onCf) return cfGame(onCf, domain);
-      return { key: `nx:${domain}`, name, iconUrl: info?.iconUrl, source: "nexus", nexusDomain: domain };
+      return { key: `nx:${domain}`, name, iconUrl: info?.iconUrl ?? igdbIcons[domain], source: "nexus", nexusDomain: domain };
     };
     for (const { seed, cf } of visibleSeedGames(SEED_GAMES, cfGames, nexusOn && nexusKey, settings.curseforge)) {
       if (cf) put(cfGame(cf, seed.nexusDomain));
@@ -94,7 +123,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean)
       } else put(nexusOnly(entry.domain, entry.name ?? entry.domain));
     }
     return [...out.values()];
-  }, [cfGames, cfError, catalog, stored, settings.curseforge, settings.nexus, nexusOn, nexusKey]);
+  }, [cfGames, cfError, catalog, stored, settings.curseforge, settings.nexus, nexusOn, nexusKey, igdbIcons]);
 
   const add = useCallback((entry: StoredGame) => {
     setStored((current) => {
