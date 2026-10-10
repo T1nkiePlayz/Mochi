@@ -9,8 +9,10 @@ import { cancelModDownload, clearFinishedDownloads } from "../lib/downloads";
 import { openPath } from "../lib/platform";
 import { useApp } from "../state/AppContext";
 import { confirmAction } from "../lib/confirm";
+import { useTranslation } from "../lib/i18n";
 
 export function DownloadsView() {
+  const t = useTranslation();
   const { downloads, lib, setActiveNav, downloadPacing } = useApp();
   const { prefs, setPrefs } = downloadPacing;
   const held = downloadsHeld(prefs, new Date());
@@ -28,7 +30,7 @@ export function DownloadsView() {
   };
   return <section className="downloads-page">
     <div className="downloads-intro">
-      <p className="eyebrow">Activity</p><h2>Downloads</h2>
+      <p className="eyebrow">{t("Activity")}</p><h2>{t("Downloads")}</h2>
       <p>Mods, resource packs and shaders from Modrinth, CurseForge and Nexus Mods download here and keep going while Mochi is hidden in the tray. Finished downloads stay in this list for 10 minutes.</p>
     </div>
     <section className="download-group download-pacing" aria-label="Download controls">
@@ -57,7 +59,7 @@ export function DownloadsView() {
       <ul className="download-update-list">{updating.map(({ piko, tofu, state }) => <li key={tofu.id}><span>{piko.name}: {tofu.name}</span><small>{state.updating.length ? `Updating ${state.updating.length}…` : `${updateCount(state)} update${updateCount(state) === 1 ? "" : "s"} available`}</small></li>)}</ul>
     </section>}
     {hasFinished(downloads) && <div className="download-toolbar"><button type="button" className="secondary-button" onClick={() => void clearFinished()}><Trash2 size={13} /> Clear finished</button></div>}
-    {!downloads.length ? <div className="download-empty"><div className="empty-icon"><MochiIcon name="downloads" fallback={Download} size={22} /></div><h3>No active downloads</h3><p>Nothing is downloading right now.</p></div> : (
+    {!downloads.length ? <div className="download-empty"><div className="empty-icon"><MochiIcon name="downloads" fallback={Download} size={22} /></div><h3>{t("No active downloads")}</h3><p>{t("Nothing is downloading right now.")}</p></div> : (
       <div className="download-groups">
         {groups.map((group) => (
           <section className="download-group" key={group.tofuId} aria-label={group.tofuName}>
