@@ -163,8 +163,8 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
     await Promise.all([enrich(withSteamData, { includeSteam: true }), enrich(rest)]);
   };
 
-  /** Clears the lookup caches and re-fetches every game; `only` restricts it to one provider so each works on its own. */
-  const refreshAll = async (library: Piko[], only?: ProviderId) => {
+  /** Clears the lookup caches and re-fetches every game from the requested scope. */
+  const refreshScope = async (library: Piko[], only?: ProviderId) => {
     if (busyRef.current) return;
     busyRef.current = true;
     setRefreshBusy(true);
@@ -182,6 +182,11 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
       notify("Metadata refresh failed", error instanceof Error ? error.message : "Could not refresh game metadata.");
     } finally { busyRef.current = false; setRefreshBusy(false); }
   };
+
+  /** Refresh just this provider. Keeping the source required prevents a provider row from falling back to Auto/all. */
+  const refreshProvider = (library: Piko[], source: ProviderId) => refreshScope(library, source);
+  /** Refresh using the user's configured metadata source. */
+  const refreshAll = (library: Piko[]) => refreshScope(library);
 
   /** How many library games each provider could refresh right now (0 means its button stays disabled). */
   const refreshableCount = (library: Piko[], only: ProviderId) => library.filter((piko) => piko.kind !== "launcher" && anyProvider(piko, only)).length;
@@ -236,7 +241,7 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
     }
   };
 
-  return { enrich, enrichImported, refreshAll, refreshGame, findMissingCovers, missingCovers, refreshBusy, refreshableCount, ready };
+  return { enrich, enrichImported, refreshAll, refreshProvider, refreshGame, findMissingCovers, missingCovers, refreshBusy, refreshableCount, ready };
 }
 
 /** Applies only the metadata fields from a fresh result onto the live Piko, so edits made while it ran are kept. */
