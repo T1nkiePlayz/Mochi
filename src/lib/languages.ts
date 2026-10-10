@@ -51,4 +51,5 @@ export function applyLauncherLanguage(value: unknown): void {
   if (typeof document === "undefined") return;
   const language = launcherLanguages.find((item) => item.code === normalizeLanguage(value));
   document.documentElement.lang = language?.locale ?? "en";
+  document.documentElement.dir = language?.code === "ar" ? "rtl" : "ltr";
 }
