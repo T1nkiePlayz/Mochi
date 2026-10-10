@@ -34,7 +34,7 @@ begin
       and c.contype = 'c'
       and c.conkey = array[source_id_attnum]::smallint[]
       and pg_get_constraintdef(c.oid) ~* 'source_id'
-      and pg_get_constraintdef(c.oid) ~* '(= any| in[[:space:]]*\\()'
+      and pg_get_constraintdef(c.oid) ~* '= any'
       and pg_get_constraintdef(c.oid) ~* '''(flatpak|heroic|steam|lutris|bottles|itch|apps|epic|whisky|battlenet|gog|prism|legendary|nile)'''
   loop
     execute format('alter table public.pikos drop constraint %I', constraint_row.conname);
