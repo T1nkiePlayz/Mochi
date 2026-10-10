@@ -40,6 +40,7 @@ type SetupProps = {
   onFinish: (games: ImportedGame[], sources: ImportSourceId[], minecraftMode: MinecraftMode) => void;
   cloudSyncEnabled: boolean;
   cloudDataAccessAllowed: boolean;
+  cloudSettingsReady: boolean;
   cloudSyncState: string;
   cloudImportBusy: boolean;
   cloudImportReady: boolean;
@@ -81,7 +82,7 @@ export function FirstLaunchSetup(props: SetupProps) {
           {step === "theme" && <ThemeStep themes={props.themes} theme={props.theme} setTheme={props.setTheme} />}
           {step === "accessibility" && <AccessibilityStep />}
           {step === "account" && <AccountStep user={props.user} onSignIn={props.onSignIn} onAddUser={props.onAddUser} />}
-          {step === "cloud" && <CloudImportStep busy={props.cloudImportBusy} ready={props.cloudImportReady} accessAllowed={props.cloudDataAccessAllowed} message={props.cloudImportMessage} syncEnabled={props.cloudSyncEnabled} syncState={props.cloudSyncState} onImport={props.onImportCloudData} />}
+          {step === "cloud" && <CloudImportStep busy={props.cloudImportBusy} ready={props.cloudImportReady} settingsReady={props.cloudSettingsReady} accessAllowed={props.cloudDataAccessAllowed} message={props.cloudImportMessage} syncEnabled={props.cloudSyncEnabled} syncState={props.cloudSyncState} onImport={props.onImportCloudData} />}
           {step === "services" && <ServicesStep {...props} signedIn={Boolean(props.user)} />}
           {step === "imports" && <ImportStep onSelectionChange={setSelection} />}
         </div>
