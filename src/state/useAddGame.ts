@@ -9,6 +9,7 @@ import { applyIgdbMetadata, sanitizeKey } from "../lib/metadata";
 import { cacheArtwork } from "./useMetadata";
 import { applyIconCovers, applyLauncherLogos } from "../lib/iconCover";
 import { saveCustomArtwork } from "../lib/artwork";
+import { GAME_LAUNCHER_METADATA } from "../lib/robloxCover";
 import type { ArtworkSelection } from "../components/artwork/ArtworkPicker";
 import { listInstalledFlatpaks, normalizeLaunchTarget, chooseGameAppBundle, chooseGameTarget, type FlatpakApp, type LaunchMethodId } from "../lib/platform";
 import type { ImportedGame } from "../lib/sources";
@@ -206,7 +207,7 @@ export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: 
     if (withIcons.size || logos.size) {
       lib.setLibrary((current) => current.map((piko) => ((withIcons.has(piko.id) || logos.has(piko.id)) && !piko.artworkSource ? { ...piko, artworkSource: sourceOf(piko) } : piko)));
     }
-    await metadata.enrichImported(created.filter((piko) => piko.kind !== "launcher").map((piko) => (withIcons.has(piko.id) ? { ...piko, artworkSource: "icon" as const } : piko)));
+    await metadata.enrichImported(created.filter((piko) => piko.kind !== "launcher" || (piko.launcherId && piko.launcherId in GAME_LAUNCHER_METADATA)).map((piko) => (withIcons.has(piko.id) ? { ...piko, artworkSource: "icon" as const } : piko)));
   };
 
   const loadFlatpaks = async () => {

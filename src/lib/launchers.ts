@@ -49,6 +49,7 @@ export const LAUNCHERS: LauncherDef[] = [
   { id: "playonlinux", name: "PlayOnLinux", ids: ["playonlinux", "playonmac"], names: ["playonlinux", "playonmac"], bundles: [] },
   { id: "gamehub", name: "GameHub", ids: ["gamehub", "com.github.tkashkin.gamehub"], names: ["gamehub"], bundles: [] },
   { id: "sober", name: "Sober (Roblox)", ids: ["sober", "org.vinegarhq.sober"], names: ["sober"], bundles: [] },
+  { id: "mocktail", name: "Mocktail (Roblox)", ids: ["mocktail", "space.bigrat.mocktail"], names: ["mocktail"], bundles: [] },
   { id: "vinegar", name: "Vinegar (Roblox Studio)", ids: ["vinegar", "org.vinegarhq.vinegar"], names: ["vinegar"], bundles: [] },
 ];
 

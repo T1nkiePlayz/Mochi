@@ -337,6 +337,7 @@ const handlers: Record<string, Handler> = {
     if (args.source === "flatpak") return [
       { id: "flatpak:org.supertuxproject.SuperTux", name: "SuperTux", source: "flatpak", launchTarget: "flatpak://org.supertuxproject.SuperTux", installPath: null, kind: "game", launcherId: null, iconPath: null },
       { id: "flatpak:org.vinegarhq.Sober", name: "Sober", source: "flatpak", launchTarget: "flatpak://org.vinegarhq.Sober", installPath: null, kind: "launcher", launcherId: "sober", iconPath: null },
+      { id: "flatpak:space.bigrat.mocktail", name: "Mocktail", source: "flatpak", launchTarget: "flatpak://space.bigrat.mocktail", installPath: null, kind: "launcher", launcherId: "mocktail", iconPath: null },
       { id: "flatpak:org.vinegarhq.Vinegar", name: "Vinegar", source: "flatpak", launchTarget: "flatpak://org.vinegarhq.Vinegar", installPath: null, kind: "launcher", launcherId: "vinegar", iconPath: null },
     ];
     if (args.source === "prism") return [

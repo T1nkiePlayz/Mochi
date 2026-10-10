@@ -14,6 +14,7 @@ import type { Piko } from "../models";
 import { applyLauncherLogos } from "../lib/iconCover";
 import { hasArtwork } from "../lib/fallbackArt";
 import { createPacer } from "../lib/throttle";
+import { GAME_LAUNCHER_METADATA } from "../lib/robloxCover";
 
 type Params = {
   user: User | null;
@@ -61,7 +62,9 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
   const ready = { igdb: igdbConfigured && canUseAccount, steamgriddb: steamGridDbConfigured && canUseAccount };
 
   const lookup = async (id: ProviderId, piko: Piko, caches: Map<ProviderId, ProviderCache>, options: Options): Promise<ProviderResult> => {
-    const key = id === "steam" ? `app:${steamAppIdOf(piko)}` : id === "steamgriddb" && steamAppIdOf(piko) ? `app:${steamAppIdOf(piko)}` : piko.name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+    const mapped = piko.kind === "launcher" ? GAME_LAUNCHER_METADATA[piko.launcherId as keyof typeof GAME_LAUNCHER_METADATA] : undefined;
+    const queryPiko = mapped ? { ...piko, name: mapped.gameName } : piko;
+    const key = id === "steam" ? `app:${steamAppIdOf(queryPiko)}` : id === "steamgriddb" && steamAppIdOf(queryPiko) ? `app:${steamAppIdOf(queryPiko)}` : queryPiko.name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
     const cache = caches.get(id)!;
     const cached = options.force ? undefined : cache.get(key);
     if (cached) return cached;
@@ -70,7 +73,7 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
       if (wait > 0) await sleep(wait);
       try {
         if (id === "steam") await steamPace();
-        const result = await providers[id].lookup({ client: supabase }, piko);
+        const result = await providers[id].lookup({ client: supabase }, queryPiko);
         cache.set(key, result);
         return result;
       } catch (error) {
@@ -116,6 +119,8 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
     }
     if (failures.length) console.warn(`Metadata lookup for ${piko.name}`, failures);
     const text = results.size ? mergeText(textResults.map((result) => result.text)) : undefined;
+    // IGDB's Roblox title describes the launcher target, but must not rename the Sober/Mocktail shortcut.
+    if (piko.kind === "launcher" && piko.launcherId && GAME_LAUNCHER_METADATA[piko.launcherId as keyof typeof GAME_LAUNCHER_METADATA]?.gameName === "Roblox" && text) text.name = undefined;
     const hasText = Boolean(text && Object.values(text).some((value) => (Array.isArray(value) ? value.length : value !== undefined)));
     if (!hasText && !art) return { piko, changed: false };
     return { piko: applyMetadata(piko, { text: hasText ? text : undefined, art }), changed: true };
@@ -140,7 +145,16 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
     return updated;
   };
 
-  const planFor = (game: Piko, options: Options) => { const plan = planProviders(options.only ?? provider, ready, steamAppIdOf(game)); return options.includeSteam ? withSteam(plan, steamAppIdOf(game)) : plan; };
+  const planFor = (game: Piko, options: Options) => {
+    const special = game.kind === "launcher" && game.launcherId ? GAME_LAUNCHER_METADATA[game.launcherId as keyof typeof GAME_LAUNCHER_METADATA] : undefined;
+    if (special) {
+      if (options.only && options.only !== special.provider) return { text: [], art: [] };
+      return planProviders(special.provider, ready, null);
+    }
+    const plan = planProviders(options.only ?? provider, ready, steamAppIdOf(game));
+    return options.includeSteam ? withSteam(plan, steamAppIdOf(game)) : plan;
+  };
+  const specialLauncher = (piko: Piko) => piko.kind === "launcher" && Boolean(piko.launcherId && GAME_LAUNCHER_METADATA[piko.launcherId as keyof typeof GAME_LAUNCHER_METADATA]);
   const anyProvider = (game: Piko, only?: ProviderId, includeSteam?: boolean) => { const plan = planFor(game, { only, includeSteam }); return plan.text.length + plan.art.length > 0; };
 
   const commit = (updated: Map<string, Piko>) =>
@@ -173,7 +187,7 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
       clearProviderCaches(user?.id, only);
       if (!only || only === "igdb") removeKey(igdbCacheKey(user?.id));
       // Launchers (Steam, Lutris...) are shortcuts, not games: looking them up would overwrite their name and art.
-      const candidates = library.filter((piko) => piko.kind !== "launcher" && anyProvider(piko, only));
+      const candidates = library.filter((piko) => (piko.kind !== "launcher" || specialLauncher(piko)) && anyProvider(piko, only));
       notify(`${only ? label : "Metadata"} refresh started`, `Refreshing ${label === "metadata" ? "metadata" : `${label} data`} for ${candidates.length} library games.`);
       await enrich(candidates, { force: true, only });
       if ((!only || only === "igdb") && ready.igdb) await refreshLauncherLogos(library);
@@ -189,10 +203,10 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
   const refreshAll = (library: Piko[]) => refreshScope(library);
 
   /** How many library games each provider could refresh right now (0 means its button stays disabled). */
-  const refreshableCount = (library: Piko[], only: ProviderId) => library.filter((piko) => piko.kind !== "launcher" && anyProvider(piko, only)).length;
+  const refreshableCount = (library: Piko[], only: ProviderId) => library.filter((piko) => (piko.kind !== "launcher" || specialLauncher(piko)) && anyProvider(piko, only)).length;
 
   /** Games that show generated art and may still get a real cover (not launchers, not hand-picked art). */
-  const missingCovers = (library: Piko[]) => library.filter((piko) => piko.kind !== "launcher" && !hasArtwork(piko) && piko.artworkSource !== "custom" && !(piko.lockedFields ?? []).includes("artwork") && anyProvider(piko, undefined, true));
+  const missingCovers = (library: Piko[]) => library.filter((piko) => (piko.kind !== "launcher" || specialLauncher(piko)) && !hasArtwork(piko) && piko.artworkSource !== "custom" && !(piko.lockedFields ?? []).includes("artwork") && anyProvider(piko, undefined, true));
 
   /** One pass over the games without a cover: looks each up (Steam games need no keys) and keeps what it finds. */
   const findMissingCovers = async (library: Piko[]): Promise<number> => {
@@ -225,6 +239,15 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
 
   /** Re-fetches one game, ignoring cached lookups. Never rejects. */
   const refreshGame = async (piko: Piko): Promise<void> => {
+    if (specialLauncher(piko)) {
+      if (!anyProvider(piko)) { notify("Metadata source not ready", "Save an IGDB key for Roblox or a SteamGridDB key for Roblox Studio to refresh this launcher."); return; }
+      try {
+        const updated = await run([piko], { force: true });
+        commit(updated);
+        notify(updated.size ? "Game data updated" : "No new game data", updated.size ? `Refreshed ${piko.name}.` : `No new data was found for ${piko.name}.`);
+      } catch (error) { notify("Metadata refresh failed", error instanceof Error ? error.message : "Could not refresh game metadata."); }
+      return;
+    }
     if (piko.kind === "launcher") {
       if (!ready.igdb) { notify("IGDB not ready", "Save your IGDB keys in Settings to fetch launcher logos."); return; }
       const count = await refreshLauncherLogos([piko]);

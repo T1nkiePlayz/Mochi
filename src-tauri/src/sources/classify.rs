@@ -63,6 +63,7 @@ pub const LAUNCHERS: &[LauncherDef] = &[
     launcher!("playonlinux", "PlayOnLinux", ["playonlinux", "playonmac"], ["playonlinux", "playonmac"], []),
     launcher!("gamehub", "GameHub", ["gamehub", "com.github.tkashkin.gamehub"], ["gamehub"], []),
     launcher!("sober", "Sober (Roblox)", ["sober", "org.vinegarhq.sober"], ["sober"], []),
+    launcher!("mocktail", "Mocktail (Roblox)", ["mocktail", "space.bigrat.mocktail"], ["mocktail"], []),
     launcher!("vinegar", "Vinegar (Roblox Studio)", ["vinegar", "org.vinegarhq.vinegar"], ["vinegar"], []),
 ];
 
