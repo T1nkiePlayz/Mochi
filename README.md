@@ -235,13 +235,45 @@ Offline, the library, launching, playtime, stats, themes, settings, installed-mo
 
 ## Development
 
-Requirements: Node 20+, a stable Rust toolchain and the [Tauri 2 prerequisites](https://tauri.app/start/prerequisites/) for your OS.
+### Build dependencies
+
+You need Node 20+, a stable Rust toolchain ([rustup](https://rustup.rs)) and the system libraries below.
+
+**Arch / Manjaro**
+
+    sudo pacman -S --needed base-devel webkit2gtk-4.1 libayatana-appindicator librsvg systemd-libs \
+      patchelf gst-plugins-base gst-plugins-good nodejs npm rustup
+
+**Debian / Ubuntu (24.04+)**
+
+    sudo apt install build-essential pkg-config libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
+      libudev-dev patchelf gstreamer1.0-plugins-base gstreamer1.0-plugins-good nodejs npm
+
+**Fedora**
+
+    sudo dnf install webkit2gtk4.1-devel libappindicator-gtk3-devel librsvg2-devel systemd-devel patchelf \
+      gstreamer1-plugins-base gstreamer1-plugins-good nodejs npm gcc pkgconf-pkg-config
+
+**macOS**: `xcode-select --install`, then install Node and Rust. **Windows** is not supported.
+
+`libudev` is for gamepad support. `patchelf` and the GStreamer plugins are only needed to bundle an AppImage (the bundle ships GStreamer for interface sounds); without them linuxdeploy fails with "patchelf not found" or a missing-plugin error. `deb` and `rpm` bundles do not need them. The [Tauri 2 prerequisites](https://tauri.app/start/prerequisites/) list other distributions.
+
+### Run and build
 
     git clone https://github.com/T1nkiePlayz/Mochi.git
     cd Mochi
     npm ci
     npm run tauri dev     # full desktop app
     npm run dev           # browser-only UI with a dev mock backend
+
+Build installers:
+
+    npm ci
+    npm run tauri build                      # all bundle types for this OS
+    npm run tauri build -- --bundles appimage   # Linux: just the AppImage (also: deb, rpm)
+    npm run tauri build -- --bundles dmg        # macOS
+
+Output is in `src-tauri/target/release/bundle/`. Use `--no-bundle` for just the binary at `src-tauri/target/release/`. On a rolling distro (Arch) an AppImage can fail on `strip` with newer libraries; if so, run with `NO_STRIP=1 npm run tauri build -- --bundles appimage`.
 
 The repository's `.env` holds only the public `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; point them at your own Supabase project if you run one. Never commit secrets.
 
@@ -253,7 +285,7 @@ Checks (the same ones CI runs):
     npm run typecheck:tests
     cd src-tauri && cargo clippy --all-targets -- -D warnings && cargo test
 
-`npm run tauri build` works locally without the updater signing key (updater artifacts are only enabled by the release workflow). On Linux the AppImage bundles GStreamer (for sound), so the build needs `patchelf` plus the GStreamer plugin packages (Arch: `sudo pacman -S patchelf gst-plugins-base gst-plugins-good`; Debian/Ubuntu: `patchelf gstreamer1.0-plugins-base gstreamer1.0-plugins-good`), otherwise linuxdeploy fails with "patchelf not found".
+`npm run tauri build` works locally without the updater signing key (updater artifacts are only enabled by the release workflow).
 
 **Supabase setup.** Migrations are in `supabase/migrations/` (apply in order; never edit an applied one). Edge functions: `store-provider-credentials` and `curseforge-proxy` (deploy with `--no-verify-jwt`; secret `CURSEFORGE_API_KEY`), see [docs/curseforge.md](docs/curseforge.md). Under Authentication > URL Configuration > Redirect URLs add **`mochi://auth/callback`** and **`mochi://auth/verify`**, otherwise sign-in links cannot return to the app.
 
