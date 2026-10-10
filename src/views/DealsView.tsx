@@ -10,7 +10,7 @@ const dateLabel = (seconds: number) => Number.isFinite(seconds) && seconds > 0 ?
 export function DealsView() {
   const { behavior } = useApp();
   const { news, mods } = useGameNews();
-  useEffect(() => { if (behavior.gameNews) markNewsRead(); }, [behavior.gameNews]);
+  useEffect(() => { if (behavior.gameNews) markNewsRead(); }, [behavior.gameNews, news.items]);
   return <div className="deals-view">
     <div className="settings-intro"><h2>Deals</h2><p>Discover giveaways, sales and price watches for your wishlist, alongside updates for games in your library.</p></div>
     <DealsPanel />
