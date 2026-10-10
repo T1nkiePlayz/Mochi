@@ -7,6 +7,8 @@ import type { ImportSourceId, ImportedGame } from "../lib/sources";
 import type { PickerSelection } from "./import/SourceGamePicker";
 import type { MinecraftMode } from "../lib/minecraftCopy";
 import { WelcomeStep } from "./setup/WelcomeStep";
+import { LanguageStep } from "./setup/LanguageStep";
+import type { LauncherLanguage } from "../lib/languages";
 import { ThemeStep } from "./setup/ThemeStep";
 import { AccessibilityStep } from "./setup/AccessibilityStep";
 import { AccountStep } from "./setup/AccountStep";
@@ -19,7 +21,7 @@ type SetupProps = {
   igdbClientSecret: string;
   setIgdbClientSecret: (value: string) => void;
   onSignIn: () => void;
-  user: User | null;
+  user: User | null;\n  language: string;\n  setLanguage: (language: LauncherLanguage) => void;
   onAddUser?: () => void;
   credentialStatus: Record<ProviderCredential, boolean>;
   credentialStatusLoaded: boolean;
@@ -35,9 +37,9 @@ type SetupProps = {
   onFinish: (games: ImportedGame[], sources: ImportSourceId[], minecraftMode: MinecraftMode) => void;
 };
 
-const steps = ["welcome", "theme", "accessibility", "account", "services", "imports"] as const;
+const steps = ["welcome", "language", "theme", "accessibility", "account", "services", "imports"] as const;
 type Step = typeof steps[number];
-const stepLabels: Record<Step, string> = { welcome: "Welcome", theme: "Theme", accessibility: "Accessibility", account: "Account", services: "Game services", imports: "Find your games" };
+const stepLabels: Record<Step, string> = { welcome: "Welcome", language: "Language", theme: "Theme", accessibility: "Accessibility", account: "Account", services: "Game services", imports: "Find your games" };
 
 export function FirstLaunchSetup(props: SetupProps) {
   const [step, setStep] = useState<Step>("welcome");
@@ -48,7 +50,7 @@ export function FirstLaunchSetup(props: SetupProps) {
   // The services step is only useful when signed in, so signed-out users skip straight past it.
   const hop = (direction: 1 | -1) => {
     let next = index + direction;
-    if (steps[next] === "services" && !props.user) next += direction;
+    while (steps[next] && ((!props.user && steps[next] === "services") || (!props.user && steps[next] === "cloud"))) next += direction;
     if (next >= 0 && next < steps.length) setStep(steps[next]);
   };
 
@@ -64,7 +66,7 @@ export function FirstLaunchSetup(props: SetupProps) {
           {steps.map((item, position) => <span key={item} className={position <= index ? "active" : ""} />)}
         </div>
         <div className="setup-body" key={step}>
-          {step === "welcome" && <WelcomeStep />}
+          {step === "welcome" && <WelcomeStep />}\n          {step === "language" && <LanguageStep language={props.language} setLanguage={props.setLanguage} />}
           {step === "theme" && <ThemeStep themes={props.themes} theme={props.theme} setTheme={props.setTheme} />}
           {step === "accessibility" && <AccessibilityStep />}
           {step === "account" && <AccountStep user={props.user} onSignIn={props.onSignIn} onAddUser={props.onAddUser} />}
