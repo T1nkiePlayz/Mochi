@@ -18,12 +18,7 @@ pub(crate) fn write_pack(path: &Path, content: &str) -> Result<PathBuf, String> 
     let mut target = path.to_path_buf();
     if extension_of(&target) != "mochipack" { target.set_extension("mochipack"); }
     if target.is_dir() { return Err("Choose a file name, not a folder.".into()); }
-    // Written beside the target and renamed, so an interrupted save never leaves half a pack.
-    let mut temp = target.clone().into_os_string();
-    temp.push(".part");
-    let temp = PathBuf::from(temp);
-    fs::write(&temp, content).map_err(|error| format!("Could not save the pack: {error}"))?;
-    fs::rename(&temp, &target).map_err(|error| { let _ = fs::remove_file(&temp); format!("Could not save the pack: {error}") })?;
+    crate::util::fsio::write_atomic_private(&target, content.as_bytes()).map_err(|error| format!("Could not save the pack: {error}"))?;
     Ok(target)
 }
 
@@ -79,6 +74,32 @@ mod tests {
         fs::write(&big, vec![b'a'; (MAX_BYTES + 1) as usize]).unwrap();
         assert!(read_pack(&big).is_err());
         assert!(write_pack(&dir.join("x"), &"a".repeat((MAX_BYTES + 1) as usize)).is_err());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replaces_an_existing_export_without_leaving_partial_contents() {
+        let dir = temp_dir("replace-existing");
+        let target = dir.join("existing.mochipack");
+        fs::write(&target, "old contents that are longer").unwrap();
+        write_pack(&target, r#"{"new":true}"#).unwrap();
+        assert_eq!(fs::read_to_string(&target).unwrap(), r#"{"new":true}"#);
+        let leftovers: Vec<_> = fs::read_dir(&dir).unwrap().flatten()
+            .filter(|entry| entry.file_name().to_string_lossy().starts_with('.'))
+            .collect();
+        assert!(leftovers.is_empty(), "temporary export files should be cleaned up");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn exported_files_are_private_to_the_current_user() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = temp_dir("private-mode");
+        let target = dir.join("private.mochipack");
+        write_pack(&target, "{}").unwrap();
+        assert_eq!(fs::metadata(target).unwrap().permissions().mode() & 0o777, 0o600);
         let _ = fs::remove_dir_all(&dir);
     }
 

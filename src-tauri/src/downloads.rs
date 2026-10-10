@@ -152,6 +152,26 @@ fn should_extract(requested: bool, filename: &str, subdir: &str) -> bool {
     requested && subdir.is_empty() && filename.to_ascii_lowercase().ends_with(".zip")
 }
 
+/// Open a download temporary path exclusively so a pre-existing symlink cannot redirect writes.
+fn create_new_temp(path: &Path) -> std::io::Result<fs::File> {
+    fs::OpenOptions::new().write(true).create_new(true).open(path)
+}
+
+/// Allocate a unique sibling file; only return a path after exclusive creation succeeds.
+fn create_download_temp(destination: &Path) -> std::io::Result<(PathBuf, fs::File)> {
+    let name = destination.file_name().and_then(|n| n.to_str()).unwrap_or("download");
+    for _ in 0..16 {
+        let id = NEXT_DOWNLOAD_ID.fetch_add(1, Ordering::Relaxed);
+        let temp = destination.with_file_name(format!("{name}{TEMP_MARKER}{}-{id}", std::process::id()));
+        match create_new_temp(&temp) {
+            Ok(file) => return Ok((temp, file)),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(error),
+        }
+    }
+    Err(std::io::Error::new(std::io::ErrorKind::AlreadyExists, "could not allocate a unique temporary download file"))
+}
+
 /// Removes the temp file when the download ends for any reason, including the task being aborted (cancel).
 struct TempFile(PathBuf);
 
@@ -189,12 +209,12 @@ pub(crate) async fn fetch_to_file(
     if total.is_some_and(|length| length > MAX_DOWNLOAD_BYTES) { return Err(format!("{label} file exceeds Mochi's 250 MiB safety limit.")); }
     progress(0, total);
 
-    let name = destination.file_name().and_then(|n| n.to_str()).unwrap_or("download");
-    let temp = destination.with_file_name(format!("{name}{TEMP_MARKER}{}", NEXT_DOWNLOAD_ID.fetch_add(1, Ordering::Relaxed)));
+    let (temp, temp_file) = create_download_temp(destination)
+        .map_err(|e| format!("Unable to create temporary download: {e}"))?;
     let _temp = TempFile(temp.clone());
-    let result: Result<String, String> = async {
+    let result: Result<String, String> = async move {
         // Chunks arrive in ~16 KiB pieces; buffering turns thousands of tiny writes into a few large ones.
-        let mut file = std::io::BufWriter::with_capacity(256 * 1024, fs::File::create(&temp).map_err(|e| format!("Unable to create temporary download: {e}"))?);
+        let mut file = std::io::BufWriter::with_capacity(256 * 1024, temp_file);
         let mut hasher = Sha1::new();
         let mut downloaded = 0u64;
         while let Some(chunk) = response.chunk().await.map_err(|e| format!("Unable to read download: {e}"))? {
@@ -579,6 +599,22 @@ mod tests {
         assert!(!should_extract(true, "faithful.zip", "resourcepacks"));
         assert!(!should_extract(true, "bloom.zip", "shaderpacks"));
         for name in ["mod.jar", "skyui.7z", "plugin.dll", "a.tmod"] { assert!(!should_extract(true, name, ""), "{name}"); }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn exclusive_download_temp_creation_does_not_follow_symlinks() {
+        use std::os::unix::fs::symlink;
+        let dir = temp_dir("temp-symlink");
+        let victim = dir.join("victim.txt");
+        let temp = dir.join(format!("victim.txt{TEMP_MARKER}{}-test", std::process::id()));
+        fs::write(&victim, b"keep me").unwrap();
+        symlink(&victim, &temp).unwrap();
+
+        assert_eq!(create_new_temp(&temp).unwrap_err().kind(), std::io::ErrorKind::AlreadyExists);
+        assert_eq!(fs::read(&victim).unwrap(), b"keep me");
+        assert!(fs::symlink_metadata(&temp).unwrap().file_type().is_symlink());
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]

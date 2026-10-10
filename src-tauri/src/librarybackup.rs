@@ -18,11 +18,7 @@ fn extension_of(path: &Path) -> String { path.extension().and_then(|value| value
 fn write_atomic(target: &Path, content: &str) -> Result<(), String> {
     if content.len() as u64 > MAX_BYTES { return Err("The backup is too large to save.".into()); }
     if target.is_dir() { return Err("Choose a file name, not a folder.".into()); }
-    let mut temp = target.to_path_buf().into_os_string();
-    temp.push(".part");
-    let temp = PathBuf::from(temp);
-    fs::write(&temp, content).map_err(|error| format!("Could not save the backup: {error}"))?;
-    fs::rename(&temp, target).map_err(|error| { let _ = fs::remove_file(&temp); format!("Could not save the backup: {error}") })
+    crate::util::fsio::write_atomic_private(target, content.as_bytes()).map_err(|error| format!("Could not save the backup: {error}"))
 }
 
 pub(crate) fn write_backup(path: &Path, content: &str) -> Result<PathBuf, String> {
@@ -115,6 +111,32 @@ mod tests {
         }
         assert_eq!(scheduled_files(&dir).len(), 2);
         assert!(dir.join("my-own.mochibackup").exists());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replaces_an_existing_backup_without_leaving_partial_contents() {
+        let dir = temp("replace-existing");
+        let target = dir.join("existing.mochibackup");
+        fs::write(&target, "old contents that are longer").unwrap();
+        write_backup(&target, r#"{"new":true}"#).unwrap();
+        assert_eq!(fs::read_to_string(&target).unwrap(), r#"{"new":true}"#);
+        let leftovers: Vec<_> = fs::read_dir(&dir).unwrap().flatten()
+            .filter(|entry| entry.file_name().to_string_lossy().starts_with('.'))
+            .collect();
+        assert!(leftovers.is_empty(), "temporary backup files should be cleaned up");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn backup_files_are_private_to_the_current_user() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = temp("private-mode");
+        let target = dir.join("private.mochibackup");
+        write_backup(&target, "{\"private\":true}").unwrap();
+        assert_eq!(fs::metadata(target).unwrap().permissions().mode() & 0o777, 0o600);
         let _ = fs::remove_dir_all(&dir);
     }
 
