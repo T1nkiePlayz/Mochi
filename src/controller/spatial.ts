@@ -73,7 +73,11 @@ const reducedMotion = () => document.documentElement.getAttribute("data-reduce-m
 
 export function focusElement(element: HTMLElement): void {
   element.focus({ preventScroll: true });
-  element.scrollIntoView({ block: "nearest", inline: "nearest", behavior: reducedMotion() ? "auto" : "smooth" });
+  // Big Picture is a couch-distance interface: animated scrolling on every controller move
+  // makes the whole library drift vertically and can be uncomfortable to follow. Keep the
+  // normal UI's smooth scrolling, but reveal Big Picture targets immediately.
+  const inBigPicture = Boolean(element.closest("[data-bp-root]"));
+  element.scrollIntoView({ block: "nearest", inline: "nearest", behavior: inBigPicture || reducedMotion() ? "auto" : "smooth" });
 }
 
 /** Moves focus one step. Returns false when there was nowhere to go. */
