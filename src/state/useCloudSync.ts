@@ -2,12 +2,14 @@ import { confirmAction } from "../lib/confirm";
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
-import { confirmedAfterClear, confirmedAfterPull, createSyncScheduler, loadConfirmedCache, saveConfirmedCache, type SyncScheduler } from "../lib/cloudStatus";
+import { confirmedAfterClear, confirmedAfterPull, createSyncScheduler, isRetryableSyncError, loadConfirmedCache, saveConfirmedCache, type SyncScheduler } from "../lib/cloudStatus";
 import { clearAccountCloudData, getCloudAccountSettings, mergeCloudLibrary, pullLibrary, pushLibrary } from "../lib/cloud";
 import type { Piko } from "../models";
 import { isNetworkError } from "../lib/offline";
 
 export type SyncState = "offline" | "syncing" | "retrying" | "synced" | "empty" | "error";
+
+const isRetryableCloudError = (error: unknown) => isNetworkError(error) || isRetryableSyncError(error);
 
 /** Optional cloud metadata sync: pulls on sign-in, then pushes (debounced) whenever the library changes. */
 export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dispatch<SetStateAction<Piko[]>>, storageReady: boolean, storageKey: string) {
@@ -31,12 +33,12 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
       confirm(userId, ids); setSyncState("synced");
     } catch (error) {
       if (!isStale()) {
-        if (!isNetworkError(error)) console.error("Mochi cloud sync failed; retrying", error);
-        setSyncState("retrying");
+        if (!isNetworkError(error)) console.error("Mochi cloud sync failed", error);
+        setSyncState(isRetryableCloudError(error) ? "retrying" : "error");
       }
       throw error;
     }
-  });
+  }, { shouldRetry: isRetryableCloudError });
   const confirm = (userId: string, ids: ReadonlySet<string>) => { setConfirmedIds(ids); saveConfirmedCache(userId, ids); };
 
   useEffect(() => {
@@ -86,10 +88,13 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
         initialized.current = false;
         // Initialization (settings + pull) must recover too; previously only pushes retried, leaving
         // a transient startup failure stuck at "error" until the account or app restarted.
-        if (!isNetworkError(error)) console.error("Mochi cloud sync initialization failed; retrying", error);
-        setSyncState("retrying");
-        const delay = Math.min(60000, 2000 * 2 ** retryAttempt.current++);
-        retryTimer = setTimeout(() => { if (!cancelled) setRetryToken((token) => token + 1); }, delay);
+        if (!isNetworkError(error)) console.error("Mochi cloud sync initialization failed", error);
+        const retryable = isRetryableCloudError(error);
+        setSyncState(retryable ? "retrying" : "error");
+        if (retryable) {
+          const delay = Math.min(60000, 2000 * 2 ** retryAttempt.current++);
+          retryTimer = setTimeout(() => { if (!cancelled) setRetryToken((token) => token + 1); }, delay);
+        }
       });
     return () => { cancelled = true; if (retryTimer !== undefined) clearTimeout(retryTimer); window.removeEventListener("online", retryWhenOnline); schedulerRef.current?.cancel(); schedulerRef.current = null; };
   // eslint-disable-next-line react-hooks/exhaustive-deps -- a new sync starts only for a different account or storage, not when callbacks change identity
@@ -98,10 +103,19 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
   // Any library change (import, enrichment, edits) asks the scheduler for a push; it debounces with a max wait and retries with backoff.
   useEffect(() => {
     libraryRef.current = library;
-    if (!storageReady || !supabase || !user || !cloudSyncEnabled || !initialized.current || !schedulerRef.current) return;
+    if (!storageReady || !supabase || !user) return;
+
+    // A permanent initialization error intentionally stops timer retries. A real
+    // local library change is a meaningful recovery signal: re-fetch account
+    // settings and pull again, without requiring an app restart.
+    if (!initialized.current) {
+      if (syncState === "error") setRetryToken((token) => token + 1);
+      return;
+    }
+    if (!cloudSyncEnabled || !schedulerRef.current) return;
     setSyncState("syncing");
     schedulerRef.current.notify();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by the account id, not the user object
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by account/library changes, not callback identity
   }, [library, user?.id, cloudSyncEnabled, storageReady, storageKey]);
 
   const clearCloudData = async () => {

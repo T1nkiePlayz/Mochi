@@ -31,6 +31,61 @@ export const confirmedAfterPull = (cloud: Pick<Piko, "id">[]): Set<string> => ne
 /** After clearing the cloud nothing is confirmed. */
 export const confirmedAfterClear = (): Set<string> => new Set();
 
+/**
+ * Classifies errors in the shapes returned by Supabase/PostgREST as well as
+ * fetch/network exceptions. Unknown exceptions remain retryable defensively;
+ * known permanent HTTP/SQL errors stop the automatic retry loop.
+ */
+export function isRetryableSyncError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return /failed to fetch|network|timeout|timed out/i.test(String(error ?? ""));
+  }
+
+  const value = error as {
+    status?: unknown;
+    statusCode?: unknown;
+    httpStatusCode?: unknown;
+    code?: unknown;
+    message?: unknown;
+    details?: unknown;
+    context?: { status?: unknown } | null;
+  };
+  // Supabase Functions/PostgREST errors can expose HTTP status as either a
+  // number or a numeric string, including under FunctionsHttpError.context.
+  const status = [value.status, value.statusCode, value.httpStatusCode, value.context?.status]
+    .map((candidate) => {
+      if (typeof candidate === "number" && Number.isFinite(candidate)) return candidate;
+      if (typeof candidate === "string" && /^\d{3}$/.test(candidate.trim())) return Number(candidate);
+      return undefined;
+    })
+    .find((candidate): candidate is number => candidate !== undefined);
+
+  if (status !== undefined) {
+    if (status === 408 || status === 425 || status === 429) return true;
+    if (status >= 400 && status < 500) return false;
+    if (status >= 500) return true;
+  }
+
+  const code = typeof value.code === "string" ? value.code.toUpperCase() : "";
+  // SQLSTATE connection, transaction rollback, resource and shutdown classes
+  // are commonly transient; integrity, auth, and SQL/access errors are not.
+  if (/^(08|40|53|57)/.test(code)) return true;
+  if (/^(22|23|28|3D|3F|42)/.test(code)) return false;
+
+  const message = [value.message, value.details]
+    .filter((part): part is string => typeof part === "string")
+    .join(" ");
+  if (/failed to fetch|networkerror|network request failed|load failed|fetch failed|timed out|timeout|connection reset|connection refused/i.test(message)) {
+    return true;
+  }
+  if (/row-level security|row level security|permission denied|jwt expired|invalid jwt|invalid token|not authenticated|violates (?:check|foreign key|unique|not-null) constraint|invalid input syntax|authentication required|cloud sync is not enabled|library must be a json array|library is too large/i.test(message)) {
+    return false;
+  }
+
+  // Unexpected error shapes should not silently disable recovery.
+  return true;
+}
+
 export function cloudStatusFor(piko: Pick<Piko, "id" | "name">, ctx: { enabled: boolean; confirmed: ReadonlySet<string>; syncState: string }): CloudStatus {
   if (!ctx.enabled || !isCloudEligible(piko)) return "none";
   if (ctx.confirmed.has(piko.id)) return "synced";
@@ -57,8 +112,8 @@ export type SyncScheduler = { notify: () => void; cancel: () => void };
  * Debounced runner with a max wait (so a continuous stream of changes still flushes), no overlapping runs,
  * and exponential backoff retry when `run` rejects. A new `notify` supersedes a pending retry.
  */
-export function createSyncScheduler(run: () => Promise<void>, opts: { debounceMs?: number; maxWaitMs?: number; retryBaseMs?: number; retryMaxMs?: number } = {}): SyncScheduler {
-  const { debounceMs = 1500, maxWaitMs = 10000, retryBaseMs = 2000, retryMaxMs = 60000 } = opts;
+export function createSyncScheduler(run: () => Promise<void>, opts: { debounceMs?: number; maxWaitMs?: number; retryBaseMs?: number; retryMaxMs?: number; shouldRetry?: (error: unknown) => boolean } = {}): SyncScheduler {
+  const { debounceMs = 1500, maxWaitMs = 10000, retryBaseMs = 2000, retryMaxMs = 60000, shouldRetry = () => true } = opts;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let firstDirty = 0;
   let dirty = false;
@@ -73,7 +128,7 @@ export function createSyncScheduler(run: () => Promise<void>, opts: { debounceMs
     if (running) { dirty = true; return; }
     running = true; dirty = false; firstDirty = 0;
     try { await run(); failures = 0; }
-    catch { failures += 1; if (!cancelled && !dirty) arm(Math.min(retryMaxMs, retryBaseMs * 2 ** (failures - 1))); }
+    catch (error) { failures += 1; if (!cancelled && !dirty && shouldRetry(error)) arm(Math.min(retryMaxMs, retryBaseMs * 2 ** (failures - 1))); }
     finally { running = false; }
     if (!cancelled && dirty && timer === undefined) { firstDirty = Date.now(); arm(debounceMs); }
   }

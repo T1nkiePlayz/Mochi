@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cloudStatusFor, confirmedAfterClear, confirmedAfterPull, confirmedAfterPush, createSyncScheduler, eligibleForPush, isCloudEligible, loadConfirmedCache, saveConfirmedCache, CLOUD_MAX_PIKOS } from "./cloudStatus";
+import { cloudStatusFor, confirmedAfterClear, confirmedAfterPull, confirmedAfterPush, createSyncScheduler, eligibleForPush, isCloudEligible, isRetryableSyncError, loadConfirmedCache, saveConfirmedCache, CLOUD_MAX_PIKOS } from "./cloudStatus";
 
 const p = (id: string, name = id) => ({ id, name });
 
@@ -23,6 +23,34 @@ describe("eligibility and confirmed sets", () => {
     expect(cloudStatusFor(p("a"), { enabled: true, confirmed: confirmedAfterClear(), syncState: "empty" })).toBe("pending");
     expect(cloudStatusFor(p("a"), { enabled: false, confirmed, syncState: "offline" })).toBe("none");
     expect(cloudStatusFor(p("z", ""), { enabled: true, confirmed, syncState: "synced" })).toBe("none");
+  });
+  it("classifies Supabase/PostgREST errors using HTTP status, SQLSTATE and message", () => {
+    expect(isRetryableSyncError({
+      status: 403,
+      code: "42501",
+      message: 'new row violates row-level security policy for table "tofus"',
+      details: null,
+      hint: null,
+    })).toBe(false);
+    expect(isRetryableSyncError({
+      status: 400,
+      code: "23514",
+      message: 'new row violates check constraint "pikos_source_id_check"',
+    })).toBe(false);
+    expect(isRetryableSyncError({ status: 401, code: "PGRST301", message: "JWT expired" })).toBe(false);
+    expect(isRetryableSyncError({ code: "PGRST301", message: "JWT expired" })).toBe(false);
+    expect(isRetryableSyncError({ status: 408, code: "PGRST000", message: "Request timed out" })).toBe(true);
+    expect(isRetryableSyncError({ status: 429, code: "PGRST003", message: "Too many requests" })).toBe(true);
+    expect(isRetryableSyncError({ status: "403", message: "Forbidden" })).toBe(false);
+    expect(isRetryableSyncError({ status: "503", message: "Service unavailable" })).toBe(true);
+    expect(isRetryableSyncError({ context: { status: "429" }, message: "Too many requests" })).toBe(true);
+    expect(isRetryableSyncError({ context: { status: "401" }, message: "Unauthorized" })).toBe(false);
+    expect(isRetryableSyncError({ context: { status: 503 }, message: "Service unavailable" })).toBe(true);
+    expect(isRetryableSyncError({ status: 503, code: "PGRST000", message: "Service unavailable" })).toBe(true);
+    expect(isRetryableSyncError({ code: "40001", message: "serialization failure" })).toBe(true);
+    expect(isRetryableSyncError({ message: "new row violates row-level security policy" })).toBe(false);
+    expect(isRetryableSyncError(new TypeError("Failed to fetch"))).toBe(true);
+    expect(isRetryableSyncError({ name: "FunctionsFetchError", message: "Failed to send a request" })).toBe(true);
   });
   it("round-trips the per-user cache", () => {
     saveConfirmedCache("u1", new Set(["a", "b"]));
@@ -59,6 +87,25 @@ describe("createSyncScheduler", () => {
     await vi.advanceTimersByTimeAsync(1); expect(run).toHaveBeenCalledTimes(2);
     await vi.advanceTimersByTimeAsync(2000); expect(run).toHaveBeenCalledTimes(3);
     await vi.advanceTimersByTimeAsync(60000); expect(run).toHaveBeenCalledTimes(3);
+  });
+  it("does not schedule repeated retries for permanent client errors", async () => {
+    const run = vi.fn(async () => { throw { status: 403, code: "42501", message: 'new row violates row-level security policy for table "tofus"' }; });
+    const s = createSyncScheduler(run, { debounceMs: 100, retryBaseMs: 1000, shouldRetry: isRetryableSyncError });
+    s.notify(); await vi.advanceTimersByTimeAsync(100);
+    expect(run).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+  it("continues retrying transient fetch failures with backoff", async () => {
+    let failuresRemaining = 1;
+    const run = vi.fn(async () => {
+      if (failuresRemaining-- > 0) throw new TypeError("Failed to fetch");
+    });
+    const s = createSyncScheduler(run, { debounceMs: 100, retryBaseMs: 1000, shouldRetry: isRetryableSyncError });
+    s.notify(); await vi.advanceTimersByTimeAsync(100);
+    expect(run).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(run).toHaveBeenCalledTimes(2);
   });
   it("never overlaps runs and re-runs for changes made mid-flight; cancel stops everything", async () => {
     let release!: () => void; let active = 0; let maxActive = 0;
