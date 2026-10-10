@@ -79,7 +79,7 @@ function Shell() {
         nexusApiKey={credentials.nexusApiKey} setNexusApiKey={credentials.setNexusApiKey}
         steamGridDbKey={credentials.steamGridDbKey} setSteamGridDbKey={credentials.setSteamGridDbKey}
         saveCredential={credentials.save} credentialBusy={credentials.busy}
-        cloudSyncEnabled={app.cloud.cloudSyncEnabled} cloudSyncState={app.cloud.syncState}
+        cloudSyncEnabled={app.cloud.cloudSyncEnabled} cloudDataAccessAllowed={app.cloud.cloudDataAccessAllowed} cloudSyncState={app.cloud.syncState}
         cloudImportBusy={app.cloud.cloudDataBusy} cloudImportReady={app.storage.ready} cloudImportMessage={app.cloud.cloudDataMessage}
         onImportCloudData={app.cloud.importCloudLibrary}
         onFinish={app.finishFirstLaunchSetup}
