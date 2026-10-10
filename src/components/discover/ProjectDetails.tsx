@@ -62,6 +62,7 @@ function VersionRow({ version, fit, onDownload }: { version: ModrinthVersion; fi
 }
 
 export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload }: Props) {
+  const t = useTranslation();
   const [tab, setTab] = useState<"overview" | "versions">("overview");
   const [versions, setVersions] = useState<ModrinthVersion[] | null>(null);
   const [error, setError] = useState("");
@@ -106,7 +107,7 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
       <h3 className="project-overview-heading">Overview</h3>
       <Markdown source={project.body || project.description} />
       {project.members?.length ? <section className="project-creators">
-        <div className="project-creators-heading"><div><h3>Creators & contributors</h3><p>{project.members.length} team member{project.members.length === 1 ? "" : "s"} credited on Modrinth.</p></div></div>
+        <div className="project-creators-heading"><div><h3>Creators & contributors</h3><p>{t(project.members.length === 1 ? "1 team member credited on Modrinth." : "{count} team members credited on Modrinth.").replace("{count}", String(project.members.length))}</p></div></div>
         <div className="project-creator-grid">{project.members.map((member) => <div className="project-creator" key={member.user.id}>
           <Avatar src={member.user.avatar_url} name={member.user.name || member.user.username} />
           <div><strong>{member.user.name || member.user.username}</strong><small>@{member.user.username} · {member.role}</small></div>
@@ -117,18 +118,18 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
         {mod && loaderChoices.length > 0 && <Select value={loader} onChange={setLoader} label="Loader" searchable={false} options={[{ value: "", label: "Any loader" }, ...loaderChoices.map((value) => ({ value, label: loaderLabels[parseLoader(value)!] ?? value }))]} />}
         <Select value={game} onChange={setGame} label="Game version" searchable={gameChoices.length > 10} options={[{ value: "", label: "Any game version" }, ...gameChoices.map((value) => ({ value, label: value }))]} />
         <Select value={channel} onChange={setChannel} label="Release type" searchable={false} options={channelOptions} />
-        {tofu && <Checkbox className="version-fit-toggle" checked={fitOnly} onChange={setFitOnly} label={`Only what fits ${tofu.name}`} />}
+        {tofu && <Checkbox className="version-fit-toggle" checked={fitOnly} onChange={setFitOnly} label={t("Only what fits {name}").replace("{name}", tofu.name)} />}
         {(loader || game || channel || fitOnly) && <button type="button" className="text-button" onClick={() => { setLoader(""); setGame(""); setChannel(""); setFitOnly(false); }}>Clear filters</button>}
       </div>
       {versions === null ? <p className="muted"><RefreshCw size={13} className="spin" /> Loading versions...</p> : <>
         {error && <p className="metadata-note" role="alert">{error}</p>}
-        <p className="version-count" aria-live="polite">{rows.length} of {versions.length} version{versions.length === 1 ? "" : "s"}</p>
+        <p className="version-count" aria-live="polite">{t(rows.length === 1 && versions.length === 1 ? "1 of 1 version" : "{shown} of {total} versions").replace("{shown}", String(rows.length)).replace("{total}", String(versions.length))}</p>
         {rows.length ? <div className="version-table" role="list">
           <div className="version-row version-head" aria-hidden="true"><div className="version-row-main"><span /><span>Version</span><span>Type</span><span>Loaders</span><span>Game versions</span><span>Published</span><span>Size</span><span /></div></div>
           {rows.slice(0, shown).map((version) => { const fit = target ? versionFit(version, target, mod) : undefined; return <div role="listitem" key={version.id}>
             <VersionRow version={version} fit={fit ? { status: fit.status, reason: fit.reasons[0] } : undefined} onDownload={() => { const file = modrinthFile(version); if (file) onDownload(project, file); }} />
           </div>; })}
-          {rows.length > shown && <button type="button" className="secondary-button version-more" onClick={() => setShown((value) => value + PAGE)}>Show {Math.min(PAGE, rows.length - shown)} more</button>}
+          {rows.length > shown && <button type="button" className="secondary-button version-more" onClick={() => setShown((value) => value + PAGE)}>{t("Show {count} more").replace("{count}", String(Math.min(PAGE, rows.length - shown)))}</button>}
         </div> : <div className="discover-empty">No versions match these filters.</div>}
       </>}
     </div>}
