@@ -112,3 +112,9 @@ export function hasTranslation(message: string, language: unknown): boolean {
   if (navLabel(message, normalized) !== message) return true;
   return Boolean(messages[message]?.[normalized] || setupMessages[message]?.[normalized] || setupCopyMessages[message]?.[normalized] || setupCopyExtraMessages[message]?.[normalized] || cloudSetupMessages[message]?.[normalized] || accountSetupMessages[message]?.[normalized] || serviceSetupMessages[message]?.[normalized] || chromeMessages[message]?.[normalized] || settingsMessages[message]?.[normalized] || downloadMessages[message]?.[normalized] || dealMessages[message]?.[normalized] || dealExtraMessages[message]?.[normalized] || libraryMessages[message]?.[normalized] || systemMessages[message]?.[normalized] || libraryExtraMessages[message]?.[normalized] || commonMessages[message]?.[normalized] || settingsTitleMessages[message]?.[normalized] || settingsTitleExtraMessages[message]?.[normalized] || accessibilitySettingsCopy[message]?.[normalized] || settingsSubtitleMessages[message]?.[normalized] || settingsSubtitleExtraMessages[message]?.[normalized] || accessibilityMessages[message]?.[normalized]);
 }
+
+/** All explicitly catalogued messages, useful for coverage checks and tooling. */
+export function getTranslationMessages(): string[] {
+  const catalogs = [messages, setupMessages, setupCopyMessages, setupCopyExtraMessages, cloudSetupMessages, accountSetupMessages, serviceSetupMessages, chromeMessages, settingsMessages, downloadMessages, dealMessages, dealExtraMessages, libraryMessages, systemMessages, libraryExtraMessages, commonMessages, settingsTitleMessages, settingsTitleExtraMessages, accessibilitySettingsCopy, settingsSubtitleMessages, settingsSubtitleExtraMessages, accessibilityMessages];
+  return [...new Set(catalogs.flatMap((catalog) => Object.keys(catalog)))];
+}
