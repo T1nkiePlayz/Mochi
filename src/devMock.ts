@@ -195,6 +195,7 @@ const handlers: Record<string, Handler> = {
   },
   remove_sound_pack: (args) => { mockSoundPacks = mockSoundPacks.filter((item) => item.id !== args.id); return null; },
   export_sound_pack: () => null,
+  write_share_card: () => null,
   read_sound_pack_file: () => { throw new Error("Dev mock has no sound files."); },
   get_playtime: () => [
     { gameId: "a", name: "Minecraft", seconds: 93_600, lastPlayed: now - 3_600 },
