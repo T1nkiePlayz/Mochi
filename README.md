@@ -131,6 +131,15 @@ A **Piko** is a game in your library: name, artwork, genres, launch target, sour
 - Guided first-launch setup (welcome, account, accessibility, import) and an import picker with per-game selection.
 - Themed "Are you sure?" confirmations for destructive actions.
 - In-app notification centre plus desktop notifications (`notify-send` on Linux, `osascript` on macOS).
+- **Backlog and wishlist**: mark games Want to play / Playing / Finished / Dropped with notes, keep a wishlist of games you don't own yet, and let *What should I play?* pick by mood and time ([docs/backlog.md](docs/backlog.md)).
+- **Duplicate merge**: the same game from several sources (Steam, Heroic, Flatpak, desktop entries) can be merged into one entry with a *Play via* picker, and unmerged at any time ([docs/duplicates.md](docs/duplicates.md)).
+- **Command palette** (Ctrl+K / Cmd+K): fuzzy-search games and run actions (theme, settings sections, mods, snapshots, Big Picture); type `>` for actions only ([docs/command-palette.md](docs/command-palette.md)).
+- **Per-game launch options**: environment variables, arguments, working directory, Proton/Wine runtime, GameMode, MangoHud and gamescope, with a live preview of the exact command and a ready-to-paste Steam launch option string ([docs/launch-options.md](docs/launch-options.md)).
+- **Save backups**: zip snapshots of Minecraft worlds, Steam userdata and any folder you add, with safe restore and automatic backup when a game closes ([docs/save-backups.md](docs/save-backups.md)).
+- **Shortcuts**: create desktop shortcuts (Linux menu/Desktop, macOS .app) and add any game to Steam as a non-Steam game ([docs/shortcuts.md](docs/shortcuts.md)).
+- **Command line and deep links**: `mochi launch|open <game>`, `mochi list` and `mochi://launch|open/<game>` work with a running or closed Mochi; ambiguous names open a chooser ([docs/cli.md](docs/cli.md)).
+- **Storage manager** (Settings > Storage): see where disk space goes and safely clear Mochi's own caches ([docs/storage.md](docs/storage.md)).
+- **Settings backup**: export or import settings, themes, collections, wishlist and per-game choices as a zip; credentials are never included ([docs/settings-export.md](docs/settings-export.md)).
 
 ### Themes
 Eleven built-in themes (shown above): Mochi, Mochi Light, Minecraft Ore, Minecraft Dungeons, Subnautica, Stardew Valley, RuneScape, Fallout Pip-Boy, Cyberpunk 2077, Animal Crossing and Terraria. Themes are packages: a JSON manifest of design tokens (colours, shapes, fonts, shell position) and an optional `theme.css` and assets. Themes can suggest an interface sound pack. You can import a theme file or folder in Settings > Appearance. The build validates themes, including contrast. See [src/themes/README.md](src/themes/README.md), [docs/theme-architecture.md](docs/theme-architecture.md) and [docs/theme-hooks.md](docs/theme-hooks.md).
@@ -162,6 +171,12 @@ Short sounds for navigation, selection, dialogs, launches, downloads and achieve
 - **Discover** browses community content from **Modrinth**, **CurseForge** and **Nexus Mods**. Each source can be switched off in Settings > Mod sources, and fixed rules pick the source per game (Minecraft Java: Modrinth and CurseForge; other CurseForge games: CurseForge; otherwise Nexus when you saved a Nexus key).
 - **Mods per Tofu**: install into a chosen Tofu, enable/disable/delete, **profiles** (Tofus can share a game folder and swap their mods, recorded in `.mochi/tofus.json` in the game folder), and **updates** for Modrinth, CurseForge and Nexus files. Updating keeps the older file for **rollback**. Buttons show Download, Downloading, Downloaded or Update available, and new imports are scanned in the background to find mods already installed. Downloads are done by Rust with a per-provider host allow-list, size cap, SHA-1 check and safe zip extraction. Nexus Mods `nxm://` links are handled (opt-in on Linux) and ask which Tofu to install into; there is no automatic dependency install.
 - CurseForge goes through a proxy that holds Mochi's own server-side key (you need no account), shows "Powered by CurseForge", never caches CurseForge data and opens the file's own CurseForge page when an author disabled third-party downloads.
+- **Dependencies**: installing a mod from Modrinth, CurseForge or Nexus Mods offers its required dependencies first in a confirm sheet, downloaded through the same verified pipeline; anything that can't be auto-installed (author-disabled downloads, free Nexus accounts, requirements on other sites) is shown with a link.
+- **Mod check**: before launch (or on demand from Manage Tofus) Mochi warns offline about duplicate mods, wrong game version or loader, missing dependencies and known incompatibilities, with one-click fixes.
+- **Snapshots**: a cheap hard-linked snapshot of a Tofu's mods is taken before updates, so *Restore last working state* undoes a bad update in one click ([docs/snapshots.md](docs/snapshots.md)).
+- **Update all** shows a review sheet with per-mod changelogs, dependency warnings and the pre-update snapshot.
+- **Share modpacks**: export a Tofu's mod list as a small `.mochipack` file or copyable code (ids and hashes only) and import it with a preview and verified downloads ([docs/mochipack.md](docs/mochipack.md)).
+- **Minecraft**: one Minecraft entry with each launcher instance as a Tofu, optional copying of instances on import, and modpack matching against Modrinth and CurseForge.
 - See [docs/mods.md](docs/mods.md) and [docs/curseforge.md](docs/curseforge.md).
 
 ### Accessibility
@@ -169,6 +184,12 @@ Settings > Accessibility covers text and interface size (85-150%), high contrast
 
 ### Updates
 Background check 10 seconds after start and every 6 hours (Settings > Updates > Auto-update), never installing without you pressing **Install & restart**. Updates are verified against an embedded public key. **Opening a newer build.** When you open a newer AppImage, or a `Mochi.app` outside `/Applications`, Mochi checks it against a signed `install-hashes.json` from that version's GitHub release. If it cannot verify the build it warns you; if you continue, it installs the build and restarts from the installed location. See [docs/updates.md](docs/updates.md) and [docs/release.md](docs/release.md).
+
+### Experimental (Settings > Experimental, off by default)
+- **Game news**: a News tab in the notification centre with Steam news for your Steam games and mod updates, checked at most every 6 hours ([docs/news.md](docs/news.md)).
+- **Deal alerts**: free Epic games, sales and wishlist price-watch alerts for the stores you use, metadata only, deals by CheapShark ([docs/deals.md](docs/deals.md)).
+- **Share card**: a locally generated PNG of your top games, playtime and achievements with privacy toggles ([docs/share-card.md](docs/share-card.md)).
+- **Game search**: search any game (needs IGDB or SteamGridDB keys) with details, artwork, prices and a price history built from CheapShark and local observations ([docs/game-search.md](docs/game-search.md)).
 
 ### Linux and macOS integration
 Application-menu shortcuts (`mochi://launch/<id>`), start at login, tray icon, managed AppImage copy and `mochi://` handler on Linux; LaunchAgent, Dock reopen and menu-bar hiding on macOS. Experimental opt-in features live in Settings > Experimental ([docs/experimental-features.md](docs/experimental-features.md)).
@@ -248,7 +269,7 @@ Push a tag `vX.Y.Z` (`-beta.N` for pre-releases) on the commit to ship. The rele
 - macOS support is newer and less tested than Linux; some paths (Whisky, entitlements) are unverified on real hardware.
 - Source scanners read other launchers' local formats and may break when those change. Battle.net, GOG Galaxy and Prism code paths are unverified on real macOS hardware.
 - Runtimes (Wine, Proton, CrossOver) are detected, not installed.
-- Nexus has no automatic dependency install.
+- Nexus Mods requirements are read from the mod's Requirements data and installed like other dependencies only when you have a Nexus key (and Premium for downloads); otherwise they are shown as links.
 - Games handed to another launcher can only be stopped once Mochi detects them.
 - Synced paths may not work on another machine; sync is metadata-only.
 - Storage formats and UI may change before a stable release.
@@ -266,6 +287,9 @@ Not promises or dates.
 - [x] Accounts, passkeys, MFA, optional cloud sync, auto-update, Linux packages, universal macOS DMG
 - [ ] Signed and notarized macOS builds (needs an Apple Developer account)
 - [ ] Stable release
+- [ ] Theme marketplace / in-app theme gallery (browse and one-click install of community themes)
+- [ ] Theme creator (live-edit colours, fonts and hooks, export a theme file)
+- [ ] Per-game automatic themes (the launcher takes on a game's look when you open it, e.g. Hades)
 
 ## Documentation index
 
