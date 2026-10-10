@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, ExternalLink, FolderOpen, FolderPlus, Heart, Pencil, Play, Square, Trash2 } from "lucide-react";
 import { GameScreenshots } from "./GameScreenshots";
+import { GAME_LAUNCHER_METADATA } from "../lib/robloxCover";
 import { ProtonDbBadge } from "./ProtonDbBadge";
 import { openExternalUrl, type PlatformCapabilities } from "../lib/platform";
 import { formatPlaytime, formatRelativeTime } from "../lib/format";
@@ -73,6 +74,13 @@ export function GameDetails({ game, capabilities, cloudStatus, running, playtime
   const [videoFailed, setVideoFailed] = useState(false);
   const choice = pickTrailer(game, { canPlayHls: canPlayHlsNatively(), skipSteam: videoFailed });
   const trailer = choice.kind === "youtube" ? choice.id : "";
+  const youtubeEmbedUrl = trailer ? (() => {
+    const params = new URLSearchParams({ autoplay: "1", controls: "1", playsinline: "1" });
+    // YouTube identifies embedded players using their HTTP Referer. Explicit origin also
+    // identifies Mochi to the iframe API in web builds with a normal http(s) origin.
+    if (window.location.protocol === "http:" || window.location.protocol === "https:") params.set("origin", window.location.origin);
+    return `https://www.youtube.com/embed/${encodeURIComponent(trailer)}?${params.toString()}`;
+  })() : "";
   const steamAppId = steamAppIdOf(game);
   const screenshots = game.screenshots ?? [];
   const screenshotCredit = singleCredit(screenshots);
@@ -111,7 +119,7 @@ export function GameDetails({ game, capabilities, cloudStatus, running, playtime
         <div><dt>Launch target</dt><dd className="path-text" title={launchTarget}>{launchTarget || "Not set"}</dd></div>
       </dl></div></div>
     <div className="game-details-content game-details-primary">
-      {game.kind !== "launcher" && <GameScreenshots game={game} />}
+      {(game.kind !== "launcher" || Boolean(game.launcherId && game.launcherId in GAME_LAUNCHER_METADATA)) && <GameScreenshots game={game} />}
       {(game.notes || game.links?.length) && <section className="game-details-section game-details-notes" aria-label={`Your notes on ${game.name}`}><div className="discover-section-heading"><div><h3>Your notes</h3><p>Only on this device and in your backups.</p></div></div>{game.notes && <p className="game-details-description" style={{ whiteSpace: "pre-wrap" }}>{game.notes}</p>}{game.links?.length ? <ul className="game-details-links">{game.links.map((link) => <li key={link.url}><button type="button" className="link-button" title={link.url} onClick={() => void openExternalUrl(link.url).catch(() => {})}>{link.label}</button></li>)}</ul> : null}</section>}
       <section className="game-details-section game-details-about" aria-label={`About ${game.name}`}><div className="discover-section-heading"><div><h3>Game information</h3><p>{infoCredit}</p></div></div><div className="game-details-info">{game.categories?.length ? <div><small>Genres</small><strong>{game.categories.join(", ")}</strong></div> : null}{game.firstReleaseDate ? <div><small>First released</small><strong>{new Date(game.firstReleaseDate * 1000).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</strong></div> : null}<div><small>Platform</small><strong>{game.platformCategory || game.sourceId || "Custom"}</strong></div>{coverCredit ? <div><small>Cover art</small><strong>{coverCredit}</strong></div> : null}</div>{game.description && <p className="game-details-description">{game.description}</p>}</section>
       {screenshots.length ? <section className="game-details-section game-details-screenshots"><div className="discover-section-heading"><div><h3>Screenshots</h3><p>{screenshotCredit ?? "Images from several sources."}</p></div></div><ScreenshotGallery urls={screenshots} gameName={game.name} /></section> : null}
@@ -121,7 +129,7 @@ export function GameDetails({ game, capabilities, cloudStatus, running, playtime
     {(steamAppId !== null || choice.kind !== "none") && <div className="game-details-content">
       {steamAppId !== null && <SteamAchievements key={steamAppId} appid={steamAppId} gameName={game.name} />}
       {choice.kind === "steam" ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Trailer</h3><p>From the Steam store.</p></div></div><div className="game-trailer-frame">{online ? <video controls preload="none" playsInline poster={choice.video.thumbnail} title={`${game.name} trailer`} onError={() => setVideoFailed(true)}>{choice.video.webm && <source src={choice.video.webm} type="video/webm" onError={choice.video.mp4 ? undefined : () => setVideoFailed(true)} />}{choice.video.mp4 && <source src={choice.video.mp4} type="video/mp4" onError={() => setVideoFailed(true)} />}{choice.video.hls && <source src={choice.video.hls} type="application/vnd.apple.mpegurl" onError={() => setVideoFailed(true)} />}</video> : <p className="game-trailer-offline">Trailer needs internet</p>}</div></section> : null}
-      {trailer ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Trailer</h3><p>If the player below shows an error, watch it on YouTube instead.</p></div><button type="button" className="text-button" onClick={() => void openExternalUrl(`https://www.youtube.com/watch?v=${trailer}`).catch(() => undefined)}><ExternalLink size={13}/> Watch on YouTube</button></div><div className="game-trailer-frame">{playTrailer && online ? <iframe src={`https://www.youtube-nocookie.com/embed/${trailer}?autoplay=1&controls=1&playsinline=1`} title={`${game.name} trailer`} referrerPolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /> : <button type="button" className="game-trailer-start" disabled={!online} onClick={() => setPlayTrailer(true)}><GameArtwork className="game-trailer-poster" cacheKey={game.artworkCacheKey} fallback={game.artwork} name={game.name} kind={game.kind} sourceId={game.sourceId} /><span><Play size={23} fill="currentColor"/> {online ? "Play trailer" : "Trailer needs internet"}</span></button>}</div></section> : null}
+      {trailer ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Trailer</h3><p>If the player below shows an error, watch it on YouTube instead.</p></div><button type="button" className="text-button" onClick={() => void openExternalUrl(`https://www.youtube.com/watch?v=${encodeURIComponent(trailer)}`).catch(() => undefined)}><ExternalLink size={13}/> Watch on YouTube</button></div><div className="game-trailer-frame">{playTrailer && online ? <iframe src={youtubeEmbedUrl} title={`${game.name} trailer`} referrerPolicy="origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /> : <button type="button" className="game-trailer-start" disabled={!online} onClick={() => setPlayTrailer(true)}><GameArtwork className="game-trailer-poster" cacheKey={game.artworkCacheKey} fallback={game.artwork} name={game.name} kind={game.kind} sourceId={game.sourceId} /><span><Play size={23} fill="currentColor"/> {online ? "Play trailer" : "Trailer needs internet"}</span></button>}</div></section> : null}
     </div>}
     {mods && <div className="game-workspace game-mods-section">{mods}</div>}
   </section>;

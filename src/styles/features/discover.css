@@ -26,6 +26,7 @@
 /* ---- Game tab strip: fixed-size tabs, label always visible, nothing reflows on hover or focus ---- */
 .discover-game-strip { display: flex; align-items: flex-start; gap: 8px; }
 .discover-game-tabs { display: flex; flex: 1 1 auto; flex-wrap: wrap; align-items: stretch; gap: 8px; min-width: 0; padding: 2px 0; }
+.discover-game-tab-wrap { position: relative; display: inline-flex; min-width: 0; max-width: 220px; }
 .discover-game-tab {
   --tab-h: 44px;
   display: inline-flex; align-items: center; justify-content: center; gap: 9px; box-sizing: border-box;
@@ -36,6 +37,10 @@
   /* Only colours animate; size never changes, so hovering cannot make neighbours jump. */
   transition: background var(--mochi-transition), border-color var(--mochi-transition), color var(--mochi-transition), box-shadow var(--mochi-transition);
 }
+.discover-game-tab.has-remove { padding-right: 31px; }
+.discover-game-remove { position: absolute; top: 50%; right: 5px; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; transform: translateY(-50%); border: 1px solid transparent; border-radius: 50%; background: transparent; color: var(--mochi-text-muted); cursor: pointer; }
+.discover-game-remove:hover, .discover-game-remove:focus-visible { border-color: var(--mochi-border-strong); background: var(--mochi-surface-hover); color: var(--mochi-text-strong); }
+.discover-game-remove:focus-visible { outline: 2px solid var(--mochi-accent); outline-offset: 1px; }
 .discover-game-tab:hover { color: var(--mochi-text-strong); border-color: var(--mochi-border-strong); background: var(--mochi-surface-hover); }
 .discover-game-tab:focus-visible, .discover-game-add:focus-visible { outline: 2px solid var(--mochi-accent); outline-offset: 2px; }
 .discover-game-tab.active { color: var(--mochi-text-strong); border-color: var(--mochi-accent); background: var(--mochi-accent-soft); box-shadow: inset 0 0 0 1px var(--mochi-accent); }
@@ -46,7 +51,7 @@
   background: transparent; color: var(--mochi-text-muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
 }
 .discover-game-add:hover { color: var(--mochi-accent-strong); border-color: var(--mochi-accent); background: var(--mochi-accent-soft); }
-@media (max-width: 700px) { .discover-game-add span { display: none; } .discover-game-add { width: 44px; padding: 0; } .discover-game-tab { max-width: 170px; } }
+@media (max-width: 700px) { .discover-game-add span { display: none; } .discover-game-add { width: 44px; padding: 0; } .discover-game-tab-wrap { max-width: 170px; } .discover-game-tab { max-width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .discover-game-tab { transition: none; } }
 
 /* Game icons: the full image, cropped to the avatar shape on a themed backdrop (a transparent PNG never shows as a box). */
@@ -82,7 +87,7 @@
 .mod-game-label { color: var(--mochi-accent-strong); font-weight: 700; }
 
 /* Tofu picker rows with compatibility */
-.tofu-picker-row .secondary-button { width: auto; min-width: 0; padding: 0 12px; white-space: nowrap; }
+.tofu-picker-row .secondary-button { flex: 0 0 auto; width: auto; min-width: 112px; min-height: 38px; padding: 0 12px; white-space: nowrap; }
 .tofu-picker-row .compat-note { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .compat-badge { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border: 1px solid currentColor; border-radius: var(--mochi-pill-radius, 999px); font-size: 11px; font-weight: 700; white-space: nowrap; }
 .compat-compatible { color: var(--mochi-success); }

@@ -99,14 +99,14 @@ export function ModrinthDiscover({ tofu, pikos, supabase, nexusConfigured, igdbC
     if (game) { setTab({ kind: "game", key: game.key }); setPendingKey(""); }
   }, [pendingKey, discover.games]);
   // A removed or switched-off game must not leave an empty page behind.
-  useEffect(() => { if (tab.kind === "game" && discover.games.length > 0 && !discover.games.some((game) => game.key === tab.key)) setTab({ kind: "all" }); }, [tab, discover.games]);
+  useEffect(() => { if (tab.kind === "game" && !discover.games.some((game) => game.key === tab.key)) setTab({ kind: "all" }); }, [tab, discover.games]);
   const activeGame = tab.kind === "game" ? discover.games.find((game) => game.key === tab.key) : undefined;
 
   const mc432 = discover.cfGames?.find((game) => game.id === CF_MINECRAFT_ID);
   const tabs: DiscoverTabItem[] = [
     { id: "all", label: "All", icon: <Layers size={15} />, hint: "Mods from every game" },
     ...(minecraftSources.length > 0 ? [{ id: "minecraft", label: "Minecraft", iconUrl: mc432?.assets?.iconUrl, icon: mc432?.assets?.iconUrl ? undefined : <MinecraftIcon /> }] : []),
-    ...discover.games.map((game) => ({ id: game.key, label: game.name, iconUrl: game.iconUrl })),
+    ...discover.games.map((game) => ({ id: game.key, label: game.name, iconUrl: game.iconUrl, removable: discover.removableKeys.has(game.key) })),
   ];
   const selectTab = (id: string) => {
     if (id === "all") setTab({ kind: "all" });
@@ -122,7 +122,7 @@ export function ModrinthDiscover({ tofu, pikos, supabase, nexusConfigured, igdbC
       </div>
 
       {nothingOn ? <p className="metadata-note" role="status">All mod sources are turned off. <button type="button" className="text-button" onClick={openSettings}>Open Settings</button> and enable one under Mod sources.</p> : <>
-      <DiscoverTabs tabs={tabs} active={tabId(tab)} onSelect={selectTab} onAdd={settings.curseforge || settings.nexus ? () => setShowPicker(true) : undefined} />
+      <DiscoverTabs tabs={tabs} active={tabId(tab)} onSelect={selectTab} onRemove={discover.remove} onAdd={settings.curseforge || settings.nexus ? () => setShowPicker(true) : undefined} />
       {discover.cfError && <div className="discover-error" role="alert"><p><WifiOff size={14} /> CurseForge games are unavailable</p><small>{discover.cfError}</small><button type="button" className="secondary-button" onClick={discover.retry}><RefreshCw size={13} /> Retry</button></div>}
       {loadError && <p className="metadata-note" role="status">{loadError}</p>}
       {install.prompt && <DependencySheet prompt={install.prompt} />}

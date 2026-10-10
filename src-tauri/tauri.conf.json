@@ -93,6 +93,7 @@
           "https://api.github.com"
         ],
         "frame-src": [
+          "https://www.youtube.com",
           "https://www.youtube-nocookie.com"
         ],
         "object-src": [
@@ -172,6 +173,7 @@
           "ws://localhost:5173"
         ],
         "frame-src": [
+          "https://www.youtube.com",
           "https://www.youtube-nocookie.com"
         ],
         "object-src": [

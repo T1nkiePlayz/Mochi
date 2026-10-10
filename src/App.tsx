@@ -54,7 +54,7 @@ function CurrentView() {
 
 const Footer = memo(function Footer() {
   const { syncState, cloudSyncEnabled, signedIn } = useAppSelector((app) => ({ syncState: app.cloud.syncState, cloudSyncEnabled: app.cloud.cloudSyncEnabled, signedIn: Boolean(app.account.user) }), shallowEqual);
-  const label = syncState === "syncing" ? "Cloud sync syncing…" : syncState === "synced" ? "Cloud sync active" : syncState === "empty" ? "Cloud library empty" : syncState === "error" ? "Cloud sync error" : signedIn && !cloudSyncEnabled ? "Cloud sync disabled" : "Cloud sync unavailable";
+  const label = syncState === "syncing" ? "Cloud sync in progress…" : syncState === "retrying" ? "Cloud sync retrying…" : syncState === "synced" ? "Cloud sync active" : syncState === "empty" ? "Cloud library empty" : syncState === "error" ? "Cloud sync error" : signedIn && !cloudSyncEnabled ? "Cloud sync disabled" : "Cloud sync unavailable";
   return <footer><span>Mochi v{__APP_VERSION__} · Local-first by design</span><span><MochiIcon name="cloud" fallback={Cloud} size={13} /> {label}</span></footer>;
 });
 
@@ -71,7 +71,7 @@ function Shell() {
       <FirstLaunchSetup
         igdbClientId={credentials.igdbClientId} setIgdbClientId={credentials.setIgdbClientId}
         igdbClientSecret={credentials.igdbClientSecret} setIgdbClientSecret={credentials.setIgdbClientSecret}
-        onSignIn={account.openSignIn} signedIn={Boolean(account.user)}
+        onSignIn={account.openSignIn} user={account.user}
         onAddUser={() => { app.storage.setMultipleAccountProfiles(true); account.openSignIn(); }}
         credentialStatus={credentials.status} credentialStatusLoaded={credentials.loaded}
         themes={themeEngine.themes} theme={themeEngine.theme} setTheme={themeEngine.setTheme}

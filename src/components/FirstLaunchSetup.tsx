@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { User } from "@supabase/supabase-js";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { ThemeDescriptor } from "../lib/theme";
 import type { ProviderCredential } from "../lib/providerCredentials";
@@ -18,7 +19,7 @@ type SetupProps = {
   igdbClientSecret: string;
   setIgdbClientSecret: (value: string) => void;
   onSignIn: () => void;
-  signedIn: boolean;
+  user: User | null;
   onAddUser?: () => void;
   credentialStatus: Record<ProviderCredential, boolean>;
   credentialStatusLoaded: boolean;
@@ -47,7 +48,7 @@ export function FirstLaunchSetup(props: SetupProps) {
   // The services step is only useful when signed in, so signed-out users skip straight past it.
   const hop = (direction: 1 | -1) => {
     let next = index + direction;
-    if (steps[next] === "services" && !props.signedIn) next += direction;
+    if (steps[next] === "services" && !props.user) next += direction;
     if (next >= 0 && next < steps.length) setStep(steps[next]);
   };
 
@@ -66,8 +67,8 @@ export function FirstLaunchSetup(props: SetupProps) {
           {step === "welcome" && <WelcomeStep />}
           {step === "theme" && <ThemeStep themes={props.themes} theme={props.theme} setTheme={props.setTheme} />}
           {step === "accessibility" && <AccessibilityStep />}
-          {step === "account" && <AccountStep signedIn={props.signedIn} onSignIn={props.onSignIn} onAddUser={props.onAddUser} />}
-          {step === "services" && <ServicesStep {...props} />}
+          {step === "account" && <AccountStep user={props.user} onSignIn={props.onSignIn} onAddUser={props.onAddUser} />}
+          {step === "services" && <ServicesStep {...props} signedIn={Boolean(props.user)} />}
           {step === "imports" && <ImportStep onSelectionChange={setSelection} />}
         </div>
         <div className="setup-footer">

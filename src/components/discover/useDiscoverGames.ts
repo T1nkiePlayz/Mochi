@@ -56,6 +56,7 @@ function readStored(): StoredGame[] {
 }
 
 const sameEntry = (a: StoredGame, b: StoredGame) => a.k === b.k && (a.k === "cf" ? a.id === (b as { id: number }).id : a.domain === (b as { domain: string }).domain);
+const nexusThumbnail = (game?: { id?: string; iconUrl?: string }) => game?.iconUrl ?? (game?.id && /^\d+$/.test(game.id) ? `https://images.nexusmods.com/images/games/v2/${game.id}/thumbnail.jpg` : undefined);
 
 /** The user's per-game site choice (Auto / CurseForge / Nexus Mods), remembered between runs. */
 export function useGameSourceChoice(gameKey: string): [GameSourceChoice, (choice: GameSourceChoice) => void] {
@@ -141,7 +142,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
       const name = info?.name ?? fallbackName;
       const onCf = settings.curseforge && cfGames ? bestNameMatch(name, cfGames) : null;
       if (onCf) return cfGame(onCf, domain);
-      return { key: `nx:${domain}`, name, iconUrl: info?.iconUrl ?? igdbIcons[domain.toLocaleLowerCase()], source: "nexus", nexusDomain: domain };
+      return { key: `nx:${domain}`, name, iconUrl: nexusThumbnail(info) ?? igdbIcons[domain.toLocaleLowerCase()], source: "nexus", nexusDomain: domain };
     };
     for (const { seed, cf } of visibleSeedGames(SEED_GAMES, cfGames, nexusOn && nexusKey, settings.curseforge)) {
       if (cf) put(cfGame(cf, seed.nexusDomain));
@@ -164,5 +165,14 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
     });
   }, []);
 
-  return { games, cfGames, cfError, cfLoading, nexusOn, nexusCatalog: catalog, add, retry: () => setReload((value) => value + 1) };
+  const remove = useCallback((key: string) => {
+    setStored((current) => {
+      const next = current.filter((entry) => entry.k === "cf" ? `cf:${entry.id}` !== key : `nx:${entry.domain}` !== key);
+      writeJson(STORE, next);
+      return next;
+    });
+  }, []);
+  const removableKeys = useMemo(() => new Set(stored.map((entry) => entry.k === "cf" ? `cf:${entry.id}` : `nx:${entry.domain}`)), [stored]);
+
+  return { games, cfGames, cfError, cfLoading, nexusOn, nexusCatalog: catalog, removableKeys, add, remove, retry: () => setReload((value) => value + 1) };
 }

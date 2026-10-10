@@ -2,13 +2,14 @@ import { useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { supabase } from "../lib/supabase";
 import { lookupIgdbGames, type IgdbGame } from "../lib/igdb";
-import { mergeInstances, isInstanceTarget, instanceTofuId } from "../lib/minecraftPiko";
+import { mergeInstances, isInstanceTarget, instanceTofuId, unimportedInstances } from "../lib/minecraftPiko";
 import { copyInstances, type MinecraftMode } from "../lib/minecraftCopy";
 import { importedGameToPiko } from "../lib/importMapping";
 import { applyIgdbMetadata, sanitizeKey } from "../lib/metadata";
 import { cacheArtwork } from "./useMetadata";
 import { applyIconCovers, applyLauncherLogos } from "../lib/iconCover";
 import { saveCustomArtwork } from "../lib/artwork";
+import { GAME_LAUNCHER_METADATA } from "../lib/robloxCover";
 import type { ArtworkSelection } from "../components/artwork/ArtworkPicker";
 import { listInstalledFlatpaks, normalizeLaunchTarget, chooseGameAppBundle, chooseGameTarget, type FlatpakApp, type LaunchMethodId } from "../lib/platform";
 import type { ImportedGame } from "../lib/sources";
@@ -161,6 +162,8 @@ export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: 
   };
 
   const importGames = (games: ImportedGame[], options: { minecraftMode?: MinecraftMode } = {}) => {
+    games = unimportedInstances(lib.library, games);
+    if (!games.length) { setShowAddPiko(false); closeImportPicker(); return; }
     const instances = games.filter((game) => isInstanceTarget(game.launchTarget));
     if (instances.length && (options.minecraftMode ?? "copy") === "copy") {
       void copyThenImport(instances);
@@ -172,8 +175,8 @@ export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: 
 
   const importNow = (games: ImportedGame[]) => {
     const now = Date.now();
-    // Minecraft instances are Tofus of the one Minecraft Piko; they are never deduplicated by name.
-    const instances = games.filter((game) => isInstanceTarget(game.launchTarget));
+    // Recheck after asynchronous Minecraft copies so names/targets added meanwhile are not duplicated.
+    const instances = unimportedInstances(lib.library, games).filter((game) => isInstanceTarget(game.launchTarget));
     const others = games.filter((game) => !isInstanceTarget(game.launchTarget));
     // Games folded into another (duplicate merge) count as known, so a re-import does not bring them back.
     const known = new Set(lib.library.flatMap((piko) => [piko, ...(piko.mergedFrom ?? [])]).map((piko) => piko.name.trim().toLowerCase()));
@@ -204,7 +207,7 @@ export function useAddGame(lib: LibraryState, metadata: MetadataState, hasIgdb: 
     if (withIcons.size || logos.size) {
       lib.setLibrary((current) => current.map((piko) => ((withIcons.has(piko.id) || logos.has(piko.id)) && !piko.artworkSource ? { ...piko, artworkSource: sourceOf(piko) } : piko)));
     }
-    await metadata.enrichImported(created.filter((piko) => piko.kind !== "launcher").map((piko) => (withIcons.has(piko.id) ? { ...piko, artworkSource: "icon" as const } : piko)));
+    await metadata.enrichImported(created.filter((piko) => piko.kind !== "launcher" || (piko.launcherId && piko.launcherId in GAME_LAUNCHER_METADATA)).map((piko) => (withIcons.has(piko.id) ? { ...piko, artworkSource: "icon" as const } : piko)));
   };
 
   const loadFlatpaks = async () => {

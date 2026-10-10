@@ -71,7 +71,7 @@ export function DataSection() {
         return <div className="data-source-row" role="listitem" key={source.id}>
           <span><strong>{source.label}</strong><small>{source.detail}</small></span>
           <span className="data-source-actions">
-            {provider && <button type="button" className="secondary-button" disabled={!need?.ready || count === 0 || metadata.refreshBusy} title={!need?.ready ? need?.text : count === 0 ? "No game in your library can use this source." : undefined} onClick={() => void metadata.refreshAll(lib.library, provider)}>{metadata.refreshBusy ? "Refreshing…" : `Refresh${count ? ` (${count})` : ""}`}</button>}
+            {provider && <button type="button" className="secondary-button" disabled={!need?.ready || count === 0 || metadata.refreshBusy} title={!need?.ready ? need?.text : count === 0 ? "No game in your library can use this source." : undefined} onClick={() => void metadata.refreshProvider(lib.library, provider)}>{metadata.refreshBusy ? "Refreshing…" : `Refresh${count ? ` (${count})` : ""}`}</button>}
             <button type="button" className="secondary-button danger-outline" disabled={busy !== null || (source.id === "custom-artwork" && covers === 0)} onClick={() => void run(source.id)}>{busy === source.id ? "Clearing…" : `Clear ${source.label} data`}</button>
           </span>
           {need && <p className={`data-source-state${need.ready ? " ready" : ""}`}>{need.ready && count === 0 ? "No game in your library can use this source yet." : need.text}</p>}
