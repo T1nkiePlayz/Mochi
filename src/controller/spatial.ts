@@ -73,11 +73,10 @@ const reducedMotion = () => document.documentElement.getAttribute("data-reduce-m
 
 export function focusElement(element: HTMLElement): void {
   element.focus({ preventScroll: true });
-  // Big Picture is a couch-distance interface: animated scrolling on every controller move
-  // makes the whole library drift vertically and can be uncomfortable to follow. Keep the
-  // normal UI's smooth scrolling, but reveal Big Picture targets immediately.
+  // "auto" can still animate when a scroll container has scroll-behavior: smooth.
+  // Use "instant" in Big Picture so controller focus never makes the library glide.
   const inBigPicture = Boolean(element.closest("[data-bp-root]"));
-  element.scrollIntoView({ block: "nearest", inline: "nearest", behavior: inBigPicture || reducedMotion() ? "auto" : "smooth" });
+  element.scrollIntoView({ block: "nearest", inline: "nearest", behavior: inBigPicture || reducedMotion() ? "instant" : "smooth" });
 }
 
 /** Moves focus one step. Returns false when there was nowhere to go. */
@@ -99,7 +98,8 @@ export function moveFocus(direction: Direction): boolean {
     const parent = scrollParent(active);
     const before = parent.scrollTop;
     const inBigPicture = Boolean(active.closest("[data-bp-root]"));
-    parent.scrollBy({ top: direction === "down" ? 160 : -160, behavior: inBigPicture || reducedMotion() ? "auto" : "smooth" });
+    // Explicitly bypass CSS scroll-behavior too; "auto" can inherit smooth scrolling.
+    parent.scrollBy({ top: direction === "down" ? 160 : -160, behavior: inBigPicture || reducedMotion() ? "instant" : "smooth" });
     return parent.scrollTop !== before || parent.scrollHeight > parent.clientHeight;
   }
   return false;
