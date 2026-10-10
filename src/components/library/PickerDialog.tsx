@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dices, Play, X } from "lucide-react";
 import type { Piko } from "../../models";
 import { GameArtwork } from "../GameArtwork";
@@ -6,14 +6,22 @@ import { backlogLabel } from "../../lib/backlog";
 import { formatPlaytime } from "../../lib/format";
 import { moods, pickGame, times, type PickerContext, type PickerOptions } from "../../lib/picker";
 
-type Props = { library: Piko[]; context: PickerContext; onPlay: (piko: Piko) => void; onClose: () => void };
+type Props = { library: Piko[]; context: PickerContext; loadHours?: (pikos: Piko[]) => Promise<Map<string, number>>; onPlay: (piko: Piko) => void; onClose: () => void };
 
 const choice = <T extends string>(label: string, items: Array<{ id: T; label: string }>, value: T, set: (value: T) => void) =>
   <div className="picker-group" role="group" aria-label={label}><span className="detail-label">{label}</span>
     <div className="filter-row">{items.map((item) => <button type="button" key={item.id} className={`filter-chip ${value === item.id ? "active" : ""}`} aria-pressed={value === item.id} onClick={() => set(item.id)}>{item.label}</button>)}</div></div>;
 
 /** "What should I play?": a weighted random pick from the backlog and barely-played games, by mood, time and length. */
-export function PickerDialog({ library, context, onPlay, onClose }: Props) {
+export function PickerDialog({ library, context: baseContext, loadHours, onPlay, onClose }: Props) {
+  const [hoursToBeat, setHoursToBeat] = useState<ReadonlyMap<string, number> | undefined>();
+  useEffect(() => {
+    if (!loadHours) return;
+    let live = true;
+    loadHours(library.filter((piko) => piko.igdbId)).then((hours) => { if (live) setHoursToBeat(hours); }).catch(() => {});
+    return () => { live = false; };
+  }, [loadHours, library]);
+  const context = hoursToBeat ? { ...baseContext, hoursToBeat } : baseContext;
   const [options, setOptions] = useState<PickerOptions>({ mood: "relaxed", time: "hour", length: "any" });
   const [result, setResult] = useState<Piko | null | undefined>(undefined);
   const shown = useRef(new Set<string>());

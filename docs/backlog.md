@@ -26,8 +26,9 @@ time (15 min / 1 hour / an evening) and length (any / short). Candidates: instal
 (IGDB genre names and tags) multiply the weight for the mood (x3), quick time favours arcade-like genres and avoids long ones, an evening favours long ones,
 and "short" favours short genres. "Pick again" skips games already shown until all were shown. `seededRandom` makes it deterministic in tests.
 
-**Time to beat:** not used. Mochi's IGDB lookup goes through the existing edge function with a fixed field list and no `game_time_to_beats` is stored on a Piko,
-so adding it would need an edge-function change. Length is a genre heuristic instead.
+**Time to beat:** when IGDB is connected, the picker asks the edge function (`igdb-time-to-beat`, IGDB `game_time_to_beats`) for the main-story hours of
+games that have an IGDB id. 8 hours or less counts as short, 25 or more as long, and 4 or less as quick. The hours are fetched when the dialog opens and are
+not stored. Games without data (or without IGDB) fall back to the genre heuristic.
 
 ## macOS
 Frontend only (localStorage, no paths or platform APIs); nothing platform-specific.

@@ -24,6 +24,7 @@ import { MochiIcon } from "../components/MochiIcon";
 import { Select } from "../components/ui/Select";
 import { GameMods } from "../components/mods/GameMods";
 import { supabase } from "../lib/supabase";
+import { lookupTimeToBeat } from "../lib/igdb";
 import { formatPlaytime, formatRelativeTime } from "../lib/format";
 import { useApp } from "../state/AppContext";
 import { usernameOf } from "../state/useAccount";
@@ -32,6 +33,12 @@ import type { LibrarySort } from "../state/useLibrary";
 const viewIcons: Record<LibraryViewMode, typeof LayoutGrid> = { grid: LayoutGrid, compact: Grid3x3, list: List, shelves: Rows3, large: Maximize2 };
 
 const greeting = () => { const hour = new Date().getHours(); return hour < 5 || hour >= 18 ? "Good evening" : hour < 12 ? "Good morning" : "Good afternoon"; };
+
+/** IGDB time-to-beat (hours) keyed by Piko id, for pikos that have an IGDB id. */
+async function loadPickerHours(pikos: Piko[]): Promise<Map<string, number>> {
+  const byGame = await lookupTimeToBeat(supabase!, pikos.flatMap((piko) => (piko.igdbId ? [piko.igdbId] : [])));
+  return new Map(pikos.flatMap((piko) => (piko.igdbId && byGame.has(piko.igdbId) ? [[piko.id, byGame.get(piko.igdbId)!] as const] : [])));
+}
 
 export function LibraryView() {
   const app = useApp();
@@ -222,7 +229,7 @@ export function LibraryView() {
       onEdit={() => app.setEditingGameId(menuGame.id)}
       onOpenFolder={() => actions.openGameFolder(menuGame)}
       onRemove={() => setRemoval([menuGame])} />}
-    {showPicker && <PickerDialog library={lib.library} context={{ playtime: lib.playtimeById, isInstalled: (piko) => Boolean(piko.executablePath) && lib.installed.get(piko.executablePath ?? "") !== false }}
+    {showPicker && <PickerDialog library={lib.library} loadHours={credentials.status.igdb && supabase ? loadPickerHours : undefined} context={{ playtime: lib.playtimeById, isInstalled: (piko) => Boolean(piko.executablePath) && lib.installed.get(piko.executablePath ?? "") !== false }}
       onPlay={(piko) => { lib.selectPiko(piko); void actions.launchGame(piko); }} onClose={() => setShowPicker(false)} />}
     {showDuplicates && <DuplicatesDialog groups={duplicates.groups} onMerge={duplicates.merge} onDismiss={duplicates.dismiss} onClose={() => setShowDuplicates(false)} />}
     {showCollections && <CollectionManager state={collections} counts={collectionCounts} onClose={() => setShowCollections(false)} />}

@@ -23,6 +23,7 @@ type Body =
   | { action: "nexus-md5"; gameDomain: string; md5: string }
   | { action: "igdb-search"; query: string; limit?: number }
   | { action: "igdb-company"; slug?: string; name?: string }
+  | { action: "igdb-time-to-beat"; gameIds: number[] }
   | { action: "sgdb-search"; query: string }
   | {
     action: "sgdb-assets"; gameId?: number; steamAppId?: number; kinds?: SgdbKind[]; dimensions?: string[]; styles?: string[];
@@ -32,7 +33,7 @@ type Body =
 type IgdbCredential = { clientId: string; clientSecret: string };
 
 const pool = new Pool(Deno.env.get("SUPABASE_DB_URL")!, 1, true);
-const ACTIONS = new Set(["set", "status", "delete", "nexus-games", "nexus-mods", "nexus-status", "nexus-mod", "nexus-files", "nexus-download", "nexus-md5", "igdb-search", "igdb-company", "sgdb-search", "sgdb-assets"]);
+const ACTIONS = new Set(["set", "status", "delete", "nexus-games", "nexus-mods", "nexus-status", "nexus-mod", "nexus-files", "nexus-download", "nexus-md5", "igdb-search", "igdb-company", "igdb-time-to-beat", "sgdb-search", "sgdb-assets"]);
 const SGDB_API = "https://www.steamgriddb.com/api/v2";
 const SGDB_KINDS = new Set<SgdbKind>(["grids", "heroes", "logos", "icons"]);
 const MAX_BODY_BYTES = 16 * 1024;
@@ -179,7 +180,7 @@ async function igdbCredentials(userId: string): Promise<IgdbCredential> {
 /** Escapes a value for use inside an IGDB Apicalypse string literal. */
 const igdbString = (value: string) => value.trim().replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 
-async function igdbPost(userId: string, endpoint: "games" | "companies", query: string): Promise<unknown> {
+async function igdbPost(userId: string, endpoint: "games" | "companies" | "game_time_to_beats", query: string): Promise<unknown> {
   const credentials = await igdbCredentials(userId);
   const accessToken = await igdbAccessToken(credentials);
   const upstream = await fetch(`https://api.igdb.com/v4/${endpoint}`, {
@@ -339,6 +340,20 @@ Deno.serve(async (req) => {
     } catch (error) {
       console.error("IGDB search failed", error);
       return response({ error: error instanceof Error ? error.message : "IGDB search failed." }, 502);
+    }
+  }
+
+  if (body.action === "igdb-time-to-beat") {
+    const ids = Array.isArray(body.gameIds) ? body.gameIds : [];
+    if (!ids.length || ids.length > 100 || !ids.every((id) => Number.isInteger(id) && id > 0)) {
+      return response({ error: "IGDB time-to-beat lookup is invalid." }, 400);
+    }
+    try {
+      const rows = await igdbPost(user.id, "game_time_to_beats", `fields game_id,hastily,normally,completely; where game_id = (${ids.join(",")}); limit ${ids.length};`);
+      return response({ times: rows });
+    } catch (error) {
+      console.error("IGDB time-to-beat failed", error);
+      return response({ error: error instanceof Error ? error.message : "IGDB time-to-beat failed." }, 502);
     }
   }
 

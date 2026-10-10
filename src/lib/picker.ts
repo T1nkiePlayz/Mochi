@@ -29,7 +29,11 @@ export const LEAST_PLAYED_SECONDS = 5 * 3600;
 const labelsOf = (piko: Piko) => [...(piko.categories ?? []), ...(piko.tags ?? [])].map((label) => label.toLowerCase());
 export const matchesHints = (piko: Piko, hints: string[]) => labelsOf(piko).some((label) => hints.some((hint) => label.includes(hint)));
 
-export type PickerContext = { playtime: Map<string, PlaytimeEntry>; isInstalled: (piko: Piko) => boolean };
+/** `hoursToBeat` (optional, keyed by Piko id) comes from IGDB time-to-beat; without it the genre heuristic is used. */
+export type PickerContext = { playtime: Map<string, PlaytimeEntry>; isInstalled: (piko: Piko) => boolean; hoursToBeat?: ReadonlyMap<string, number> };
+
+const SHORT_HOURS = 8;
+const LONG_HOURS = 25;
 
 /** Games worth suggesting: installed, not a launcher/extra, not finished or dropped, and wanted/in progress or barely played. */
 export function pickerCandidates(library: Piko[], context: PickerContext): Piko[] {
@@ -46,9 +50,12 @@ export function pickerWeight(piko: Piko, options: PickerOptions, context: Picker
   const seconds = context.playtime.get(piko.id)?.seconds ?? 0;
   let weight = piko.backlog?.status === "want" ? 4 : piko.backlog?.status === "playing" ? 2.5 : seconds <= 0 ? 2.5 : 1;
   if (matchesHints(piko, MOOD_HINTS[options.mood])) weight *= 3;
-  if (options.time === "quick") { if (matchesHints(piko, QUICK_HINTS)) weight *= 2.5; if (matchesHints(piko, LONG_HINTS)) weight *= 0.5; }
-  if (options.time === "evening" && matchesHints(piko, LONG_HINTS)) weight *= 2;
-  if (options.length === "short") { if (matchesHints(piko, SHORT_HINTS)) weight *= 2; if (matchesHints(piko, LONG_HINTS)) weight *= 0.4; }
+  const hours = context.hoursToBeat?.get(piko.id);
+  const isShort = hours === undefined ? matchesHints(piko, SHORT_HINTS) : hours <= SHORT_HOURS;
+  const isLong = hours === undefined ? matchesHints(piko, LONG_HINTS) : hours >= LONG_HOURS;
+  if (options.time === "quick") { if (hours === undefined ? matchesHints(piko, QUICK_HINTS) : hours <= 4) weight *= 2.5; if (isLong) weight *= 0.5; }
+  if (options.time === "evening" && isLong) weight *= 2;
+  if (options.length === "short") { if (isShort) weight *= 2; if (isLong) weight *= 0.4; }
   return weight;
 }
 

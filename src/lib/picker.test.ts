@@ -57,3 +57,12 @@ describe("pickGame", () => {
     expect(pickGame(lib, opts, ctx(), rng, shown)).not.toBeNull();
   });
 });
+
+describe("pickerWeight with IGDB hours", () => {
+  it("prefers short games for the short length when hours are known, ignoring genre hints", () => {
+    const hours = new Map([["a", 4], ["b", 60]]);
+    const c = { ...ctx(), hoursToBeat: hours };
+    const short = { ...opts, length: "short" as const };
+    expect(pickerWeight(mk("a", { categories: ["Role-playing (RPG)"] }), short, c)).toBeGreaterThan(pickerWeight(mk("b", { categories: ["Puzzle"] }), short, c));
+  });
+});
