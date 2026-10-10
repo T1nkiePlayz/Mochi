@@ -74,7 +74,7 @@ function Details({ game, onSearch }: { game: GameDetails; onSearch: (name: strin
     </header>
     <div className="game-search-actions">
       <button type="button" className="secondary-button" onClick={addWish} disabled={Boolean(stored)}><Gift size={14} aria-hidden="true" /> {stored ? t("On wishlist") : t("Add to wishlist")}</button>
-      <label className="game-search-target">{t("Alert me at")} <input className="compact-input" inputMode="decimal" placeholder={lowestNow ? (lowestNow * 0.8).toFixed(2) : "9.99"} value={target} onChange={(event) => setTarget(event.target.value)} aria-label={t("Target price in USD")} /> {t("USD")}</label>
+      <label className="game-search-target">{t("Alert me at")} <input className="compact-input" inputMode="decimal" placeholder={lowestNow ? (lowestNow * 0.8).toFixed(2) : "9.99"} value={target} onChange={(event) => setTarget(event.target.value)} aria-label={t("Target price in USD")} /> USD</label>
       <button type="button" className="secondary-button" onClick={watch}><Bell size={14} aria-hidden="true" /> {t("Watch price")}</button>
       {stored?.priceWatch?.targetPrice !== undefined && <button type="button" className="secondary-button" onClick={() => { unwatchPrice(stored.id); setNote(t("Price watch removed.")); }}><BellOff size={14} aria-hidden="true" /> {t("Stop watching ({price})").replace("{price}", money(stored.priceWatch.targetPrice))}</button>}
     </div>
