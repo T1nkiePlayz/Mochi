@@ -17,7 +17,7 @@ import { PickerDialog } from "../components/library/PickerDialog";
 import { DuplicatesDialog, DuplicatesNotice } from "../components/library/DuplicatesDialog";
 import { useDuplicates } from "../state/useDuplicates";
 import { useGridKeyboard } from "../state/useGridKeyboard";
-import type { Piko } from "../models";
+import type { Piko, Tofu } from "../models";
 import { GameArtwork } from "../components/GameArtwork";
 import { subscribePickerRequest, takePickerRequest } from "../lib/pickerRequest";
 import { selectLaunchProfile } from "../lib/launchProfiles";
@@ -34,6 +34,34 @@ import { lookupTimeToBeat } from "../lib/igdb";
 import { formatPlaytime, formatRelativeTime } from "../lib/format";
 import { useApp } from "../state/AppContext";
 import { usernameOf } from "../state/useAccount";
+
+function MinecraftInstancesGroup({ piko, instances, onOpen, onPlay, onShowAll }: {
+  piko: Piko;
+  instances: Tofu[];
+  onOpen: (piko: Piko, tofuId: string) => void;
+  onPlay: (piko: Piko, tofuId: string) => void;
+  onShowAll: (piko: Piko) => void;
+}) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const [hasOverflow, setHasOverflow] = useState(false);
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const measure = () => setHasOverflow(list.scrollHeight > list.clientHeight + 1);
+    measure();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    observer?.observe(list);
+    return () => observer?.disconnect();
+  }, [instances.length]);
+
+  return <div className={`tofu-entry-group${hasOverflow ? " has-overflow" : ""}`} role="group" aria-label={`${piko.name} instances`}>
+    <span className="tofu-entry-title">{piko.name} instances · {instances.length}</span>
+    <div className="tofu-entry-list" ref={listRef}>{instances.map((tofu) => <TofuEntryCard key={tofu.id} piko={piko} tofu={tofu} onOpen={onOpen} onPlay={onPlay} />)}</div>
+    {hasOverflow && <button type="button" className="tofu-entry-more" onClick={() => onShowAll(piko)} aria-label={`Show all ${instances.length} ${piko.name} instances`}>
+      Show all {instances.length} <ChevronRight size={14} />
+    </button>}
+  </div>;
+}
 import type { LibrarySort } from "../state/useLibrary";
 
 const viewIcons: Record<LibraryViewMode, typeof LayoutGrid> = { grid: LayoutGrid, compact: Grid3x3, list: List, shelves: Rows3, large: Maximize2 };
@@ -108,10 +136,7 @@ export function LibraryView() {
       selecting={selecting} checked={checked.has(piko.id)} tabStop={grid.tabId === piko.id}
       onOpen={openGame} onToggleFavorite={toggleFavorite} onToggleChecked={toggleChecked} onMenu={openMenu} />;
     if (!instances) return card;
-    return [card, <div className="tofu-entry-group" key={`${piko.id}:instances`} role="group" aria-label={`${piko.name} instances`}>
-      <span className="tofu-entry-title">{piko.name} instances · {instances.length}</span>
-      <div className="tofu-entry-list">{instances.map((tofu) => <TofuEntryCard key={tofu.id} piko={piko} tofu={tofu} onOpen={openInstance} onPlay={playInstance} />)}</div>
-    </div>];
+    return [card, <MinecraftInstancesGroup key={`${piko.id}:instances`} piko={piko} instances={instances} onOpen={openInstance} onPlay={playInstance} onShowAll={openGame} />];
   };
   const toggleChecked = useCallback((gameId: string) => setChecked((current) => { const next = new Set(current); if (!next.delete(gameId)) next.add(gameId); return next; }), []);
   const openMenu = useCallback((gameId: string, x: number, y: number) => setMenu({ gameId, x, y }), []);
