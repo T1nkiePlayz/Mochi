@@ -18,11 +18,33 @@ fn extension_of(path: &Path) -> String { path.extension().and_then(|value| value
 fn write_atomic(target: &Path, content: &str) -> Result<(), String> {
     if content.len() as u64 > MAX_BYTES { return Err("The backup is too large to save.".into()); }
     if target.is_dir() { return Err("Choose a file name, not a folder.".into()); }
-    let mut temp = target.to_path_buf().into_os_string();
-    temp.push(".part");
-    let temp = PathBuf::from(temp);
-    fs::write(&temp, content).map_err(|error| format!("Could not save the backup: {error}"))?;
-    fs::rename(&temp, target).map_err(|error| { let _ = fs::remove_file(&temp); format!("Could not save the backup: {error}") })
+    let temp = temp_path(target);
+    write_atomic_to(target, content, &temp)
+}
+
+static TEMP_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+fn temp_path(target: &Path) -> PathBuf {
+    let mut temp = target.as_os_str().to_os_string();
+    temp.push(format!(".part-{}-{}", std::process::id(), TEMP_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed)));
+    PathBuf::from(temp)
+}
+
+/// Exclusive creation prevents an attacker-controlled symlink from redirecting a backup write.
+fn write_atomic_to(target: &Path, content: &str, temp: &Path) -> Result<(), String> {
+    use std::io::Write;
+    let mut file = fs::OpenOptions::new().write(true).create_new(true).open(temp)
+        .map_err(|error| format!("Could not save the backup: {error}"))?;
+    if let Err(error) = file.write_all(content.as_bytes()) {
+        drop(file);
+        let _ = fs::remove_file(temp);
+        return Err(format!("Could not save the backup: {error}"));
+    }
+    drop(file);
+    fs::rename(temp, target).map_err(|error| {
+        let _ = fs::remove_file(temp);
+        format!("Could not save the backup: {error}")
+    })
 }
 
 pub(crate) fn write_backup(path: &Path, content: &str) -> Result<PathBuf, String> {
@@ -115,6 +137,23 @@ mod tests {
         }
         assert_eq!(scheduled_files(&dir).len(), 2);
         assert!(dir.join("my-own.mochibackup").exists());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn refuses_a_precreated_symlink_as_the_temporary_file() {
+        use std::os::unix::fs::symlink;
+        let dir = temp("symlink-temp");
+        let target = dir.join("export.mochibackup");
+        let victim = dir.join("victim.txt");
+        let temp = dir.join("export.mochibackup.part");
+        fs::write(&victim, "keep me").unwrap();
+        symlink(&victim, &temp).unwrap();
+
+        assert!(write_atomic_to(&target, "overwrite", &temp).is_err());
+        assert_eq!(fs::read_to_string(&victim).unwrap(), "keep me");
+        assert!(fs::symlink_metadata(&temp).unwrap().file_type().is_symlink());
         let _ = fs::remove_dir_all(&dir);
     }
 
