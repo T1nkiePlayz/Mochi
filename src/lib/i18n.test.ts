@@ -105,6 +105,7 @@ describe("shared UI translations", () => {
     expect(translate("Add a Piko", "de")).toBe("Piko hinzufügen");
     expect(translate("Local-first by design", "es")).toBe("Diseñado para priorizar el uso local");
     expect(translate("Cloud sync active", "de")).toBe("Cloud-Synchronisierung aktiv");
+    expect(translate("No games match “{query}”.", "fr")).toBe("Aucun jeu ne correspond à « {query} ».");
   });
 
   it("falls back to the original text for unknown messages and unsupported locales", () => {
