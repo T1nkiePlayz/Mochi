@@ -33,7 +33,7 @@ pub mod icons;
 pub mod launchers;
 pub mod mccopy;
 pub mod prism;
-mod vdf;
+pub(crate) mod vdf;
 
 /// Steam install folders for this OS (used to find the signed-in account).
 pub fn steam_install_roots(home: &Path) -> Vec<PathBuf> { os::steam_roots(home) }
