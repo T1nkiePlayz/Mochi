@@ -8,10 +8,12 @@ import { resolveIgdbImage } from "../lib/metadata";
 import type { LaunchMethodId } from "../lib/platform";
 import { useApp } from "../state/AppContext";
 import { cssUrl } from "../lib/metadata/merge";
+import { useTranslation } from "../lib/useTranslation";
 
-const methodLabel = (method: string) => method === "file" ? "Choose file" : method === "app" ? "macOS application" : method === "flatpak" ? "Flatpak" : "Custom";
+const methodLabel = (method: string, t: (message: string) => string) => method === "file" ? t("Choose file") : method === "app" ? t("macOS application") : method === "flatpak" ? t("Flatpak") : t("Custom");
 
 export function AddGameModals() {
+  const t = useTranslation();
   const { add, platformCapabilities } = useApp();
   const [searchText, setSearchText] = useState("");
   useEffect(() => { if (add.step === "igdb") setSearchText(add.pendingGame?.name ?? ""); }, [add.step]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -36,7 +38,7 @@ export function AddGameModals() {
             <label>Platform category<input value={add.formCategory} onChange={(event) => add.setFormCategory(event.target.value)} placeholder="e.g. Steam, Heroic, Custom" /></label>
             <div className="editor-field"><span className="editor-field-label">Launch method</span>
               <Select<LaunchMethodId> label="Launch method" value={add.launchType} onChange={add.setLaunchType}
-                options={(platformCapabilities?.launchMethods ?? ["file", "flatpak", "custom"]).map((method) => ({ value: method as LaunchMethodId, label: methodLabel(method) }))} />
+                options={(platformCapabilities?.launchMethods ?? ["file", "flatpak", "custom"]).map((method) => ({ value: method as LaunchMethodId, label: methodLabel(method, t) }))} />
             </div>
             {(add.launchType === "file" || add.launchType === "app") && <div className="launch-target-picker"><button type="button" className="secondary-button file-picker-button" onClick={add.chooseFile}>{add.launchType === "app" ? "Choose macOS application" : "Choose executable / launcher file"}</button></div>}
             {add.launchType === "flatpak" && <div className="flatpak-input-row"><button type="button" className="secondary-button" onClick={add.loadFlatpaks} disabled={add.flatpakBusy}>{add.flatpakBusy ? <><MochiIcon name="refresh" fallback={RefreshCw} size={15} className="spin" /> Loading...</> : <><MochiIcon name="installed" fallback={Grid2X2} size={15} /> Choose installed Flatpak</>}</button><input value={add.launchTarget} onChange={(event) => add.setLaunchTarget(event.target.value)} placeholder="org.company.game" autoComplete="off" aria-label="Flatpak ID" /></div>}
