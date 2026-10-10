@@ -14,7 +14,7 @@ const MAX_THUMBS_PER_CALL: usize = 60;
 const THUMB_WIDTH: u32 = 480;
 const MAX_SOURCE_BYTES: u64 = 80 * 1024 * 1024;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ScanRequest {
     pub steam_app_id: Option<u32>,
@@ -24,7 +24,6 @@ pub struct ScanRequest {
     /// Folders with one sub-folder per game, named like the game.
     pub shared_folders: Vec<String>,
 }
-impl Default for ScanRequest { fn default() -> Self { Self { steam_app_id: None, game_name: String::new(), game_folders: vec![], shared_folders: vec![] } } }
 
 #[derive(Debug, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
