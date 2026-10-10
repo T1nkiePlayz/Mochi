@@ -31,6 +31,16 @@ export const confirmedAfterPull = (cloud: Pick<Piko, "id">[]): Set<string> => ne
 /** After clearing the cloud nothing is confirmed. */
 export const confirmedAfterClear = (): Set<string> => new Set();
 
+/** HTTP client errors usually need a code/configuration fix, not an automatic retry loop. */
+export function isRetryableSyncError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return true;
+  const status = "status" in error ? (error as { status?: unknown }).status : undefined;
+  if (typeof status !== "number") return true;
+  if (status === 408 || status === 425 || status === 429) return true;
+  if (status >= 400 && status < 500) return false;
+  return true;
+}
+
 export function cloudStatusFor(piko: Pick<Piko, "id" | "name">, ctx: { enabled: boolean; confirmed: ReadonlySet<string>; syncState: string }): CloudStatus {
   if (!ctx.enabled || !isCloudEligible(piko)) return "none";
   if (ctx.confirmed.has(piko.id)) return "synced";
@@ -73,7 +83,7 @@ export function createSyncScheduler(run: () => Promise<void>, opts: { debounceMs
     if (running) { dirty = true; return; }
     running = true; dirty = false; firstDirty = 0;
     try { await run(); failures = 0; }
-    catch { failures += 1; if (!cancelled && !dirty) arm(Math.min(retryMaxMs, retryBaseMs * 2 ** (failures - 1))); }
+    catch (error) { failures += 1; if (!cancelled && !dirty && shouldRetry(error)) arm(Math.min(retryMaxMs, retryBaseMs * 2 ** (failures - 1))); }
     finally { running = false; }
     if (!cancelled && dirty && timer === undefined) { firstDirty = Date.now(); arm(debounceMs); }
   }
