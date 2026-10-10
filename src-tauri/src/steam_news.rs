@@ -77,7 +77,8 @@ async fn fetch(appid: u32) -> Result<String, (bool, String)> {
         .redirect(reqwest::redirect::Policy::none())
         .connect_timeout(Duration::from_secs(8)).timeout(Duration::from_secs(20)).build(), "Unable to prepare the Steam request")
         .map_err(|m| (false, m))?;
-    let url = format!("https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid={appid}&count=3&maxlength=300&format=json");
+    let language = language.as_deref().filter(|value| matches!(*value, "arabic" | "bulgarian" | "schinese" | "tchinese" | "czech" | "danish" | "dutch" | "english" | "finnish" | "french" | "german" | "greek" | "hungarian" | "indonesian" | "italian" | "japanese" | "koreana" | "norwegian" | "polish" | "portuguese" | "romanian" | "russian" | "spanish" | "swedish" | "thai" | "turkish" | "ukrainian" | "vietnamese")).unwrap_or("english");
+    let url = format!("https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid={appid}&count=3&maxlength=300&language={language}&format=json");
     let mut response = client.get(url).send().await.map_err(|error| {
         if error.is_connect() || error.is_timeout() { (true, "Steam could not be reached.".to_string()) } else { (false, format!("Steam request failed: {error}")) }
     })?;
@@ -91,7 +92,7 @@ async fn fetch(appid: u32) -> Result<String, (bool, String)> {
 
 /// Latest news posts for a Steam app. Never rejects; problems come back as `status`/`message`.
 #[tauri::command]
-pub async fn get_steam_news(appid: u32) -> SteamNewsResult {
+pub async fn get_steam_news(appid: u32, language: Option<String>) -> SteamNewsResult {
     if appid == 0 { return SteamNewsResult { status: "error", items: vec![], message: Some("Invalid Steam app id.".into()) }; }
     match fetch(appid).await.and_then(|body| parse_news(&body).map_err(|m| (false, m))) {
         Ok(items) => SteamNewsResult { status: "ok", items, message: None },
