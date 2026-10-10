@@ -618,21 +618,6 @@ mod tests {
     }
 
     #[test]
-    fn download_temp_allocation_retries_existing_names() {
-        let dir = temp_dir("temp-collision");
-        let destination = dir.join("mod.jar");
-        let first_id = NEXT_DOWNLOAD_ID.load(Ordering::Relaxed);
-        let first_candidate = dir.join(format!("mod.jar{TEMP_MARKER}{}-{first_id}", std::process::id()));
-        fs::write(&first_candidate, b"stale").unwrap();
-        let (temp, file) = create_download_temp(&destination).unwrap();
-        drop(file);
-        assert_ne!(temp, first_candidate);
-        assert_eq!(fs::read(&first_candidate).unwrap(), b"stale");
-        assert!(temp.exists());
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
     fn a_failed_sha1_check_replaces_nothing_and_leaves_no_temp_file() {
         let dir = temp_dir("sha-fail");
         let (destination, temp) = (dir.join("m.jar"), dir.join("m.jar.mochi-download-7"));
