@@ -105,6 +105,23 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn refuses_a_precreated_symlink_as_the_temporary_file() {
+        use std::os::unix::fs::symlink;
+        let dir = temp_dir("symlink-temp");
+        let target = dir.join("export.mochipack");
+        let victim = dir.join("victim.txt");
+        let temp = dir.join("export.mochipack.part");
+        fs::write(&victim, "keep me").unwrap();
+        symlink(&victim, &temp).unwrap();
+
+        assert!(write_atomic_to(&target, "overwrite", &temp, "pack").is_err());
+        assert_eq!(fs::read_to_string(&victim).unwrap(), "keep me");
+        assert!(fs::symlink_metadata(&temp).unwrap().file_type().is_symlink());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
     #[test]
     fn a_name_that_is_a_folder_is_refused() {
         let dir = temp_dir("folder");
