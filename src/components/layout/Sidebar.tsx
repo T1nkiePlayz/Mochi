@@ -8,7 +8,7 @@ import { shallowEqual, useAppGetter, useAppSelector, type NavId } from "../../st
 import { usernameOf } from "../../state/useAccount";
 import { useExperimentalStatus } from "../../state/useExperimental";
 import { navLabel } from "../../lib/nav";
-import { useTranslation } from "../../lib/i18n";
+import { useTranslation } from "../../lib/useTranslation";
 import { useShellFit } from "../../lib/useShellFit";
 import { useDismiss } from "../ui/useDismiss";
 import { useAnchoredMenu } from "./useAnchoredMenu";
