@@ -14,6 +14,7 @@ import { DiscoveryImage } from "./DiscoveryImage";
 import { Markdown } from "./Markdown";
 import { formatDate, getPrimaryCreator, projectTypeLabel } from "./utils";
 import { Checkbox } from "../ui/Checkbox";
+import { useTranslation } from "../../lib/useTranslation";
 
 type Props = {
   project: ModrinthProjectDetails;
@@ -30,6 +31,7 @@ const channelLabel = { release: "Release", beta: "Beta", alpha: "Alpha" } as con
 const channelOptions = [{ value: "", label: "Any release type" }, { value: "release", label: "Release" }, { value: "beta", label: "Beta" }, { value: "alpha", label: "Alpha" }];
 
 function VersionRow({ version, fit, onDownload }: { version: ModrinthVersion; fit?: { status: "compatible" | "maybe" | "incompatible"; reason?: string }; onDownload: () => void }) {
+  const t = useTranslation();
   const [open, setOpen] = useState(false);
   const channel = version.version_type ?? "release";
   const games = collapseList(version.game_versions, 3);
@@ -54,7 +56,7 @@ function VersionRow({ version, fit, onDownload }: { version: ModrinthVersion; fi
       {version.game_versions.length > 3 && <p><strong>Game versions</strong> {version.game_versions.join(", ")}</p>}
       {version.changelog ? <div className="version-changelog"><Markdown source={version.changelog} /></div> : <p className="muted">No changelog was provided.</p>}
       <div className="project-file-list">{version.files.map((file) => <div key={file.filename}><span>{file.filename}</span><small>{formatBytes(file.size)}{file.primary ? " · Primary" : ""}</small></div>)}</div>
-      {version.dependencies.length > 0 && <p className="muted">{version.dependencies.length} dependenc{version.dependencies.length === 1 ? "y" : "ies"} listed on Modrinth. Mochi offers to install the required ones before the mod.</p>}
+      {version.dependencies.length > 0 && <p className="muted">{t(version.dependencies.length === 1 ? "1 dependency listed on Modrinth. Mochi offers to install the required ones before the mod." : "{count} dependencies listed on Modrinth. Mochi offers to install the required ones before the mod.").replace("{count}", String(version.dependencies.length))}</p>}
     </div>}
   </div>;
 }
