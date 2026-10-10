@@ -38,6 +38,7 @@ describe("eligibility and confirmed sets", () => {
       message: 'new row violates check constraint "pikos_source_id_check"',
     })).toBe(false);
     expect(isRetryableSyncError({ status: 401, code: "PGRST301", message: "JWT expired" })).toBe(false);
+    expect(isRetryableSyncError({ code: "PGRST301", message: "JWT expired" })).toBe(false);
     expect(isRetryableSyncError({ status: 408, code: "PGRST000", message: "Request timed out" })).toBe(true);
     expect(isRetryableSyncError({ status: 429, code: "PGRST003", message: "Too many requests" })).toBe(true);
     expect(isRetryableSyncError({ status: 503, code: "PGRST000", message: "Service unavailable" })).toBe(true);
@@ -89,6 +90,18 @@ describe("createSyncScheduler", () => {
     expect(run).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(60000);
     expect(run).toHaveBeenCalledTimes(1);
+  });
+  it("continues retrying transient fetch failures with backoff", async () => {
+    let fail = true;
+    const run = vi.fn(async () => {
+      if (fail) throw new TypeError("Failed to fetch");
+      fail = false;
+    });
+    const s = createSyncScheduler(run, { debounceMs: 100, retryBaseMs: 1000, shouldRetry: isRetryableSyncError });
+    s.notify(); await vi.advanceTimersByTimeAsync(100);
+    expect(run).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(run).toHaveBeenCalledTimes(2);
   });
   it("never overlaps runs and re-runs for changes made mid-flight; cancel stops everything", async () => {
     let release!: () => void; let active = 0; let maxActive = 0;
