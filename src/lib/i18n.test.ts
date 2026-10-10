@@ -45,7 +45,7 @@ describe("shared UI translations", () => {
       return part;
     }).filter(Boolean).join(" ").trim();
     const found = new Map<string, string>();
-    const untranslatedByDesign = new Set(["Mochi", "Mochi v", "Mochi Cloud", "GitHub", "Google", "CheapShark", "Epic Games Store", "Steam", "Heroic", "Prism", "Flatpak", "IGDB", "macOS", "U", "you@example.com", "org.company.game"]);
+    const untranslatedByDesign = new Set(["Mochi", "Mochi v", "Mochi Cloud", "GitHub", "Google", "CheapShark", "Epic Games Store", "Steam", "Heroic", "Prism", "Flatpak", "IGDB", "macOS", "USD", "Steam (US)", "U", "you@example.com", "org.company.game"]);
     const collect = (node: ts.Node, skipText = false) => {
       if (ts.isJsxElement(node)) {
         const tag = node.openingElement.tagName.getText();
