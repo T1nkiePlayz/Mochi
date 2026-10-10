@@ -71,13 +71,13 @@ pub fn parse_news(body: &str) -> Result<Vec<SteamNewsItem>, String> {
     }).take(MAX_ITEMS).collect())
 }
 
-async fn fetch(appid: u32) -> Result<String, (bool, String)> {
+async fn fetch(appid: u32, language: &str) -> Result<String, (bool, String)> {
     static CLIENT: http::SharedClient = http::SharedClient::new();
     let client = CLIENT.get(|| http::builder().user_agent(USER_AGENT)
         .redirect(reqwest::redirect::Policy::none())
         .connect_timeout(Duration::from_secs(8)).timeout(Duration::from_secs(20)).build(), "Unable to prepare the Steam request")
         .map_err(|m| (false, m))?;
-    let url = format!("https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid={appid}&count=3&maxlength=300&format=json");
+    let url = format!("https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid={appid}&count=3&maxlength=300&language={language}&format=json");
     let mut response = client.get(url).send().await.map_err(|error| {
         if error.is_connect() || error.is_timeout() { (true, "Steam could not be reached.".to_string()) } else { (false, format!("Steam request failed: {error}")) }
     })?;
@@ -89,11 +89,23 @@ async fn fetch(appid: u32) -> Result<String, (bool, String)> {
     String::from_utf8(body).map_err(|_| (false, "Steam returned non-text data.".to_string()))
 }
 
+const SUPPORTED_LANGUAGES: &[&str] = &[
+    "arabic", "brazilian", "bulgarian", "schinese", "tchinese", "czech", "danish", "dutch",
+    "english", "finnish", "french", "german", "greek", "hungarian", "indonesian", "italian",
+    "japanese", "koreana", "norwegian", "polish", "portuguese", "romanian", "russian",
+    "spanish", "swedish", "thai", "turkish", "ukrainian", "vietnamese",
+];
+
+fn supported_language(language: Option<&str>) -> &str {
+    language.filter(|value| SUPPORTED_LANGUAGES.contains(value)).unwrap_or("english")
+}
+
 /// Latest news posts for a Steam app. Never rejects; problems come back as `status`/`message`.
 #[tauri::command]
-pub async fn get_steam_news(appid: u32) -> SteamNewsResult {
+pub async fn get_steam_news(appid: u32, language: Option<String>) -> SteamNewsResult {
     if appid == 0 { return SteamNewsResult { status: "error", items: vec![], message: Some("Invalid Steam app id.".into()) }; }
-    match fetch(appid).await.and_then(|body| parse_news(&body).map_err(|m| (false, m))) {
+    let language = supported_language(language.as_deref());
+    match fetch(appid, language).await.and_then(|body| parse_news(&body).map_err(|m| (false, m))) {
         Ok(items) => SteamNewsResult { status: "ok", items, message: None },
         Err((offline, message)) => SteamNewsResult { status: if offline { "offline" } else { "error" }, items: vec![], message: Some(message) },
     }
@@ -102,6 +114,14 @@ pub async fn get_steam_news(appid: u32) -> SteamNewsResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn validates_news_language_and_defaults_to_english() {
+        assert_eq!(supported_language(Some("brazilian")), "brazilian");
+        assert_eq!(supported_language(Some("french")), "french");
+        assert_eq!(supported_language(Some("fr-FR")), "english");
+        assert_eq!(supported_language(None), "english");
+    }
 
     #[test]
     fn parses_news_items() {

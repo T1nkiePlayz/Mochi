@@ -132,7 +132,8 @@ html[data-input="controller"] .bp-root button:focus { outline: 3px solid var(--m
 .bp-shelf-row { display: flex; gap: 1.1rem; overflow-x: auto; padding: .8rem var(--bp-gutter) 1.2rem; scroll-padding-inline: var(--bp-gutter); scrollbar-width: none; }
 .bp-shelf-row::-webkit-scrollbar { display: none; }
 .bp-card { position: relative; flex: 0 0 var(--bp-card-w); aspect-ratio: var(--bp-card-ratio, 3 / 4); padding: 0; overflow: hidden; border: 1px solid var(--mochi-card-border); border-radius: var(--mochi-card-radius, var(--mochi-radius-lg)); background: var(--mochi-card-background); box-shadow: var(--mochi-shadow-card); text-align: left; transition: transform .18s cubic-bezier(.2, .8, .3, 1.2), box-shadow .18s ease, border-color .18s ease; scroll-margin-inline: var(--bp-gutter); }
-.bp-card:hover, .bp-card:focus-visible { transform: scale(1.09) translateY(-4px); z-index: 2; border-color: var(--mochi-accent-strong); box-shadow: var(--mochi-shadow), var(--mochi-focus-ring); }
+/* Hint only the compositor-friendly property; promoting box-shadow as well can add expensive paint work. */
+.bp-card:hover, .bp-card:focus-visible { will-change: transform; transform: scale(1.09) translateY(-4px); z-index: 2; border-color: var(--mochi-accent-strong); box-shadow: var(--mochi-shadow), var(--mochi-focus-ring); }
 .bp-art { position: absolute; inset: 0; background: var(--mochi-cover-placeholder) center / cover no-repeat; image-rendering: var(--mochi-image-rendering, auto); display: grid; place-items: center; }
 .bp-art-initial { font: 800 3.2rem var(--mochi-font-display, var(--mochi-font-body)); color: var(--mochi-text-faint); }
 .bp-card-shade { position: absolute; inset: 0; background: var(--mochi-hero-overlay); opacity: .9; }

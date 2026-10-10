@@ -7,6 +7,8 @@ import { applyKindOverride, applyKindOverrides, readOverrides, setOverride, over
 import { filterItems, type PickerFilter } from "./filterItems";
 import { MinecraftModeChooser } from "./MinecraftModeChooser";
 import type { MinecraftMode } from "../../lib/minecraftCopy";
+import type { Piko } from "../../models";
+import { excludeLibraryImports } from "../../lib/importFiltering";
 import { detectImportSources, scanImportGames, type DetectedImportSource, type ImportSourceId, type ImportedGame } from "../../lib/sources";
 
 // The "Minecraft instances" source tile shows the game logo rather than the Prism launcher mark.
@@ -25,6 +27,8 @@ type Props = {
   /** Extra controls under the source list (e.g. "Platform not showing up?"). */
   sidebarExtra?: ReactNode;
   emptyHint?: ReactNode;
+  /** Existing library entries to hide from an add-to-library scan. */
+  existingLibrary?: Piko[];
   /** "launchers" lists, counts and selects only game launchers. */
   filter?: PickerFilter;
 };
@@ -46,7 +50,7 @@ function TriCheckbox({ checked, indeterminate, label, onChange }: { checked: boo
   return <input ref={ref} type="checkbox" className="sgp-check" checked={checked} aria-label={label} onChange={onChange} />;
 }
 
-export function SourceGamePicker({ onSelectionChange, renderAction, sources: fixedSources, scan, sidebarExtra, emptyHint, filter = "all" }: Props) {
+export function SourceGamePicker({ onSelectionChange, renderAction, sources: fixedSources, scan, sidebarExtra, emptyHint, existingLibrary = [], filter = "all" }: Props) {
   const [detected, setDetected] = useState<DetectedImportSource[] | null>(fixedSources ?? null);
   const [detectError, setDetectError] = useState(false);
   const [data, setData] = useState<Record<string, SourceState>>({});
@@ -91,7 +95,7 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
         setData((current) => ({ ...current, [source.id]: { status: "ready", games } }));
         if (!initialised.current.has(source.id)) {
           initialised.current.add(source.id);
-          setSelected((current) => { const next = new Set(current); games.forEach((game) => next.add(keyOf(game))); return next; });
+          setSelected((current) => { const next = new Set(current); excludeLibraryImports(games, existingLibrary).forEach((game) => next.add(keyOf(game))); return next; });
         }
       }).catch(() => { if (!cancelled) setData((current) => ({ ...current, [source.id]: { status: "error", games: [] } })); });
     });
@@ -104,26 +108,37 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
     scanSource(id).then((games) => {
       setData((current) => ({ ...current, [id]: { status: "ready", games } }));
       initialised.current.add(id);
-      setSelected((current) => { const next = new Set(current); games.forEach((game) => next.add(keyOf(game))); return next; });
+      setSelected((current) => { const next = new Set(current); excludeLibraryImports(games, existingLibrary).forEach((game) => next.add(keyOf(game))); return next; });
     }).catch(() => setData((current) => ({ ...current, [id]: { status: "error", games: [] } })));
   };
+
+  // Re-filter against the live library as well as at selection time: a cloud sync or another library action can add a game while this modal is open.
+  const visibleData = useMemo(() => Object.fromEntries(Object.entries(data).map(([id, state]) => [id, { ...state, games: excludeLibraryImports(state.games, existingLibrary) }])), [data, existingLibrary]);
+  const visibleDetected = useMemo(() => (detected ?? []).filter((source) => {
+    const state = visibleData[source.id];
+    return state?.status !== "ready" || state.games.length > 0;
+  }), [detected, visibleData]);
 
   const selection = useMemo<PickerSelection>(() => {
     const games: ImportedGame[] = [];
     const ids: ImportSourceId[] = [];
-    for (const source of detected ?? []) {
-      const picked = (data[source.id]?.games ?? []).filter((game) => selected.has(keyOf(game)));
+    for (const source of visibleDetected) {
+      const picked = (visibleData[source.id]?.games ?? []).filter((game) => selected.has(keyOf(game)));
       if (picked.length) { games.push(...picked); ids.push(source.id); }
     }
     return { games, sources: ids, minecraftMode };
-  }, [detected, data, selected, minecraftMode]);
+  }, [visibleDetected, visibleData, selected, minecraftMode]);
 
   const onChangeRef = useRef(onSelectionChange);
   onChangeRef.current = onSelectionChange;
   useEffect(() => { onChangeRef.current?.(selection); }, [selection]);
 
-  const current = active ? data[active] : undefined;
-  const activeSource = detected?.find((source) => source.id === active);
+  const current = active ? visibleData[active] : undefined;
+  const activeSource = visibleDetected.find((source) => source.id === active);
+
+  useEffect(() => {
+    if (active && !visibleDetected.some((source) => source.id === active)) setActive(visibleDetected[0]?.id ?? null);
+  }, [active, visibleDetected]);
 
   const rows = useMemo<Row[]>(() => {
     const needle = query.trim().toLowerCase();
@@ -202,7 +217,7 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
     return next;
   });
 
-  const gamesOf = (id: ImportSourceId) => data[id]?.games ?? [];
+  const gamesOf = (id: ImportSourceId) => visibleData[id]?.games ?? [];
   const toggleSource = (id: ImportSourceId) => setSelected((currentSet) => {
     const next = new Set(currentSet);
     const games = gamesOf(id);
@@ -256,7 +271,7 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
     );
   }
 
-  if (!detected.length) {
+  if (!visibleDetected.length) {
     return (
       <div className="sgp sgp-empty-all">
         <div className="sgp-empty" role={detectError ? "alert" : "status"}>
@@ -274,8 +289,8 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
   return (
     <div className="sgp">
       <div className="sgp-sources" role="list" aria-label="Detected game sources">
-        {detected.map((source) => {
-          const state = data[source.id];
+        {visibleDetected.map((source) => {
+          const state = visibleData[source.id];
           const games = state?.games ?? [];
           const picked = games.filter((game) => selected.has(keyOf(game))).length;
           const gameCount = games.filter((game) => game.kind !== "launcher").length;

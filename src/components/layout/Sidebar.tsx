@@ -31,9 +31,9 @@ function moveInMenu(event: KeyboardEvent<HTMLElement>) {
 }
 
 export const Sidebar = memo(function Sidebar() {
-  const { user, showAccountMenu, setShowAccountMenu, savedAccounts, openSignIn, activeNav, setActiveNav, multipleAccountsEnabled, showDeals } = useAppSelector((app) => ({
+  const { user, showAccountMenu, setShowAccountMenu, savedAccounts, openSignIn, activeNav, setActiveNav, multipleAccountsEnabled, showDeals, language } = useAppSelector((app) => ({
     user: app.account.user, showAccountMenu: app.account.showAccountMenu, setShowAccountMenu: app.account.setShowAccountMenu, savedAccounts: app.account.savedAccounts,
-    openSignIn: app.account.openSignIn, activeNav: app.activeNav, setActiveNav: app.setActiveNav, multipleAccountsEnabled: app.storage.multipleAccountsEnabled, showDeals: app.behavior.showDeals,
+    openSignIn: app.account.openSignIn, activeNav: app.activeNav, setActiveNav: app.setActiveNav, multipleAccountsEnabled: app.storage.multipleAccountsEnabled, showDeals: app.behavior.showDeals, language: app.behavior.language,
   }), shallowEqual);
   // switchAccount/signOut change identity every render, so handlers read the latest at click time.
   const getApp = useAppGetter();
@@ -61,16 +61,16 @@ export const Sidebar = memo(function Sidebar() {
     </div>
     <nav className="primary-nav" aria-label="Main navigation">
       {navItems.filter(({ id }) => id !== "Deals" || showDeals).map(({ id, icon: Icon, iconName }) => (
-        <button className={`nav-item ${activeNav === id ? "active" : ""}`} key={id} title={navLabel(id)} aria-label={navLabel(id)} aria-current={activeNav === id ? "page" : undefined} onClick={() => setActiveNav(id)}>
+        <button className={`nav-item ${activeNav === id ? "active" : ""}`} key={id} title={navLabel(id, language)} aria-label={navLabel(id, language)} aria-current={activeNav === id ? "page" : undefined} onClick={() => setActiveNav(id)}>
           <MochiIcon name={iconName} fallback={Icon} size={17} strokeWidth={1.8} />
-          <span>{navLabel(id)}</span>
+          <span>{navLabel(id, language)}</span>
         </button>
       ))}
     </nav>
     <div className="sidebar-bottom">
-      <button className={`nav-item ${activeNav === "Settings" ? "active" : ""}`} title="Settings" aria-label="Settings" aria-current={activeNav === "Settings" ? "page" : undefined} onClick={() => setActiveNav("Settings")}>
+      <button className={`nav-item ${activeNav === "Settings" ? "active" : ""}`} title={navLabel("Settings", language)} aria-label={navLabel("Settings", language)} aria-current={activeNav === "Settings" ? "page" : undefined} onClick={() => setActiveNav("Settings")}>
         <MochiIcon name="settings" fallback={Settings} size={17} strokeWidth={1.8} />
-        <span>Settings</span>
+        <span>{navLabel("Settings", language)}</span>
         {unseenCount > 0 && <span className="nav-new-dot" role="img" aria-label="New experimental features" />}
       </button>
     </div>

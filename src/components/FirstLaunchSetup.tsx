@@ -7,11 +7,14 @@ import type { ImportSourceId, ImportedGame } from "../lib/sources";
 import type { PickerSelection } from "./import/SourceGamePicker";
 import type { MinecraftMode } from "../lib/minecraftCopy";
 import { WelcomeStep } from "./setup/WelcomeStep";
+import { LanguageStep } from "./setup/LanguageStep";
+import type { LauncherLanguage } from "../lib/languages";
 import { ThemeStep } from "./setup/ThemeStep";
 import { AccessibilityStep } from "./setup/AccessibilityStep";
 import { AccountStep } from "./setup/AccountStep";
 import { ServicesStep } from "./setup/ServicesStep";
 import { ImportStep } from "./setup/ImportStep";
+import { CloudImportStep } from "./setup/CloudImportStep";
 
 type SetupProps = {
   igdbClientId: string;
@@ -20,6 +23,8 @@ type SetupProps = {
   setIgdbClientSecret: (value: string) => void;
   onSignIn: () => void;
   user: User | null;
+  language: string;
+  setLanguage: (language: LauncherLanguage) => void;
   onAddUser?: () => void;
   credentialStatus: Record<ProviderCredential, boolean>;
   credentialStatusLoaded: boolean;
@@ -33,11 +38,19 @@ type SetupProps = {
   saveCredential: (provider: ProviderCredential) => Promise<void>;
   credentialBusy: ProviderCredential | null;
   onFinish: (games: ImportedGame[], sources: ImportSourceId[], minecraftMode: MinecraftMode) => void;
+  cloudSyncEnabled: boolean;
+  cloudDataAccessAllowed: boolean;
+  cloudSettingsReady: boolean;
+  cloudSyncState: string;
+  cloudImportBusy: boolean;
+  cloudImportReady: boolean;
+  cloudImportMessage: string;
+  onImportCloudData: () => Promise<void>;
 };
 
-const steps = ["welcome", "theme", "accessibility", "account", "services", "imports"] as const;
+const steps = ["welcome", "language", "theme", "accessibility", "account", "cloud", "services", "imports"] as const;
 type Step = typeof steps[number];
-const stepLabels: Record<Step, string> = { welcome: "Welcome", theme: "Theme", accessibility: "Accessibility", account: "Account", services: "Game services", imports: "Find your games" };
+const stepLabels: Record<Step, string> = { welcome: "Welcome", language: "Language", theme: "Theme", accessibility: "Accessibility", account: "Account", cloud: "Cloud library", services: "Game services", imports: "Find your games" };
 
 export function FirstLaunchSetup(props: SetupProps) {
   const [step, setStep] = useState<Step>("welcome");
@@ -48,7 +61,7 @@ export function FirstLaunchSetup(props: SetupProps) {
   // The services step is only useful when signed in, so signed-out users skip straight past it.
   const hop = (direction: 1 | -1) => {
     let next = index + direction;
-    if (steps[next] === "services" && !props.user) next += direction;
+    while (steps[next] && !props.user && (steps[next] === "cloud" || steps[next] === "services")) next += direction;
     if (next >= 0 && next < steps.length) setStep(steps[next]);
   };
 
@@ -65,9 +78,11 @@ export function FirstLaunchSetup(props: SetupProps) {
         </div>
         <div className="setup-body" key={step}>
           {step === "welcome" && <WelcomeStep />}
+          {step === "language" && <LanguageStep language={props.language} setLanguage={props.setLanguage} />}
           {step === "theme" && <ThemeStep themes={props.themes} theme={props.theme} setTheme={props.setTheme} />}
           {step === "accessibility" && <AccessibilityStep />}
           {step === "account" && <AccountStep user={props.user} onSignIn={props.onSignIn} onAddUser={props.onAddUser} />}
+          {step === "cloud" && <CloudImportStep busy={props.cloudImportBusy} ready={props.cloudImportReady} settingsReady={props.cloudSettingsReady} accessAllowed={props.cloudDataAccessAllowed} message={props.cloudImportMessage} syncEnabled={props.cloudSyncEnabled} syncState={props.cloudSyncState} onImport={props.onImportCloudData} />}
           {step === "services" && <ServicesStep {...props} signedIn={Boolean(props.user)} />}
           {step === "imports" && <ImportStep onSelectionChange={setSelection} />}
         </div>

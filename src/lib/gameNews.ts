@@ -7,8 +7,21 @@ export const NEWS_CYCLE_CAP = 50;
 export const NEWS_MAX_ITEMS = 100;
 export const NEWS_MAX_SEEN = 1500;
 
+/** Converts a UI/OS locale to Steam's language names; a future launcher-language setting can pass its locale here. */
+export function steamNewsLanguage(locale: string): string {
+  const normalized = locale.toLowerCase().replace(/_/g, "-");
+  if (/^zh-(hant|tw|hk|mo)(-|$)/.test(normalized)) return "tchinese";
+  if (/^zh-hans(-|$)/.test(normalized)) return "schinese";
+  if (/^pt-br(-|$)/.test(normalized)) return "brazilian";
+  const code = normalized.split("-", 1)[0];
+  const names: Record<string, string> = { ar: "arabic", bg: "bulgarian", zh: "schinese", cs: "czech", da: "danish", nl: "dutch", en: "english", fi: "finnish", fr: "french", de: "german", el: "greek", hu: "hungarian", id: "indonesian", it: "italian", ja: "japanese", ko: "koreana", no: "norwegian", pl: "polish", pt: "portuguese", ro: "romanian", ru: "russian", es: "spanish", sv: "swedish", th: "thai", tr: "turkish", uk: "ukrainian", vi: "vietnamese" };
+  return names[code] ?? "english";
+}
+
 export type NewsItem = { gid: string; appid: number; game: string; title: string; url: string; feedLabel: string; date: number; summary: string };
 export type NewsState = {
+  /** Steam news language used for this cache; a language change invalidates the old feed. */
+  language: string;
   /** Last time each appid was fetched (ms). */
   checked: Record<string, number>;
   /** Ids already shown or notified (news gids and `mod:` keys), oldest first. */
@@ -18,7 +31,13 @@ export type NewsState = {
   readAt: number;
 };
 
-export const emptyNewsState = (): NewsState => ({ checked: {}, seen: [], items: [], readAt: 0 });
+export const emptyNewsState = (language = "english"): NewsState => ({ language, checked: {}, seen: [], items: [], readAt: 0 });
+
+/** A locale change discards language-specific posts and fetch timestamps, but preserves mod-update dedupe keys. */
+export function resetNewsLanguage(state: NewsState, language: string): NewsState {
+  if (state.language === language) return state;
+  return { ...emptyNewsState(language), seen: state.seen.filter((key) => key.startsWith("mod:")) };
+}
 
 /** Appids due for a fetch: never or >= interval ago (or clock moved back), oldest first, at most `cap`. */
 export function dueApps(appids: readonly number[], checked: Readonly<Record<string, number>>, now: number, interval = NEWS_INTERVAL_MS, cap = NEWS_CYCLE_CAP): number[] {
@@ -80,5 +99,5 @@ export function parseNewsState(raw: unknown): NewsState {
   const checked: Record<string, number> = {};
   if (value.checked && typeof value.checked === "object") for (const [key, at] of Object.entries(value.checked)) if (typeof at === "number" && Number.isFinite(at)) checked[key] = at;
   const items = Array.isArray(value.items) ? value.items.filter((item): item is NewsItem => !!item && typeof item.gid === "string" && typeof item.title === "string" && typeof item.url === "string" && typeof item.appid === "number" && typeof item.date === "number").slice(0, NEWS_MAX_ITEMS) : [];
-  return { checked, seen: Array.isArray(value.seen) ? value.seen.filter((id): id is string => typeof id === "string").slice(-NEWS_MAX_SEEN) : [], items, readAt: typeof value.readAt === "number" ? value.readAt : 0 };
+  return { language: typeof value.language === "string" && /^[a-z-]{2,24}$/.test(value.language) ? value.language : "english", checked, seen: Array.isArray(value.seen) ? value.seen.filter((id): id is string => typeof id === "string").slice(-NEWS_MAX_SEEN) : [], items, readAt: typeof value.readAt === "number" ? value.readAt : 0 };
 }

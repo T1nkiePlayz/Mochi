@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { AppearanceSection } from "./AppearanceSection";
+import { LanguageSection } from "./LanguageSection";
 import { AccessibilitySection } from "./AccessibilitySection";
 import { ProvidersSection } from "./ProvidersSection";
 import { ModSourcesSection } from "./ModSourcesSection";
@@ -25,6 +26,7 @@ import { PluginsSection } from "./PluginsSection";
  */
 export const settingsSections: Array<{ id: string; Section: ComponentType }> = [
   { id: "appearance", Section: AppearanceSection },
+  { id: "language", Section: LanguageSection },
   { id: "accessibility", Section: AccessibilitySection },
   { id: "providers", Section: ProvidersSection },
   { id: "modsources", Section: ModSourcesSection },

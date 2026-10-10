@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cfAllGames, type CfGame } from "../../lib/curseforge";
 import { KNOWN_NEXUS_GAMES, SEED_GAMES, visibleSeedGames } from "../../lib/mods/gameCatalog";
 import { bestNameMatch } from "../../lib/mods/gameMatch";
@@ -15,6 +15,7 @@ export type DiscoverGame = {
   key: string;
   name: string;
   iconUrl?: string;
+  iconFallbackUrls?: string[];
   source: "curseforge" | "nexus";
   cf?: CfGame;
   nexusDomain?: string;
@@ -56,7 +57,8 @@ function readStored(): StoredGame[] {
 }
 
 const sameEntry = (a: StoredGame, b: StoredGame) => a.k === b.k && (a.k === "cf" ? a.id === (b as { id: number }).id : a.domain === (b as { domain: string }).domain);
-const nexusThumbnail = (game?: { id?: string; iconUrl?: string }) => game?.iconUrl ?? (game?.id && /^\d+$/.test(game.id) ? `https://images.nexusmods.com/images/games/v2/${game.id}/thumbnail.jpg` : undefined);
+// Only use artwork URLs actually supplied by Nexus; its GraphQL game IDs are not guaranteed to map to static CDN filenames.
+const nexusThumbnail = (game?: { iconUrl?: string }) => game?.iconUrl;
 
 /** The user's per-game site choice (Auto / CurseForge / Nexus Mods), remembered between runs. */
 export function useGameSourceChoice(gameKey: string): [GameSourceChoice, (choice: GameSourceChoice) => void] {
@@ -72,6 +74,8 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
   const [cfLoading, setCfLoading] = useState(false);
   const [catalog, setCatalog] = useState<NexusGame[]>([]);
   const [igdbIcons, setIgdbIcons] = useState<Record<string, string>>({});
+  const igdbIconsRef = useRef(igdbIcons);
+  useEffect(() => { igdbIconsRef.current = igdbIcons; }, [igdbIcons]);
   const [stored, setStored] = useState<StoredGame[]>(readStored);
   const [reload, setReload] = useState(0);
   const nexusOn = settings.nexus;
@@ -91,31 +95,53 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
     return () => { cancelled = true; };
   }, [nexusOn]);
 
-  // Nexus can omit game icons. Use IGDB only when configured and avoid duplicate lookups.
+  // Nexus and CurseForge both have incomplete or stale icon data. Resolve secondary artwork for
+  // Nexus games and for CurseForge games with missing icons, prioritising games the user explicitly added.
   useEffect(() => {
-    if (!settings.nexus || !igdbConfigured || !client) { setIgdbIcons({}); return; }
+    if (!igdbConfigured || !client) { setIgdbIcons({}); return; }
     let cancelled = false;
-    // Prioritise explicitly added games and the live Nexus catalogue before built-in suggestions.
-    // This keeps the request budget useful even when the built-in catalogue grows beyond the cap.
-    const candidates: Array<Pick<NexusGame, "domainName" | "name"> & { iconUrl?: string }> = [
-      ...stored.filter((entry): entry is Extract<StoredGame, { k: "nx" }> => entry.k === "nx")
-        .map((entry) => ({ domainName: entry.domain, name: entry.name ?? entry.domain })),
-      ...catalog,
-      ...KNOWN_NEXUS_GAMES,
+    type IconCandidate = { lookupKey: string; name: string };
+    const storedNexus: IconCandidate[] = settings.nexus ? stored
+      .filter((entry): entry is Extract<StoredGame, { k: "nx" }> => entry.k === "nx")
+       .map((entry) => ({ lookupKey: entry.domain.toLocaleLowerCase(), name: entry.name ?? entry.domain })) : [];
+    const storedCurseForge: IconCandidate[] = stored
+      .filter((entry): entry is Extract<StoredGame, { k: "cf" }> => entry.k === "cf")
+      .flatMap((entry) => {
+        const game = cfGames?.find((candidate) => candidate.id === entry.id);
+        return game ? [{ lookupKey: `cf:${game.id}`, name: game.name }] : [];
+      });
+    const liveNexus: IconCandidate[] = settings.nexus ? catalog.map((game) => ({ lookupKey: game.domainName.toLocaleLowerCase(), name: game.name })) : [];
+    const knownNexus: IconCandidate[] = settings.nexus ? KNOWN_NEXUS_GAMES.map((game) => ({ lookupKey: game.domainName.toLocaleLowerCase(), name: game.name })) : [];
+    const missingCurseForge: IconCandidate[] = (cfGames ?? [])
+      .filter((game) => !game.assets?.iconUrl)
+      .map((game) => ({ lookupKey: `cf:${game.id}`, name: game.name }));
+    // Also request secondary art for a bounded number of other CurseForge games: an icon URL can exist but be stale.
+    const otherCurseForge: IconCandidate[] = (cfGames ?? [])
+      .filter((game) => Boolean(game.assets?.iconUrl))
+      .map((game) => ({ lookupKey: `cf:${game.id}`, name: game.name }));
+    const byKey = new Map<string, IconCandidate>();
+    // Bound each source so a large Nexus catalogue cannot consume the entire IGDB budget before
+    // missing CurseForge icons are considered. Explicitly added games always take priority.
+    const candidates = [
+      ...storedNexus,
+      ...storedCurseForge,
+      ...liveNexus.slice(0, 12),
+      ...knownNexus,
+      ...missingCurseForge.slice(0, 32),
+      ...otherCurseForge.slice(0, 16),
     ];
-    const iconned = new Set(candidates.filter((game) => game.iconUrl).map((game) => game.domainName.toLocaleLowerCase()));
-    const missingByDomain = new Map(candidates
-      .filter((game) => !iconned.has(game.domainName.toLocaleLowerCase()))
-      .map((game) => [game.domainName.toLocaleLowerCase(), game]));
-    const missing = [...missingByDomain.values()].slice(0, 32);
+    for (const game of candidates) {
+      if (!byKey.has(game.lookupKey)) byKey.set(game.lookupKey, game);
+    }
+    const missing = [...byKey.values()].filter((game) => !igdbIconsRef.current[game.lookupKey]).slice(0, 64);
 
     void (async () => {
       const resolved: Array<readonly [string, string]> = [];
       for (let offset = 0; offset < missing.length; offset += 4) {
         const batch = await Promise.all(missing.slice(offset, offset + 4).map(async (game) => {
           try {
-            const url = await lookupNexusGameIcon(client, game);
-            return url ? [game.domainName.toLocaleLowerCase(), url] as const : null;
+            const url = await lookupNexusGameIcon(client, { domainName: game.lookupKey, name: game.name });
+            return url ? [game.lookupKey, url] as const : null;
           } catch { return null; }
         }));
         resolved.push(...batch.filter((entry): entry is readonly [string, string] => entry !== null));
@@ -124,7 +150,7 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
       if (!cancelled) setIgdbIcons((current) => ({ ...current, ...Object.fromEntries(resolved) }));
     })();
     return () => { cancelled = true; };
-  }, [catalog, stored, settings.nexus, igdbConfigured, client]);
+  }, [catalog, stored, cfGames, settings.nexus, igdbConfigured, client]);
 
   const games = useMemo<DiscoverGame[]>(() => {
     // Wait for CurseForge's list so a game on both sites never shows up first as Nexus-only and then jumps.
@@ -134,7 +160,12 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
     const nexusInfo = (domain: string) => catalog.find((game) => game.domainName === domain) ?? KNOWN_NEXUS_GAMES.find((game) => game.domainName === domain);
     const cfGame = (game: CfGame, nexusDomain?: string): DiscoverGame => {
       const domain = nexusDomain ?? (settings.nexus ? bestNameMatch(game.name, catalog.map((entry) => ({ ...entry, slug: entry.domainName })))?.domainName : undefined);
-      return { key: `cf:${game.id}`, name: game.name, iconUrl: game.assets?.iconUrl, source: "curseforge", cf: game, nexusDomain: settings.nexus ? domain : undefined };
+      const info = domain ? nexusInfo(domain) : undefined;
+      const nexusUrl = nexusThumbnail(info);
+      const igdbUrl = (domain ? igdbIcons[domain.toLocaleLowerCase()] : undefined) ?? igdbIcons[`cf:${game.id}`];
+      const iconUrl = game.assets?.iconUrl ?? nexusUrl ?? igdbUrl;
+      const iconFallbackUrls = [...(game.assets?.iconUrl ? [nexusUrl] : []), igdbUrl].filter((url): url is string => Boolean(url && url !== iconUrl));
+      return { key: `cf:${game.id}`, name: game.name, iconUrl, iconFallbackUrls, source: "curseforge", cf: game, nexusDomain: settings.nexus ? domain : undefined };
     };
     const nexusOnly = (domain: string, fallbackName: string): DiscoverGame | null => {
       if (!settings.nexus) return null;
@@ -142,7 +173,10 @@ export function useDiscoverGames(settings: ModSourceSettings, nexusKey: boolean,
       const name = info?.name ?? fallbackName;
       const onCf = settings.curseforge && cfGames ? bestNameMatch(name, cfGames) : null;
       if (onCf) return cfGame(onCf, domain);
-      return { key: `nx:${domain}`, name, iconUrl: nexusThumbnail(info) ?? igdbIcons[domain.toLocaleLowerCase()], source: "nexus", nexusDomain: domain };
+      const nexusUrl = nexusThumbnail(info);
+      const igdbUrl = igdbIcons[domain.toLocaleLowerCase()];
+      const iconUrl = nexusUrl ?? igdbUrl;
+      return { key: `nx:${domain}`, name, iconUrl, iconFallbackUrls: [igdbUrl].filter((url): url is string => Boolean(url && url !== iconUrl)), source: "nexus", nexusDomain: domain };
     };
     for (const { seed, cf } of visibleSeedGames(SEED_GAMES, cfGames, nexusOn && nexusKey, settings.curseforge)) {
       if (cf) put(cfGame(cf, seed.nexusDomain));

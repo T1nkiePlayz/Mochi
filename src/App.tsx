@@ -72,12 +72,16 @@ function Shell() {
         igdbClientId={credentials.igdbClientId} setIgdbClientId={credentials.setIgdbClientId}
         igdbClientSecret={credentials.igdbClientSecret} setIgdbClientSecret={credentials.setIgdbClientSecret}
         onSignIn={account.openSignIn} user={account.user}
+        language={app.behavior.language} setLanguage={(language) => app.setBehavior((current) => ({ ...current, language }))}
         onAddUser={() => { app.storage.setMultipleAccountProfiles(true); account.openSignIn(); }}
         credentialStatus={credentials.status} credentialStatusLoaded={credentials.loaded}
         themes={themeEngine.themes} theme={themeEngine.theme} setTheme={themeEngine.setTheme}
         nexusApiKey={credentials.nexusApiKey} setNexusApiKey={credentials.setNexusApiKey}
         steamGridDbKey={credentials.steamGridDbKey} setSteamGridDbKey={credentials.setSteamGridDbKey}
         saveCredential={credentials.save} credentialBusy={credentials.busy}
+        cloudSyncEnabled={app.cloud.cloudSyncEnabled} cloudDataAccessAllowed={app.cloud.cloudDataAccessAllowed} cloudSettingsReady={app.cloud.cloudSettingsReady} cloudSyncState={app.cloud.syncState}
+        cloudImportBusy={app.cloud.cloudDataBusy} cloudImportReady={app.storage.ready} cloudImportMessage={app.cloud.cloudDataMessage}
+        onImportCloudData={app.cloud.importCloudLibrary}
         onFinish={app.finishFirstLaunchSetup}
       />
       {account.showAuth && <AuthModal />}

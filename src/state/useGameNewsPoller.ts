@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Piko } from "../models";
-import { canPoll, dueApps, markChecked, mergeNews, modUpdateNews, takeUnseen, type ModUpdateNews, type NewsItem } from "../lib/gameNews";
+import { canPoll, dueApps, markChecked, mergeNews, modUpdateNews, resetNewsLanguage, steamNewsLanguage, takeUnseen, type ModUpdateNews, type NewsItem } from "../lib/gameNews";
 import { isOnline, markNetworkFailure, markNetworkOk } from "../lib/offline";
 import { steamAppIdOf } from "../lib/metadata/merge";
 import { getNewsSnapshot, setModNews, setNews } from "./gameNewsStore";
@@ -12,6 +12,7 @@ type RawItem = { gid: string; title: string; url: string; feedLabel: string; dat
 type RawResult = { status: "ok" | "offline" | "error"; items: RawItem[] };
 
 const TICK_MS = 10 * 60 * 1000;
+
 const FIRST_DELAY_MS = 20_000;
 const STAGGER_MS = 1500;
 
@@ -20,7 +21,7 @@ const STAGGER_MS = 1500;
  * Runs when the window is visible and online, fetches each game at most every 6 hours (50 per cycle, one at a
  * time with a pause between), and reuses the mod update checks that already run elsewhere.
  */
-export function useGameNewsPoller(enabled: boolean, library: readonly Piko[], notify: Notify) {
+export function useGameNewsPoller(enabled: boolean, library: readonly Piko[], notify: Notify, locale?: string) {
   const libraryRef = useRef(library);
   libraryRef.current = library;
   const notifyRef = useRef(notify);
@@ -31,6 +32,10 @@ export function useGameNewsPoller(enabled: boolean, library: readonly Piko[], no
     if (!enabled) return;
     let cancelled = false;
     let running = false;
+    // The launcher passes its selected display language; the OS/webview locale is only the fallback.
+    const language = steamNewsLanguage(locale ?? (typeof navigator === "undefined" ? "en" : navigator.language));
+    const currentNews = getNewsSnapshot().news;
+    if (currentNews.language !== language) setNews(resetNewsLanguage(currentNews, language));
     const timers = new Set<number>();
     const sleep = (ms: number) => new Promise<void>((resolve) => { const id = window.setTimeout(() => { timers.delete(id); resolve(); }, ms); timers.add(id); });
     const ok = () => canPoll({ enabled: !cancelled, online: isOnline(), visible: document.visibilityState !== "hidden" });
@@ -48,7 +53,11 @@ export function useGameNewsPoller(enabled: boolean, library: readonly Piko[], no
           if (!ok()) break;
           const game = names.get(appid) ?? `Steam app ${appid}`;
           let result: RawResult;
-          try { result = await invoke<RawResult>("get_steam_news", { appid }); } catch { continue; }
+          try { result = await invoke<RawResult>("get_steam_news", { appid, language }); } catch {
+            // Invocation errors count as a visit too, otherwise a broken command is retried every poll cycle.
+            if (!cancelled) setNews(markChecked(getNewsSnapshot().news, appid, Date.now()));
+            continue;
+          }
           if (cancelled) break;
           if (result.status === "offline") { markNetworkFailure(); break; }
           markNetworkOk();
@@ -67,7 +76,7 @@ export function useGameNewsPoller(enabled: boolean, library: readonly Piko[], no
     const tick = window.setInterval(() => void cycle(), TICK_MS);
     document.addEventListener("visibilitychange", onVisible);
     return () => { cancelled = true; clearTimeout(first); clearInterval(tick); timers.forEach((id) => clearTimeout(id)); document.removeEventListener("visibilitychange", onVisible); };
-  }, [enabled]);
+  }, [enabled, locale]);
 
   // Mod updates: read the results of the existing update checks (no extra requests) and announce each new version once.
   useEffect(() => {

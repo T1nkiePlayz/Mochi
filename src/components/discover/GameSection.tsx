@@ -22,7 +22,7 @@ export function GameSection({ plan, source, cacheKey, pikos, ecosystem, onSeeAll
   const headingId = `all-section-${plan.key.replace(/[^\w-]/g, "_")}`;
   return <section ref={ref} className="all-game-section" aria-labelledby={headingId}>
     <div className="all-game-head">
-      {plan.minecraft && !plan.iconUrl ? <span className="game-avatar game-avatar-glyph" aria-hidden="true"><MinecraftIcon /></span> : <GameAvatar src={plan.iconUrl} name={plan.name} />}
+      {plan.minecraft && !plan.iconUrl ? <span className="game-avatar game-avatar-glyph" aria-hidden="true"><MinecraftIcon /></span> : <GameAvatar src={plan.iconUrl} fallbackSrcs={plan.iconFallbackUrls} name={plan.name} />}
       <h3 id={headingId}>{plan.name}</h3>
       <span className="source-badge">{sourceLabels[plan.site]}</span>
       <button type="button" className="text-button all-see-all" aria-label={`See all ${plan.name} mods`} onClick={onSeeAll}>See all <ChevronRight size={14} aria-hidden="true" /></button>

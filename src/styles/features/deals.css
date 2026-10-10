@@ -1,8 +1,63 @@
-.deals-panel { max-height: min(60vh, 520px); overflow-y: auto; border-top: var(--mochi-border-width) solid var(--mochi-border); }
+.deals-view { display: grid; gap: 20px; align-content: start; }
+.deals-view > .settings-intro { margin-bottom: 0; }
+.deals-panel { overflow: hidden; min-width: 0; border: var(--mochi-border-width) solid var(--mochi-card-border); border-radius: var(--mochi-card-radius); background: var(--mochi-card-background); box-shadow: var(--mochi-card-shadow); }
 .deals-panel a { color: var(--mochi-accent-strong); text-decoration: none; }
 .deals-panel a:hover, .deals-panel a:focus-visible { text-decoration: underline; }
-.deals-refresh { display: inline-flex; align-items: center; gap: 4px; }
-.deals-refresh:disabled { opacity: .6; }
-.deals-stores { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 8px 13px; font-size: 11px; color: var(--mochi-text-muted); border-bottom: var(--mochi-border-width) solid var(--mochi-border); }
-.deals-stores label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
-.deals-row { display: grid; gap: 1px; }
+.deals-section-head { display: flex; align-items: center; gap: 13px; padding: 18px 20px 14px; }
+.deals-section-icon { display: grid; place-items: center; flex: 0 0 42px; width: 42px; height: 42px; border-radius: var(--mochi-radius-sm); color: var(--mochi-accent-strong); background: var(--mochi-hover); }
+.deals-section-title { min-width: 0; flex: 1; }
+.deals-section-title h3 { margin: 0; color: var(--mochi-text); font-size: 16px; font-weight: 700; }
+.deals-section-title p { margin: 4px 0 0; color: var(--mochi-text-muted); font-size: 12px; line-height: 1.45; }
+.deals-refresh { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: 0 0 auto; }
+.deals-refresh:disabled { opacity: .6; cursor: wait; }
+.deals-refresh-spin { animation: deals-spin 1s linear infinite; }
+@keyframes deals-spin { to { transform: rotate(360deg); } }
+.deals-status { display: flex; align-items: center; gap: 8px; margin: 0 20px 14px; padding: 9px 11px; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-radius-sm); color: var(--mochi-text-muted); font-size: 11px; }
+.deals-status-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--mochi-success, var(--mochi-accent-strong)); }
+.deals-status-dot.muted { background: var(--mochi-text-muted); }
+.deals-preferences, .deals-results { padding: 15px 20px 18px; border-top: var(--mochi-border-width) solid var(--mochi-border); }
+.deals-subhead { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; color: var(--mochi-text-muted); }
+.deals-subhead > svg { flex: 0 0 auto; color: var(--mochi-accent-strong); }
+.deals-subhead > div { display: grid; gap: 3px; flex: 1; min-width: 0; }
+.deals-subhead strong { color: var(--mochi-text); font-size: 13px; }
+.deals-subhead small { color: var(--mochi-text-muted); font-size: 11px; }
+.deals-count { display: grid; place-items: center; min-width: 23px; height: 23px; padding: 0 6px; border-radius: var(--mochi-pill-radius); background: var(--mochi-hover); color: var(--mochi-text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.deals-store-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 185px), 1fr)); gap: 8px; }
+.deals-store-option { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 11px; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-radius-sm); cursor: pointer; transition: border-color var(--mochi-transition), background var(--mochi-transition); }
+.deals-store-option:hover { border-color: var(--mochi-card-border); background: var(--mochi-hover); }
+.deals-store-option input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.deals-store-option:focus-within { outline: 2px solid var(--mochi-accent-strong); outline-offset: 2px; }
+.deals-store-check { display: grid; place-items: center; flex: 0 0 17px; width: 17px; height: 17px; border: 1px solid var(--mochi-input-border); border-radius: 5px; background: var(--mochi-input-background); }
+.deals-store-option input:checked + .deals-store-check { border-color: var(--mochi-accent-strong); background: var(--mochi-accent-strong); }
+.deals-store-option input:checked + .deals-store-check::after { content: ""; width: 7px; height: 4px; border: solid var(--mochi-accent-text); border-width: 0 0 2px 2px; transform: rotate(-45deg) translateY(-1px); }
+.deals-store-option > span:last-child { display: grid; gap: 3px; min-width: 0; }
+.deals-store-option strong { color: var(--mochi-text); font-size: 12px; font-weight: 600; }
+.deals-store-option small { color: var(--mochi-text-muted); font-size: 10px; }
+.deals-offer-list { display: grid; gap: 7px; }
+.deals-offer { display: flex; align-items: center; gap: 11px; min-width: 0; padding: 10px; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-radius-sm); background: var(--mochi-background); }
+.deals-offer-art { display: grid; place-items: center; flex: 0 0 38px; width: 38px; height: 42px; border-radius: 8px; color: var(--mochi-accent-strong); background: var(--mochi-hover); }
+.deals-offer-art.free { color: var(--mochi-success, var(--mochi-accent-strong)); }
+.deals-offer-art.wishlist { color: var(--mochi-warning, var(--mochi-accent-strong)); }
+.deals-offer-copy { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.deals-offer-copy strong { overflow: hidden; color: var(--mochi-text); font-size: 12px; font-weight: 650; text-overflow: ellipsis; }
+.deals-offer-copy small, .deals-offer-price small { color: var(--mochi-text-muted); font-size: 10px; }
+.deals-offer-price { display: grid; justify-items: end; gap: 4px; flex: 0 0 auto; text-align: right; }
+.deals-offer-price strong { color: var(--mochi-text); font-size: 12px; font-variant-numeric: tabular-nums; }
+.deals-offer-price > span { color: var(--mochi-text-muted); font-size: 10px; }
+.deals-offer-price > span:not(.deals-free-now) { padding: 3px 6px; border-radius: 5px; background: var(--mochi-hover); }
+.deals-offer-price .deals-free-now { color: var(--mochi-success, var(--mochi-accent-strong)); font-weight: 700; }
+.deals-empty-inline { padding: 14px; border: 1px dashed var(--mochi-border); border-radius: var(--mochi-radius-sm); color: var(--mochi-text-muted); font-size: 12px; text-align: center; }
+.deals-attribution { padding: 12px 20px; border-top: var(--mochi-border-width) solid var(--mochi-border); color: var(--mochi-text-muted); font-size: 10px; }
+.deals-attribution a { display: inline-flex; align-items: center; gap: 3px; }
+@media (max-width: 620px) { .deals-section-head { align-items: flex-start; padding: 14px; } .deals-section-icon { display: none; } .deals-preferences, .deals-results { padding: 13px 14px; } .deals-status { margin: 0 14px 12px; } .deals-attribution { padding: 12px 14px; } }
+@media (prefers-reduced-motion: reduce) { .deals-refresh-spin { animation: none; } .deals-store-option { transition: none; } }
+
+.deals-news-list { display: grid; gap: 7px; }
+.deals-news-item { display: flex; align-items: center; gap: 11px; width: 100%; min-width: 0; padding: 11px; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-radius-sm); background: var(--mochi-background); color: var(--mochi-text); text-align: left; cursor: pointer; transition: border-color var(--mochi-transition), background var(--mochi-transition); }
+button.deals-news-item:hover, button.deals-news-item:focus-visible { border-color: var(--mochi-card-border); background: var(--mochi-hover); }
+.deals-news-mark { display: grid; place-items: center; flex: 0 0 36px; width: 36px; height: 36px; border-radius: 8px; background: var(--mochi-hover); color: var(--mochi-accent-strong); }
+.deals-news-copy { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.deals-news-copy strong { color: var(--mochi-text); font-size: 12px; font-weight: 650; overflow-wrap: anywhere; }
+.deals-news-copy small { color: var(--mochi-text-muted); font-size: 10px; line-height: 1.45; }
+.deals-news-item > svg:last-child { flex: 0 0 auto; color: var(--mochi-text-muted); }
+@media (prefers-reduced-motion: reduce) { .deals-news-item { transition: none; } }

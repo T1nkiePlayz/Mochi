@@ -18,11 +18,20 @@ export function hueOf(name: string): number {
  * A game's full icon, cropped to the avatar shape (round; square in the Ore theme) with a themed backdrop, so a
  * transparent PNG never shows up as a box. No image, or one that fails to load, becomes initials.
  */
-export function GameAvatar({ src, name, className = "" }: { src?: string; name: string; className?: string }) {
+export function GameAvatar({ src, fallbackSrcs = [], name, className = "" }: { src?: string; fallbackSrcs?: string[]; name: string; className?: string }) {
+  const [fallbackIndex, setFallbackIndex] = useState(src ? -1 : 0);
   const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [src]);
+  const fallbacks = fallbackSrcs.filter((url, index, all) => Boolean(url) && url !== src && all.indexOf(url) === index);
+  const fallbackKey = fallbacks.join("\n");
+  // Depend on URL values rather than array identity; callers may build an equivalent array during render.
+  useEffect(() => { setFallbackIndex(src ? -1 : 0); setFailed(false); }, [src, fallbackKey]);
+  const activeSrc = fallbackIndex < 0 ? src : fallbacks[fallbackIndex];
   const style = { "--game-hue": hueOf(name) } as React.CSSProperties;
+  const onError = () => {
+    if (fallbackIndex + 1 < fallbacks.length) setFallbackIndex((index) => index + 1);
+    else setFailed(true);
+  };
   return <span className={`game-avatar ${className}`.trim()} style={style} aria-hidden="true">
-    {src && !failed ? <img src={src} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} /> : <span className="game-avatar-initials">{initialsOf(name)}</span>}
+    {activeSrc && !failed ? <img src={activeSrc} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={onError} /> : <span className="game-avatar-initials">{initialsOf(name)}</span>}
   </span>;
 }
