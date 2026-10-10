@@ -19,7 +19,7 @@ export function CloudImportStep({ busy, message, syncEnabled, syncState, onImpor
         {syncEnabled ? <Check size={18} /> : <CloudOff size={18} />}
         <span><strong>{syncEnabled ? "Cloud sync is enabled" : "Cloud sync is not enabled"}</strong><small>{syncing ? "Mochi is checking your cloud account…" : syncEnabled ? "Your account can sync library metadata." : "You can still try importing your saved cloud library. Sync preferences can be managed later."}</small></span>
       </div>
-      <button type="button" className="play-button setup-cloud-import" onClick={() => void onImport()} disabled={busy || syncing}>
+      <button type="button" className="play-button setup-cloud-import" onClick={() => void onImport()} disabled={busy}>
         {busy ? <LoaderCircle size={16} className="spin" /> : <RefreshCw size={16} />}
         {busy ? "Importing cloud library…" : "Check and import cloud data"}
       </button>
