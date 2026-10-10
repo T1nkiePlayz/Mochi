@@ -103,10 +103,19 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
   // Any library change (import, enrichment, edits) asks the scheduler for a push; it debounces with a max wait and retries with backoff.
   useEffect(() => {
     libraryRef.current = library;
-    if (!storageReady || !supabase || !user || !cloudSyncEnabled || !initialized.current || !schedulerRef.current) return;
+    if (!storageReady || !supabase || !user) return;
+
+    // A permanent initialization error intentionally stops timer retries. A real
+    // local library change is a meaningful recovery signal: re-fetch account
+    // settings and pull again, without requiring an app restart.
+    if (!initialized.current) {
+      if (syncState === "error") setRetryToken((token) => token + 1);
+      return;
+    }
+    if (!cloudSyncEnabled || !schedulerRef.current) return;
     setSyncState("syncing");
     schedulerRef.current.notify();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by the account id, not the user object
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by account/library changes, not callback identity
   }, [library, user?.id, cloudSyncEnabled, storageReady, storageKey]);
 
   const clearCloudData = async () => {
