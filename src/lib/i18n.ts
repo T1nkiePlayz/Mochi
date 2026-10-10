@@ -4,6 +4,7 @@ import { setupCopyMessages } from "./i18nSetupCopy";
 import { setupCopyExtraMessages } from "./i18nSetupCopyExtra";
 import { cloudSetupMessages } from "./i18nCloudSetup";
 import { accountSetupMessages } from "./i18nAccountSetup";
+import { serviceSetupMessages } from "./i18nServiceSetup";
 import { chromeMessages } from "./i18nChrome";
 import { settingsMessages } from "./i18nSettings";
 import { downloadMessages } from "./i18nDownloads";
