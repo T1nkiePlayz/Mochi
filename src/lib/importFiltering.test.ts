@@ -43,6 +43,12 @@ describe("library-aware game importing", () => {
     expect(isImportedGameInLibrary(game({ id: "steam-570", launchTarget: "steam://rungameid/570" }), [piko()])).toBe(false);
   });
 
+  it("does not treat a launcher shortcut as an already-added game just because paths match", () => {
+    const gameEntry = game({ source: "apps", id: "example-game", launchTarget: "/usr/bin/example" });
+    const launcherEntry = piko({ kind: "launcher", sourceId: "apps", importKey: "example-launcher", executablePath: "/usr/bin/example" });
+    expect(isImportedGameInLibrary(gameEntry, [launcherEntry])).toBe(false);
+  });
+
   it("normalizes path separators for equivalent executable paths", () => {
     const pathGame = game({ id: "foo", source: "apps", launchTarget: "C:\\Games\\Example\\game.exe" });
     const pathPiko = piko({ sourceId: "apps", importKey: "different", executablePath: "c:/Games/Example/game.exe" });
