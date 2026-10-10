@@ -18,10 +18,50 @@ pub(crate) fn write_pack(path: &Path, content: &str) -> Result<PathBuf, String> 
     let mut target = path.to_path_buf();
     if extension_of(&target) != "mochipack" { target.set_extension("mochipack"); }
     if target.is_dir() { return Err("Choose a file name, not a folder.".into()); }
-    // A unique sibling and create_new prevent a pre-created symlink or file from being followed.
-    let temp = temp_path(&target);
-    write_atomic_to(&target, content, &temp, "pack")?;
+    write_atomic(&target, content, "pack")?;
     Ok(target)
+}
+
+static TEMP_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+fn temp_path(target: &Path) -> PathBuf {
+    let mut temp = target.as_os_str().to_os_string();
+    temp.push(format!(".part-{}-{}", std::process::id(), TEMP_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed)));
+    PathBuf::from(temp)
+}
+
+/// Retry stale-name collisions, while refusing to follow pre-existing files or symlinks.
+fn write_atomic(target: &Path, content: &str, label: &str) -> Result<(), String> {
+    for _ in 0..16 {
+        let temp = temp_path(target);
+        match write_atomic_to(target, content, &temp) {
+            Ok(()) => return Ok(()),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(format!("Could not save the {label}: {error}")),
+        }
+    }
+    Err(format!("Could not save the {label}: could not allocate a unique temporary file."))
+}
+
+/// Exclusively creates a private sibling file, then renames the completed file into place.
+fn write_atomic_to(target: &Path, content: &str, temp: &Path) -> std::io::Result<()> {
+    use std::io::Write;
+    let mut options = fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    // Library/pack contents may be private; do not expose them to other local users.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options.open(temp)?;
+    if let Err(error) = file.write_all(content.as_bytes()) {
+        drop(file);
+        let _ = fs::remove_file(temp);
+        return Err(error);
+    }
+    drop(file);
+    fs::rename(temp, target).inspect_err(|_| { let _ = fs::remove_file(temp); })
 }
 
 static TEMP_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
@@ -118,6 +158,17 @@ mod tests {
         assert!(write_atomic_to(&target, "overwrite", &temp, "pack").is_err());
         assert_eq!(fs::read_to_string(&victim).unwrap(), "keep me");
         assert!(fs::symlink_metadata(&temp).unwrap().file_type().is_symlink());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn exported_files_are_private_to_the_current_user() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = temp_dir("private-mode");
+        let target = dir.join("private.mochipack");
+        write_pack(&target, "{}").unwrap();
+        assert_eq!(fs::metadata(target).unwrap().permissions().mode() & 0o777, 0o600);
         let _ = fs::remove_dir_all(&dir);
     }
 
