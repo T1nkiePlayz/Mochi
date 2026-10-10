@@ -71,3 +71,15 @@ describe("storage breakdown", () => {
     });
   });
 });
+
+describe("clearAllUnused", () => {
+  it("runs every action, sums the results and keeps going after a failure", async () => {
+    const { clearAllUnused, clearActions } = await import("./diskUsage");
+    const calls: Array<[string, number | undefined]> = [];
+    const result = await clearAllUnused(30, async (kind, days) => { calls.push([kind, days]); if (kind === "logs") throw new Error("busy"); return { files: 2, bytes: 10 }; });
+    expect(calls).toHaveLength(clearActions.length);
+    expect(calls.find(([kind]) => kind === "artworkCache")?.[1]).toBeUndefined();
+    expect(calls.find(([kind]) => kind === "snapshots")?.[1]).toBe(30);
+    expect(result).toEqual({ files: 2 * (clearActions.length - 1), bytes: 10 * (clearActions.length - 1), failed: ["Remove old game logs"] });
+  });
+});
