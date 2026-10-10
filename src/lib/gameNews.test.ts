@@ -88,6 +88,6 @@ describe("news grouping", () => {
 describe("parseNewsState", () => {
   it("survives garbage", () => {
     expect(parseNewsState(null)).toEqual(emptyNewsState());
-    expect(parseNewsState({ checked: { 1: "x", 2: 5 }, seen: [1, "a"], items: [{ gid: 1 }, item("z")], readAt: "no" })).toEqual({ language: "english", checked: { 2: 5 }, seen: ["a"], items: [item("z")], language: "english", readAt: 0 });
+    expect(parseNewsState({ checked: { 1: "x", 2: 5 }, seen: [1, "a"], items: [{ gid: 1 }, item("z")], readAt: "no" })).toEqual({ language: "english", checked: { 2: 5 }, seen: ["a"], items: [item("z")], readAt: 0 });
   });
 });
