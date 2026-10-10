@@ -3,13 +3,14 @@ import { Check, CloudDownload, CloudOff, LoaderCircle, RefreshCw } from "lucide-
 type Props = {
   busy: boolean;
   ready: boolean;
+  accessAllowed: boolean;
   message: string;
   syncEnabled: boolean;
   syncState: string;
   onImport: () => Promise<void>;
 };
 
-export function CloudImportStep({ busy, ready, message, syncEnabled, syncState, onImport }: Props) {
+export function CloudImportStep({ busy, ready, accessAllowed, message, syncEnabled, syncState, onImport }: Props) {
   const syncing = syncState === "syncing" || syncState === "retrying";
   return <section className="setup-page setup-cloud-page">
     <div className="setup-icon"><CloudDownload size={22} /></div>
@@ -18,11 +19,11 @@ export function CloudImportStep({ busy, ready, message, syncEnabled, syncState, 
     <div className="setup-cloud-card">
       <div className="setup-cloud-status">
         {syncEnabled ? <Check size={18} /> : <CloudOff size={18} />}
-        <span><strong>{syncEnabled ? "Cloud sync is enabled" : "Cloud sync is not enabled"}</strong><small>{syncing ? "Mochi is checking your cloud account…" : syncEnabled ? "Your account can sync library metadata." : "You can still try importing your saved cloud library. Sync preferences can be managed later."}</small></span>
+        <span><strong>{syncEnabled ? "Cloud sync is enabled" : "Cloud sync is not enabled"}</strong><small>{syncing ? "Mochi is checking your cloud account…" : syncEnabled ? "Your account can sync library metadata." : "Cloud data access is disabled for this account. Enable it in Settings before importing."}</small></span>
       </div>
-      <button type="button" className="play-button setup-cloud-import" onClick={() => void onImport()} disabled={busy || !ready}>
+      <button type="button" className="play-button setup-cloud-import" onClick={() => void onImport()} disabled={busy || !ready || !accessAllowed}>
         {busy ? <LoaderCircle size={16} className="spin" /> : <RefreshCw size={16} />}
-        {busy ? "Importing cloud library…" : !ready ? "Preparing your account…" : "Check and import cloud data"}
+        {busy ? "Importing cloud library…" : !ready ? "Preparing your account…" : !accessAllowed ? "Enable cloud access in Settings" : "Check and import cloud data"}
       </button>
       <p className="setup-cloud-safety">This does not delete your local games or move any installed files.</p>
       {message && <p className="setup-cloud-message" role="status">{message}</p>}
