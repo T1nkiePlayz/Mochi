@@ -99,3 +99,10 @@ export function translate(message: string, language: unknown = getTranslationLoc
   return messages[message]?.[normalized] ?? setupMessages[message]?.[normalized] ?? setupCopyMessages[message]?.[normalized] ?? setupCopyExtraMessages[message]?.[normalized] ?? cloudSetupMessages[message]?.[normalized] ?? accountSetupMessages[message]?.[normalized] ?? serviceSetupMessages[message]?.[normalized] ?? chromeMessages[message]?.[normalized] ?? settingsMessages[message]?.[normalized] ?? downloadMessages[message]?.[normalized] ?? dealMessages[message]?.[normalized] ?? dealExtraMessages[message]?.[normalized] ?? libraryMessages[message]?.[normalized] ?? systemMessages[message]?.[normalized] ?? libraryExtraMessages[message]?.[normalized] ?? commonMessages[message]?.[normalized] ?? message;
 }
 
+
+/** Returns whether a source message has an explicit translation for a locale. */
+export function hasTranslation(message: string, language: unknown): boolean {
+  const normalized = normalizeLanguage(language);
+  if (navLabel(message, normalized) !== message) return true;
+  return Boolean(messages[message]?.[normalized] || setupMessages[message]?.[normalized] || setupCopyMessages[message]?.[normalized] || setupCopyExtraMessages[message]?.[normalized] || cloudSetupMessages[message]?.[normalized] || accountSetupMessages[message]?.[normalized] || serviceSetupMessages[message]?.[normalized] || chromeMessages[message]?.[normalized] || settingsMessages[message]?.[normalized] || downloadMessages[message]?.[normalized] || dealMessages[message]?.[normalized] || dealExtraMessages[message]?.[normalized] || libraryMessages[message]?.[normalized] || systemMessages[message]?.[normalized] || libraryExtraMessages[message]?.[normalized] || commonMessages[message]?.[normalized]);
+}
