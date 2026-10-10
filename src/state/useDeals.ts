@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Piko } from "../models";
 import { useOnline } from "../lib/offline";
 import { CHECK_INTERVAL_MS, RETRY_MS, activeStores, detectStores, fetchDeals, fetchEpicFreeGames, getPriceInfo, readDealsState, readStoreChoices, runDealsCheck, watchQuery, watchedItems, writeDealsState, writeStoreChoices, type Deal, type EpicFreeGame, type StoreChoices, type StoreId } from "../lib/deals";
+import { historyKey, observationsFromPrices, recordObservations } from "../lib/gameSearch";
 import { readWishlist, updateWishlistItem } from "../lib/wishlist";
 
 type Notify = (title: string, message: string, opts?: { group?: string; item?: string }) => void;
@@ -38,7 +39,12 @@ export function useDeals(enabled: boolean, library: Piko[], notify: Notify): Dea
       const stored = readDealsState();
       const result = await runDealsCheck({
         stores: wanted, now, seen: stored.seen, epic: fetchEpicFreeGames, deals: fetchDeals, watches: watchedItems(readWishlist()),
-        price: async (item) => (await getPriceInfo(watchQuery(item)))?.cheapestNow ?? null,
+        price: async (item) => {
+          const info = await getPriceInfo(watchQuery(item));
+          // Watched games feed the local price history shown by game search.
+          if (info) recordObservations(historyKey({ name: item.name, steamAppId: item.source === "steam" ? Number(item.externalId) : null }), observationsFromPrices({ steam: null, shark: info }, now));
+          return info?.cheapestNow ?? null;
+        },
         shouldStop: () => !live.current.enabled || !live.current.online,
       });
       for (const update of result.watchUpdates) updateWishlistItem(update.id, { priceWatch: update.priceWatch });

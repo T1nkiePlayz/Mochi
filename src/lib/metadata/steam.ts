@@ -5,6 +5,7 @@ import { ProviderError, type MetadataProvider, type ProviderResult } from "./typ
 
 export type SteamStoreDetails = {
   appid: number; name: string; description: string; genres: string[]; screenshots: string[];
+  developers?: string[]; publishers?: string[];
   movies?: Array<{ name: string; thumbnail?: string | null; mp4Url?: string | null; webmUrl?: string | null; hlsUrl?: string | null }>;
   releaseDate?: number | null; contentType?: ContentType; coverUrl: string; headerUrl: string; heroUrl: string;
 };

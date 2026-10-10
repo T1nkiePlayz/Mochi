@@ -19,6 +19,7 @@ export const experimentalFeatures: ExperimentalFeature[] = [
   { id: "game-news", name: "Game news", description: "A News tab in the notification centre with the latest Steam news for your Steam games and updates for your installed mods. Checks at most every 6 hours while Mochi is open.", since: "0.1.0" },
   { id: "deal-alerts", name: "Deal alerts", description: "Free games and sales for the stores you use (Epic, CheapShark), plus price-watch alerts for wishlist games. Metadata only, checked at most every 6 hours.", since: "0.1.0" },
   { id: "share-card", name: "Share card", description: "Stats > Share card makes a PNG of your top games, playtime and achievements to save or copy. Built locally; you choose what it shows.", since: "0.1.0" },
+  { id: "game-search", name: "Game search", description: "Search any game (not just yours) from the command palette: details, artwork, ratings, similar games and prices, with a local price history and one-click wishlist or price watch. Needs an IGDB or SteamGridDB key in Settings.", since: "0.1.0" },
 ];
 
 export const experimentalIds = () => experimentalFeatures.map((feature) => feature.id);

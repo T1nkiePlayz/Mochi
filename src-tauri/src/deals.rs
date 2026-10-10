@@ -71,6 +71,18 @@ pub struct PriceInfo {
     pub deals: Vec<StoreDeal>,
 }
 
+/// Steam's current price for one app in one region (`price_overview`). Amounts are in minor units (cents).
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SteamPrice {
+    pub currency: String,
+    pub initial: i64,
+    #[serde(rename = "final")]
+    pub final_price: i64,
+    pub discount_percent: i64,
+    pub formatted: String,
+}
+
 /// Never rejects: `status` is "ok", "offline" or "error".
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -167,6 +179,16 @@ pub fn parse_price_info(game_id: &str, body: &str) -> Result<Option<PriceInfo>, 
     }))
 }
 
+/// A Steam `appdetails?filters=price_overview` answer. `Ok(None)` for unknown apps and for free or unpriced ones (Steam sends `data: []`).
+pub fn parse_steam_price(app_id: u32, body: &str) -> Result<Option<SteamPrice>, String> {
+    let root: Value = serde_json::from_str(body).map_err(|error| format!("Steam returned unreadable data: {error}"))?;
+    let Some(entry) = root.get(app_id.to_string()) else { return Ok(None) };
+    let Some(price) = entry.get("data").and_then(|d| d.get("price_overview")).filter(|p| p.is_object()) else { return Ok(None) };
+    let int = |key: &str| price.get(key).and_then(Value::as_i64);
+    let (Some(initial), Some(final_price)) = (int("initial"), int("final")) else { return Ok(None) };
+    Ok(Some(SteamPrice { currency: text(price.get("currency")), initial, final_price, discount_percent: int("discount_percent").unwrap_or(0), formatted: text(price.get("final_formatted")) }))
+}
+
 enum FetchError { Offline(String), Other(String) }
 
 struct Gate { next_at: Option<Instant>, blocked_until: Option<Instant> }
@@ -260,6 +282,15 @@ pub async fn get_price_info(title: Option<String>, steam_app_id: Option<u32>) ->
     }.await)
 }
 
+/// Steam's current price for an app in the region `cc` (two letters, e.g. "us"). Keyless; shares the throttled client and one-hour cache.
+#[tauri::command]
+pub async fn get_steam_price(app_id: u32, cc: String) -> DealsResult<SteamPrice> {
+    let cc = cc.trim().to_lowercase();
+    if app_id == 0 || cc.len() != 2 || !cc.chars().all(|c| c.is_ascii_lowercase()) { return DealsResult { status: "error", data: None, message: Some("A Steam app id and a two-letter region are needed.".into()) }; }
+    let url = format!("https://store.steampowered.com/api/appdetails?appids={app_id}&filters=price_overview&cc={cc}");
+    finish(async { parse_steam_price(app_id, &fetch(&url).await?).map_err(FetchError::Other) }.await)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -312,6 +343,17 @@ mod tests {
         assert_eq!(info.deals.len(), 4);
         assert_eq!(info.steam_app_id, None);
         assert_eq!(parse_price_info("1", "{}").unwrap(), None);
+    }
+
+    #[test]
+    fn steam_price_parses_discounts_and_skips_free_apps() {
+        let body = r#"{"620":{"success":true,"data":{"price_overview":{"currency":"USD","initial":999,"final":249,"discount_percent":75,"final_formatted":"$2.49"}}}}"#;
+        let price = parse_steam_price(620, body).unwrap().unwrap();
+        assert_eq!((price.initial, price.final_price, price.discount_percent, price.formatted.as_str(), price.currency.as_str()), (999, 249, 75, "$2.49", "USD"));
+        assert_eq!(parse_steam_price(10, r#"{"10":{"success":true,"data":[]}}"#).unwrap(), None);
+        assert_eq!(parse_steam_price(10, r#"{"10":{"success":false}}"#).unwrap(), None);
+        assert_eq!(parse_steam_price(11, body).unwrap(), None);
+        assert!(parse_steam_price(1, "nope").is_err());
     }
 
     #[test]
