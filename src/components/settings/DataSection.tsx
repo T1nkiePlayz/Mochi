@@ -7,6 +7,7 @@ import { clearAllDataSources, clearDataSource, dataSources, gamesWithArtworkFrom
 import { providerLabels } from "../../state/useCredentials";
 import type { ProviderId } from "../../lib/metadata/types";
 import { SettingsGroup, ToggleRow } from "./Section";
+import { SettingsTransfer } from "./SettingsTransfer";
 
 export function DataSection() {
   const { behavior, setBehavior, account, credentials, lib, metadata, cloud, themeEngine, chooseConfigLocation } = useApp();
@@ -71,6 +72,7 @@ export function DataSection() {
     <div className="setting-row"><span><strong>Cloud data</strong><small>{cloud.cloudDataAccessAllowed ? "Delete your cloud Pikos and Tofus. Your local library, account, and saved provider credentials stay unchanged." : "Mochi Cloud data controls are not enabled for this account."}</small></span><button type="button" className="secondary-button danger-outline" disabled={!account.user || !cloud.cloudDataAccessAllowed || cloud.cloudDataBusy} onClick={() => void cloud.clearCloudData()}>{cloud.cloudDataBusy ? "Clearing…" : cloud.cloudDataAccessAllowed ? "Clear cloud data" : "Unavailable"}</button></div>
     {cloud.cloudDataMessage && <p className="metadata-note settings-note" role="status">{cloud.cloudDataMessage}</p>}
     <div className="setting-row setting-location-row"><span><strong>Library location</strong><small>Your Mochi configuration, themes and launcher data are stored here.</small></span><span className="setting-location-value"><code>{themeEngine.configInfo?.configPath || "Default Mochi location"}</code><button type="button" className="secondary-button" onClick={() => void chooseConfigLocation()}>Change</button></span></div>
+    <SettingsTransfer />
     <button className="setting-row setting-button" aria-expanded={showAdvanced} onClick={() => setShowAdvanced(!showAdvanced)}><span><strong>Advanced settings</strong><small>Diagnostics and launcher controls.</small></span><MochiIcon name="chevron" fallback={ChevronDown} className={showAdvanced ? "rotate" : ""} size={16} /></button>
     {showAdvanced && <div className="advanced-settings">
       <ToggleRow title="Confirm before launching" description="Ask before starting a game." checked={behavior.confirmLaunch} onChange={(confirmLaunch) => setBehavior((current) => ({ ...current, confirmLaunch }))} />

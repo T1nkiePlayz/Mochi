@@ -280,6 +280,18 @@ const handlers: Record<string, Handler> = {
       input.click();
     });
   },
+  export_settings_zip: () => null,
+  read_settings_zip: () => ({
+    manifest: { format: "mochi-settings", version: 1, createdAt: "2026-10-01T12:00:00Z", appVersion: "0.1.0", sections: ["behavior", "collections", "wishlist", "games", "themes"] },
+    sections: {
+      behavior: { keepOpen: false, confirmLaunch: false, autoUpdate: true },
+      collections: [{ id: "col-co-op", name: "Co-op nights", icon: "🎮" }, { id: "col-cozy", name: "Cozy" }],
+      wishlist: [{ id: "wish-a", name: "Hades II", addedAt: 1 }, { id: "wish-b", name: "Silksong", addedAt: 2 }],
+      games: [{ id: "piko-1", name: "Mock game", tags: ["favourite-run"], collectionIds: ["col-cozy"] }, { id: "gone", name: "Not installed", tags: ["x"] }],
+    },
+    themes: [{ id: "sunset-demo", name: "Sunset demo", version: "1.0.0", standalone: true }],
+  }),
+  install_themes_from_settings_zip: (args) => ({ installed: args.themeIds, skipped: [] }),
   list_user_themes: () => [],
   cache_theme_fonts: () => "",
   get_mochi_config_info: () => ({ configPath: "~/.config/Mochi/config.json", themesPath: "~/.config/Mochi/themes", selectedTheme: localStorage.getItem("mochi:theme") ?? "mochi" }),

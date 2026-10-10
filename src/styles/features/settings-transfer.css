@@ -1,0 +1,11 @@
+/* Settings export/import preview sheet (Settings > Data). */
+.settings-import-modal { display: flex; flex-direction: column; gap: 12px; width: min(640px, calc(100vw - 32px)); max-height: min(720px, calc(100vh - 32px)); overflow: hidden; }
+.settings-import-modal > .modal-header, .settings-import-actions { flex: 0 0 auto; }
+.settings-import-list { display: grid; gap: 8px; overflow-y: auto; min-height: 0; padding-right: 4px; }
+.settings-import-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 8px 10px; border: var(--mochi-border-width) solid var(--mochi-border); border-radius: var(--mochi-radius-md); background: var(--mochi-surface); }
+.settings-import-check { display: flex; align-items: flex-start; gap: 10px; min-width: 0; cursor: pointer; color: var(--mochi-text); }
+.settings-import-check input { margin-top: 3px; flex: 0 0 auto; }
+.settings-import-check span { display: grid; gap: 2px; min-width: 0; }
+.settings-import-check small, .settings-import-summary { color: var(--mochi-text-muted); }
+.settings-import-summary { grid-column: 1 / -1; padding-left: 26px; }
+.settings-import-actions { display: flex; justify-content: flex-end; gap: 8px; }

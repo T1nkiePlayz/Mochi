@@ -47,7 +47,10 @@ export function useCollections(ownerKey: string, ready: boolean, setLibrary: Dis
     setLibrary((library) => library.map((piko) => (piko.collectionIds?.includes(id) ? { ...piko, collectionIds: piko.collectionIds.filter((value) => value !== id) } : piko)));
   }, [update, setLibrary]);
 
-  return { collections, createCollection, renameCollection, moveCollection, deleteCollection };
+  /** Replaces the whole list (settings import). */
+  const replaceCollections = useCallback((items: Collection[]) => update(() => clean(items)), [update]);
+
+  return { collections, replaceCollections, createCollection, renameCollection, moveCollection, deleteCollection };
 }
 
 export type CollectionsState = ReturnType<typeof useCollections>;

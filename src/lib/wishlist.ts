@@ -86,6 +86,9 @@ export function addToWishlist(input: WishlistInput, now = Date.now()): WishlistI
   return item;
 }
 
+/** Replaces the whole list (settings import); stored data is re-sanitised. */
+export function replaceWishlist(items: WishlistItem[]): void { save(sanitizeWishlist(items).slice(0, WISHLIST_LIMIT)); }
+
 export function removeFromWishlist(id: string): void {
   const items = readWishlist();
   if (items.some((item) => item.id === id)) save(items.filter((item) => item.id !== id));
