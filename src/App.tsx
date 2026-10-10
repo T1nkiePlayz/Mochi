@@ -80,7 +80,7 @@ function Shell() {
         steamGridDbKey={credentials.steamGridDbKey} setSteamGridDbKey={credentials.setSteamGridDbKey}
         saveCredential={credentials.save} credentialBusy={credentials.busy}
         cloudSyncEnabled={app.cloud.cloudSyncEnabled} cloudSyncState={app.cloud.syncState}
-        cloudImportBusy={app.cloud.cloudDataBusy} cloudImportMessage={app.cloud.cloudDataMessage}
+        cloudImportBusy={app.cloud.cloudDataBusy} cloudImportReady={app.storage.ready} cloudImportMessage={app.cloud.cloudDataMessage}
         onImportCloudData={app.cloud.importCloudLibrary}
         onFinish={app.finishFirstLaunchSetup}
       />
