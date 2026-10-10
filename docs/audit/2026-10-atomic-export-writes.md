@@ -18,17 +18,23 @@ Both writers used a predictable temporary pathname by appending `.part` to the s
 
 The practical impact is local and depends on a hostile or pre-existing filesystem entry; this is not a remote code-execution issue. It can nevertheless destroy user data or overwrite any file the current user can write.
 
-### Fix
+## Improvements in this PR
 
-- Generate a distinct sibling temporary name using the process ID and an atomic counter to avoid normal collisions and stale `.part` files.
-- Open the temporary path with `OpenOptions::create_new(true)`. The exclusive create fails if a file or symlink already occupies that exact name; it does not truncate or follow the existing entry.
-- Write the full contents, remove the temporary file after a write/rename failure where safe, and rename the completed file into place.
-- Keep the existing size limits, extension validation, and same-directory rename behavior.
+### 1. Exclusive creation and unique sibling files
 
-### Regression coverage
+- Generate a sibling temporary name using the process ID and an atomic counter.
+- Open it with `OpenOptions::create_new(true)`, which refuses existing files and symlinks rather than following or truncating them.
+- Retry up to 16 times when a candidate name already exists. This handles stale files from a reused process ID and simultaneous export attempts instead of failing on the first collision.
+- Write the complete contents before renaming the temporary file into place, and clean up after write/rename errors.
 
-Both Rust modules now have Unix-only regression tests that place a symlink at the temporary path, attempt the write, and assert that the operation fails, the symlink remains a symlink, and its target contents are unchanged.
+### 2. Private file permissions on Unix
+
+Temporary export files are created with mode `0600` on Unix, so modpack contents and library backups are not exposed to other local users through permissive directory defaults. The mode is retained when the completed temporary file is renamed into place. On non-Unix platforms, the platform's normal inherited ACL behavior remains in effect.
+
+### 3. Regression tests
+
+Unix-only tests verify that a symlink at the temporary path is rejected without changing its target, and that successfully written modpack and library backup files have mode `0600`.
 
 ## Verification and remaining work
 
-The code change adds focused regression tests, but those tests and the complete CI workflow must pass before this PR should be considered ready to merge. This patch does not claim to resolve unrelated audit items or replace dependency, platform, and end-to-end security review.
+The change should remain a draft until the Rust tests and all required GitHub Actions checks pass. This is a targeted follow-up, not a claim that this PR exhaustively resolves every issue across the repository or replaces dependency, platform, and end-to-end security review.
