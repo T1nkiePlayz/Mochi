@@ -75,6 +75,18 @@
   [data-mochi-shell="top"] .sidebar-bottom, [data-mochi-shell="bottom"] .sidebar-bottom { margin: 0 !important; width: auto !important; }
   [data-mochi-shell="bottom"] .sidebar { flex-wrap: nowrap !important; }
 
+  /* Keep the Settings action beside the account control while the primary tabs occupy the visual centre. */
+  [data-mochi-shell="top"] .sidebar { --mochi-nav-account-slot: 176px; }
+  [data-mochi-shell="top"] .sidebar .brand { order: 0; flex: 1 1 0 !important; min-width: 34px; margin-right: var(--mochi-nav-account-slot); }
+  [data-mochi-shell="top"] .sidebar .primary-nav { order: 1; margin-inline: auto !important; }
+  [data-mochi-shell="top"] .sidebar .sidebar-bottom { order: 2; display: flex !important; align-items: center; justify-content: flex-end; flex: 1 1 0 !important; min-width: 44px; margin: 0 !important; }
+  [data-mochi-shell="top"] .sidebar .sidebar-account-wrap { order: 3; }
+  [data-mochi-shell="top"] .sidebar .sidebar-bottom .nav-item { min-height: 38px; padding-inline: 12px; }
+  @media (max-width: 900px) {
+    [data-mochi-shell="top"] .sidebar { --mochi-nav-account-slot: 0px; }
+    [data-mochi-shell="top"] .sidebar .brand { margin-right: 0; }
+  }
+
   /* Narrowing steps, picked by useShellFit from what fits: compact (account shows its avatar only), tight (brand text goes), icons. */
   html[data-nav-mode="compact"] .sidebar-account > span, html[data-nav-mode="tight"] .sidebar-account > span, html[data-nav-mode="icons"] .sidebar-account > span,
   html[data-nav-mode="compact"] .sidebar-account > svg:last-child, html[data-nav-mode="tight"] .sidebar-account > svg:last-child, html[data-nav-mode="icons"] .sidebar-account > svg:last-child,
