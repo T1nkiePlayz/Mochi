@@ -58,6 +58,12 @@ fn write_atomic_file(target: &Path, content: &str, temp: &Path) -> std::io::Resu
         let _ = fs::remove_file(temp);
         return Err(error);
     }
+    // Flush file contents before publishing the completed export at its final path.
+    if let Err(error) = file.sync_all() {
+        drop(file);
+        let _ = fs::remove_file(temp);
+        return Err(error);
+    }
     drop(file);
     fs::rename(temp, target).inspect_err(|_| { let _ = fs::remove_file(temp); })
 }
@@ -169,6 +175,21 @@ mod tests {
         assert!(write_atomic_file(&target, "overwrite", &temp).is_err());
         assert_eq!(fs::read_to_string(&victim).unwrap(), "keep me");
         assert!(fs::symlink_metadata(&temp).unwrap().file_type().is_symlink());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replaces_an_existing_backup_without_leaving_partial_contents() {
+        let dir = temp("replace-existing");
+        let target = dir.join("existing.mochibackup");
+        fs::write(&target, "old contents that are longer").unwrap();
+        write_backup(&target, r#"{"new":true}"#).unwrap();
+        assert_eq!(fs::read_to_string(&target).unwrap(), r#"{"new":true}"#);
+        let leftovers: Vec<_> = fs::read_dir(&dir).unwrap().flatten()
+            .filter(|entry| entry.file_name().to_string_lossy().contains(".part-"))
+            .collect();
+        assert!(leftovers.is_empty(), "temporary backup files should be cleaned up");
         let _ = fs::remove_dir_all(&dir);
     }
 
