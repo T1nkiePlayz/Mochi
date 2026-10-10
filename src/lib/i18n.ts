@@ -15,6 +15,7 @@ import { libraryMessages } from "./i18nLibrary";
 import { systemMessages } from "./i18nSystem";
 import { libraryExtraMessages } from "./i18nLibraryExtra";
 import { normalizeLanguage } from "./languages";
+import { commonMessages } from "./i18nCommon";
 
 /**
  * Shared UI message catalogue. Keys are stable English source strings so missing
@@ -95,6 +96,6 @@ export function translate(message: string, language: unknown = getTranslationLoc
   const normalized = normalizeLanguage(language);
   const navigation = navLabel(message, normalized);
   if (navigation !== message) return navigation;
-  return messages[message]?.[normalized] ?? setupMessages[message]?.[normalized] ?? setupCopyMessages[message]?.[normalized] ?? setupCopyExtraMessages[message]?.[normalized] ?? cloudSetupMessages[message]?.[normalized] ?? accountSetupMessages[message]?.[normalized] ?? serviceSetupMessages[message]?.[normalized] ?? chromeMessages[message]?.[normalized] ?? settingsMessages[message]?.[normalized] ?? downloadMessages[message]?.[normalized] ?? dealMessages[message]?.[normalized] ?? dealExtraMessages[message]?.[normalized] ?? libraryMessages[message]?.[normalized] ?? systemMessages[message]?.[normalized] ?? libraryExtraMessages[message]?.[normalized] ?? message;
+  return messages[message]?.[normalized] ?? setupMessages[message]?.[normalized] ?? setupCopyMessages[message]?.[normalized] ?? setupCopyExtraMessages[message]?.[normalized] ?? cloudSetupMessages[message]?.[normalized] ?? accountSetupMessages[message]?.[normalized] ?? serviceSetupMessages[message]?.[normalized] ?? chromeMessages[message]?.[normalized] ?? settingsMessages[message]?.[normalized] ?? downloadMessages[message]?.[normalized] ?? dealMessages[message]?.[normalized] ?? dealExtraMessages[message]?.[normalized] ?? libraryMessages[message]?.[normalized] ?? systemMessages[message]?.[normalized] ?? libraryExtraMessages[message]?.[normalized] ?? commonMessages[message]?.[normalized] ?? message;
 }
 
