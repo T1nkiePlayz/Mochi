@@ -15,6 +15,8 @@ export type ExperimentalFeature = {
   since: string;
 };
 
-export const experimentalFeatures: ExperimentalFeature[] = [];
+export const experimentalFeatures: ExperimentalFeature[] = [
+  { id: "game-news", name: "Game news", description: "A News tab in the notification centre with the latest Steam news for your Steam games and updates for your installed mods. Checks at most every 6 hours while Mochi is open.", since: "0.1.0" },
+];
 
 export const experimentalIds = () => experimentalFeatures.map((feature) => feature.id);

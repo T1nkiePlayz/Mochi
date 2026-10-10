@@ -16,6 +16,7 @@ import { useCredentials } from "./useCredentials";
 import { useLibrary } from "./useLibrary";
 import { usePlaytime } from "./usePlaytime";
 import { useCollections } from "./useCollections";
+import { useGameNewsPoller } from "./useGameNewsPoller";
 import { useProfileStorage } from "./useProfileStorage";
 import { useCloudSync } from "./useCloudSync";
 import { useDownloads } from "./useDownloads";
@@ -74,6 +75,7 @@ function useAppController() {
       notifications.setShowNotifications(false);
     },
   });
+  useGameNewsPoller(behavior.experimental.includes("game-news"), lib.library, notify);
   const collections = useCollections(storage.ownerKey, storage.ready, lib.setLibrary);
   const cloud = useCloudSync(user, lib.library, lib.setLibrary, storage.ready, storage.ownerKey);
   const downloads = useDownloads(activeNav === "Downloads", notify);

@@ -18,6 +18,7 @@ const plural = (count: number, one: string, many: string) => `${count} ${count =
 /** Per-group summaries for bursts of two or more; a lone notification is never reformatted. */
 export const GROUP_FORMATTERS: Record<string, GroupFormatter> = {
   achievements: (entries) => ({ title: `${plural(entries.length, "achievement", "achievements")} earned`, message: listItems(entries.map((entry) => entry.item ?? entry.title)) }),
+  news: (entries) => ({ title: `${plural(entries.length, "news update", "news updates")}`, message: listItems([...new Set(entries.map((entry) => entry.item ?? entry.title))]) }),
   downloads: (entries) => ({ title: `${plural(entries.length, "download", "downloads")} finished`, message: listItems(entries.map((entry) => entry.item ?? entry.title)) }),
 };
 
