@@ -42,11 +42,13 @@ where
 // Steam Deck detection
 // ---------------------------------------------------------------------------
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub fn deck_from_dmi(product_name: &str, board_name: &str) -> bool {
     let is_deck = |value: &str| matches!(value.trim(), "Jupiter" | "Galileo");
     is_deck(product_name) || is_deck(board_name)
 }
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub fn deck_from_os_release(text: &str) -> bool {
     text.lines().any(|line| {
         let Some((key, value)) = line.split_once('=') else { return false };

@@ -15,7 +15,7 @@ use std::{
 /// How a launcher was found. The order is the dedupe preference (first wins): a desktop entry or
 /// bundle that was scanned, then a native binary, a known install path, Flatpak, and Snap last.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-pub enum Method { Desktop, AppBundle, Binary, KnownPath, Flatpak, Snap }
+pub enum Method { #[cfg_attr(not(target_os = "linux"), allow(dead_code))] Desktop, AppBundle, Binary, KnownPath, Flatpak, Snap }
 
 /// Where one launcher can be installed. Names, desktop ids and bundle ids live in `classify::LAUNCHERS`.
 pub struct Detect {

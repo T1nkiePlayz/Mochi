@@ -12,12 +12,15 @@ use std::{
 /// A MultiMC-family launcher: id used in launch targets, config file name and data-folder names.
 pub struct InstanceLauncher {
     pub id: &'static str,
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     pub name: &'static str,
     pub config: &'static str,
     /// Data folder name on Linux (`~/.local/share/<dir>`) and macOS (`~/Library/Application Support/<dir>`).
     pub dir: &'static str,
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     pub flatpak: Option<&'static str>,
     /// Commands on Linux, in the order they are tried.
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     pub commands: &'static [&'static str],
     #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     pub bundle: &'static str,
