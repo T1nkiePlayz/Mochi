@@ -29,6 +29,25 @@
 > - Only download Mochi from the official [GitHub Releases](https://github.com/T1nkiePlayz/Mochi/releases) page and verify the download before running anything.
 > - **Early development:** storage formats, features and UI may change between versions. Do not treat Mochi as the only copy of data you care about (library, collections, playtime history). Keep your own backups.
 
+## Table of contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Piko and Tofu](#piko-and-tofu)
+- [Importing games and launching](#importing-games-and-launching)
+- [Accounts, cloud sync and offline use](#accounts-cloud-sync-and-offline-use)
+- [Platform support](#platform-support)
+- [Install](#install)
+- [Verify your download](#verify-your-download)
+- [Security model](#security-model)
+- [Current limitations](#current-limitations)
+- [Roadmap](#roadmap)
+- [Documentation index](#documentation-index)
+- [Development](#development)
+- [Releasing](#releasing)
+- [Contributing](#contributing)
+- [License](#license)
 ## Overview
 
 Mochi is a cross-platform (Linux and macOS) desktop game launcher that sits above existing game ecosystems instead of replacing them. It gives you one library for games that already live on your computer: Steam, Heroic, Epic, itch.io, Flatpak, Lutris, Bottles, Whisky/CrossOver, plain executables, scripts and apps.
