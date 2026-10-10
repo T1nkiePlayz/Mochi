@@ -67,8 +67,8 @@ export type SyncScheduler = { notify: () => void; cancel: () => void };
  * Debounced runner with a max wait (so a continuous stream of changes still flushes), no overlapping runs,
  * and exponential backoff retry when `run` rejects. A new `notify` supersedes a pending retry.
  */
-export function createSyncScheduler(run: () => Promise<void>, opts: { debounceMs?: number; maxWaitMs?: number; retryBaseMs?: number; retryMaxMs?: number } = {}): SyncScheduler {
-  const { debounceMs = 1500, maxWaitMs = 10000, retryBaseMs = 2000, retryMaxMs = 60000 } = opts;
+export function createSyncScheduler(run: () => Promise<void>, opts: { debounceMs?: number; maxWaitMs?: number; retryBaseMs?: number; retryMaxMs?: number; shouldRetry?: (error: unknown) => boolean } = {}): SyncScheduler {
+  const { debounceMs = 1500, maxWaitMs = 10000, retryBaseMs = 2000, retryMaxMs = 60000, shouldRetry = () => true } = opts;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let firstDirty = 0;
   let dirty = false;
