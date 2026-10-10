@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
+import { getPlatformCapabilities } from "../../lib/platform";
+import { buildDiagnostics } from "../../lib/diagnostics";
 import { ChevronDown } from "lucide-react";
 import { MochiIcon } from "../MochiIcon";
 import { useApp } from "../../state/AppContext";
@@ -22,6 +25,16 @@ export function DataSection() {
     if (!user) return { ready: false, text: `${providerLabels[id]} needs a free key that is saved on your Mochi account, so sign in first. Other sources keep working without it.` };
     if (!saved[id]) return { ready: false, text: `Save your ${providerLabels[id]} key under Mod & metadata providers to use it. Other sources keep working without it.` };
     return { ready: true, text: "Ready." };
+  };
+  const copyDiagnostics = async () => {
+    try {
+      const caps = await getPlatformCapabilities().catch(() => ({ platform: "unknown", displayName: "Unknown", isSteamDeck: false, isGamescope: false, launchMethods: [] as string[] }));
+      const bySource: Record<string, number> = {};
+      for (const piko of lib.library) { const kind = piko.kind ?? "game"; bySource[kind] = (bySource[kind] ?? 0) + 1; }
+      const report = buildDiagnostics({ version: await getVersion().catch(() => "unknown"), platform: caps, userAgent: navigator.userAgent, online: navigator.onLine, gameCount: lib.library.length, gamesBySource: bySource, experimental: behavior.experimental, signedIn: Boolean(user) });
+      await navigator.clipboard.writeText(report);
+      setNote("Debug info copied. It contains no passwords, keys or email addresses, and your home folder name is hidden.");
+    } catch { setNote("Could not copy debug info."); }
   };
   const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
   // Names exactly what goes: the source's saved lookups plus how many covers on this device came from it.
@@ -77,6 +90,7 @@ export function DataSection() {
     {showAdvanced && <div className="advanced-settings">
       <ToggleRow title="Confirm before launching" description="Ask before starting a game." checked={behavior.confirmLaunch} onChange={(confirmLaunch) => setBehavior((current) => ({ ...current, confirmLaunch }))} />
       <ToggleRow title="Detailed launch errors" description="Show extra information when a game fails to launch." checked={behavior.detailedErrors} onChange={(detailedErrors) => setBehavior((current) => ({ ...current, detailedErrors }))} />
+      <div className="setting-row"><span><strong>Copy debug info</strong><small>Version, system and library counts for a bug report. Secrets and your user name are removed.</small></span><button type="button" className="secondary-button" onClick={() => void copyDiagnostics()}>Copy</button></div>
     </div>}
   </SettingsGroup>;
 }
