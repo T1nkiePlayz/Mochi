@@ -1,9 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { canPoll, dueApps, emptyNewsState, mergeNews, modUpdateNews, NEWS_CYCLE_CAP, NEWS_INTERVAL_MS, NEWS_MAX_ITEMS, parseNewsState, takeUnseen, unreadCount, type NewsItem } from "./gameNews";
+import { canPoll, dueApps, emptyNewsState, mergeNews, modUpdateNews, NEWS_CYCLE_CAP, NEWS_INTERVAL_MS, NEWS_MAX_ITEMS, parseNewsState, takeUnseen, steamNewsLanguage, unreadCount, type NewsItem } from "./gameNews";
 import { listItems, summarise } from "./notifyBatch";
 
 const item = (gid: string, appid = 1, date = 100): NewsItem => ({ gid, appid, game: "G", title: `T${gid}`, url: "https://x/", feedLabel: "", date, summary: "" });
 const H = 60 * 60 * 1000;
+
+describe("steamNewsLanguage", () => {
+  it("maps supported locales to Steam language names and defaults unknown locales to English", () => {
+    expect(steamNewsLanguage("fr-FR")).toBe("french");
+    expect(steamNewsLanguage("en-AU")).toBe("english");
+    expect(steamNewsLanguage("zh-TW")).toBe("tchinese");
+    expect(steamNewsLanguage("zh-CN")).toBe("schinese");
+    expect(steamNewsLanguage("xx-YY")).toBe("english");
+  });
+});
 
 describe("dueApps", () => {
   it("returns never-checked and stale apps, oldest first, deduped", () => {
@@ -78,6 +88,6 @@ describe("news grouping", () => {
 describe("parseNewsState", () => {
   it("survives garbage", () => {
     expect(parseNewsState(null)).toEqual(emptyNewsState());
-    expect(parseNewsState({ checked: { 1: "x", 2: 5 }, seen: [1, "a"], items: [{ gid: 1 }, item("z")], readAt: "no" })).toEqual({ checked: { 2: 5 }, seen: ["a"], items: [item("z")], readAt: 0 });
+    expect(parseNewsState({ checked: { 1: "x", 2: 5 }, seen: [1, "a"], items: [{ gid: 1 }, item("z")], readAt: "no" })).toEqual({ language: "english", checked: { 2: 5 }, seen: ["a"], items: [item("z")], readAt: 0 });
   });
 });
