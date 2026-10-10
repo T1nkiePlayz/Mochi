@@ -17,7 +17,7 @@ export function lookupGameIcon(client: SupabaseClient, cacheKey: string, name: s
   if (cached && cached.expiresAt > Date.now()) return cached.promise;
   if (cached) iconLookups.delete(key);
 
-  const entry: CacheEntry = { promise: Promise.resolve(null), expiresAt: Date.now() + MISS_TTL_MS };
+  const entry: CacheEntry = { promise: Promise.resolve(null), expiresAt: SUCCESS_TTL };
   entry.promise = lookupIgdbGames(client, name).then((matches) => {
     const url = igdbIconFor(name, matches);
     if (iconLookups.get(key) === entry) entry.expiresAt = url ? SUCCESS_TTL : Date.now() + MISS_TTL_MS;
