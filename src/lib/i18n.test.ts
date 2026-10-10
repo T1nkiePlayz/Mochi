@@ -88,15 +88,13 @@ describe("shared UI translations", () => {
       const source = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
       collect(source);
     }
-    const missing: string[] = [];
+    const missing = new Map<string, { file: string; languages: string[] }>();
     for (const [message, file] of found) {
-      for (const language of launcherLanguages) {
-        if (language.code !== "en" && !hasTranslation(message, language.code)) {
-          missing.push(`${language.code}: "${message}" (${file})`);
-        }
-      }
+      const languages = launcherLanguages.filter((language) => language.code !== "en" && !hasTranslation(message, language.code)).map((language) => language.code);
+      if (languages.length) missing.set(message, { file, languages });
     }
-    expect(missing, `Missing literal UI translations (first 100 shown):\n${missing.slice(0, 100).join("\n")}`).toEqual([]);
+    const missingMessages = [...missing.entries()].map(([message, details]) => `"${message}" (${details.file}) — missing: ${details.languages.join(", ")}`);
+    expect(missingMessages, `Missing literal UI translations (${missingMessages.length} strings):\n${missingMessages.slice(0, 200).join("\n")}`).toEqual([]);
   });
 
   it("falls back to the original text for unknown messages and unsupported locales", () => {
