@@ -3,15 +3,17 @@ import { Check, RotateCcw, TriangleAlert, X } from "lucide-react";
 import { SettingsGroup, ToggleRow } from "./Section";
 import { announce, useAccessibility, type Accessibility } from "../../state/accessibility";
 import { openShortcuts } from "../ShortcutsHelp";
+import { useTranslation } from "../../lib/useTranslation";
 
 type Option<T extends string> = { value: T; label: string };
 
 export function A11yChoice<T extends string>({ title, description, value, options, onChange }: { title: string; description: string; value: T; options: Array<Option<T>>; onChange: (value: T) => void }) {
+  const t = useTranslation();
   const id = useId();
   return <div className="a11y-control" role="group" aria-labelledby={id}>
     <div className="a11y-control-head"><span><strong id={id}>{title}</strong><small>{description}</small></span></div>
     <div className="a11y-segmented">
-      {options.map((option) => <button key={option.value} type="button" aria-pressed={value === option.value} onClick={() => onChange(option.value)}>{option.label}</button>)}
+      {options.map((option) => <button key={option.value} type="button" aria-pressed={value === option.value} onClick={() => onChange(option.value)}>{t(option.label)}</button>)}
     </div>
   </div>;
 }
