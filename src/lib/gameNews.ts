@@ -11,6 +11,7 @@ export const NEWS_MAX_SEEN = 1500;
 export function steamNewsLanguage(locale: string): string {
   const normalized = locale.toLowerCase().replace(/_/g, "-");
   if (/^zh-(tw|hk|mo)(-|$)/.test(normalized)) return "tchinese";
+  if (/^pt-br(-|$)/.test(normalized)) return "brazilian";
   const code = normalized.split("-", 1)[0];
   const names: Record<string, string> = { ar: "arabic", bg: "bulgarian", zh: "schinese", cs: "czech", da: "danish", nl: "dutch", en: "english", fi: "finnish", fr: "french", de: "german", el: "greek", hu: "hungarian", id: "indonesian", it: "italian", ja: "japanese", ko: "koreana", no: "norwegian", pl: "polish", pt: "portuguese", ro: "romanian", ru: "russian", es: "spanish", sv: "swedish", th: "thai", tr: "turkish", uk: "ukrainian", vi: "vietnamese" };
   return names[code] ?? "english";
@@ -30,6 +31,12 @@ export type NewsState = {
 };
 
 export const emptyNewsState = (language = "english"): NewsState => ({ language, checked: {}, seen: [], items: [], readAt: 0 });
+
+/** A locale change discards language-specific posts and fetch timestamps, but preserves mod-update dedupe keys. */
+export function resetNewsLanguage(state: NewsState, language: string): NewsState {
+  if (state.language === language) return state;
+  return { ...emptyNewsState(language), seen: state.seen.filter((key) => key.startsWith("mod:")) };
+}
 
 /** Appids due for a fetch: never or >= interval ago (or clock moved back), oldest first, at most `cap`. */
 export function dueApps(appids: readonly number[], checked: Readonly<Record<string, number>>, now: number, interval = NEWS_INTERVAL_MS, cap = NEWS_CYCLE_CAP): number[] {
