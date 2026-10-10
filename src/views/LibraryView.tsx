@@ -16,6 +16,7 @@ import { WishlistPanel } from "../components/library/WishlistPanel";
 import { PickerDialog } from "../components/library/PickerDialog";
 import { DuplicatesDialog, DuplicatesNotice } from "../components/library/DuplicatesDialog";
 import { useDuplicates } from "../state/useDuplicates";
+import { useGridKeyboard } from "../state/useGridKeyboard";
 import type { Piko } from "../models";
 import { GameArtwork } from "../components/GameArtwork";
 import { subscribePickerRequest, takePickerRequest } from "../lib/pickerRequest";
@@ -104,7 +105,7 @@ export function LibraryView() {
     const instances = lib.instancesByPiko.get(piko.id);
     const card = <GameCard key={piko.id} piko={piko}
       selected={selectedPiko.id === piko.id} running={sessions.isRunning(piko.id)} cloudStatus={cloudStatusFor(piko, cloudCtx)}
-      selecting={selecting} checked={checked.has(piko.id)}
+      selecting={selecting} checked={checked.has(piko.id)} tabStop={grid.tabId === piko.id}
       onOpen={openGame} onToggleFavorite={toggleFavorite} onToggleChecked={toggleChecked} onMenu={openMenu} />;
     if (!instances) return card;
     return [card, <div className="tofu-entry-group" key={`${piko.id}:instances`} role="group" aria-label={`${piko.name} instances`}>
@@ -114,6 +115,10 @@ export function LibraryView() {
   };
   const toggleChecked = useCallback((gameId: string) => setChecked((current) => { const next = new Set(current); if (!next.delete(gameId)) next.add(gameId); return next; }), []);
   const openMenu = useCallback((gameId: string, x: number, y: number) => setMenu({ gameId, x, y }), []);
+  const gridIds = useMemo(() => lib.groupedPikos.flatMap(([, games]) => games.map((piko) => piko.id)), [lib.groupedPikos]);
+  const gridNames = useMemo(() => new Map(lib.library.map((piko) => [piko.id, piko.name] as const)), [lib.library]);
+  const playById = useCallback((id: string) => { const piko = lib.library.find((item) => item.id === id); if (piko) { selectPiko(piko); void launchRef.current(piko); } }, [lib.library, selectPiko]);
+  const grid = useGridKeyboard({ ids: gridIds, names: gridNames, play: playById, toggleFavorite });
 
   const addButton = <button className="secondary-button" onClick={() => add.setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> Add Piko</button>;
 
@@ -225,7 +230,7 @@ export function LibraryView() {
       onSelectAll={() => setChecked(new Set(lib.visiblePikos.map((piko) => piko.id)))}
       onDone={endSelecting} />}
     {!lib.visiblePikos.length && <div className="empty-state library-no-match"><h2>No games match.</h2><p>Try another filter or clear the search.</p><button type="button" className="secondary-button" onClick={() => { lib.setFilter({ kind: "smart", id: "all" }); lib.setTagFilters([]); lib.setSearch(""); }}>Show everything</button></div>}
-    <section className="library-grid-view" data-view={view} data-groups={lib.groupedPikos.length} key={view}>
+    <section className="library-grid-view" data-view={view} data-groups={lib.groupedPikos.length} key={view} {...grid.gridProps}>
       {lib.groupedPikos.map(([category, games]) => <div className="library-category" key={category}>
         <div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div>
         <div className="game-card-grid">{games.map(cardWithInstances)}</div>

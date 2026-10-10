@@ -3,6 +3,7 @@
 import type { Piko, Tofu } from "../../models";
 import { tofuTarget } from "./compat";
 import { checkTofu, modPageUrl, sortIssues, type CheckEntry, type Issue, type IssueAction } from "./conflicts";
+import { crashSuspects, suspectIssues } from "./crashSuspects";
 import { installBest } from "./install";
 import { listInstanceMods, setInstanceModsEnabled } from "./instances";
 import { createModrinthSource } from "./modrinthSource";
@@ -23,6 +24,16 @@ export async function checkTofuMods(piko: Pick<Piko, "tofus">, tofu: Tofu, timeo
     const siblings = piko.tofus.length > 1 ? piko.tofus.map((other) => other.id) : undefined;
     const files: CheckEntry[] = await withTimeout(listInstanceMods(tofu.id, tofu.path, undefined, siblings), timeoutMs);
     return sortIssues(checkTofu(files, tofu));
+  } catch { return []; }
+}
+
+/** The mods of a Tofu that a game log points at, as fixable rows. No timeout like the launch check: the user asked for it. Never throws. */
+export async function findCrashSuspects(piko: Pick<Piko, "tofus">, tofu: Tofu, log: string): Promise<Issue[]> {
+  if (!tofu.path || !log.trim()) return [];
+  try {
+    const siblings = piko.tofus.length > 1 ? piko.tofus.map((other) => other.id) : undefined;
+    const files: CheckEntry[] = await listInstanceMods(tofu.id, tofu.path, undefined, siblings);
+    return suspectIssues(crashSuspects(log, files));
   } catch { return []; }
 }
 

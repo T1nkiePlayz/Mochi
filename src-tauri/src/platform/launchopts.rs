@@ -39,7 +39,7 @@ pub fn classify(target: &str) -> (Applies, Option<&'static str>) {
     if target.starts_with("flatpak://") || target.starts_with("flatpak run ") { return (Applies::Flatpak, Some("Environment variables and arguments are passed to flatpak run. Wrappers, runtimes and the working directory do not apply to Flatpak apps.")); }
     if target.ends_with(".desktop") { return (Applies::None, Some("Launch options cannot be passed through a .desktop entry. Point the launch target at the program itself to use them.")); }
     if crate::sources::prism::parse_instance_target(target).is_some() { return (Applies::None, Some("The Minecraft launcher starts this instance. Set its options in that launcher.")); }
-    if target.starts_with("heroic://") || target.starts_with("bottles:run/") || target.starts_with("lutris:") || target.starts_with("itch://") || crate::sources::battlenet::parse_wine_target(target).is_some() {
+    if target.starts_with("heroic://") || target.starts_with("bottles:run/") || target.starts_with("lutris:") || target.starts_with("itch://") || target.starts_with("legendary://") || target.starts_with("nile://") || crate::sources::battlenet::parse_wine_target(target).is_some() {
         return (Applies::None, Some("Another launcher starts this game, so Mochi's launch options do not apply. Set them in that launcher."));
     }
     (Applies::Full, None)
@@ -387,6 +387,8 @@ mod tests {
         assert_eq!(classify("/x/game.desktop").0, Applies::None);
         assert_eq!(classify("heroic://launch/x").0, Applies::None);
         assert_eq!(classify("lutris:rungameid/3").0, Applies::None);
+        assert_eq!(classify("legendary://launch/Sugar").0, Applies::None);
+        assert_eq!(classify("nile://launch/amzn1.x").0, Applies::None);
     }
 
     #[test]

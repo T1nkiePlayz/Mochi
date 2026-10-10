@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Copy, FolderOpen, Plus, Trash2 } from "lucide-react";
 import { listLaunchRuntimes, previewLaunchCommand, type LaunchPreview, type RuntimeInfo } from "../../../lib/platform";
-import { formatArgs, parseArgs } from "../../../lib/launch";
+import { formatArgs, parseArgs, runtimeIdOf } from "../../../lib/launch";
 import { addEnvRow, duplicateEnvNames, envNameError, removeEnvRow, setEnvRow, updateLaunchOptions } from "../../../lib/launchOptionsState";
 import { launchTargetFor } from "../../../lib/minecraftPiko";
 import type { LaunchOptions } from "../../../models";
 import { activeLaunchProfile, addLaunchProfile, effectiveLaunchOptions, MAX_LAUNCH_PROFILES, removeLaunchProfile, renameLaunchProfile, selectLaunchProfile, withLaunchOptions } from "../../../lib/launchProfiles";
 import { Select } from "../../ui/Select";
+import { PrefixManager } from "./PrefixManager";
 import { Switch } from "../../ui/Checkbox";
 import type { EditorContext } from "./types";
 
@@ -107,6 +108,7 @@ export function LaunchOptionsSection({ ctx }: { ctx: EditorContext }) {
         <Select label="Windows runtime" value={runtimeValue} onChange={chooseRuntime} searchable={false} options={[{ value: "", label: "Automatic (native, or Wine if available)" }, ...compat.map((runtime) => ({ value: runtime.id, label: runtime.name, description: runtime.id === "wine" ? "System Wine" : "Proton, with a private prefix for this game" }))]} />
         <small className="launch-hint">Used for Windows programs (.exe). Native games ignore it.</small>
       </div>}
+      {compat.length > 0 && /\.(exe|bat|msi|lnk)$/i.test(target) && <PrefixManager gameId={draft.id} tofuId={tofu?.id} gameName={draft.name} runtime={runtimeIdOf(options.runtime)} />}
       <div className="launch-toggles" role="group" aria-label="Wrappers">
         <Switch label="GameMode" description={wrapperHint("gamemoderun", "GameMode") ?? "Runs the game through gamemoderun."} checked={!!options.gamemode} onChange={(on) => set({ gamemode: on })} />
         <Switch label="MangoHud" description={wrapperHint("mangohud", "MangoHud") ?? "Shows the performance overlay."} checked={!!options.mangohud} onChange={(on) => set({ mangohud: on })} />

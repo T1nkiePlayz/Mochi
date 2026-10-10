@@ -144,6 +144,10 @@ A **Piko** is a game in your library: name, artwork, genres, launch target, sour
 - **Debug info and launch hints**: *Copy debug info* (secrets and your user name removed), and a notification with likely causes when a game closes within 15 seconds of starting, including a rollback hint after a recent mod update.
 - **Download controls** (Downloads page): pause and resume all, a shared speed limit and allowed hours. **Stats**: recent sessions and a year-in-review summary.
 - **Game themes** (Settings > Appearance): one switch that uses each game's cover colour as the accent on its page, with any theme.
+- **Keyboard-first library**: the grid is one Tab stop; arrow keys, Home/End, Page Up/Down and typing a game's name move between games, Enter opens, Shift+Enter plays, Ctrl/Cmd+D favourites and `/` goes to search. A controller uses the same cards. Press `?` for the full list.
+- **Crash suspects**: *Find suspect mods* in a game's Logs reads the log for the mods it names and offers a switch-off button for each (the quick-exit notification names them too). The existing pre-launch check still warns about duplicate, missing, incompatible and wrong-version mods.
+- **Windows prefix manager** (Linux, game editor > Launch options): where a game's Wine/Proton prefix is and how big, Wine settings, registry, repair (`wineboot -u`), a short list of winetricks components (Visual C++, .NET, DirectX, fonts), and a reset that keeps the old copy so you can restore it.
+- **More store imports** (Linux): Epic games installed with Legendary or Rare and Amazon games installed with Nile, launched through those tools. **Find missing covers** (Settings > Data, or the palette) looks up every game that only has a generated cover.
 - **Settings backup**: export or import settings, themes, collections, wishlist and per-game choices as a zip; credentials are never included ([docs/settings-export.md](docs/settings-export.md)).
 
 ### Themes
@@ -336,6 +340,10 @@ Not promises or dates.
 - [x] Recent sessions, playtime timeline and a year-in-review card
 - [x] Download controls: pause and resume all, speed limit, allowed hours
 - [x] More command-palette actions (picker, play next up or last played, stop, switch launch profile, pause downloads)
+- [x] Keyboard-first library grid (one Tab stop, arrows, type-ahead, play and favourite from the keyboard)
+- [x] Crash suspects from game logs, with one-click switch-off
+- [x] Wine/Proton prefix manager (repair, winetricks components, reset with a kept copy)
+- [x] Import Epic (Legendary/Rare) and Amazon (Nile) games, and a bulk "find missing covers"
 - [ ] Per-game automatic themes (the launcher takes on a game's look when you open it, e.g. Hades)
 
 ## Documentation index

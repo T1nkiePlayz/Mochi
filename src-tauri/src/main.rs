@@ -22,6 +22,7 @@ mod modscan;
 mod nxm;
 mod modrinth;
 mod platform;
+mod prefixes;
 mod selfinstall;
 mod shortcuts;
 mod playtime;
@@ -345,7 +346,7 @@ fn main() {
             modinstance::rollback_mod_update, modinstance::sync_instance_mods, modinstance::import_mods_from_folder, modlocs::detect_mod_locations,
             modscan::hash_mod_files, modscan::modrinth_identify, modscan::record_instance_mods, modscan::list_instance_records, modscan::copy_instance_records,
             modprofiles::read_tofu_manifest, modprofiles::write_tofu_manifest, modprofiles::restore_instance_records, modprofiles::apply_tofu_mods, nxm::get_nxm_handler, nxm::set_nxm_handler,
-            mochipack::write_mochipack_file, mochipack::read_mochipack_file, librarybackup::write_library_backup, librarybackup::read_library_backup, librarybackup::write_scheduled_library_backup,
+            mochipack::write_mochipack_file, mochipack::read_mochipack_file, librarybackup::write_library_backup, librarybackup::read_library_backup, librarybackup::write_scheduled_library_backup, prefixes::get_prefix_info, prefixes::reset_game_prefix, prefixes::restore_game_prefix, prefixes::delete_game_prefix_backup, prefixes::run_prefix_tool,
             modsnapshot::create_tofu_snapshot, modsnapshot::list_tofu_snapshots, modsnapshot::restore_tofu_snapshot, modsnapshot::delete_tofu_snapshot,
             gamelogs::list_game_logs, gamelogs::read_game_log, gamelogs::clear_game_logs,
             savebackup::list_save_locations, savebackup::create_save_backup, savebackup::list_save_backups, savebackup::restore_save_backup, savebackup::delete_save_backup, savebackup::auto_backup_saves, savebackup::get_save_backup_settings, savebackup::set_save_backup_settings,

@@ -53,6 +53,7 @@ export function registerBuiltinCommands(): () => void {
     return a.behavior.experimental.includes("game-search") && (Boolean(gameSearchBackendOverride()) || gameSearchAvailable(a.credentials.status));
   }));
   off.push(register("library.picker", "What should I play?", ["pick", "random", "suggest", "choose", "decide"], "Library", ({ app }) => { app().setActiveNav("Library"); requestPicker(); }, ({ app }) => app().lib.library.some((piko) => piko.kind !== "launcher")));
+  off.push(register("library.covers", "Find missing covers", ["artwork", "cover", "images", "metadata", "fetch"], "Library", ({ app }) => { const a = app(); void a.metadata.findMissingCovers(a.lib.library); }, ({ app }) => { const a = app(); return !a.metadata.refreshBusy && a.metadata.missingCovers(a.lib.library).length > 0; }));
   off.push(register("library.nextup", "Play next up game", ["backlog", "queue", "next"], "Library", async ({ app }) => {
     const a = app(); const piko = a.lib.library.find(isNextUp);
     if (piko) { a.lib.selectPiko(piko); await a.actions.launchGame(piko); }

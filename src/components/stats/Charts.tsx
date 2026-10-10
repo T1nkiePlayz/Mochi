@@ -178,7 +178,7 @@ export function Heatmap({ totals, now = Date.now() }: { totals: Map<string, numb
   );
 }
 
-const sourceNames: Record<string, string> = { steam: "Steam", heroic: "Heroic", lutris: "Lutris", bottles: "Bottles", itch: "itch.io", flatpak: "Flatpak", apps: "Desktop apps", manual: "Added manually" };
+const sourceNames: Record<string, string> = { steam: "Steam", heroic: "Heroic", lutris: "Lutris", bottles: "Bottles", itch: "itch.io", legendary: "Epic (Legendary)", nile: "Amazon (Nile)", flatpak: "Flatpak", apps: "Desktop apps", manual: "Added manually" };
 
 /** Library split by where the games came from. */
 export function Composition({ library, playtime }: { library: Piko[]; playtime: Map<string, number> }) {

@@ -12,7 +12,7 @@ export type CheckRecord = {
 /** A file of the Tofu's mod folder; `InstanceMod` fits. */
 export type CheckEntry = { filename: string; path?: string; enabled: boolean; foreign?: boolean; modifiedMs?: number; record?: CheckRecord };
 
-export type IssueKind = "duplicate-file" | "duplicate-project" | "wrong-version" | "wrong-loader" | "missing-dependency" | "incompatible";
+export type IssueKind = "duplicate-file" | "duplicate-project" | "wrong-version" | "wrong-loader" | "missing-dependency" | "incompatible" | "crash-suspect";
 export type IssueAction =
   | { kind: "disable"; label: string; paths: string[] }
   | { kind: "enable"; label: string; paths: string[] }

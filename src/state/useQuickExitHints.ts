@@ -5,6 +5,7 @@ import { getPlatformCapabilities } from "../lib/platform";
 import { listGameLogs, readGameLog } from "../lib/gameLogs";
 import { launchHints, modUpdateHint, quickExits } from "../lib/launchHints";
 import { listTofuSnapshots } from "../lib/mods/snapshots";
+import { findCrashSuspects } from "../lib/mods/conflictService";
 
 const LOG_TAIL_BYTES = 64 * 1024;
 
@@ -34,6 +35,9 @@ export function useQuickExitHints(sessions: ActiveSession[], library: Piko[], no
           const snapshots = (await Promise.all((piko?.tofus ?? []).filter((tofu) => tofu.path).map((tofu) => listTofuSnapshots(tofu.id).catch(() => [])))).flat();
           const rollback = modUpdateHint(snapshots, Date.now());
           if (rollback) hints.unshift(rollback);
+          const tofu = piko?.tofus.find((item) => item.path);
+          const suspects = piko && tofu && text ? await findCrashSuspects(piko, tofu, text) : [];
+          if (suspects.length) hints.unshift(`The log names ${suspects.slice(0, 3).map((issue) => issue.title.replace(/ is named in the log$/, "")).join(", ")}. Open the game's Logs and use "Find suspect mods" to switch it off.`);
           notifyRef.current(`${name} closed right after starting`, hints.join(" "));
         } catch { /* browser/development mode */ }
       })();

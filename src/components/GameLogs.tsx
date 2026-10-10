@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Copy, FolderOpen, RefreshCw, ScrollText, Trash2, X } from "lucide-react";
+import { Copy, FolderOpen, RefreshCw, ScrollText, Search, Trash2, X } from "lucide-react";
 import { appendLog, clearGameLogs, handoffHelp, listGameLogs, readGameLog, type LogList } from "../lib/gameLogs";
 import { formatBytes } from "../lib/format";
 import { openPath } from "../lib/platform";
 import type { Piko } from "../models";
 import { useApp } from "../state/AppContext";
 import { ModalShell } from "./mods/ModalShell";
+import { ConflictIssues } from "./mods/ConflictIssues";
+import { findCrashSuspects } from "../lib/mods/conflictService";
+import type { Issue } from "../lib/mods/conflicts";
 import { confirmAction } from "../lib/confirm";
 
 const when = (ms: number) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -28,9 +31,11 @@ function GameLogsModal({ game, onClose }: { game: Piko; onClose: () => void }) {
   const [text, setText] = useState("");
   const [follow, setFollow] = useState(running);
   const [message, setMessage] = useState("");
+  const [suspects, setSuspects] = useState<Issue[] | null>(null);
   const offset = useRef<number | undefined>(undefined);
   const view = useRef<HTMLPreElement>(null);
   const current = list?.sessions.find((item) => item.id === sessionId);
+  const modTofu = game.tofus.find((tofu) => tofu.path);
   const platform = platformCapabilities?.platform ?? "linux";
 
   const loadList = useCallback(async () => {
@@ -60,6 +65,11 @@ function GameLogsModal({ game, onClose }: { game: Piko; onClose: () => void }) {
   }, [follow, sessionId, read]);
   useEffect(() => { if (follow && view.current) view.current.scrollTop = view.current.scrollHeight; }, [text, follow]);
 
+  useEffect(() => { setSuspects(null); }, [sessionId]);
+  const findSuspects = useCallback(async () => {
+    if (modTofu) setSuspects(await findCrashSuspects(game, modTofu, text));
+  }, [game, modTofu, text]);
+
   const copy = async () => {
     try { await navigator.clipboard.writeText(text); setMessage("Copied to the clipboard."); }
     catch { setMessage("Could not copy. Select the text and copy it by hand."); }
@@ -84,10 +94,14 @@ function GameLogsModal({ game, onClose }: { game: Piko; onClose: () => void }) {
       <label className="check-row"><input type="checkbox" checked={follow} onChange={(event) => setFollow(event.target.checked)} /> Follow</label>
       <button type="button" className="secondary-button" onClick={() => { void loadList(); void read(); }}><RefreshCw size={13} /> Refresh</button>
       <button type="button" className="secondary-button" onClick={() => void copy()} disabled={!text}><Copy size={13} /> Copy</button>
+      {modTofu && <button type="button" className="secondary-button" onClick={() => void findSuspects()} disabled={!text} title="Looks in this log for the mods it names"><Search size={13} /> Find suspect mods</button>}
       <button type="button" className="secondary-button" onClick={() => list?.dir && void openPath(list.dir).catch((error) => setMessage(errorText(error)))} disabled={!list?.dir}><FolderOpen size={13} /> Open folder</button>
       <button type="button" className="secondary-button danger-outline" onClick={() => void clear()} disabled={empty}><Trash2 size={13} /> Clear</button>
     </div>
     {message && <p className="metadata-note" role="status">{message}</p>}
+    {suspects && modTofu && (suspects.length
+      ? <ConflictIssues issues={suspects} tofu={modTofu} onFixed={async () => setSuspects(await findCrashSuspects(game, modTofu, text))} />
+      : <p className="metadata-note" role="status">No installed mod is named in this log.</p>)}
     {empty ? <p className="muted game-logs-empty">{running ? "The game is running but no log was captured for it." : "Nothing has been captured yet. Start the game from Mochi and its output appears here."}</p>
       : !current.direct ? <p className="muted game-logs-empty" role="status">{handoffHelp(platform)}</p>
       : <pre className="game-logs-view" ref={view} tabIndex={0} aria-label="Log output">{text || (running ? "Waiting for output..." : "This session wrote no output.")}</pre>}

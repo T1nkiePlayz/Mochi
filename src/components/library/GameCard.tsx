@@ -14,6 +14,8 @@ type Props = {
   cloudStatus: CloudStatus;
   selecting: boolean;
   checked: boolean;
+  /** The one card in the grid that Tab lands on (the others are reached with the arrow keys). */
+  tabStop?: boolean;
   // Handlers receive the game so one stable function serves every card (lets memo skip untouched cards).
   onOpen: (piko: Piko) => void;
   onToggleFavorite: (gameId: string) => void;
@@ -23,7 +25,7 @@ type Props = {
 
 const LONG_PRESS_MS = 550;
 
-export const GameCard = memo(function GameCard({ piko, selected, running, cloudStatus, selecting, checked, onOpen, onToggleFavorite, onToggleChecked, onMenu }: Props) {
+export const GameCard = memo(function GameCard({ piko, selected, running, cloudStatus, selecting, checked, tabStop = true, onOpen, onToggleFavorite, onToggleChecked, onMenu }: Props) {
   const timer = useRef<number>();
   const fired = useRef(false);
   const cancel = () => window.clearTimeout(timer.current);
@@ -42,10 +44,12 @@ export const GameCard = memo(function GameCard({ piko, selected, running, cloudS
     }
   };
 
-  return <article className={`game-card ${hasArtwork(piko) ? "" : "no-art"} ${selected ? "selected" : ""} ${checked ? "multi-selected" : ""} ${running ? "is-running" : ""}`}
+  // Hidden from Tab but still reachable by arrow keys and the controller (data-nav).
+  const roving = tabStop ? {} : { tabIndex: -1, "data-nav": "" };
+  return <article data-game-id={piko.id} className={`game-card ${hasArtwork(piko) ? "" : "no-art"} ${selected ? "selected" : ""} ${checked ? "multi-selected" : ""} ${running ? "is-running" : ""}`}
     onContextMenu={(event) => { event.preventDefault(); onMenu(piko.id, event.clientX, event.clientY); }}
     onPointerDown={onPointerDown} onPointerUp={cancel} onPointerLeave={cancel} onPointerCancel={cancel} onKeyDown={onKeyDown}>
-    <button type="button" className="game-card-main" aria-pressed={selecting ? checked : undefined}
+    <button type="button" className="game-card-main" {...roving} aria-pressed={selecting ? checked : undefined}
       onClick={() => { if (fired.current) { fired.current = false; return; } if (selecting) onToggleChecked(piko.id); else onOpen(piko); }}>
       <GameArtwork className="game-card-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} name={piko.name} kind={piko.kind} sourceId={piko.sourceId} />
       <div className="game-card-copy">
@@ -57,6 +61,6 @@ export const GameCard = memo(function GameCard({ piko, selected, running, cloudS
     </button>
     {selecting
       ? <span className={`game-card-check ${checked ? "on" : ""}`} aria-hidden="true">{checked && <Check size={13} />}</span>
-      : <button type="button" className={`game-card-heart ${piko.favorite ? "on" : ""}`} aria-pressed={Boolean(piko.favorite)} aria-label={piko.favorite ? `Remove ${piko.name} from favourites` : `Add ${piko.name} to favourites`} onClick={() => onToggleFavorite(piko.id)}><Heart size={15} fill={piko.favorite ? "currentColor" : "none"} /></button>}
+      : <button type="button" className={`game-card-heart ${piko.favorite ? "on" : ""}`} tabIndex={-1} data-nav="" aria-pressed={Boolean(piko.favorite)} aria-label={piko.favorite ? `Remove ${piko.name} from favourites` : `Add ${piko.name} to favourites`} onClick={() => onToggleFavorite(piko.id)}><Heart size={15} fill={piko.favorite ? "currentColor" : "none"} /></button>}
   </article>;
 });
