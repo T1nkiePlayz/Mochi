@@ -12,7 +12,7 @@ vi.mock("../lib/cloud", async (original) => ({
   pushLibrary: (...args: unknown[]) => (pushLibrary as (...a: unknown[]) => Promise<undefined>)(...args),
 }));
 
-import { getCloudAccountSettings } from "../lib/cloud";
+import { getCloudAccountSettings, pullLibrary } from "../lib/cloud";
 import { useCloudSync } from "./useCloudSync";
 
 const user = (id: string) => ({ id }) as never;
@@ -39,6 +39,30 @@ describe("useCloudSync account switch", () => {
 });
 
 describe("useCloudSync initialization recovery", () => {
+  it("recovers after the initial library pull fails transiently", async () => {
+    const settings = vi.mocked(getCloudAccountSettings);
+    const pull = vi.mocked(pullLibrary);
+    settings.mockClear();
+    pull.mockClear();
+    pull.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+
+    const { result } = renderHook(() => useCloudSync(user("A"), lib, vi.fn(), true, "shared"));
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(result.current.syncState).toBe("retrying");
+    expect(pull).toHaveBeenCalledTimes(1);
+
+    // Startup failures use backoff; once the transient pull error clears, the
+    // next initialization must pull successfully and leave the retrying state.
+    await act(async () => { await vi.advanceTimersByTimeAsync(1999); });
+    expect(pull).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+    expect(pull).toHaveBeenCalledTimes(2);
+    expect(result.current.syncState).not.toBe("retrying");
+    expect(result.current.syncState).not.toBe("error");
+  });
   it("retries initialization after a local library change following a permanent settings error", async () => {
     const settings = vi.mocked(getCloudAccountSettings);
     settings.mockClear();
