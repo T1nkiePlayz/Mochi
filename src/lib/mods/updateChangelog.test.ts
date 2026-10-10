@@ -46,14 +46,15 @@ describe("changelog loader", () => {
   });
   it("CurseForge and Nexus only link and never fetch or persist anything", async () => {
     const fetcher = vi.fn();
-    const writes = vi.spyOn(Storage.prototype, "setItem");
+    const writes = vi.fn();
+    vi.stubGlobal("localStorage", { setItem: writes, getItem: vi.fn(() => null), removeItem: vi.fn(), clear: vi.fn(), key: vi.fn(), length: 0 });
     const loader = createChangelogLoader(fetcher);
     expect(await loader.load(item("curseforge", "c"))).toEqual({ kind: "link", url: "https://www.curseforge.com/projects/p", label: "Changelog on CurseForge" });
     expect(await loader.load(item("nexus", "n", { pageUrl: "https://www.nexusmods.com/g/mods/1" }))).toMatchObject({ kind: "link", label: "Changelog on Nexus Mods" });
     expect(fetcher).not.toHaveBeenCalled();
     expect(loader.size()).toBe(0);
     expect(writes).not.toHaveBeenCalled();
-    writes.mockRestore();
+    vi.unstubAllGlobals();
   });
   it("has nothing to show for a Nexus update without a page", () => { expect(linkChangelog(item("nexus", "n"))).toEqual({ kind: "none" }); });
 });
