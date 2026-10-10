@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import type { Piko } from "../models";
 import { parseCliPayload, resolveGame, type CliIntent } from "../lib/cliIntent";
 
@@ -60,10 +61,10 @@ export function useCliIntents({ ready, library, launch, open, report }: Options)
     if (!("__TAURI_INTERNALS__" in window)) return;
     let off: (() => void) | undefined;
     let disposed = false;
-    void import("@tauri-apps/api/event").then(({ listen }) => listen<unknown>("cli-intent", (event) => {
+    void listen<unknown>("cli-intent", (event) => {
       const intent = parseCliPayload(event.payload);
       if (intent) handle(intent);
-    })).then((unlisten) => { if (disposed) unlisten(); else off = unlisten; }).catch(() => {});
+    }).then((unlisten) => { if (disposed) unlisten(); else off = unlisten; }).catch(() => {});
     return () => { disposed = true; off?.(); };
   }, [handle]);
 

@@ -1,3 +1,4 @@
+import { ensureChecked } from "../state/modUpdates";
 import { register } from "./commands";
 import type { NavId } from "../state/AppContext";
 import { toggleBigPicture } from "../bigpicture/mode";
@@ -52,7 +53,6 @@ export function registerBuiltinCommands(): () => void {
   off.push(register("mods.check", "Check mods for updates", ["update", "outdated", "mods"], "Mods", async ({ app }) => {
     const a = app(); const tofu = a.lib.selectedTofu;
     a.notifications.notify("Checking mods", `${a.lib.selectedPiko.name} / ${tofu.name}`);
-    const { ensureChecked } = await import("../state/modUpdates");
     const check = await ensureChecked(tofu, a.lib.selectedPiko, a.behavior.modSources, true).catch(() => undefined);
     a.notifications.notify("Mod check finished", check ? (check.items.length ? `${check.items.length} update${check.items.length === 1 ? "" : "s"} available.` : "Everything is up to date.") : "The check could not finish.");
   }, ({ app }) => Boolean(app().lib.selectedTofu?.path)));
