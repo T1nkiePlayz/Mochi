@@ -102,3 +102,15 @@ export const clearActions: Array<{ kind: ClearKind; label: string; detail: strin
 ];
 export const ageOptions = [7, 30, 90, 365] as const;
 export const ageLabel = (days: number) => (days === 365 ? "1 year" : `${days} days`);
+
+/** Runs every clear action in turn (age-based ones use `olderThanDays`); one failure never stops the rest. */
+export async function clearAllUnused(olderThanDays: number, run: typeof clearStorageLocation = clearStorageLocation): Promise<{ files: number; bytes: number; failed: string[] }> {
+  const total = { files: 0, bytes: 0, failed: [] as string[] };
+  for (const action of clearActions) {
+    try {
+      const result = await run(action.kind, action.needsAge ? olderThanDays : undefined);
+      total.files += result.files; total.bytes += result.bytes;
+    } catch { total.failed.push(action.label); }
+  }
+  return total;
+}

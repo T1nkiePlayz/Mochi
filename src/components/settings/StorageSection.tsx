@@ -5,7 +5,7 @@ import { useApp } from "../../state/AppContext";
 import { confirmAction } from "../../lib/confirm";
 import { formatBytes } from "../../lib/format";
 import { useStorageScan } from "../../lib/useStorageScan";
-import { ageLabel, ageOptions, buildRows, categoryLabels, clearActions, clearStorageLocation, formatShare, openFolder, sortRows, summarise, visibleRows, type SortKey, type SortState, type StorageRow } from "../../lib/diskUsage";
+import { ageLabel, ageOptions, buildRows, categoryLabels, clearActions, clearAllUnused, clearStorageLocation, formatShare, openFolder, sortRows, summarise, visibleRows, type SortKey, type SortState, type StorageRow } from "../../lib/diskUsage";
 import { SettingsGroup } from "./Section";
 
 const PAGE = 200;
@@ -54,6 +54,18 @@ export function StorageSection() {
     } catch (cause) { setNote(errorText(cause)); }
     finally { setBusy(null); }
   };
+  const clearAll = async () => {
+    const ok = await confirmAction({ title: "Clear all unused data?", danger: true, confirmLabel: "Clear everything", message: `Removes every cache and leftover Mochi keeps: artwork cache, unfinished downloads, game logs, and rollback copies and snapshots older than ${ageLabel(age)}. This cannot be undone. Game installs, your own mod folders, covers you picked yourself and anything in use are never touched.`,
+      items: clearActions.map((action) => action.needsAge ? `${action.label} (older than ${ageLabel(age)})` : action.label) });
+    if (!ok) return;
+    setBusy("all"); setNote("");
+    try {
+      const result = await clearAllUnused(age);
+      const done = result.files ? `Removed ${result.files.toLocaleString()} file${result.files === 1 ? "" : "s"} and freed ${formatBytes(result.bytes)}.` : "There was nothing to remove.";
+      setNote(result.failed.length ? `${done} Could not clear: ${result.failed.join(", ")}.` : done);
+      void scan();
+    } finally { setBusy(null); }
+  };
   const open = (path: string) => { void openFolder(path).catch((cause) => setNote(errorText(cause))); };
 
   return <SettingsGroup title="Storage" subtitle="Where disk space goes" id="settings-storage" className="storage-group">
@@ -100,6 +112,8 @@ export function StorageSection() {
       <small className="metadata-note storage-note">Game installs and mod folders can only be opened here, never deleted. Sizes of nested folders can overlap, and very large folders are measured up to a limit.</small>
     </>}
     <div className="setting-row storage-clear-head"><span><strong>Free up space</strong><small>Only Mochi's own caches and leftovers can be removed here.</small></span><Select value={String(age)} onChange={(value) => setAge(Number(value))} options={ageOption} label="Age for old items" className="storage-age" /></div>
+    <div className="setting-row"><span><strong>Clear all unused data</strong><small>Runs every action below at once, using the age chosen above.</small></span>
+      <button type="button" className="secondary-button danger-outline" disabled={busy !== null || scanning} onClick={() => void clearAll()}>{busy === "all" ? "Clearing…" : "Clear all"}</button></div>
     {clearActions.map((action) => <div className="setting-row" key={action.kind}>
       <span><strong>{action.label}{action.needsAge ? ` (older than ${ageLabel(age)})` : ""}</strong><small>{action.detail}</small></span>
       <button type="button" className="secondary-button danger-outline" disabled={busy !== null || scanning} onClick={() => void clear(action)}>{busy === action.kind ? "Removing…" : "Remove"}</button>
