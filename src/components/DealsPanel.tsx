@@ -45,7 +45,7 @@ export function DealsPanel() {
         <div className="deals-offer-art"><Tag size={17} aria-hidden="true" /></div>
         <div className="deals-offer-copy"><strong><ExternalLink href={deal.link}>{deal.title}</ExternalLink></strong><small>{storeLabel(deal.storeId)}</small></div>
         <div className="deals-offer-price"><strong>{money(deal.salePrice)}</strong><span>{Math.round(deal.savings)}% off</span></div>
-      </article>)}</div> : <div className="deals-empty-inline">{checking ? "Looking for current offers…" : deals.stores.length ? "No matching sales yet. Try refreshing later." : "Select a store above to see its offers."}</div>}
+      </article>)}</div> : <div className="deals-empty-inline">{checking ? t("Looking for current offers…") : deals.stores.length ? t("No matching sales yet. Try refreshing later.") : t("Select a store above to see its offers.")}</div>}
     </section>
     <section className="deals-results">
       <div className="deals-subhead"><Clock3 size={15} aria-hidden="true" /><div><strong>{t("Free on Epic")}</strong><small>{t("Limited-time giveaways and upcoming offers")}</small></div><span className="deals-count">{free.length}</span></div>
@@ -53,7 +53,7 @@ export function DealsPanel() {
         <div className="deals-offer-art free"><Store size={17} aria-hidden="true" /></div>
         <div className="deals-offer-copy"><strong><ExternalLink href={game.url}>{game.title}</ExternalLink></strong><small>Epic Games Store</small></div>
         <div className="deals-offer-price"><span className={game.state === "free-now" ? "deals-free-now" : ""}>{game.state === "free-now" ? t("Free now") : t("Coming soon")}</span>{game.originalPrice && <small>{t("Was")} {game.originalPrice}</small>}</div>
-      </article>)}</div> : <div className="deals-empty-inline">{deals.stores.includes("epic") ? "No Epic giveaways available right now." : "Enable Epic Games Store above to see giveaways."}</div>}
+      </article>)}</div> : <div className="deals-empty-inline">{deals.stores.includes("epic") ? t("No Epic giveaways available right now.") : t("Enable Epic Games Store above to see giveaways.")}</div>}
     </section>
     {watched.length > 0 && <section className="deals-results">
       <div className="deals-subhead"><Heart size={15} aria-hidden="true" /><div><strong>{t("Price watches")}</strong><small>{t("Games you are keeping an eye on")}</small></div><span className="deals-count">{watched.length}</span></div>
