@@ -118,6 +118,27 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by account/library changes, not callback identity
   }, [library, user?.id, cloudSyncEnabled, storageReady, storageKey]);
 
+  /** Explicit setup import: fetch the account's cloud library and merge it with local data without deleting local-only games. */
+  const importCloudLibrary = async () => {
+    if (!supabase || !user || cloudDataBusy) return;
+    setCloudDataBusy(true);
+    setCloudDataMessage("");
+    try {
+      const cloudLibrary = await pullLibrary(supabase, user.id);
+      const localIds = new Set(libraryRef.current.map((piko) => piko.id));
+      const importedCount = cloudLibrary.filter((piko) => !localIds.has(piko.id)).length;
+      setLibrary((local) => mergeCloudLibrary(local, cloudLibrary));
+      if (cloudSyncEnabled && schedulerRef.current) schedulerRef.current.notify();
+      setCloudDataMessage(cloudLibrary.length
+        ? `Imported/updated ${cloudLibrary.length} cloud games; ${importedCount} were new on this device. Local-only games were kept.`
+        : "No games were found in your cloud library. Your local library was not changed.");
+    } catch (error) {
+      setCloudDataMessage(error instanceof Error ? error.message : "Unable to import your cloud library. Check your connection and account access, then try again.");
+    } finally {
+      setCloudDataBusy(false);
+    }
+  };
+
   const clearCloudData = async () => {
     if (!supabase || !user || !cloudDataAccessAllowed || cloudDataBusy) return;
     if (!await confirmAction({ title: "Clear your cloud library?", danger: true, confirmLabel: "Clear cloud data", message: "Every Piko and Tofu stored in Mochi Cloud for this account is deleted. Your local library, account and saved provider credentials are not changed.", items: ["All cloud Pikos (games)", "All cloud Tofus (environments)"] })) return;
@@ -139,5 +160,5 @@ export function useCloudSync(user: User | null, library: Piko[], setLibrary: Dis
     } finally { setCloudDataBusy(false); }
   };
 
-  return { syncState, confirmedIds, cloudSyncEnabled, cloudDataAccessAllowed, cloudDataBusy, cloudDataMessage, clearCloudData };
+  return { syncState, confirmedIds, cloudSyncEnabled, cloudDataAccessAllowed, cloudDataBusy, cloudDataMessage, clearCloudData, importCloudLibrary };
 }
