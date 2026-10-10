@@ -17,6 +17,7 @@ import { installAccessibilityEnhancer } from "./lib/dialogs";
 import { installTruncationTitles } from "./lib/truncationTitles";
 import { Cloud } from "lucide-react";
 import { OfflineBanner } from "./components/OfflineBanner";
+import { useTranslation } from "./lib/i18n";
 
 // Dialogs only mount when opened, so their code (and the pickers/editors behind them) stays out of the entry chunk.
 const AddGameModals = lazy(() => import("./components/AddGameModals").then((m) => ({ default: m.AddGameModals })));
@@ -35,11 +36,13 @@ const DealsView = lazy(() => import("./views/DealsView").then((m) => ({ default:
 const StatsView = lazy(() => import("./views/StatsView").then((m) => ({ default: m.StatsView })));
 
 function ViewFallback() {
-  return <div className="view-loading" role="status" aria-live="polite"><span className="view-loading-dot" /><span>Loading…</span></div>;
+  const t = useTranslation();
+  return <div className="view-loading" role="status" aria-live="polite"><span className="view-loading-dot" /><span>{t("Loading…")}</span></div>;
 }
 
 function CurrentView() {
   const { activeNav } = useApp();
+  const t = useTranslation();
   switch (activeNav) {
     case "Library": return <LibraryView />;
     case "Settings": return <SettingsView />;
@@ -48,7 +51,7 @@ function CurrentView() {
     case "Installed": return <InstalledView />;
     case "Stats": return <StatsView />;
     case "Deals": return <DealsView />;
-    default: return <div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>Not found.</h2></div>;
+    default: return <div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>{t("Not found.")}</h2></div>;
   }
 }
 
