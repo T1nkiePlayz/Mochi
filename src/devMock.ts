@@ -5,6 +5,7 @@
 import { installModsMock } from "./devModsMock";
 import { instanceHandlers } from "./devInstancesMock";
 import { saveHandlers } from "./devSavesMock";
+import { assembleDetails, setGameSearchBackendForDev, type SearchHit } from "./lib/gameSearch";
 type Handler = (args: Record<string, unknown>) => unknown;
 
 
@@ -113,6 +114,7 @@ const handlers: Record<string, Handler> = {
     { dealId: "d2", storeId: "7", gameId: "2", title: "The Knightling", salePrice: 4.79, normalPrice: 29.99, savings: 84, steamAppId: null, link: "https://www.cheapshark.com/redirect?dealID=d2", lastChange: 1 },
     { dealId: "d3", storeId: "25", gameId: "3", title: "Not My Store Game", salePrice: 1, normalPrice: 10, savings: 90, steamAppId: null, link: "https://www.cheapshark.com/redirect?dealID=d3", lastChange: 1 },
   ] }),
+  get_steam_price: () => ({ status: "ok", message: null, data: { currency: "USD", initial: 1999, final: 1499, discountPercent: 25, formatted: "$14.99" } }),
   get_price_info: () => ({ status: "ok", message: null, data: { gameId: "1", title: "Mock", steamAppId: null, cheapestNow: 9.99, cheapestEver: 4.99, cheapestEverDate: 1759177295, deals: [] } }),
   get_steam_achievement_totals: () => [{ appid: 220, steamId: "76561197960287930", unlocked: 18, total: 33, fetchedAt: now }],
   get_steam_store_details: ({ appid }) => ({
@@ -368,6 +370,17 @@ export function installDevMock() {
   const w = window as unknown as Record<string, unknown>;
   if ("__TAURI_INTERNALS__" in w) return;
   installModsMock();
+  // Game search (experimental) has no Supabase in the browser build: answer from a small fake catalogue.
+  const catalogue = ["Hades II", "Hollow Knight: Silksong", "Hades", "Half-Life 2"].map((name, i): SearchHit => ({ key: `igdb:${i}`, name, year: 2020 + i, igdb: { id: i, name, first_release_date: 1_600_000_000 + i * 31_536_000 } }));
+  const art = (kind: "grids" | "heroes" | "logos", n: number) => Array.from({ length: n }, (_, i) => ({ id: i, kind, url: `https://cdn2.steamgriddb.com/${kind}/${i}.png`, thumb: `https://cdn2.steamgriddb.com/${kind}/${i}.png`, width: 600, height: 900 }));
+  setGameSearchBackendForDev({
+    search: async (query) => catalogue.filter((hit) => hit.name.toLowerCase().includes(query.toLowerCase())),
+    details: async (hit) => assembleDetails({
+      hit, steamAppId: 1145350, sgdb: [...art("grids", 3), ...art("heroes", 2), ...art("logos", 2)], steam: null,
+      igdb: { id: 1, name: hit.name, summary: "A sample description from the development mock. Fight through waves of enemies, upgrade your arsenal and uncover the story.", genres: [{ name: "Roguelike" }, { name: "Action" }], platforms: [{ name: "PC" }, { name: "Nintendo Switch" }], total_rating: 91.4, total_rating_count: 812, first_release_date: 1_726_000_000, involved_companies: [{ developer: true, company: { name: "Mock Studio" } }], similar_games: [{ name: "Hades" }, { name: "Dead Cells" }], websites: [{ url: "https://example.com/game" }], url: "https://www.igdb.com/games/mock" },
+      prices: { steam: { currency: "USD", initial: 1999, final: 1499, discountPercent: 25, formatted: "$14.99" }, shark: { gameId: "1", title: hit.name, steamAppId: "1145350", cheapestNow: 13.49, cheapestEver: 11.99, cheapestEverDate: 1_740_000_000, deals: [{ storeId: "7", price: 13.49, retailPrice: 19.99, savings: 32, link: "https://www.cheapshark.com/redirect?dealID=x" }] } },
+    }),
+  });
   w.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener: () => {} };
   w.__MOCHI_DEV_MOCK__ = true; // lets src/lib/updater.ts fake an available update
   w.__TAURI_INTERNALS__ = {

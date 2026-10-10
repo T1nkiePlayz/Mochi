@@ -17,6 +17,8 @@ export const storageKeys = {
   /** Deal alerts: store toggles and the alert/check bookkeeping (`src/lib/deals.ts`). */
   dealsStores: "mochi:deals-stores",
   dealsState: "mochi:deals-state",
+  /** Local price observations per game (`src/lib/gameSearch.ts`). */
+  priceHistory: "mochi:price-history",
   /** User corrections of game/launcher detection, keyed by import id. */
   launcherOverrides: "mochi:launcher-overrides",
   /** Pairs of games the user said are not the same game (`src/lib/duplicates.ts`). */

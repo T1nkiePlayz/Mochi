@@ -1,0 +1,46 @@
+.modal.game-search-dialog { width: min(1040px, 94vw); max-width: min(1040px, 94vw); height: min(86vh, 820px); display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; }
+.game-search-body { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 16px; min-height: 0; }
+.game-search-side { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 8px; min-height: 0; }
+.game-search-input { display: flex; align-items: center; gap: 8px; padding: 0 10px; height: 38px; }
+.game-search-input input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--mochi-text); font: inherit; }
+.game-search-status { min-height: 1.2em; font-size: 12px; color: var(--mochi-text-muted); }
+.game-search-hits { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; overflow-y: auto; min-height: 0; align-content: start; }
+.game-search-hit { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 10px; align-items: center; width: 100%; padding: 6px; text-align: left; color: inherit; background: var(--mochi-surface-hover); border: var(--mochi-border-width, 1px) solid var(--mochi-border-strong); border-radius: var(--mochi-radius); cursor: pointer; }
+.game-search-hit:hover, .game-search-hit.active { border-color: var(--mochi-accent); }
+.game-search-hit img, .game-search-nocover { width: 36px; height: 48px; object-fit: cover; border-radius: var(--mochi-radius-sm); background: var(--mochi-surface); }
+.game-search-hit span:last-child { display: grid; min-width: 0; }
+.game-search-hit strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-search-hit small, .game-search-muted { color: var(--mochi-text-muted); font-size: 12px; }
+.game-search-main { overflow-y: auto; min-height: 0; padding-right: 4px; }
+.game-search-details { display: grid; gap: 12px; }
+.game-search-details h3, .game-search-details h4, .game-search-details p { margin: 0; }
+.game-search-details h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--mochi-text-muted); margin-bottom: 6px; }
+.game-search-hero { height: 140px; overflow: hidden; border-radius: var(--mochi-radius); background: var(--mochi-surface-hover); }
+.game-search-hero img { width: 100%; height: 100%; object-fit: cover; }
+.game-search-title { display: flex; gap: 14px; align-items: flex-start; }
+.game-search-cover { width: 72px; height: 96px; object-fit: cover; border-radius: var(--mochi-radius-sm); flex-shrink: 0; }
+.game-search-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.game-search-actions button { display: inline-flex; align-items: center; gap: 6px; }
+.game-search-target { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--mochi-text-muted); }
+.game-search-target input { width: 72px; }
+.game-search-description { line-height: 1.5; }
+.game-search-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; margin: 0; }
+.game-search-facts dt { color: var(--mochi-text-muted); }
+.game-search-facts dd { margin: 0; }
+.game-search-prices { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 4px; }
+.game-search-prices li { display: flex; justify-content: space-between; gap: 12px; }
+.game-search-chart { margin: 0; display: grid; gap: 4px; }
+.game-search-chart svg { width: 100%; height: 96px; background: var(--mochi-surface-hover); border: var(--mochi-border-width, 1px) solid var(--mochi-border-strong); border-radius: var(--mochi-radius); }
+.game-search-chart figcaption { font-size: 11px; color: var(--mochi-text-muted); }
+.game-search-line { stroke: var(--mochi-accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.game-search-dot { fill: var(--mochi-accent-strong); }
+.game-search-ever { stroke: var(--mochi-text-muted); stroke-width: 1; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.game-search-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.game-search-strip a { flex: 0 0 auto; }
+.game-search-strip img { height: 96px; width: auto; max-width: 240px; border-radius: var(--mochi-radius-sm); display: block; }
+.game-search-strip.wide img { height: 110px; }
+.game-search-similar { display: flex; flex-wrap: wrap; gap: 6px; }
+.game-search-links { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.game-search-details a { color: var(--mochi-accent-strong); text-decoration: none; }
+.game-search-details a:hover, .game-search-details a:focus-visible { text-decoration: underline; }
+@media (max-width: 760px) { .game-search-body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 40%) minmax(0, 1fr); } }

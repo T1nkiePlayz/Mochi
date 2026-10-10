@@ -14,6 +14,15 @@ export type IgdbGame = {
   game_modes?: Array<{ name: string }>;
   player_perspectives?: Array<{ name: string }>;
   first_release_date?: number;
+  // Added to the edge function's field list for game search; absent until that function is redeployed.
+  slug?: string;
+  url?: string;
+  platforms?: Array<{ name: string }>;
+  total_rating?: number;
+  total_rating_count?: number;
+  websites?: Array<{ url?: string }>;
+  involved_companies?: Array<{ developer?: boolean; company?: { name?: string } }>;
+  similar_games?: Array<{ id?: number; name: string; cover?: { url?: string } }>;
 };
 
 export async function lookupIgdbGames(client: SupabaseClient, name: string): Promise<IgdbGame[]> {

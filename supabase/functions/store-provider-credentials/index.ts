@@ -204,7 +204,7 @@ function searchIgdb(userId: string, query: string, limit: number) {
   return igdbPost(
     userId,
     "games",
-    `search "${igdbString(query)}"; fields name,summary,cover.url,artworks.url,screenshots.url,videos.name,videos.video_id,genres.name,themes.name,game_modes.name,player_perspectives.name,first_release_date; limit ${limit};`,
+    `search "${igdbString(query)}"; fields name,summary,cover.url,artworks.url,screenshots.url,videos.name,videos.video_id,genres.name,themes.name,game_modes.name,player_perspectives.name,first_release_date,slug,url,platforms.name,total_rating,total_rating_count,websites.url,involved_companies.developer,involved_companies.company.name,similar_games.name,similar_games.cover.url; limit ${limit};`,
   );
 }
 

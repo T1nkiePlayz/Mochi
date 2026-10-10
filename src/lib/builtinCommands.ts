@@ -3,6 +3,7 @@ import type { NavId } from "../state/AppContext";
 import { toggleBigPicture } from "../bigpicture/mode";
 import { openShortcuts } from "../components/ShortcutsHelp";
 import { openExternalUrl } from "./platform";
+import { gameSearchAvailable, gameSearchBackendOverride, openGameSearch } from "./gameSearch";
 
 const DOCS_URL = "https://github.com/T1nkiePlayz/Mochi/tree/main/docs";
 const ISSUES_URL = "https://github.com/T1nkiePlayz/Mochi/issues";
@@ -42,6 +43,10 @@ export function registerBuiltinCommands(): () => void {
   off.push(register("library.add", "Add game", ["new", "piko", "custom"], "Library", ({ app }) => { const a = app(); a.setActiveNav("Library"); a.add.setShowAddPiko(true); }));
   off.push(register("library.import", "Import games", ["steam", "launcher", "scan", "heroic", "lutris"], "Library", ({ app }) => { const a = app(); a.setActiveNav("Library"); a.add.openImportPicker("games"); }));
   off.push(register("mods.discover", "Install mod…", ["install", "mod", "search", "discover", "download"], "Mods", async ({ app }) => { const { openDiscoverWithQuery } = await import("./discoverQuery"); openDiscoverWithQuery("", app().setActiveNav); }));
+  off.push(register("games.search", "Search all games", ["find", "lookup", "price", "wishlist", "igdb", "steamgriddb", "discover"], "Discover", () => { openGameSearch(); }, ({ app }) => {
+    const a = app();
+    return a.behavior.experimental.includes("game-search") && (Boolean(gameSearchBackendOverride()) || gameSearchAvailable(a.credentials.status));
+  }));
   off.push(register("tofu.manage", "Open Tofu manager", ["tofu", "profile", "instance"], "Library", ({ app }) => app().setShowTofuManager(true), ({ app }) => app().lib.library.some((piko) => piko.id === app().lib.selectedPiko.id)));
   off.push(register("mods.snapshot", "Create snapshot of current Tofu", ["backup", "mods", "restore point"], "Mods", async ({ app }) => {
     const a = app(); const tofu = a.lib.selectedTofu;
