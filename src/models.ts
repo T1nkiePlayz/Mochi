@@ -107,6 +107,8 @@ export type ContentType = "game" | "soundtrack" | "extra";
 /** One way to start a game that was found in several places (Steam, Heroic, Flatpak...); see `src/lib/duplicates.ts`. `id` is the id of the Piko it came from. */
 export type LaunchSource = { id: string; label: string; sourceId?: ImportSourceId; executablePath: string; installPath?: string; importKey?: string };
 
+export type GameLink = { label: string; url: string };
+
 export type Piko = {
   id: string;
   name: string;
@@ -132,6 +134,10 @@ export type Piko = {
   trailerVideos?: TrailerVideo[];
   firstReleaseDate?: number;
   platformCategory?: string;
+  /** The user's own notes (build, mod load order, ...); plain text. Included in library backups. */
+  notes?: string;
+  /** Web links the user attached (walkthroughs, wikis); http(s) only. */
+  links?: GameLink[];
   executablePath?: string;
   /** Environment, arguments, working directory, runtime and wrappers for launching this game. */
   launchOptions?: LaunchOptions;

@@ -74,7 +74,8 @@ Mochi is a cross-platform (Linux and macOS) desktop game launcher that sits abov
 - **Save backups**: zip snapshots of Minecraft worlds, Steam userdata and any folder you add, with safe restore and automatic backup when a game closes ([docs/save-backups.md](docs/save-backups.md)).
 - **Shortcuts**: create desktop shortcuts (Linux menu/Desktop, macOS .app) and add any game to Steam as a non-Steam game ([docs/shortcuts.md](docs/shortcuts.md)).
 - **Command line and deep links**: `mochi launch|open <game>`, `mochi list` and `mochi://launch|open/<game>` work with a running or closed Mochi; ambiguous names open a chooser ([docs/cli.md](docs/cli.md)).
-- **Storage manager** (Settings > Storage): see where disk space goes and safely clear Mochi's own caches ([docs/storage.md](docs/storage.md)).
+- **Per-game notes and links**: plain-text notes and web links in the game editor's Notes tab, shown on the game page and included in the library backup.
+- **Storage manager** (Settings > Storage): see where disk space goes, safely clear Mochi's own caches, or use *Clear all* to run every clean-up at once ([docs/storage.md](docs/storage.md)).
 - **Saved filters, Next up and launch profiles**: save any combination of status, played, tags, genres and hours-to-beat as a named filter chip; mark backlog games *Next up* so the picker favours them; keep alternative launch-option sets per game (for example another Proton version) and switch from the game page or the palette.
 - **Library backup** (Settings > Data): one `.mochibackup` file with your games, collections, wishlist and saved filters, plus an optional automatic copy to a folder (daily, weekly or monthly, newest few kept). No credentials; playtime history is not included.
 - **Debug info and launch hints**: *Copy debug info* (secrets and your user name removed), and a notification with likely causes when a game closes within 15 seconds of starting, including a rollback hint after a recent mod update.
@@ -270,6 +271,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [x] Backlog, wishlist, Next up, play suggestions and saved filters
 - [x] Per-game launch options and launch profiles, Wine/Proton prefix tools, crash hints and suspected-mod helpers
 - [x] Library/settings backups, storage manager, download controls, keyboard-first navigation and command palette
+- [x] Per-game notes and links, a one-click "Clear all" in the storage manager and a redesigned Edit game window
 - [x] Game themes that use each game's cover colour as the accent on its page
 - [x] Accounts, optional metadata-only cloud sync, TOTP MFA, provider credential management and offline library use
 - [x] Linux packages, universal macOS DMG, update verification and release checksums/signatures/attestations
@@ -280,9 +282,6 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] Stable release
 - [ ] Theme marketplace / in-app theme gallery for browsing and installing community themes
 - [ ] Theme creator with live editing of colours, fonts and hooks, plus theme export
-- [ ] Per-game notes and links, included in the library backup
-- [ ] A "clear unused data" action in the storage manager that removes cached and saved data no game uses
-- [ ] Redesigned Edit game window
 - [ ] Pre-launch and post-exit scripts in per-game launch profiles
 
 ## Documentation index
