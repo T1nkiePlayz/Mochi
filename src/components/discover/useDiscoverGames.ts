@@ -30,7 +30,7 @@ const CHOICES = "mochi:discover-source-choice";
 const igdbIconLookupCache = new Map<string, Promise<string | null>>();
 
 function normalizeGameName(value: string): string {
-  return value.toLocaleLowerCase().normalize("NFKD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  return value.toLocaleLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
 function lookupNexusGameIcon(client: SupabaseClient, game: NexusGame): Promise<string | null> {
@@ -49,7 +49,7 @@ function lookupNexusGameIcon(client: SupabaseClient, game: NexusGame): Promise<s
     let parsed: URL;
     try { parsed = new URL(url); } catch { return null; }
     if (parsed.protocol !== "https:" || parsed.hostname !== "images.igdb.com") return null;
-    parsed.pathname = parsed.pathname.replace(/\\bt_[a-z0-9_]+\\./i, "t_cover_big.");
+    parsed.pathname = parsed.pathname.replace(/\bt_[a-z0-9_]+\./i, "t_cover_big.");
     return parsed.toString();
   })();
 
