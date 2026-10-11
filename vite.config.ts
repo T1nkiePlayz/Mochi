@@ -96,10 +96,13 @@ function jsxLocalizationPlugin() {
           return factory.updateJsxFragment(node, node.openingFragment, children, node.closingFragment);
         }
         if (ts.isJsxText(node) && !skipText) {
-          const normalized = normalizeText(node.text);
-          const message = decodeEntities(normalized.trim());
-          if (!message || !/[\p{L}\p{N}]/u.test(message) || /^(?:--?[\w-]+)(?:\s+--?[\w-]+)*$/.test(message) || /^https?:\/\//i.test(message)) return node;
-          return localizedText(message, !node.text.includes("\n") && /^\s/.test(node.text), !node.text.includes("\n") && /\s$/.test(node.text));
+          const normalized = decodeEntities(normalizeText(node.text));
+          const message = normalized.trim();
+          if (!message || !/[\\p{L}\\p{N}]/u.test(message) || /^(?:--?[\\w-]+)(?:\\s+--?[\\w-]+)*$/.test(message) || /^https?:\\/\\//i.test(message)) return node;
+          // Preserve significant spaces even when JSX formatting introduces a newline.
+          // Checking the raw node only works for single-line text and joins adjacent
+          // dynamic expressions together in multiline JSX.
+          return localizedText(message, /^\\s/.test(normalized), /\\s$/.test(normalized));
         }
         if (ts.isJsxExpression(node) && node.expression && ts.isStringLiteralLike(node.expression) && !skipText) {
           return localizedText(decodeEntities(node.expression.text), false, false);
@@ -143,13 +146,18 @@ export default defineConfig({
           if (id.includes("/node_modules/@supabase/")) return "supabase";
           if (id.includes("/node_modules/lucide-react/")) return "icons";
           if (id.includes("/node_modules/react-dom/") || id.includes("/node_modules/react/")) return "react";
-          // Keep the translation catalogue modules in separate chunks. They contain all 28
-          // supported locales and otherwise inflate the initial app entry into a multi-MB file.
-          // Each catalogue remains statically available to the synchronous translation lookup,
-          // while Vite can emit/cache them independently instead of bundling them into index.
+          // Keep translation catalogues out of the app entry, but group them by
+          // feature instead of emitting one eagerly-loaded chunk per catalogue. The lookup
+          // is synchronous, so every catalogue is needed at startup; dozens of tiny chunks
+          // add request overhead without providing lazy-loading benefits.
           if (id.includes("/src/lib/i18n") && !id.includes(".test.")) {
             const fileName = path.basename(id, path.extname(id));
-            return "translations-" + fileName;
+            if (fileName === "i18n") return "translations-core";
+            if (/^i18n(?:Setup|CloudSetup|AccountSetup|ServiceSetup|Chrome|AccountHardware|Accessibility)/.test(fileName)) return "translations-setup";
+            if (/^i18n(?:Settings|Controls|Navigation|Keyboard|Launch|UpdateArtwork|ArtworkSources|ExportShare|PickerGuidance|EditFilter|SavedFilter)/.test(fileName)) return "translations-settings";
+            if (/^i18n(?:Library|Installed|Downloads|Mod|Tofu|Save|Saves|Duplicates)/.test(fileName)) return "translations-content";
+            if (/^i18n(?:Discover|Discovery|Project|Deals|Metadata|Stats)/.test(fileName)) return "translations-discovery";
+            return "translations-common";
           }
           // App code that is large and only needed once a game or mod is involved: keeps the entry chunk under the 500 kB limit.
           if (id.includes("/src/assets/launchers")) return "launcher-art";
