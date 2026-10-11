@@ -60,7 +60,7 @@ export function StorageSection() {
   };
   const clearAll = async () => {
     const ok = await confirmAction({ title: t("Clear all unused data?"), danger: true, confirmLabel: t("Clear everything"), message: t("Removes every cache and leftover Mochi keeps: artwork cache, unfinished downloads, game logs, and rollback copies and snapshots older than {age}. This cannot be undone. Game installs, your own mod folders, covers you picked yourself and anything in use are never touched.").replace("{age}", localizedAge(age)),
-      items: clearActions.map((action) => action.needsAge ? `${t(action.label)} (${t("older than")} ${t(ageLabel(age))})` : t(action.label)) });
+      items: clearActions.map((action) => action.needsAge ? `${t(action.label)} (${t("older than")} ${localizedAge(age)})` : t(action.label)) });
     if (!ok) return;
     setBusy("all"); setNote("");
     try {
@@ -119,7 +119,7 @@ export function StorageSection() {
     <div className="setting-row"><span><strong>{t("Clear all unused data")}</strong><small>{t("Runs every action below at once, using the age chosen above.")}</small></span>
       <button type="button" className="secondary-button danger-outline" disabled={busy !== null || scanning} onClick={() => void clearAll()}>{busy === "all" ? t("Clearing…") : t("Clear all")}</button></div>
     {clearActions.map((action) => <div className="setting-row" key={action.kind}>
-      <span><strong>{t(action.label)}{action.needsAge ? ` (${t("older than")} ${ageLabel(age)})` : ""}</strong><small>{t(action.detail)}</small></span>
+      <span><strong>{t(action.label)}{action.needsAge ? ` (${t("older than")} ${localizedAge(age)})` : ""}</strong><small>{t(action.detail)}</small></span>
       <button type="button" className="secondary-button danger-outline" disabled={busy !== null || scanning} onClick={() => void clear(action)}>{busy === action.kind ? t("Removing…") : t("Remove")}</button>
     </div>)}
     {note && <p className="metadata-note settings-note" role="status">{note}</p>}
