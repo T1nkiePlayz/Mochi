@@ -22,8 +22,9 @@ type Props = {
  * Minecraft version dropdown: search, "All versions", "Latest release", recent/most-used
  * pins, releases grouped by major line, and snapshots only when asked for.
  */
-export function VersionPicker({
-  const t = useTranslation(); value, onChange, versions, loading, label = "Minecraft version", className = "" }: Props) {
+export function VersionPicker({ value, onChange, versions, loading, label, className = "" }: Props) {
+  const t = useTranslation();
+  const displayLabel = label ?? t("Minecraft version");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [snapshots, setSnapshots] = useState(false);
@@ -75,19 +76,19 @@ export function VersionPicker({
 
   const shown = value ? value : "All versions";
   return <div ref={root} className={`mochi-select version-picker ${open ? "open" : ""} ${className}`.trim()} data-placement={placement} onKeyDown={onKeyDown}>
-    <button type="button" className="mochi-select-trigger" aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listId : undefined} aria-label={`${label}: ${shown}`} onClick={() => setOpen((current) => !current)}>
+    <button type="button" className="mochi-select-trigger" aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listId : undefined} aria-label={t("{label}: {value}").replace("{label}", displayLabel).replace("{value}", shown)} onClick={() => setOpen((current) => !current)}>
       <span className="mochi-select-value">{shown}</span>
       <ChevronDown size={15} className="mochi-select-chevron" aria-hidden="true" />
     </button>
     {open && <div className="mochi-select-popover version-picker-popover" style={{ maxHeight }}>
       <label className="mochi-select-search"><Search size={14} aria-hidden="true" /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Search versions…")} aria-label={t("Search Minecraft versions")} /></label>
       <label className="version-picker-switch"><input type="checkbox" role="switch" checked={snapshots} onChange={(event) => setSnapshots(event.target.checked)} /><span>{t("Include snapshots")}</span><small>{t("Pre-releases, release candidates, April Fools")}</small></label>
-      <div ref={list} id={listId} className="mochi-select-list" role="listbox" aria-label={label} aria-activedescendant={`${listId}-${active}`}>
+      <div ref={list} id={listId} className="mochi-select-list" role="listbox" aria-label={displayLabel} aria-activedescendant={`${listId}-${active}`}>
         {loading && !versions.length && <div className="mochi-select-empty">{t("Loading versions…")}</div>}
         {rows.map((row, index) => <div key={row.id} role="presentation">
           {row.heading && <div className="mochi-select-group" role="presentation">{row.heading}</div>}
           <div id={`${listId}-${index}`} role="option" data-index={index} aria-selected={row.value === value && row.id !== "latest"} className={`mochi-select-option ${index === active ? "active" : ""} ${row.value === value && row.id !== "latest" ? "selected" : ""}`} onMouseEnter={() => setActive(index)} onClick={() => choose(row)}>
-            <span className="mochi-select-option-copy"><span>{row.label}</span>{row.hint && <small>{row.hint}</small>}</span>
+            <span className="mochi-select-option-copy"><span>{t(row.label)}</span>{row.hint && <small>{row.hint}</small>}</span>
             {row.value === value && row.id !== "latest" && <Check size={14} aria-hidden="true" />}
           </div>
         </div>)}

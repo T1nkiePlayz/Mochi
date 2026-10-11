@@ -14,8 +14,8 @@ type Props = { cfGames: CfGame[] | null; addedIds: ReadonlySet<number>; refreshK
 const toStored = (game: CfGame): StoredGame => ({ k: "cf", id: game.id, slug: game.slug });
 
 /** A few popular games that are not tabs yet. Idle until scrolled near; the mod names are a tiny queued lookup per card. */
-export function OtherGames({
-  const t = useTranslation(); cfGames, addedIds, refreshKey, onAdd }: Props) {
+export function OtherGames({ cfGames, addedIds, refreshKey, onAdd }: Props) {
+  const t = useTranslation();
   const ref = useRef<HTMLElement>(null);
   const near = useNearViewport(ref, false);
   const picks = useMemo(() => pickOtherGames(cfGames, addedIds, 6), [cfGames, addedIds]);
@@ -27,6 +27,7 @@ export function OtherGames({
 }
 
 function OtherGameCard({ game, load, refreshKey, onAdd }: { game: CfGame; load: boolean; refreshKey: number; onAdd: () => void }) {
+  const t = useTranslation();
   const [names, setNames] = useState<string[]>([]);
   useEffect(() => {
     if (!load) return;

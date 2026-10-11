@@ -16,8 +16,8 @@ import { ProjectSkeletons } from "./ProjectCard";
 type Props = { plan: SectionPlan; source: ModSource; cacheKey: string; pikos: Piko[]; ecosystem: EcosystemRef; onSeeAll: () => void };
 
 /** One game on Discover > All: header plus its top mods. Nothing is fetched until the section is near the screen. */
-export function GameSection({
-  const t = useTranslation(); plan, source, cacheKey, pikos, ecosystem, onSeeAll }: Props) {
+export function GameSection({ plan, source, cacheKey, pikos, ecosystem, onSeeAll }: Props) {
+  const t = useTranslation();
   const ref = useRef<HTMLElement>(null);
   const near = useNearViewport(ref, false);
   const preview = useMemo(() => createPreviewSource(source, cacheKey), [source, cacheKey]);
