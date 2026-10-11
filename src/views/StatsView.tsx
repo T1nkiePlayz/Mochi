@@ -94,11 +94,11 @@ export function StatsView() {
                 {analysis.historicSeconds > 0 && <span className="stats-muted">{t("Plus {hours} played before Mochi kept history.").replace("{hours}", formatHours(analysis.historicSeconds))}</span>}
               </div>
               <div className="stats-kpis">
-                <Kpi label="Time played" value={formatDuration(analysis.totalSeconds)} />
-                <Kpi label="Sessions" value={String(analysis.sessionCount)} />
-                <Kpi label="Average session" value={analysis.sessionCount ? formatDuration(analysis.averageSeconds) : "None"} />
-                <Kpi label="Longest session" value={analysis.longestSeconds ? formatDuration(analysis.longestSeconds) : "None"} />
-                <Kpi label="Games played" value={String(analysis.gamesPlayed)} />
+                <Kpi label={t("Time played")} value={formatDuration(analysis.totalSeconds)} />
+                <Kpi label={t("Sessions")} value={String(analysis.sessionCount)} />
+                <Kpi label={t("Average session")} value={analysis.sessionCount ? formatDuration(analysis.averageSeconds) : t("None")} />
+                <Kpi label={t("Longest session")} value={analysis.longestSeconds ? formatDuration(analysis.longestSeconds) : "None"} />
+                <Kpi label={t("Games played")} value={String(analysis.gamesPlayed)} />
                 <Kpi label={t("Current streak")} value={`${streaks.current} ${t(streaks.current === 1 ? "day" : "days")}`} hint={t("Longest {count}").replace("{count}", String(streaks.longest))} />
               </div>
               <Card id="st-days" title={weekly ? "Hours per week" : "Hours per day"} wide><StackedBars buckets={buckets} games={analysis.games} weekly={weekly} /></Card>
