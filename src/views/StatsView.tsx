@@ -99,7 +99,7 @@ export function StatsView() {
                 <Kpi label="Average session" value={analysis.sessionCount ? formatDuration(analysis.averageSeconds) : "None"} />
                 <Kpi label="Longest session" value={analysis.longestSeconds ? formatDuration(analysis.longestSeconds) : "None"} />
                 <Kpi label="Games played" value={String(analysis.gamesPlayed)} />
-                <Kpi label="Current streak" value={`${streaks.current} day${streaks.current === 1 ? "" : "s"}`} hint={t("Longest {count}").replace("{count}", String(streaks.longest))} />
+                <Kpi label={t("Current streak")} value={`${streaks.current} ${t(streaks.current === 1 ? "day" : "days")}`} hint={t("Longest {count}").replace("{count}", String(streaks.longest))} />
               </div>
               <Card id="st-days" title={weekly ? "Hours per week" : "Hours per day"} wide><StackedBars buckets={buckets} games={analysis.games} weekly={weekly} /></Card>
               <div className="stats-grid">
