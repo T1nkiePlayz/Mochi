@@ -10,7 +10,7 @@ describe("cssUrl", () => {
   });
   it("is used for applied artwork", () => {
     const next = applyMetadata({ id: "a", name: "A", description: "", accent: "", artwork: "", tofus: [] }, { art: { source: "igdb", url: "https://x/y.jpg')" } });
-    expect(next.artwork).not.toContain("')\"");
+    expect(next.artwork).not.toContain("')\\");
     expect(next.artworkUrl).toBe("https://x/y.jpg')");
   });
 });
@@ -34,6 +34,20 @@ describe("planProviders", () => {
   it("keyless Steam works signed out, for Steam games only", () => {
     expect(planProviders("auto", none, 440)).toEqual({ text: ["steam"], art: ["steam"] });
     expect(planProviders("auto", none, null)).toEqual({ text: [], art: [] });
+  });
+  it("auto prefers Steam artwork, then SteamGridDB, then IGDB, while keeping IGDB text priority", () => {
+    expect(planProviders("auto", { igdb: true, steamgriddb: true }, 440)).toEqual({
+      text: ["igdb", "steam"],
+      art: ["steam", "steamgriddb", "igdb"],
+    });
+    expect(planProviders("auto", { igdb: true, steamgriddb: true }, null)).toEqual({
+      text: ["igdb"],
+      art: ["steamgriddb", "igdb"],
+    });
+    expect(planProviders("auto", { igdb: false, steamgriddb: true }, null)).toEqual({
+      text: [],
+      art: ["steamgriddb"],
+    });
   });
   it("a single provider never needs another one", () => {
     expect(planProviders("steam", { igdb: true, steamgriddb: true }, 440)).toEqual({ text: ["steam"], art: ["steam"] });
