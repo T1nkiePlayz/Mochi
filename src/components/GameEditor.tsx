@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useTranslation } from "../lib/useTranslation";
 import { X } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { lookupIgdbGames } from "../lib/igdb";
@@ -102,8 +103,8 @@ export function GameEditor({ game, capabilities, onSave, onClose }: Props) {
   return <div className="modal-backdrop" onClick={onClose}>
     <div className="modal game-editor" role="dialog" aria-modal="true" aria-label={`Edit ${game.name}`} onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => { if (event.key === "Escape" && !event.defaultPrevented) onClose(); }}>
-      <div className="modal-header"><div><p className="eyebrow">{t("Library")}</p><h2>Edit game</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
-      <div className="editor-tabs" role="tablist" aria-label="Game settings">
+      <div className="modal-header"><div><p className="eyebrow">{t("Library")}</p><h2>{t("Edit game")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
+      <div className="editor-tabs" role="tablist" aria-label={t("Game settings")}>
         {tabs.map(([id, label], index) => <button type="button" key={id} role="tab" id={`editor-tab-${id}`} aria-selected={tab === id} aria-controls={`editor-panel-${id}`} tabIndex={tab === id ? 0 : -1}
           ref={(node) => { tabRefs.current[index] = node; }} className={tab === id ? "active" : ""} onClick={() => setTab(id)} onKeyDown={(event) => onTabKey(event, index)}>{label === "General" ? t("General") : label === "Notes" ? t("Notes") : label}</button>)}
       </div>
@@ -115,7 +116,7 @@ export function GameEditor({ game, capabilities, onSave, onClose }: Props) {
         {tab === "metadata" && <MetadataTab ctx={ctx} />}
       </div>
       {error && <p className="auth-error" role="alert">{error}</p>}
-      <div className="editor-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="play-button" type="button" onClick={() => void submit()} disabled={saving}>{saving ? "Saving…" : "Save changes"}</button></div>
+      <div className="editor-footer"><button type="button" className="secondary-button" onClick={onClose}>{t("Cancel")}</button><button className="play-button" type="button" onClick={() => void submit()} disabled={saving}>{saving ? t("Saving…") : t("Save changes")}</button></div>
     </div>
   </div>;
 }

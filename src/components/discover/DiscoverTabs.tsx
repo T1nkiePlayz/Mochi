@@ -1,6 +1,7 @@
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { Plus, X } from "lucide-react";
 import { GameAvatar } from "./GameAvatar";
+import { useTranslation } from "../../lib/useTranslation";
 
 export type DiscoverTabItem = { id: string; label: string; iconUrl?: string; iconFallbackUrls?: string[]; icon?: ReactNode; hint?: string; removable?: boolean };
 

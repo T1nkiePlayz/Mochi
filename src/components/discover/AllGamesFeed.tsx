@@ -1,6 +1,7 @@
 import { DISCOVER_QUERY_EVENT, clearDiscoverQuery, peekDiscoverQuery } from "../../lib/discoverQuery";
 import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { useTranslation } from "../../lib/useTranslation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CF_MINECRAFT_ID, type CfGame } from "../../lib/curseforge";
 import { planSections } from "../../lib/mods/allSections";
@@ -63,9 +64,9 @@ export function AllGamesFeed({ games, cfGames, pikos, supabase, settings, refres
   const addedIds = useMemo(() => new Set(games.flatMap((game) => game.cf ? [game.cf.id] : [])), [games]);
 
   return <section className="discover-section all-sections">
-    <div className="discover-section-heading"><div><h3>All your games</h3><p>The most popular mods for Minecraft and every game tab. Search looks in all of them.</p></div></div>
+    <div className="discover-section-heading"><div><h3>{t("All your games")}</h3><p>{t("The most popular mods for Minecraft and every game tab. Search looks in all of them.")}</p></div></div>
     {searchSource && <div className="mods-controls all-search"><label className="search-box"><Search size={15} /><input value={text} onChange={(event) => setText(event.target.value)} placeholder={t("Search mods in all your games...")} aria-label={t("Search mods in all your games")} /></label></div>}
-    {!searchSource && <div className="discover-empty">No mod source is available for any game yet.</div>}
+    {!searchSource && <div className="discover-empty">{t("No mod source is available for any game yet.")}</div>}
     {searchSource && searching && <ModsBrowser key={`all-search:${refreshKey}:${games.length}`} source={searchSource} query={query} noun="mods" target={{ kind: "choose", pikos, ecosystem: { source: "modrinth" }, tofuFilter: (tofu, item) => item.ecosystem?.source === "modrinth" || (item.ecosystem?.source === "curseforge" && item.ecosystem.gameId === CF_MINECRAFT_ID) ? minecraftFilterFor(tofu, true) : undefined }} />}
     {searchSource && !searching && <>
       {built.map(({ plan, source, ecosystem }) => <GameSection key={`${plan.key}:${refreshKey}`} plan={plan} source={source} cacheKey={`${plan.key}:${refreshKey}`} pikos={pikos} ecosystem={ecosystem} onSeeAll={() => onSeeAll(plan.tab)} />)}
