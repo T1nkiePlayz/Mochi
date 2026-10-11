@@ -16,7 +16,10 @@ export function formatBytes(bytes: number, language = getTranslationLocale()): s
     language === "en"
       ? value.toFixed(maximumFractionDigits)
       : new Intl.NumberFormat(locale, { maximumFractionDigits, minimumFractionDigits }).format(value);
-  if (bytes < 1024 * 1024) return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.max(1, Math.round(bytes / 1024))) + " KiB";
+  if (bytes < 1024 * 1024) {
+    const kib = Math.max(1, Math.round(bytes / 1024));
+    return (language === "en" ? String(kib) : new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(kib)) + " KiB";
+  }
   if (bytes < 1024 * 1024 * 1024) return number(bytes / 1024 / 1024, 1, 1) + " MiB";
   return number(bytes / 1024 / 1024 / 1024, 2, 2) + " GiB";
 }
