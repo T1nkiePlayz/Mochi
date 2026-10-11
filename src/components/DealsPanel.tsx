@@ -4,6 +4,7 @@ import { useWishlist } from "../lib/wishlist";
 import { dealStores, filterDeals, storeLabel, watchedItems, type StoreId } from "../lib/deals";
 import { openExternalUrl } from "../lib/platform";
 import { useTranslation } from "../lib/useTranslation";
+import { getTranslationLocale } from "../lib/translationLocale";
 
 const money = (value: number) => `$${value.toFixed(2)}`;
 const SHOWN = 8;
@@ -21,7 +22,7 @@ export function DealsPanel() {
   const sales = filterDeals(deals.deals, deals.stores).slice(0, SHOWN);
   const free = deals.stores.includes("epic") ? deals.epic : [];
   const checking = deals.status === "checking";
-  const status = deals.status === "offline" ? t("Offline · showing saved results") : deals.status === "error" ? t("Deals are unavailable right now.") : deals.checkedAt ? `${t("Updated")} ${new Date(deals.checkedAt).toLocaleString()}` : t("Ready when you are");
+  const status = deals.status === "offline" ? t("Offline · showing saved results") : deals.status === "error" ? t("Deals are unavailable right now.") : deals.checkedAt ? `${t("Updated")} ${new Date(deals.checkedAt).toLocaleString(getTranslationLocale())}` : t("Ready when you are");
   return <section className="deals-panel" aria-label={t("Deals")}>
     <header className="deals-section-head">
       <div className="deals-section-icon"><Tag size={19} aria-hidden="true" /></div>
