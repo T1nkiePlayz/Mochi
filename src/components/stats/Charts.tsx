@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "../../lib/useTranslation";
+import { getTranslationLocale } from "../../lib/translationLocale";
 import type { Piko } from "../../models";
 import { GameArtwork } from "../GameArtwork";
 import { addDays, dayKey, formatDuration, formatHours, startOfDay, weekdayIndex, type Analysis, type DayBucket } from "../../lib/stats";
@@ -7,7 +8,7 @@ import { ChartTip, DataTable, niceMax, OTHER_SERIES, seriesVar, useChartTip, use
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const longDate = (date: Date) => date.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+const longDate = (date: Date) => date.toLocaleDateString(getTranslationLocale(), { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 
 type Series = { id: string; name: string; color: string };
 
