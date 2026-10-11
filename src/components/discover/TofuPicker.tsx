@@ -37,7 +37,7 @@ function Row({ choice, onInstall }: { choice: TofuChoice; onInstall: (tofu: Tofu
       {compat && <small className={`compat-note compat-${compat.status}`}><span className={`compat-badge compat-${compat.status}`}>{Icon && <Icon size={12} aria-hidden="true" />}{badgeText[compat.status]}</span>{compat.reasons[0] ? ` ${compat.reasons[0]}` : ""}</small>}
     </div>
     <button type="button" className="secondary-button" aria-label={`${incompatible ? "Install anyway to" : "Download to"} ${tofu.name} (${piko.name})`} onClick={() => onInstall(tofu, piko, incompatible)}>
-      <Download size={14} /> {incompatible ? "Install anyway" : "Download"}
+      <Download size={14} /> {incompatible ? "Install anyway"  : t("Download")}
     </button>
   </div>;
 }

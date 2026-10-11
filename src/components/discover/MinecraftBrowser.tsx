@@ -46,6 +46,7 @@ type Props = {
 const looksLikeRelease = (version: string) => /^\d+\.\d+(\.\d+)?$/.test(version);
 
 export function MinecraftBrowser({ category, onCategory, tofuVersion, busy, onView, onChoose }: Props) {
+  const t = useTranslation();
   const { versions, loading: versionsLoading } = useGameVersions();
   const [gameVersion, setGameVersion] = useState(looksLikeRelease(tofuVersion) ? tofuVersion : "");
   const [loader, setLoader] = useState("");
@@ -74,14 +75,14 @@ export function MinecraftBrowser({ category, onCategory, tofuVersion, busy, onVi
   const pickVersion = (version: string) => { setGameVersion(version); recordRecentVersion(version); };
 
   return <>
-    <div className="discover-tabs" role="tablist" aria-label="Minecraft content categories">
+    <div className="discover-tabs" role="tablist" aria-label={t("Minecraft content categories")}>
       {minecraftTabs.map((item) => <button key={item.id} className={category === item.id ? "active" : ""} type="button" role="tab" aria-selected={category === item.id} onClick={() => onCategory(item.id)}>{item.label}</button>)}
     </div>
     <div className={`discover-controls minecraft-controls${category === "mod" ? "" : " no-loader"}`}>
       <label className="search-box"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${tab.label.toLowerCase()}...`} aria-label={`Search ${tab.label}`} /></label>
-      <div className="discover-select-wrap"><span>Minecraft</span><VersionPicker value={gameVersion} onChange={pickVersion} versions={versions} loading={versionsLoading} /></div>
+      <div className="discover-select-wrap"><span>{t("Minecraft")}</span><VersionPicker value={gameVersion} onChange={pickVersion} versions={versions} loading={versionsLoading} /></div>
       {category === "mod" && <div className="discover-select-wrap"><span>Loader</span><Select value={loader} onChange={setLoader} options={loaderOptions} label="Loader" searchable={false} /></div>}
-      <div className="discover-select-wrap"><span>Sort</span><Select value={effectiveSort} onChange={setSort} options={sortOptions} label="Sort" searchable={false} align="end" /></div>
+      <div className="discover-select-wrap"><span>{t("Sort")}</span><Select value={effectiveSort} onChange={setSort} options={sortOptions} label={t("Sort")} searchable={false} align="end" /></div>
     </div>
     {feed.offline && <p className="metadata-note discover-offline" role="status"><WifiOff size={13} /> Showing cached results (offline). They will refresh when Modrinth is reachable.</p>}
     <div className="discover-sections"><section className="discover-section">

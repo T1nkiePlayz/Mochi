@@ -36,8 +36,8 @@ export function AddGameModals() {
           <div className="form-fields">
             <label>Game name<input value={add.formName} onChange={(event) => add.setFormName(event.target.value)} autoFocus placeholder="e.g. Hollow Knight" aria-invalid={Boolean(add.formError) && !add.formName.trim()} /></label>
             <label>Platform category<input value={add.formCategory} onChange={(event) => add.setFormCategory(event.target.value)} placeholder="e.g. Steam, Heroic, Custom" /></label>
-            <div className="editor-field"><span className="editor-field-label">Launch method</span>
-              <Select<LaunchMethodId> label="Launch method" value={add.launchType} onChange={add.setLaunchType}
+            <div className="editor-field"><span className="editor-field-label">{t("Launch method")}</span>
+              <Select<LaunchMethodId> label={t("Launch method")} value={add.launchType} onChange={add.setLaunchType}
                 options={(platformCapabilities?.launchMethods ?? ["file", "flatpak", "custom"]).map((method) => ({ value: method as LaunchMethodId, label: methodLabel(method, t) }))} />
             </div>
             {(add.launchType === "file" || add.launchType === "app") && <div className="launch-target-picker"><button type="button" className="secondary-button file-picker-button" onClick={add.chooseFile}>{add.launchType === "app" ? "Choose macOS application" : "Choose executable / launcher file"}</button></div>}

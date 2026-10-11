@@ -11,6 +11,7 @@ type Props = { tabs: DiscoverTabItem[]; active: string; onSelect: (id: string) =
  * (no reflow, no jumping). Arrow keys, Home and End move between tabs; the selected one is the only tab stop.
  */
 export function DiscoverTabs({ tabs, active, onSelect, onAdd, onRemove, label = "Game discovery" }: Props) {
+  const t = useTranslation();
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => { root.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" }); }, [active]);
 
@@ -37,6 +38,6 @@ export function DiscoverTabs({ tabs, active, onSelect, onAdd, onRemove, label = 
         </div>;
       })}
     </div>
-    {onAdd && <button className="discover-game-add" type="button" title="Add a game" aria-label="Add a game" onClick={onAdd}><Plus size={17} aria-hidden="true" /><span>Add game</span></button>}
+    {onAdd && <button className="discover-game-add" type="button" title={t("Add a game")} aria-label={t("Add a game")} onClick={onAdd}><Plus size={17} aria-hidden="true" /><span>{t("Add a game")}</span></button>}
   </div>;
 }
