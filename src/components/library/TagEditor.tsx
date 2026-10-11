@@ -1,4 +1,5 @@
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { X } from "lucide-react";
 import { normalizeTag } from "../../lib/library";
 
@@ -6,6 +7,7 @@ type Props = { tags: string[]; suggestions: string[]; onChange: (tags: string[])
 
 /** Chip input with autocomplete from tags already used in the library. */
 export function TagEditor({ tags, suggestions, onChange, label = "Tags" }: Props) {
+  const t = useTranslation();
   const [text, setText] = useState("");
   const [active, setActive] = useState(-1);
   const [focused, setFocused] = useState(false);
@@ -39,7 +41,7 @@ export function TagEditor({ tags, suggestions, onChange, label = "Tags" }: Props
       <input ref={input} value={text} aria-label={label} placeholder={tags.length ? "" : "Add a tag…"} role="combobox" aria-expanded={focused && matches.length > 0} aria-controls={listId} aria-autocomplete="list"
         onChange={(event) => { setText(event.target.value); setActive(-1); }} onKeyDown={onKeyDown} onFocus={() => setFocused(true)} onBlur={() => { setFocused(false); if (text.trim()) add(text); }} />
     </div>
-    {focused && matches.length > 0 && <ul className="tag-suggestions" id={listId} role="listbox" aria-label="Tag suggestions">
+    {focused && matches.length > 0 && <ul className="tag-suggestions" id={listId} role="listbox" aria-label={t("Tag suggestions")}>
       {matches.map((tag, index) => <li key={tag} role="option" aria-selected={index === active} className={index === active ? "active" : ""} onMouseDown={(event) => { event.preventDefault(); add(tag); }}>{tag}</li>)}
     </ul>}
   </div>;

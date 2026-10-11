@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { Gift, Trash2 } from "lucide-react";
 import { useWishlist, WISHLIST_LIMIT } from "../../lib/wishlist";
 import { formatRelativeTime } from "../../lib/format";
 
 /** Games you want but do not own yet. Local to this device. */
 export function WishlistPanel() {
+  const t = useTranslation();
   const { items, add, remove, update } = useWishlist();
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
@@ -14,7 +16,7 @@ export function WishlistPanel() {
     <div className="section-heading"><div><p className="eyebrow">Not owned yet</p><h3>Wishlist</h3></div><span className="category-count">{items.length} game{items.length === 1 ? "" : "s"}</span></div>
     <form className="wishlist-add" onSubmit={submit}>
       <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Game name" aria-label="Game name" maxLength={120} disabled={full} />
-      <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Note (optional)" aria-label="Note" maxLength={280} disabled={full} />
+      <input value={note} onChange={(event) => setNote(event.target.value)} placeholder={t("Note (optional)")} aria-label={t("Note")} maxLength={280} disabled={full} />
       <button type="submit" className="play-button" disabled={!name.trim() || full}>Add game</button>
     </form>
     {items.length === 0

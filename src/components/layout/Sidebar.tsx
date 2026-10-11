@@ -8,6 +8,7 @@ import { shallowEqual, useAppGetter, useAppSelector, type NavId } from "../../st
 import { usernameOf } from "../../state/useAccount";
 import { useExperimentalStatus } from "../../state/useExperimental";
 import { navLabel } from "../../lib/nav";
+import { useTranslation } from "../../lib/useTranslation";
 import { useShellFit } from "../../lib/useShellFit";
 import { useDismiss } from "../ui/useDismiss";
 import { useAnchoredMenu } from "./useAnchoredMenu";
@@ -37,6 +38,7 @@ export const Sidebar = memo(function Sidebar() {
   }), shallowEqual);
   // switchAccount/signOut change identity every render, so handlers read the latest at click time.
   const getApp = useAppGetter();
+  const t = useTranslation();
   const { unseenCount } = useExperimentalStatus();
   const ref = useRef<HTMLElement>(null);
   useShellFit(ref);
@@ -49,17 +51,17 @@ export const Sidebar = memo(function Sidebar() {
   const placed = Boolean(menuStyle);
   useEffect(() => { if (showAccountMenu && placed) { const menu = menuRef.current; if (menu && !menu.contains(document.activeElement)) menu.querySelector<HTMLElement>("[role='menuitem']")?.focus({ preventScroll: true }); } }, [showAccountMenu, placed]);
   return <aside className="sidebar" ref={ref}>
-    <div className="brand"><div className="brand-mark"><img src="/mochi-mark.png" alt="Mochi" /></div><div><strong>Mochi</strong><span>Your games, your way.</span></div></div>
+    <div className="brand"><div className="brand-mark"><img src="/mochi-mark.png" alt="Mochi" /></div><div><strong>Mochi</strong><span>{t("Your games, your way.")}</span></div></div>
     <div className="sidebar-account-wrap" ref={accountWrap}>
-      <button className="sidebar-account" ref={triggerRef} title={usernameOf(user)} aria-label={`Account: ${usernameOf(user)}`} aria-haspopup="menu" aria-expanded={showAccountMenu} onClick={() => setShowAccountMenu(!showAccountMenu)}><AccountAvatar user={user} size={34} /><span><strong>{usernameOf(user)}</strong><small>{user ? "Mochi account" : "Sign in to Mochi"}</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={14} /></button>
-      {showAccountMenu && menuStyle && createPortal(<div className="account-menu" ref={menuRef} style={menuStyle} role="menu" aria-label="Account" onKeyDown={moveInMenu}>
-        {multipleAccountsEnabled && savedAccounts.map((saved) => <button type="button" key={saved.id} className={saved.id === user?.id ? "selected" : ""} role="menuitem" onClick={() => { setShowAccountMenu(false); void getApp().account.switchAccount(saved); }}><span className="account-menu-avatar">{saved.avatarUrl ? <RemoteImage className="account-menu-avatar-image" src={saved.avatarUrl} alt="" referrerPolicy="no-referrer" fallback={saved.username.slice(0, 1).toUpperCase()} /> : saved.username.slice(0, 1).toUpperCase()}</span><span><strong>{saved.username}</strong><small>Mochi account</small></span></button>)}
-        {!user && <button type="button" role="menuitem" className="account-menu-add" onClick={() => { setShowAccountMenu(false); openSignIn(); }}><Plus size={14} /><span><strong>Sign in</strong><small>Add a Mochi account</small></span></button>}
-        {user && multipleAccountsEnabled && savedAccounts.length < 5 && <button type="button" role="menuitem" className="account-menu-add" onClick={() => { setShowAccountMenu(false); openSignIn(); }}><Plus size={14} /><span><strong>Add User</strong><small>Sign in to another Mochi account</small></span></button>}
-        {user && <button type="button" role="menuitem" className="account-menu-add" onClick={() => { setShowAccountMenu(false); void getApp().account.signOut(); }}><span className="account-menu-avatar">↪</span><span><strong>Sign out</strong><small>Keep local Mochi data</small></span></button>}
+      <button className="sidebar-account" ref={triggerRef} title={usernameOf(user)} aria-label={t("Account: {name}").replace("{name}", usernameOf(user))} aria-haspopup="menu" aria-expanded={showAccountMenu} onClick={() => setShowAccountMenu(!showAccountMenu)}><AccountAvatar user={user} size={34} /><span><strong>{usernameOf(user)}</strong><small>{user ? t("Mochi account") : t("Sign in to Mochi")}</small></span><MochiIcon name="chevron" fallback={ChevronDown} size={14} /></button>
+      {showAccountMenu && menuStyle && createPortal(<div className="account-menu" ref={menuRef} style={menuStyle} role="menu" aria-label={t("Account")} onKeyDown={moveInMenu}>
+        {multipleAccountsEnabled && savedAccounts.map((saved) => <button type="button" key={saved.id} className={saved.id === user?.id ? "selected" : ""} role="menuitem" onClick={() => { setShowAccountMenu(false); void getApp().account.switchAccount(saved); }}><span className="account-menu-avatar">{saved.avatarUrl ? <RemoteImage className="account-menu-avatar-image" src={saved.avatarUrl} alt="" referrerPolicy="no-referrer" fallback={saved.username.slice(0, 1).toUpperCase()} /> : saved.username.slice(0, 1).toUpperCase()}</span><span><strong>{saved.username}</strong><small>{t("Mochi account")}</small></span></button>)}
+        {!user && <button type="button" role="menuitem" className="account-menu-add" onClick={() => { setShowAccountMenu(false); openSignIn(); }}><Plus size={14} /><span><strong>{t("Sign in")}</strong><small>{t("Add a Mochi account")}</small></span></button>}
+        {user && multipleAccountsEnabled && savedAccounts.length < 5 && <button type="button" role="menuitem" className="account-menu-add" onClick={() => { setShowAccountMenu(false); openSignIn(); }}><Plus size={14} /><span><strong>{t("Add User")}</strong><small>{t("Sign in to another Mochi account")}</small></span></button>}
+        {user && <button type="button" role="menuitem" className="account-menu-add" onClick={() => { setShowAccountMenu(false); void getApp().account.signOut(); }}><span className="account-menu-avatar">↪</span><span><strong>{t("Sign out")}</strong><small>{t("Keep local Mochi data")}</small></span></button>}
       </div>, document.body)}
     </div>
-    <nav className="primary-nav" aria-label="Main navigation">
+    <nav className="primary-nav" aria-label={t("Main navigation")}>
       {navItems.filter(({ id }) => id !== "Deals" || showDeals).map(({ id, icon: Icon, iconName }) => (
         <button className={`nav-item ${activeNav === id ? "active" : ""}`} key={id} title={navLabel(id, language)} aria-label={navLabel(id, language)} aria-current={activeNav === id ? "page" : undefined} onClick={() => setActiveNav(id)}>
           <MochiIcon name={iconName} fallback={Icon} size={17} strokeWidth={1.8} />

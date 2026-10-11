@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type R
 import { Check, ChevronDown, Search } from "lucide-react";
 import { usePopoverPlacement } from "./usePopoverPlacement";
 import { useDismiss } from "./useDismiss";
+import { useTranslation } from "../../lib/useTranslation";
 
 export type SelectOption<T extends string = string> = {
   value: T;
@@ -33,6 +34,7 @@ type Props<T extends string> = {
  * classes and design tokens, keyboard operable (arrows, Home/End, type-ahead, Enter, Escape).
  */
 export function Select<T extends string>({ value, onChange, options, label, placeholder, searchable, disabled, className = "", align = "start" }: Props<T>) {
+  const t = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(-1);
@@ -45,8 +47,8 @@ export function Select<T extends string>({ value, onChange, options, label, plac
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return needle ? options.filter((option) => `${option.label} ${option.description ?? ""} ${option.group ?? ""}`.toLowerCase().includes(needle)) : options;
-  }, [options, query]);
+    return needle ? options.filter((option) => `${t(option.label)} ${option.description ? t(option.description) : ""} ${option.group ? t(option.group) : ""}`.toLowerCase().includes(needle)) : options;
+  }, [options, query, t]);
 
   useDismiss(root, open, () => setOpen(false));
 
@@ -95,27 +97,27 @@ export function Select<T extends string>({ value, onChange, options, label, plac
 
   let lastGroup: string | undefined;
   return <div ref={root} className={`mochi-select ${open ? "open" : ""} ${className}`.trim()} onKeyDown={onKeyDown} data-align={align} data-placement={placement}>
-    <button type="button" className="mochi-select-trigger" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listId : undefined} aria-label={`${label}: ${selected?.label ?? placeholder ?? ""}`} onClick={() => setOpen((current) => !current)}>
+    <button type="button" className="mochi-select-trigger" disabled={disabled} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listId : undefined} aria-label={`${label}: ${selected ? t(selected.label) : placeholder ?? ""}`} onClick={() => setOpen((current) => !current)}>
       {selected?.icon && <span className="mochi-select-icon">{selected.icon}</span>}
-      <span className={`mochi-select-value ${selected ? "" : "placeholder"}`}>{selected?.label ?? placeholder ?? label}</span>
+      <span className={`mochi-select-value ${selected ? "" : "placeholder"}`}>{selected ? t(selected.label) : placeholder ?? label}</span>
       <ChevronDown size={15} className="mochi-select-chevron" aria-hidden="true" />
     </button>
     {open && <div className="mochi-select-popover" style={{ maxHeight }}>
-      {showSearch && <label className="mochi-select-search"><Search size={14} aria-hidden="true" /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${label.toLowerCase()}…`} aria-label={`Search ${label}`} /></label>}
+      {showSearch && <label className="mochi-select-search"><Search size={14} aria-hidden="true" /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Search {label}…").replace("{label}", label.toLowerCase())} aria-label={t("Search {label}").replace("{label}", label)} /></label>}
       <ul ref={listRef} id={listId} className="mochi-select-list" role="listbox" aria-label={label} aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}>
         {visible.map((option, index) => {
           const heading = option.group && option.group !== lastGroup ? option.group : null;
           lastGroup = option.group;
           return <li key={option.value} role="presentation">
-            {heading && <div className="mochi-select-group" role="presentation">{heading}</div>}
+            {heading && <div className="mochi-select-group" role="presentation">{t(heading)}</div>}
             <div role="option" aria-selected={option.value === value} aria-disabled={option.disabled || undefined} id={`${listId}-${index}`} data-index={index} className={`mochi-select-option ${index === active ? "active" : ""} ${option.value === value ? "selected" : ""}`} onMouseEnter={() => setActive(index)} onClick={() => choose(option)}>
               {option.icon && <span className="mochi-select-icon">{option.icon}</span>}
-              <span className="mochi-select-option-copy"><span>{option.label}</span>{option.description && <small>{option.description}</small>}</span>
+              <span className="mochi-select-option-copy"><span>{t(option.label)}</span>{option.description && <small>{t(option.description)}</small>}</span>
               {option.value === value && <Check size={14} aria-hidden="true" />}
             </div>
           </li>;
         })}
-        {!visible.length && <li className="mochi-select-empty" role="presentation">Nothing matches “{query}”.</li>}
+        {!visible.length && <li className="mochi-select-empty" role="presentation">{t("Nothing matches “{query}”.").replace("{query}", query)}</li>}
       </ul>
     </div>}
   </div>;

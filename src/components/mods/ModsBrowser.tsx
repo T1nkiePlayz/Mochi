@@ -22,6 +22,7 @@ import { ensureTofuFolder } from "../../lib/mods/autoFolder";
 import { applyUpdates } from "../../state/modUpdates";
 import { useInstallState } from "./useInstallState";
 import { WindowedGrid } from "./WindowedGrid";
+import { useTranslation } from "../../lib/useTranslation";
 
 type Filter = { gameVersion?: string; loader?: string };
 
@@ -47,6 +48,7 @@ type Props = {
 
 /** Search, filter and download mods from one source straight into the selected Tofu. */
 export function ModsBrowser({ source, target, filter, noun, collapsedCount, preview = false, query: externalQuery }: Props) {
+  const t = useTranslation();
   const { lib, downloads } = useApp();
   const tofu = target.kind === "tofu" ? target.tofu : null;
   const active = downloads.filter((entry) => (tofu ? entry.tofuId === tofu.id : true) && entry.status === "downloading").length;
@@ -89,12 +91,12 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
     };
     const detected = game ? await ensureTofuFolder(game, chosen, save) : null;
     if (detected) return detected;
-    const folder = await open({ directory: true, multiple: false, title: `Choose a folder for ${chosen.name}` });
+    const folder = await open({ directory: true, multiple: false, title: t("Choose a folder for {name}").replace("{name}", chosen.name) });
     if (typeof folder !== "string") return null;
     if (target.kind === "tofu") target.onUpdateTofu({ path: folder });
     else if (owner) lib.updateGame(owner.id, { tofus: owner.tofus.map((entry) => entry.id === chosen.id ? { ...entry, path: folder } : entry) });
     return { ...chosen, path: folder };
-  }, [target, lib]);
+  }, [target, lib, t]);
 
   const run = useCallback(async (item: ModItem, file: ModFile | undefined, chosen: Tofu, owner?: Piko, force = false) => {
     const ready = await withFolder(chosen, owner);
@@ -118,14 +120,14 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
     void applyUpdates(tofu, [state.update]);
   }, [stateOf, tofu]);
 
-  const categoryOptions = [{ value: "", label: "All categories" }, ...categories.map((category) => ({ value: category.id, label: category.name }))];
+  const categoryOptions = [{ value: "", label: t("All categories") }, ...categories.map((category) => ({ value: category.id, label: category.name }))];
   const filtered = Boolean(effectiveQuery || categoryId);
   const busy = install.busyId !== "";
-  const actionLabel = target.kind === "tofu" ? "Download" : "Choose Tofu instance";
+  const actionLabel = target.kind === "tofu" ? t("Download") : t("Choose Tofu instance");
 
   const modals = <>
     {install.prompt && <DependencySheet prompt={install.prompt} />}
-    {viewing && <ModDetailsModal source={source} item={viewing} filter={filter} installLabel={tofu ? `Download to ${tofu.name}` : "Choose Tofu instance"} busy={busy} notice={install.notice} onDismissNotice={() => install.setNotice(null)} onInstall={(file) => act(viewing, file)} onClose={() => setViewing(null)} />}
+    {viewing && <ModDetailsModal source={source} item={viewing} filter={filter} installLabel={tofu ? t("Download to {name}").replace("{name}", tofu.name) : t("Choose Tofu instance")} busy={busy} notice={install.notice} onDismissNotice={() => install.setNotice(null)} onInstall={(file) => act(viewing, file)} onClose={() => setViewing(null)} />}
     {picking && target.kind === "choose" && <TofuPicker title={picking.item.name} pikos={target.pikos} ecosystem={picking.item.ecosystem ?? target.ecosystem} gameName={picking.item.game ?? target.gameName}
       metas={picking.file ? [metaFromModFile(picking.file)] : metasOfItem(picking.item)} onClose={() => setPicking(null)}
       onInstall={(chosen, owner, force) => { const pending = picking; setPicking(null); void run(pending.item, pending.file, chosen, owner, force); }} />}
@@ -135,33 +137,33 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
     <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />
     {feed.loading && <div className="discover-grid mods-grid mods-preview-grid" aria-busy="true"><ProjectSkeletons count={4} /></div>}
     {!feed.loading && feed.items.length > 0 && <div className="discover-grid mods-grid mods-preview-grid">{feed.items.map((item) => <ModCard key={`${item.source}:${item.id}`} showSource={false} item={item} actionLabel={actionLabel} busy={busy} onView={setViewing} onAction={act} />)}</div>}
-    {feed.error && <div className="discover-error mods-preview-error" role="alert"><p>{feed.offline ? "You appear to be offline." : `Could not load ${noun}.`}</p><small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> Retry</button></div>}
-    {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty"><p>No {noun} to show yet.</p></div>}
+    {feed.error && <div className="discover-error mods-preview-error" role="alert"><p>{feed.offline ? t("You appear to be offline.") : t("Could not load {items}.").replace("{items}", t(noun))}</p><small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> {t("Retry")}</button></div>}
+    {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty"><p>{t("No {items} to show yet.").replace("{items}", t(noun))}</p></div>}
     {modals}
   </div>;
 
   return <div className="mods-browser">
     <div className="mods-controls">
-      {externalQuery === undefined && <label className="search-box"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${noun}...`} aria-label={`Search ${noun}`} /></label>}
-      {categories.length > 0 && <div className="discover-select-wrap"><span>Category</span><Select value={categoryId} onChange={setCategoryId} options={categoryOptions} label="Category" searchable={categories.length > 8} /></div>}
-      <div className="discover-select-wrap"><span>Sort</span><Select value={sort} onChange={setSort} options={source.sorts} label="Sort" searchable={false} align="end" /></div>
+      {externalQuery === undefined && <label className="search-box"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("Search {items}...").replace("{items}", t(noun))} aria-label={t("Search {items}").replace("{items}", t(noun))} /></label>}
+      {categories.length > 0 && <div className="discover-select-wrap"><span>{t("Category")}</span><Select value={categoryId} onChange={setCategoryId} options={categoryOptions} label={t("Category")} searchable={categories.length > 8} /></div>}
+      <div className="discover-select-wrap"><span>{t("Sort")}</span><Select value={sort} onChange={setSort} options={source.sorts.map((option) => ({ ...option, label: t(option.label) }))} label={t("Sort")} searchable={false} align="end" /></div>
     </div>
     <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />
-    {active > 0 && <p className="metadata-note" role="status">{active} download{active === 1 ? "" : "s"} in progress. See Downloads.</p>}
+    {active > 0 && <p className="metadata-note" role="status">{t(active === 1 ? "1 download in progress. See Downloads." : "{count} downloads in progress. See Downloads.").replace("{count}", String(active))}</p>}
     {!source.searchesServerSide && effectiveQuery && <p className="metadata-note">Nexus Mods cannot search by text, so this filters the mods Mochi has loaded so far. Scroll to load more.</p>}
-    <div className="mods-heading"><span aria-live="polite">{feed.loading ? "Loading..." : `${feed.items.length.toLocaleString()} of ${feed.total.toLocaleString()} ${noun}`}</span>{(source.id === "curseforge" || feed.items.some((item) => item.source === "curseforge")) && <CurseforgeCredit />}</div>
+    <div className="mods-heading"><span aria-live="polite">{feed.loading ? t("Loading...") : `${feed.items.length.toLocaleString()} ${t("of")} ${feed.total.toLocaleString()} ${t(noun)}`}</span>{(source.id === "curseforge" || feed.items.some((item) => item.source === "curseforge")) && <CurseforgeCredit />}</div>
     {feed.loading && <div className="discover-grid mods-grid" aria-busy="true"><ProjectSkeletons count={6} /></div>}
     {!feed.loading && feed.items.length > 0 && <WindowedGrid className="discover-grid mods-grid" items={shown} keyOf={(item) => `${item.source}:${item.id}`}
       render={(item) => <ModCard showSource={source.mixed === true || Boolean(item.game)} item={item} actionLabel={actionLabel} busy={busy} onView={setViewing} onAction={act} state={tofu ? stateOf(item) : undefined} onUpdate={tofu ? update : undefined} />} />}
-    {!expanded && !feed.loading && !feed.error && (feed.items.length > shown.length || feed.hasMore) && <div className="mods-show-more"><button type="button" className="secondary-button" onClick={() => { setExpanded(true); if (feed.items.length <= shown.length) feed.loadMore(); }}>Show more {noun}</button></div>}
+    {!expanded && !feed.loading && !feed.error && (feed.items.length > shown.length || feed.hasMore) && <div className="mods-show-more"><button type="button" className="secondary-button" onClick={() => { setExpanded(true); if (feed.items.length <= shown.length) feed.loadMore(); }}>{t("Show more {items}").replace("{items}", t(noun))}</button></div>}
     {feed.error && <div className="discover-error" role="alert">
-      {feed.offline ? <p><WifiOff size={14} /> You appear to be offline</p> : <p>{feed.items.length ? "Could not load more." : `Could not load ${noun} from ${source.label}.`}</p>}
+      {feed.offline ? <p><WifiOff size={14} /> {t("You appear to be offline.")}</p> : <p>{feed.items.length ? t("Could not load more.") : t("Could not load {items} from {source}.").replace("{items}", t(noun)).replace("{source}", source.label)}</p>}
       <small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> Retry</button>
     </div>}
-    {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty"><p>No {noun} match{filtered ? " these filters" : ""}.</p>{filtered && <button type="button" className="secondary-button" onClick={() => { setSearch(""); setDebounced(""); setCategoryId(""); }}>Clear filters</button>}</div>}
+    {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty"><p>{t(filtered ? "No {items} match these filters." : "No {items} match.").replace("{items}", t(noun))}</p>{filtered && <button type="button" className="secondary-button" onClick={() => { setSearch(""); setDebounced(""); setCategoryId(""); }}>{t("Clear filters")}</button>}</div>}
     {expanded && feed.loadingMore && <div className="discover-grid mods-grid" aria-busy="true"><ProjectSkeletons count={3} /></div>}
     <div ref={sentinel} className="discover-sentinel" aria-hidden="true" />
-    {expanded && !feed.hasMore && !feed.loading && !feed.error && feed.items.length > 0 && <p className="discover-end">You have reached the end. {feed.items.length.toLocaleString()} {noun}.</p>}
+    {expanded && !feed.hasMore && !feed.loading && !feed.error && feed.items.length > 0 && <p className="discover-end">{t("You have reached the end. {count} {items}.").replace("{count}", feed.items.length.toLocaleString()).replace("{items}", t(noun))}</p>}
     {modals}
   </div>;
 }

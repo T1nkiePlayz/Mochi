@@ -6,6 +6,7 @@ import { RemoteImage } from "./RemoteImage";
 import { sameWish, useWishlist, type WishlistInput } from "../lib/wishlist";
 import { unwatchPrice, watchPrice } from "../lib/deals";
 import { openExternalUrl } from "../lib/platform";
+import { useTranslation } from "../lib/useTranslation";
 import {
   buildChart, createDebouncedSearch, createProviderBackend, dailyLowest, gameSearchAvailable, gameSearchBackendOverride, historyCaption, historyKey,
   observationsFromPrices, recordObservations, type GameDetails, type GameSearchBackend, type PriceObservation, type SearchHit,
@@ -19,17 +20,18 @@ function Link({ href, children }: { href: string; children: React.ReactNode }) {
 }
 
 function PriceChart({ observations, ever, everDate }: { observations: PriceObservation[]; ever: number | null; everDate: number | null }) {
+  const t = useTranslation();
   const points = useMemo(() => dailyLowest(observations), [observations]);
   const chart = useMemo(() => buildChart(points, ever), [points, ever]);
-  const caption = historyCaption(observations, everDate);
+  const caption = historyCaption(observations, everDate, t);
   if (!points.length && ever === null) return <p className="game-search-muted">No price data yet. {caption}</p>;
   return <figure className="game-search-chart">
-    <svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label={`Price history. ${caption} Lowest ${money(chart.min)}, highest ${money(chart.max)}.`} preserveAspectRatio="none">
+    <svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label={t("Price history. {caption} Lowest {min}, highest {max}.").replace("{caption}", caption).replace("{min}", money(chart.min)).replace("{max}", money(chart.max))} preserveAspectRatio="none">
       {chart.everY !== null && <line className="game-search-ever" x1="0" x2={chart.width} y1={chart.everY} y2={chart.everY} />}
       {chart.dots.length > 1 && <path className="game-search-line" d={chart.line} fill="none" />}
       {chart.dots.map((dot) => <circle key={dot.t} className="game-search-dot" cx={dot.x} cy={dot.y} r="3"><title>{`${new Date(dot.t).toLocaleDateString()}: ${money(dot.price)}`}</title></circle>)}
     </svg>
-    <figcaption>{caption}{ever !== null && <> Dashed line: lowest ever, {money(ever)}.</>}</figcaption>
+    <figcaption>{caption}{ever !== null && <> {t("Dashed line: lowest ever, {price}.").replace("{price}", money(ever))}</>}</figcaption>
   </figure>;
 }
 
@@ -41,6 +43,7 @@ function Gallery({ title, urls, wide }: { title: string; urls: Array<{ thumb: st
 }
 
 function Details({ game, onSearch }: { game: GameDetails; onSearch: (name: string) => void }) {
+  const t = useTranslation();
   const wishlist = useWishlist();
   const [observations, setObservations] = useState<PriceObservation[]>([]);
   const [target, setTarget] = useState("");
@@ -53,11 +56,11 @@ function Details({ game, onSearch }: { game: GameDetails; onSearch: (name: strin
   const current = [game.prices.steam ? game.prices.steam.final / 100 : null, game.prices.shark?.cheapestNow ?? null].filter((p): p is number => p !== null);
   const lowestNow = current.length ? Math.min(...current) : null;
   const wishInput = (): WishlistInput => ({ name: game.name, source: game.steamAppId ? "steam" : "igdb", externalId: game.steamAppId ? String(game.steamAppId) : undefined, coverUrl: game.coverUrl?.startsWith("https://") ? game.coverUrl : undefined });
-  const addWish = () => { setNote(wishlist.add(wishInput()) ? "On your wishlist." : "Could not add it to the wishlist."); };
+  const addWish = () => { setNote(wishlist.add(wishInput()) ? t("On your wishlist.") : t("Could not add it to the wishlist.")); };
   const watch = () => {
     const value = Number(target.replace(",", "."));
-    if (!(value > 0)) { setNote("Enter a target price above 0."); return; }
-    setNote(watchPrice(wishInput(), value) ? `Watching for ${money(value)} or less. Deal alerts check every few hours.` : "Could not start the price watch.");
+    if (!(value > 0)) { setNote(t("Enter a target price above 0.")); return; }
+    setNote(watchPrice(wishInput(), value) ? t("Watching for {price} or less. Deal alerts check every few hours.").replace("{price}", money(value)) : t("Could not start the price watch."));
   };
   const stored = wishlist.items.find((item) => sameWish(item, wishInput()));
   const ever = game.prices.shark?.cheapestEver ?? null;
@@ -66,15 +69,15 @@ function Details({ game, onSearch }: { game: GameDetails; onSearch: (name: strin
     <header className="game-search-title">
       {game.coverUrl && <RemoteImage className="game-search-cover" src={game.coverUrl} alt="" referrerPolicy="no-referrer" />}
       <div><h3>{game.name}</h3>
-        <p className="game-search-muted">{[game.releaseDate ? fullDate(game.releaseDate) : "", game.developers.join(", ")].filter(Boolean).join(" · ") || "No release or developer info"}</p>
-        {game.rating && <p><strong>{game.rating.score}</strong>/100 on IGDB{game.rating.count ? ` (${game.rating.count} ratings)` : ""}</p>}
+        <p className="game-search-muted">{[game.releaseDate ? fullDate(game.releaseDate) : "", game.developers.join(", ")].filter(Boolean).join(" · ") || t("No release or developer info")}</p>
+        {game.rating && <p><strong>{game.rating.score}</strong>/100 on IGDB{game.rating.count ? ` (${t(game.rating.count === 1 ? "{count} rating" : "{count} ratings").replace("{count}", String(game.rating.count))})` : ""}</p>}
       </div>
     </header>
     <div className="game-search-actions">
-      <button type="button" className="secondary-button" onClick={addWish} disabled={Boolean(stored)}><Gift size={14} aria-hidden="true" /> {stored ? "On wishlist" : "Add to wishlist"}</button>
-      <label className="game-search-target">Alert me at <input className="compact-input" inputMode="decimal" placeholder={lowestNow ? (lowestNow * 0.8).toFixed(2) : "9.99"} value={target} onChange={(event) => setTarget(event.target.value)} aria-label="Target price in USD" /> USD</label>
-      <button type="button" className="secondary-button" onClick={watch}><Bell size={14} aria-hidden="true" /> Watch price</button>
-      {stored?.priceWatch?.targetPrice !== undefined && <button type="button" className="secondary-button" onClick={() => { unwatchPrice(stored.id); setNote("Price watch removed."); }}><BellOff size={14} aria-hidden="true" /> Stop watching ({money(stored.priceWatch.targetPrice)})</button>}
+      <button type="button" className="secondary-button" onClick={addWish} disabled={Boolean(stored)}><Gift size={14} aria-hidden="true" /> {stored ? t("On wishlist") : t("Add to wishlist")}</button>
+      <label className="game-search-target">{t("Alert me at")} <input className="compact-input" inputMode="decimal" placeholder={lowestNow ? (lowestNow * 0.8).toFixed(2) : "9.99"} value={target} onChange={(event) => setTarget(event.target.value)} aria-label={t("Target price in USD")} /> USD</label>
+      <button type="button" className="secondary-button" onClick={watch}><Bell size={14} aria-hidden="true" /> {t("Watch price")}</button>
+      {stored?.priceWatch?.targetPrice !== undefined && <button type="button" className="secondary-button" onClick={() => { unwatchPrice(stored.id); setNote(t("Price watch removed.")); }}><BellOff size={14} aria-hidden="true" /> {t("Stop watching ({price})").replace("{price}", money(stored.priceWatch.targetPrice))}</button>}
     </div>
     <p className="game-search-muted" role="status" aria-live="polite">{note}</p>
     {game.description && <p className="game-search-description">{game.description}</p>}
@@ -96,15 +99,16 @@ function Details({ game, onSearch }: { game: GameDetails; onSearch: (name: strin
     <Gallery title="Covers" urls={game.art.covers.map((a) => ({ thumb: a.thumb, url: a.url }))} />
     <Gallery title="Heroes" urls={game.art.heroes.map((a) => ({ thumb: a.thumb, url: a.url }))} wide />
     <Gallery title="Logos" urls={game.art.logos.map((a) => ({ thumb: a.thumb, url: a.url }))} />
-    {game.similar.length > 0 && <section aria-label="Similar games"><h4>Similar games</h4><div className="game-search-similar">
+    {game.similar.length > 0 && <section aria-label={t("Similar games")}><h4>{t("Similar games")}</h4><div className="game-search-similar">
       {game.similar.map((item) => <button key={item.name} type="button" className="secondary-button" onClick={() => onSearch(item.name)}>{item.name}</button>)}
     </div></section>}
     {game.links.length > 0 && <section aria-label="Links"><h4>Links</h4><p className="game-search-links">{game.links.map((link) => <Link key={link.url} href={link.url}>{link.label}</Link>)}</p></section>}
-    <p className="game-search-muted">Data from {game.sources.join(", ") || "no provider"}. Artwork belongs to its authors.</p>
+    <p className="game-search-muted">Data from {game.sources.join(", ") || t("no provider")}. Artwork belongs to its authors.</p>
   </article>;
 }
 
 export function GameSearchDialog({ onClose }: { onClose: () => void }) {
+  const t = useTranslation();
   const { credentials } = useApp();
   const ready = { igdb: credentials.status.igdb, steamgriddb: credentials.status.steamgriddb };
   const backend: GameSearchBackend | null = useMemo(() => gameSearchBackendOverride() ?? (supabase && gameSearchAvailable(ready) ? createProviderBackend(supabase, ready) : null),
@@ -121,14 +125,14 @@ export function GameSearchDialog({ onClose }: { onClose: () => void }) {
   useEffect(() => { input.current?.focus(); return () => detailAbort.current?.abort(); }, []);
 
   const search = useMemo(() => createDebouncedSearch(
-    (text, signal) => (backend ? backend.search(text, signal) : Promise.reject(new Error("No provider is set up."))),
+    (text, signal) => (backend ? backend.search(text, signal) : Promise.reject(new Error(t("No provider is set up.")))),
     {
       onStart: () => setStatus("searching"),
       onResult: (_text, result) => { setHits(result); setStatus("done"); setMessage(""); },
-      onError: (_text, error) => { setStatus("error"); setHits([]); setMessage(error instanceof Error ? error.message : "Search failed."); },
+      onError: (_text) => { setStatus("error"); setHits([]); setMessage(t("Search failed.")); },
       onClear: () => { setHits([]); setStatus("idle"); setMessage(""); },
     },
-  ), [backend]);
+  ), [backend, t]);
   useEffect(() => () => search.cancel(), [search]);
 
   const type = (text: string) => { setQuery(text); search.call(text); };
@@ -139,24 +143,24 @@ export function GameSearchDialog({ onClose }: { onClose: () => void }) {
     detailAbort.current = controller;
     setLoading(hit.name); setMessage("");
     backend.details(hit, controller.signal).then((details) => { if (!controller.signal.aborted) { setGame(details); setLoading(null); } })
-      .catch((error) => { if (!controller.signal.aborted) { setLoading(null); setMessage(error instanceof Error ? error.message : "Could not load the game."); } });
+      .catch(() => { if (!controller.signal.aborted) { setLoading(null); setMessage(t("Could not load the game.")); } });
   };
 
   return <div className="modal-backdrop" onClick={onClose}>
     <div className="modal game-search-dialog" role="dialog" aria-modal="true" aria-labelledby="game-search-title" onClick={(event) => event.stopPropagation()}>
-      <div className="modal-header"><div><p className="eyebrow">Experimental</p><h2 id="game-search-title">Search all games</h2></div><button type="button" className="icon-button" aria-label="Close game search" onClick={onClose}><X size={16} aria-hidden="true" /></button></div>
+      <div className="modal-header"><div><p className="eyebrow">Experimental</p><h2 id="game-search-title">{t("Search all games")}</h2></div><button type="button" className="icon-button" aria-label={t("Close game search")} onClick={onClose}><X size={16} aria-hidden="true" /></button></div>
       <div className="game-search-body">
         <div className="game-search-side">
           <label className="search-box game-search-input"><Search size={15} aria-hidden="true" /><input ref={input} value={query} onChange={(event) => type(event.target.value)} placeholder="Search any game" aria-label="Search any game" autoComplete="off" spellCheck={false} /></label>
-          <div className="game-search-status" role="status" aria-live="polite">{status === "searching" ? "Searching…" : status === "done" && !hits.length ? "No games found." : message}</div>
+          <div className="game-search-status" role="status" aria-live="polite">{status === "searching" ? t("Searching…") : status === "done" && !hits.length ? t("No games found.") : message}</div>
           <ul className="game-search-hits" aria-label="Search results">
             {hits.map((hit) => <li key={hit.key}><button type="button" className={`game-search-hit${game?.key === hit.key ? " active" : ""}`} onClick={() => pick(hit)} aria-current={game?.key === hit.key ? "true" : undefined}>
               {hit.coverUrl ? <RemoteImage src={hit.coverUrl} alt="" referrerPolicy="no-referrer" fallback={<span className="game-search-nocover" />} /> : <span className="game-search-nocover" />}
-              <span><strong>{hit.name}</strong><small>{hit.year ?? "Unknown year"}</small></span></button></li>)}
+              <span><strong>{hit.name}</strong><small>{hit.year ?? t("Unknown year")}</small></span></button></li>)}
           </ul>
         </div>
         <div className="game-search-main" aria-busy={Boolean(loading)}>
-          {loading ? <p className="game-search-muted" role="status">Loading {loading}…</p> : game ? <Details key={game.key} game={game} onSearch={(name) => { type(name); input.current?.focus(); }} />
+          {loading ? <p className="game-search-muted" role="status">{t("Loading {name}…").replace("{name}", loading)}</p> : game ? <Details key={game.key} game={game} onSearch={(name) => { type(name); input.current?.focus(); }} />
             : <p className="game-search-muted">Type a game name, then pick a result for its details, artwork and prices.</p>}
         </div>
       </div>

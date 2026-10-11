@@ -11,11 +11,13 @@ import { Select } from "../../ui/Select";
 import { PrefixManager } from "./PrefixManager";
 import { Switch } from "../../ui/Checkbox";
 import type { EditorContext } from "./types";
+import { useTranslation } from "../../../lib/useTranslation";
 
 const empty: LaunchOptions = { env: [], args: [] };
 
 /** Environment, arguments, working directory, runtime and wrappers. The "Final command" is built by the launcher itself. */
 export function LaunchOptionsSection({ ctx }: { ctx: EditorContext }) {
+  const t = useTranslation();
   const { draft, patch, capabilities } = ctx;
   const options = effectiveLaunchOptions(draft) ?? empty;
   const profile = activeLaunchProfile(draft);
@@ -52,10 +54,10 @@ export function LaunchOptionsSection({ ctx }: { ctx: EditorContext }) {
   const runtimeValue = options.runtime?.kind === "wine" ? "wine" : options.runtime?.kind === "proton" ? options.runtime.id ?? "" : "";
   const chooseRuntime = (value: string) => set({ runtime: !value ? undefined : value === "wine" ? { kind: "wine", id: "wine" } : { kind: "proton", id: value } });
   const duplicates = duplicateEnvNames(options.env);
-  const wrapperHint = (id: string, name: string) => have(id) || !runtimes.length ? undefined : `${name} is not installed.`;
+  const wrapperHint = (id: string, name: string) => have(id) || !runtimes.length ? undefined : t("{name} is not installed.").replace("{name}", name);
 
   const copySteam = () => { if (preview?.steamOptions) void navigator.clipboard?.writeText(preview.steamOptions).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1500); }).catch(() => {}); };
-  const chooseDir = async () => { const picked = await open({ directory: true, multiple: false, title: "Choose working directory" }); if (typeof picked === "string") set({ workingDir: picked }); };
+  const chooseDir = async () => { const picked = await open({ directory: true, multiple: false, title: t("Choose working directory") }); if (typeof picked === "string") set({ workingDir: picked }); };
 
   return <section className="launch-options" aria-label="Launch options">
     <div className="launch-options-heading"><h3>Launch options</h3><p>Applied each time Mochi starts this game. Tofu launch settings override them.</p></div>
@@ -66,25 +68,25 @@ export function LaunchOptionsSection({ ctx }: { ctx: EditorContext }) {
           {(draft.launchProfiles ?? []).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select>
         {profile && <input aria-label="Rename profile" defaultValue={profile.name} key={profile.id} maxLength={40} onBlur={(event) => { if (event.target.value.trim()) patch({ launchProfiles: renameLaunchProfile(draft, profile.id, event.target.value) }); else event.target.value = profile.name; }} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} />}
-        {profile && <button type="button" className="icon-button" aria-label={`Delete profile ${profile.name}`} onClick={() => patch(removeLaunchProfile(draft, profile.id))}><Trash2 size={14} /></button>}
+        {profile && <button type="button" className="icon-button" aria-label={t("Delete profile {name}").replace("{name}", profile.name)} onClick={() => patch(removeLaunchProfile(draft, profile.id))}><Trash2 size={14} /></button>}
       </div>
       <div className="launch-profile-row">
-        <input aria-label="New profile name" value={newName} maxLength={40} placeholder="New profile, copied from the current options" disabled={(draft.launchProfiles?.length ?? 0) >= MAX_LAUNCH_PROFILES} onChange={(event) => setNewName(event.target.value)} />
+        <input aria-label={t("New profile name")} value={newName} maxLength={40} placeholder={t("New profile, copied from the current options")} disabled={(draft.launchProfiles?.length ?? 0) >= MAX_LAUNCH_PROFILES} onChange={(event) => setNewName(event.target.value)} />
         <button type="button" className="secondary-button" disabled={!newName.trim() || (draft.launchProfiles?.length ?? 0) >= MAX_LAUNCH_PROFILES} onClick={() => { patch(addLaunchProfile(draft, newName)); setNewName(""); }}><Plus size={13} /> Add profile</button>
       </div>
-      <small className="metadata-note">{profile ? `Editing “${profile.name}”: its options replace the default ones when the game starts.` : "Profiles hold alternative runtime, variables and arguments, switchable from the game page."}</small>
+      <small className="metadata-note">{profile ? t("Editing “{name}”: its options replace the default ones when the game starts.").replace("{name}", profile.name) : t("Profiles hold alternative runtime, variables and arguments, switchable from the game page.")}</small>
     </div>
     {preview?.note && <p className="launch-hint launch-options-note" role="status">{preview.note}</p>}
 
     <div className="editor-field"><span className="editor-field-label">Environment variables</span>
       <div className="launch-env" role="group" aria-label="Environment variables">
         {options.env.map(([key, value], index) => {
-          const problem = envNameError(key) ?? (duplicates.has(key.trim()) ? "Set more than once. The last one wins." : null);
+          const problem = envNameError(key) ?? (duplicates.has(key.trim()) ? t("Set more than once. The last one wins.") : null);
           return <div className="launch-env-row" key={index}>
-            <input value={key} aria-label={`Variable ${index + 1} name`} placeholder="NAME" spellCheck={false} autoComplete="off" aria-invalid={!!envNameError(key)} disabled={!mayEdit} onChange={(event) => set({ env: setEnvRow(options.env, index, [event.target.value, value]) })} />
-            <input value={value} aria-label={`Variable ${index + 1} value`} placeholder="value" spellCheck={false} autoComplete="off" disabled={!mayEdit} onChange={(event) => set({ env: setEnvRow(options.env, index, [key, event.target.value]) })} />
-            <button type="button" className="icon-button" aria-label={`Remove variable ${index + 1}`} disabled={!mayEdit} onClick={() => set({ env: removeEnvRow(options.env, index) })}><Trash2 size={14} /></button>
-            {problem && <small className="launch-field-error" role="alert">{problem}</small>}
+            <input value={key} aria-label={t("Variable {index} name").replace("{index}", String(index + 1))} placeholder="NAME" spellCheck={false} autoComplete="off" aria-invalid={!!envNameError(key)} disabled={!mayEdit} onChange={(event) => set({ env: setEnvRow(options.env, index, [event.target.value, value]) })} />
+            <input value={value} aria-label={t("Variable {index} value").replace("{index}", String(index + 1))} placeholder="value" spellCheck={false} autoComplete="off" disabled={!mayEdit} onChange={(event) => set({ env: setEnvRow(options.env, index, [key, event.target.value]) })} />
+            <button type="button" className="icon-button" aria-label={t("Remove variable {index}").replace("{index}", String(index + 1))} disabled={!mayEdit} onClick={() => set({ env: removeEnvRow(options.env, index) })}><Trash2 size={14} /></button>
+            {problem && <small className="launch-field-error" role="alert">{t(problem)}</small>}
           </div>;
         })}
         <button type="button" className="secondary-button launch-env-add" disabled={!mayEdit || options.env.length >= 64} onClick={() => set({ env: addEnvRow(options.env) })}><Plus size={14} /> Add variable</button>
@@ -112,14 +114,14 @@ export function LaunchOptionsSection({ ctx }: { ctx: EditorContext }) {
 
     {linux && full && <>
       {compat.length > 0 && <div className="editor-field"><span className="editor-field-label">Windows runtime</span>
-        <Select label="Windows runtime" value={runtimeValue} onChange={chooseRuntime} searchable={false} options={[{ value: "", label: "Automatic (native, or Wine if available)" }, ...compat.map((runtime) => ({ value: runtime.id, label: runtime.name, description: runtime.id === "wine" ? "System Wine" : "Proton, with a private prefix for this game" }))]} />
-        <small className="launch-hint">Used for Windows programs (.exe). Native games ignore it.</small>
+        <Select label="Windows runtime" value={runtimeValue} onChange={chooseRuntime} searchable={false} options={[{ value: "", label: t("Automatic (native, or Wine if available)") }, ...compat.map((runtime) => ({ value: runtime.id, label: runtime.name, description: runtime.id === "wine" ? t("System Wine") : t("Proton, with a private prefix for this game") }))]} />
+        <small className="launch-hint">{t("Used for Windows programs (.exe). Native games ignore it.")}</small>
       </div>}
       {compat.length > 0 && /\.(exe|bat|msi|lnk)$/i.test(target) && <PrefixManager gameId={draft.id} tofuId={tofu?.id} gameName={draft.name} runtime={runtimeIdOf(options.runtime)} />}
       <div className="launch-toggles" role="group" aria-label="Wrappers">
-        <Switch label="GameMode" description={wrapperHint("gamemoderun", "GameMode") ?? "Runs the game through gamemoderun."} checked={!!options.gamemode} onChange={(on) => set({ gamemode: on })} />
-        <Switch label="MangoHud" description={wrapperHint("mangohud", "MangoHud") ?? "Shows the performance overlay."} checked={!!options.mangohud} onChange={(on) => set({ mangohud: on })} />
-        <Switch label="gamescope" description="Runs the game inside a gamescope session." checked={!!options.gamescope?.enabled} onChange={(on) => set({ gamescope: { enabled: on, args: options.gamescope?.args ?? [] } })} />
+        <Switch label="GameMode" description={wrapperHint("gamemoderun", "GameMode") ?? t("Runs the game through gamemoderun.")} checked={!!options.gamemode} onChange={(on) => set({ gamemode: on })} />
+        <Switch label="MangoHud" description={wrapperHint("mangohud", "MangoHud") ?? t("Shows the performance overlay.")} checked={!!options.mangohud} onChange={(on) => set({ mangohud: on })} />
+        <Switch label="gamescope" description={t("Runs the game inside a gamescope session.")} checked={!!options.gamescope?.enabled} onChange={(on) => set({ gamescope: { enabled: on, args: options.gamescope?.args ?? [] } })} />
       </div>
       {options.gamescope?.enabled && <div className="editor-field"><span className="editor-field-label">gamescope arguments</span>
         <input aria-label="gamescope arguments" value={gamescopeText} placeholder="-W 1920 -H 1080 -f" spellCheck={false} autoComplete="off" onChange={(event) => { setGamescopeText(event.target.value); set({ gamescope: { enabled: true, args: parseArgs(event.target.value) } }); }} />
@@ -133,17 +135,17 @@ export function LaunchOptionsSection({ ctx }: { ctx: EditorContext }) {
       {options.gamescope?.enabled && <input value={gamescopeText} aria-label="gamescope arguments" placeholder="-W 1920 -H 1080 -f" spellCheck={false} onChange={(event) => { setGamescopeText(event.target.value); set({ gamescope: { enabled: true, args: parseArgs(event.target.value) } }); }} />}
     </div>}
 
-    {preview?.errors.filter((error) => !error.includes("is not a valid variable name")).map((error) => <p className="auth-error editor-warning launch-error" role="alert" key={error}>{error}</p>)}
+    {preview?.errors.filter((error) => !error.includes("is not a valid variable name")).map((error) => <p className="auth-error editor-warning launch-error" role="alert" key={error}>{t(error)}</p>)}
 
     {applies === "steam" && preview?.steamOptions && <div className="editor-field"><span className="editor-field-label" id="launch-steam-label">Steam launch options</span>
       <div className="launch-command-row">
         <code className="launch-command" aria-labelledby="launch-steam-label" tabIndex={0}>{preview.steamOptions}</code>
-        <button type="button" className="secondary-button" onClick={copySteam}><Copy size={14} /> {copied ? "Copied" : "Copy"}</button>
+        <button type="button" className="secondary-button" onClick={copySteam}><Copy size={14} /> {copied ? t("Copied") : t("Copy")}</button>
       </div>
       <small className="launch-hint">Paste this into the game's Properties, General, Launch options in Steam. Runtimes and the working directory are managed by Steam.</small>
     </div>}
     {(applies === "full" || applies === "flatpak") && <div className="editor-field"><span className="editor-field-label" id="launch-final-label">Final command</span>
-      <code className="launch-command" role="textbox" aria-readonly="true" aria-labelledby="launch-final-label" tabIndex={0}>{preview?.command ?? (previewFailed ? "Preview unavailable." : preview?.errors.length ? "Fix the problems above to see the command." : "…")}</code>
+      <code className="launch-command" role="textbox" aria-readonly="true" aria-labelledby="launch-final-label" tabIndex={0}>{preview?.command ?? (previewFailed ? t("Preview unavailable.") : preview?.errors.length ? t("Fix the problems above to see the command.") : "…")}</code>
     </div>}
   </section>;
 }

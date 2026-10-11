@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { ArrowDown, ArrowUp, FolderOpen } from "lucide-react";
 import { Select, type SelectOption } from "../ui/Select";
 import { useApp } from "../../state/AppContext";
@@ -14,8 +15,8 @@ const errorText = (error: unknown) => (error instanceof Error ? error.message : 
 
 function SizeCell({ row, max }: { row: StorageRow; max: number }) {
   const size = row.measurement;
-  if (!size) return <span className="storage-skeleton" aria-label="Measuring" />;
-  if (size.error) return <span className="storage-error" title={size.error}>Unavailable</span>;
+  if (!size) return <span className="storage-skeleton" aria-label={t("Measuring")} />;
+  if (size.error) return <span className="storage-error" title={size.error}>{t("Unavailable")}</span>;
   const width = max > 0 ? Math.max(size.bytes > 0 ? 2 : 0, (size.bytes / max) * 100) : 0;
   return <span className="storage-size" title={size.truncated ? "A very large folder: this is a lower bound." : `${size.files.toLocaleString()} files`}>
     <span className="storage-size-bar" aria-hidden="true"><span className={`storage-fill storage-cat-${row.category}`} style={{ width: `${width}%` }} /></span>
@@ -24,6 +25,7 @@ function SizeCell({ row, max }: { row: StorageRow; max: number }) {
 }
 
 export function StorageSection() {
+  const t = useTranslation();
   const { lib } = useApp();
   const { locations, measurements, scanning, started, error, scan, cancel } = useStorageScan(lib.library);
   const [sort, setSort] = useState<SortState>({ key: "bytes", dir: "desc" });
@@ -68,15 +70,15 @@ export function StorageSection() {
   };
   const open = (path: string) => { void openFolder(path).catch((cause) => setNote(errorText(cause))); };
 
-  return <SettingsGroup title="Storage" subtitle="Where disk space goes" id="settings-storage" className="storage-group">
+  return <SettingsGroup title={t("Storage")} subtitle={t("Where disk space goes")} id="settings-storage" className="storage-group">
     <div className="storage-summary">
       <span>
         <strong className="storage-total">{started ? formatBytes(totals.total) : "Not measured yet"}</strong>
         <small role="status">{!started ? "Measuring reads folder sizes only and can take a while for big libraries, so it runs when you ask." : scanning ? `Measuring… ${totals.measured + totals.failed} of ${locations.length || "?"} locations done.` : `${totals.measured} location${totals.measured === 1 ? "" : "s"} measured${totals.failed ? `, ${totals.failed} unavailable` : ""}.`}</small>
       </span>
       <span className="storage-summary-actions">
-        {scanning && <button type="button" className="secondary-button" onClick={cancel}>Stop</button>}
-        <button type="button" className="secondary-button" disabled={scanning} onClick={() => void scan()}>{started ? "Scan again" : "Measure disk usage"}</button>
+        {scanning && <button type="button" className="secondary-button" onClick={cancel}>{t("Stop")}</button>}
+        <button type="button" className="secondary-button" disabled={scanning} onClick={() => void scan()}>{started ? t("Scan again") : t("Measure disk usage")}</button>
       </span>
     </div>
     {error && <p className="metadata-note settings-note" role="alert">{error}</p>}
@@ -84,7 +86,7 @@ export function StorageSection() {
       <div className="storage-bar" role="img" aria-label={`Storage by kind: ${totals.categories.map((item) => `${categoryLabels[item.category]} ${formatBytes(item.bytes)}`).join(", ") || "nothing measured yet"}`}>
         {totals.categories.map((item) => <span key={item.category} className={`storage-segment storage-cat-${item.category}`} style={{ flexGrow: item.bytes }} title={`${categoryLabels[item.category]}: ${formatBytes(item.bytes)}`} />)}
       </div>
-      <ul className="storage-legend" aria-label="Kinds">
+      <ul className="storage-legend" aria-label={t("Kinds")}>
         {totals.categories.map((item) => <li key={item.category}><span className={`storage-dot storage-cat-${item.category}`} aria-hidden="true" />{categoryLabels[item.category]}<small>{formatBytes(item.bytes)}</small></li>)}
       </ul>
       <div className="storage-table-wrap">
@@ -93,8 +95,8 @@ export function StorageSection() {
             {columns.map((column) => <th key={column.key} scope="col" aria-sort={sort.key === column.key ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
               <button type="button" className="storage-sort" onClick={() => sortBy(column.key)}>{column.label}{sort.key === column.key && (sort.dir === "asc" ? <ArrowUp size={12} aria-hidden="true" /> : <ArrowDown size={12} aria-hidden="true" />)}</button>
             </th>)}
-            <th scope="col" className="storage-share-col">Share</th>
-            <th scope="col"><span className="visually-hidden">Actions</span></th>
+            <th scope="col" className="storage-share-col">{t("Share")}</th>
+            <th scope="col"><span className="visually-hidden">{t("Actions")}</span></th>
           </tr></thead>
           <tbody>
             {locations.length === 0 && [0, 1, 2, 3].map((index) => <tr key={index}><td colSpan={5}><span className="storage-skeleton storage-skeleton-row" /></td></tr>)}
@@ -111,7 +113,7 @@ export function StorageSection() {
       {hidden > 0 && <div className="storage-more"><button type="button" className="secondary-button" onClick={() => setLimit((current) => current + PAGE)}>Show {Math.min(PAGE, hidden)} more ({hidden.toLocaleString()} hidden)</button></div>}
       <small className="metadata-note storage-note">Game installs and mod folders can only be opened here, never deleted. Sizes of nested folders can overlap, and very large folders are measured up to a limit.</small>
     </>}
-    <div className="setting-row storage-clear-head"><span><strong>Free up space</strong><small>Only Mochi's own caches and leftovers can be removed here.</small></span><Select value={String(age)} onChange={(value) => setAge(Number(value))} options={ageOption} label="Age for old items" className="storage-age" /></div>
+    <div className="setting-row storage-clear-head"><span><strong>Free up space</strong><small>Only Mochi's own caches and leftovers can be removed here.</small></span><Select value={String(age)} onChange={(value) => setAge(Number(value))} options={ageOption} label={t("Age for old items")} className="storage-age" /></div>
     <div className="setting-row"><span><strong>Clear all unused data</strong><small>Runs every action below at once, using the age chosen above.</small></span>
       <button type="button" className="secondary-button danger-outline" disabled={busy !== null || scanning} onClick={() => void clearAll()}>{busy === "all" ? "Clearing…" : "Clear all"}</button></div>
     {clearActions.map((action) => <div className="setting-row" key={action.kind}>

@@ -5,11 +5,19 @@ import { commandsVersion, listCommands, subscribeCommands } from "../lib/command
 import { registerBuiltinCommands, registerLaunchProfileCommands, registerThemeCommands } from "../lib/builtinCommands";
 import { OPEN_PALETTE_EVENT, parsePaletteQuery, paletteShortcutLabel, rankPalette, readRecents, rememberAction, type PaletteItem } from "../lib/palette";
 import { useBigPictureActive } from "../bigpicture/mode";
+import { useTranslation } from "../lib/useTranslation";
 
 /**
  * Ctrl/Cmd+K command palette: games and actions in one list. ">" shows actions only. Rows are real buttons, so keyboard,
  * D-pad (spatial navigation) and A/B all work: arrows move focus, Enter/A runs, Escape/B closes (via the dialog enhancer).
  */
+function translateCommandTitle(title: string, t: (message: string) => string) {
+  if (title.startsWith("Settings: ")) return `${t("Settings:")} ${t(title.slice("Settings: ".length))}`;
+  if (title.startsWith("Theme: ")) return `${t("Theme:")} ${title.slice("Theme: ".length)}`;
+  if (title.startsWith("Launch profile: ")) return `${t("Launch profile:")} ${title.slice("Launch profile: ".length).replace(" / Default options", ` / ${t("Default options")}`)}`;
+  return t(title);
+}
+
 export function CommandPalette() {
   const { themes, setupOpen, platform } = useAppSelector((app) => ({ themes: app.themeEngine.themes, setupOpen: app.showFirstLaunchSetup, platform: app.platformCapabilities?.platform }), shallowEqual);
   const getApp = useAppGetter();
@@ -39,6 +47,7 @@ export function CommandPalette() {
 }
 
 function PaletteDialog({ getApp, platform, onClose }: { getApp: ReturnType<typeof useAppGetter>; platform?: string; onClose: () => void }) {
+  const t = useTranslation();
   const [raw, setRaw] = useState("");
   const deferred = useDeferredValue(raw);
   const [recents] = useState(readRecents);
@@ -58,7 +67,7 @@ function PaletteDialog({ getApp, platform, onClose }: { getApp: ReturnType<typeo
   const run = useCallback((item: PaletteItem) => {
     onClose();
     const app = getApp();
-    if (item.kind === "command") { if (!item.command.id.endsWith("install-query")) rememberAction(item.command.id); void Promise.resolve(item.command.run(context)).catch((error) => app.notifications.notify("Command failed", error instanceof Error ? error.message : String(error))); return; }
+    if (item.kind === "command") { if (!item.command.id.endsWith("install-query")) rememberAction(item.command.id); void Promise.resolve(item.command.run(context)).catch((error) => app.notifications.notify(t("Command failed"), error instanceof Error ? error.message : String(error))); return; }
     app.lib.selectPiko(item.piko, item.kind === "tofu" ? item.tofuId : undefined);
     app.setActiveNav("Library");
     if (item.kind === "tofu") app.setShowTofuManager(true); else app.lib.setGameDetailsId(item.piko.id);
@@ -81,16 +90,16 @@ function PaletteDialog({ getApp, platform, onClose }: { getApp: ReturnType<typeo
   };
 
   return <div className="modal-backdrop palette-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <div className="modal palette-modal" role="dialog" aria-modal="true" aria-label="Command palette" onKeyDown={onKeyDown}>
+    <div className="modal palette-modal" role="dialog" aria-modal="true" aria-label={t("Command palette")} onKeyDown={onKeyDown}>
       <div className="palette-search">
         <Search size={16} aria-hidden="true" />
-        <input ref={input} data-autofocus value={raw} onChange={(event) => setRaw(event.target.value)} placeholder={mode === "actions" ? "Run an action…" : "Search games and actions, or type > for actions"} aria-label="Search games and actions" role="combobox" aria-expanded="true" aria-controls="palette-list" autoComplete="off" spellCheck={false} />
+        <input ref={input} data-autofocus value={raw} onChange={(event) => setRaw(event.target.value)} placeholder={mode === "actions" ? t("Run an action…") : t("Search games and actions, or type > for actions")} aria-label={t("Search games and actions")} role="combobox" aria-expanded="true" aria-controls="palette-list" autoComplete="off" spellCheck={false} />
         <kbd>{paletteShortcutLabel(platform)}</kbd>
-        <button type="button" className="icon-button" aria-label="Close command palette" onClick={onClose}><X size={15} aria-hidden="true" /></button>
+        <button type="button" className="icon-button" aria-label={t("Close command palette")} onClick={onClose}><X size={15} aria-hidden="true" /></button>
       </div>
-      <div className="palette-list" id="palette-list" role="listbox" aria-label="Results" ref={list}>
-        {items.map((item) => <button type="button" role="option" aria-selected="false" className="palette-item" data-kind={item.kind} key={item.key} onClick={() => run(item)}><span className="palette-title">{item.title}</span><small>{item.subtitle}</small></button>)}
-        {!items.length && <div className="palette-empty" role="status">{raw.trim() ? "Nothing matches. Try a different word." : "No actions available."}</div>}
+      <div className="palette-list" id="palette-list" role="listbox" aria-label={t("Results")} ref={list}>
+        {items.map((item) => <button type="button" role="option" aria-selected="false" className="palette-item" data-kind={item.kind} key={item.key} onClick={() => run(item)}><span className="palette-title">{item.kind === "command" ? translateCommandTitle(item.title, t) : item.title}</span><small>{item.kind === "command" ? t(item.subtitle) : item.subtitle}</small></button>)}
+        {!items.length && <div className="palette-empty" role="status">{raw.trim() ? t("Nothing matches. Try a different word.") : t("No actions available.")}</div>}
       </div>
       <div className="palette-hint" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Enter</kbd> run</span><span><kbd>Esc</kbd> close</span><span><kbd>&gt;</kbd> actions only</span></div>
     </div>

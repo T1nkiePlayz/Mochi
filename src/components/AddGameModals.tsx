@@ -8,10 +8,12 @@ import { resolveIgdbImage } from "../lib/metadata";
 import type { LaunchMethodId } from "../lib/platform";
 import { useApp } from "../state/AppContext";
 import { cssUrl } from "../lib/metadata/merge";
+import { useTranslation } from "../lib/useTranslation";
 
-const methodLabel = (method: string) => method === "file" ? "Choose file" : method === "app" ? "macOS application" : method === "flatpak" ? "Flatpak" : "Custom";
+const methodLabel = (method: string, t: (message: string) => string) => method === "file" ? t("Choose file") : method === "app" ? t("macOS application") : method === "flatpak" ? t("Flatpak") : t("Custom");
 
 export function AddGameModals() {
+  const t = useTranslation();
   const { add, platformCapabilities } = useApp();
   const [searchText, setSearchText] = useState("");
   useEffect(() => { if (add.step === "igdb") setSearchText(add.pendingGame?.name ?? ""); }, [add.step]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -28,26 +30,26 @@ export function AddGameModals() {
 
     {add.showCustomGame && <div className="modal-backdrop" onClick={() => add.reset()}>
       <div className={`modal igdb-selection-modal add-game-modal step-${add.step}`} role="dialog" aria-modal="true" aria-label="Add custom game" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === "Escape" && !event.defaultPrevented) add.reset(); }}>
-        <div className="modal-header"><div><p className="eyebrow">{add.step === "igdb" ? "Step 2 · Confirm game identity" : add.step === "cover" ? `Step ${add.hasIgdb ? 3 : 2} · Cover` : "Local library"}</p><h2>{add.step === "igdb" ? "Is this the right game?" : add.step === "cover" ? "Choose a cover" : "Add custom game"}</h2></div><button className="icon-button" type="button" aria-label="Close" onClick={() => add.reset()}><MochiIcon name="close" fallback={X} size={17} /></button></div>
+        <div className="modal-header"><div><p className="eyebrow">{add.step === "igdb" ? t("Step 2 · Confirm game identity") : add.step === "cover" ? t("Step {number} · Cover").replace("{number}", String(add.hasIgdb ? 3 : 2)) : t("Local library")}</p><h2>{add.step === "igdb" ? t("Is this the right game?") : add.step === "cover" ? t("Choose a cover") : t("Add custom game")}</h2></div><button className="icon-button" type="button" aria-label="Close" onClick={() => add.reset()}><MochiIcon name="close" fallback={X} size={17} /></button></div>
         {add.step === "form" && <form onSubmit={(event) => void add.submitCustom(event)} noValidate>
           <p className="modal-description">Choose how Mochi should launch this game. File selection uses the native file dialog.</p>
           <div className="form-fields">
             <label>Game name<input value={add.formName} onChange={(event) => add.setFormName(event.target.value)} autoFocus placeholder="e.g. Hollow Knight" aria-invalid={Boolean(add.formError) && !add.formName.trim()} /></label>
             <label>Platform category<input value={add.formCategory} onChange={(event) => add.setFormCategory(event.target.value)} placeholder="e.g. Steam, Heroic, Custom" /></label>
-            <div className="editor-field"><span className="editor-field-label">Launch method</span>
-              <Select<LaunchMethodId> label="Launch method" value={add.launchType} onChange={add.setLaunchType}
-                options={(platformCapabilities?.launchMethods ?? ["file", "flatpak", "custom"]).map((method) => ({ value: method as LaunchMethodId, label: methodLabel(method) }))} />
+            <div className="editor-field"><span className="editor-field-label">{t("Launch method")}</span>
+              <Select<LaunchMethodId> label={t("Launch method")} value={add.launchType} onChange={add.setLaunchType}
+                options={(platformCapabilities?.launchMethods ?? ["file", "flatpak", "custom"]).map((method) => ({ value: method as LaunchMethodId, label: methodLabel(method, t) }))} />
             </div>
             {(add.launchType === "file" || add.launchType === "app") && <div className="launch-target-picker"><button type="button" className="secondary-button file-picker-button" onClick={add.chooseFile}>{add.launchType === "app" ? "Choose macOS application" : "Choose executable / launcher file"}</button></div>}
-            {add.launchType === "flatpak" && <div className="flatpak-input-row"><button type="button" className="secondary-button" onClick={add.loadFlatpaks} disabled={add.flatpakBusy}>{add.flatpakBusy ? <><MochiIcon name="refresh" fallback={RefreshCw} size={15} className="spin" /> Loading...</> : <><MochiIcon name="installed" fallback={Grid2X2} size={15} /> Choose installed Flatpak</>}</button><input value={add.launchTarget} onChange={(event) => add.setLaunchTarget(event.target.value)} placeholder="org.company.game" autoComplete="off" aria-label="Flatpak ID" /></div>}
+            {add.launchType === "flatpak" && <div className="flatpak-input-row"><button type="button" className="secondary-button" onClick={add.loadFlatpaks} disabled={add.flatpakBusy}>{add.flatpakBusy ? <><MochiIcon name="refresh" fallback={RefreshCw} size={15} className="spin" /> {t("Loading…")}</> : <><MochiIcon name="installed" fallback={Grid2X2} size={15} /> Choose installed Flatpak</>}</button><input value={add.launchTarget} onChange={(event) => add.setLaunchTarget(event.target.value)} placeholder="org.company.game" autoComplete="off" aria-label="Flatpak ID" /></div>}
             {add.launchType === "custom" && <input value={add.launchTarget} onChange={(event) => add.setLaunchTarget(event.target.value)} placeholder="Custom path, Flatpak ID, or supported launch target" autoComplete="off" aria-label="Launch target" />}
             {add.launchTarget && <p className="metadata-note path-text" title={add.launchTarget}>{add.launchTarget}</p>}
           </div>
           {add.formError && <p className="auth-error" role="alert">{add.formError}</p>}
-          <button className="play-button form-submit" type="submit" disabled={add.igdbBusy}>{add.igdbBusy ? <><MochiIcon name="refresh" fallback={RefreshCw} size={16} className="spin" /> Searching IGDB...</> : <>Next <MochiIcon name="chevron" fallback={ChevronDown} size={16} /></>}</button>
+          <button className="play-button form-submit" type="submit" disabled={add.igdbBusy}>{add.igdbBusy ? <><MochiIcon name="refresh" fallback={RefreshCw} size={16} className="spin" /> {t("Searching IGDB…")}</> : <>Next <MochiIcon name="chevron" fallback={ChevronDown} size={16} /></>}</button>
         </form>}
         {add.step === "igdb" && <>
-          <p className="modal-description">{add.pendingGame?.candidates.length ? "Mochi found these matches. Approve the best match to use its artwork, description and categories." : "Mochi could not find a confident match. Search again or add the game without IGDB metadata."}</p>
+          <p className="modal-description">{add.pendingGame?.candidates.length ? t("Mochi found these matches. Approve the best match to use its artwork, description and categories.") : t("Mochi could not find a confident match. Search again or add the game without IGDB metadata.")}</p>
           <form className="artwork-search-bar" onSubmit={(event) => { event.preventDefault(); void add.searchIgdbAgain(searchText); }}>
             <label className="artwork-search-input"><Search size={14} aria-hidden="true" /><input value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Search IGDB again" aria-label="Search IGDB again" /></label>
             <button type="submit" className="secondary-button" disabled={add.igdbBusy || !searchText.trim()}>{add.igdbBusy ? "Searching…" : "Search"}</button>
@@ -60,13 +62,13 @@ export function AddGameModals() {
           <div className="igdb-selection-actions"><button type="button" className="secondary-button" onClick={() => add.setStep("form")}>Back</button><button type="button" className="secondary-button" onClick={() => add.approveIgdbGame(null)}>None of these</button></div>
         </>}
         {add.step === "cover" && <>
-          <p className="modal-description">Optional. Pick your own cover, or skip to use {add.pendingGame?.match ? "the IGDB artwork" : "Mochi's placeholder"}. You can change it later in Edit.</p>
+          <p className="modal-description">{t("Optional. Pick your own cover, or skip to use {cover}. You can change it later in Edit.").replace("{cover}", add.pendingGame?.match ? t("the IGDB artwork") : t("Mochi's placeholder"))}</p>
           <ArtworkPicker gameName={add.pendingGame?.match?.name || add.pendingGame?.name || ""} onChange={add.setCover} />
           {add.formError && <p className="auth-error" role="alert">{add.formError}</p>}
           <div className="igdb-selection-actions">
             <button type="button" className="secondary-button" onClick={() => add.setStep(add.hasIgdb ? "igdb" : "form")} disabled={add.adding}>Back</button>
             <button type="button" className="secondary-button" onClick={() => void add.finishAdd(false)} disabled={add.adding}>Skip cover</button>
-            <button type="button" className="play-button" onClick={() => void add.finishAdd(true)} disabled={add.adding || !add.cover}><MochiIcon name="plus" fallback={Plus} size={16} /> {add.adding ? "Adding…" : "Add game"}</button>
+            <button type="button" className="play-button" onClick={() => void add.finishAdd(true)} disabled={add.adding || !add.cover}><MochiIcon name="plus" fallback={Plus} size={16} /> {add.adding ? t("Adding…") : t("Add game")}</button>
           </div>
         </>}
       </div>

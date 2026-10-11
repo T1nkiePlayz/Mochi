@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { X } from "lucide-react";
 import { backlogStatuses, type BacklogStatus } from "../../lib/backlog";
 import { ruleIsEmpty, ruleUsesHours, sanitizeRule, type SavedFilter, type SavedRule } from "../../lib/savedFilters";
@@ -18,6 +19,7 @@ const num = (text: string) => (text.trim() === "" || !Number.isFinite(Number(tex
 
 /** Build or edit a saved smart filter: every field that is set must match. */
 export function SavedFilterDialog({ initial, existing, hoursAvailable, onSave, onDelete, onClose }: Props) {
+  const t = useTranslation();
   const [name, setName] = useState(existing?.name ?? "");
   const [status, setStatus] = useState<BacklogStatus[]>(initial.status ?? []);
   const [nextUp, setNextUp] = useState(Boolean(initial.nextUp));
@@ -48,8 +50,8 @@ export function SavedFilterDialog({ initial, existing, hoursAvailable, onSave, o
         <label><input type="checkbox" checked={installed} onChange={(event) => setInstalled(event.target.checked)} /> Installed</label>
         <label>Played <select value={played} onChange={(event) => setPlayed(event.target.value as typeof played)}><option value="">Any</option><option value="unplayed">Never</option><option value="played">Already</option></select></label>
       </div>
-      <label className="field">Tags (all of, comma separated)<input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="co-op, couch" /></label>
-      <label className="field">Genres (any of, comma separated)<input value={categories} onChange={(event) => setCategories(event.target.value)} placeholder="Adventure, Puzzle" /></label>
+      <label className="field">Tags (all of, comma separated)<input value={tags} onChange={(event) => setTags(event.target.value)} placeholder={t("co-op, couch")} /></label>
+      <label className="field">Genres (any of, comma separated)<input value={categories} onChange={(event) => setCategories(event.target.value)} placeholder={t("Adventure, Puzzle")} /></label>
       <div className="filter-row">
         <label>Hours to beat, from <input type="number" min={0} max={2000} value={minHours} onChange={(event) => setMinHours(event.target.value)} style={{ width: "5em" }} /></label>
         <label>to <input type="number" min={0} max={2000} value={maxHours} onChange={(event) => setMaxHours(event.target.value)} style={{ width: "5em" }} /></label>

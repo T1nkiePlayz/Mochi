@@ -19,6 +19,8 @@ export type CardData = {
 export type CardPalette = { background: string; surface: string; border: string; text: string; muted: string; accent: string; accentText: string; fontBody: string; fontDisplay: string };
 /** Cover images as data URLs, keyed by game id. A game without one is drawn with its initials. */
 export type CardCovers = Record<string, string | undefined>;
+export type CardLabels = { ariaLabel: string; playStats: string; accountStats: string; timePlayed: string; achievements: string; topGames: string; noGamesPlayed: string; generatedLocally: string; saveDialogTitle: string; pngImage: string };
+const defaultCardLabels: CardLabels = { ariaLabel: "Mochi stats card", playStats: "Play stats", accountStats: "{account}'s stats", timePlayed: "TIME PLAYED", achievements: "ACHIEVEMENTS", topGames: "TOP GAMES", noGamesPlayed: "No games played in this period.", generatedLocally: "Generated locally by Mochi", saveDialogTitle: "Save share card", pngImage: "PNG image" };
 
 export const CARD_WIDTH = 1080;
 export const CARD_HEIGHT = 1080;
@@ -60,35 +62,35 @@ const safeCover = (value: string | undefined) => (value && /^data:image\/(png|jp
 const safeColor = (value: string, fallback: string) => (/^[#a-z0-9(),.%\s-]+$/i.test(value) && value.trim() ? value.trim() : fallback);
 const safeFont = (value: string, fallback: string) => (value.trim() ? value.replace(/["<>&]/g, "").trim() : fallback);
 
-export function buildCardSvg(data: CardData, palette: CardPalette, covers: CardCovers = {}): string {
+export function buildCardSvg(data: CardData, palette: CardPalette, covers: CardCovers = {}, labels: CardLabels = defaultCardLabels): string {
   const color = { bg: safeColor(palette.background, "#0b0f0e"), surface: safeColor(palette.surface, "#141d19"), border: safeColor(palette.border, "#2a3a32"), text: safeColor(palette.text, "#e4eee8"), muted: safeColor(palette.muted, "#91a69a"), accent: safeColor(palette.accent, "#b9dbc8"), accentText: safeColor(palette.accentText, "#102019") };
   const body = safeFont(palette.fontBody, "system-ui, sans-serif");
   const display = safeFont(palette.fontDisplay, body);
   const parts: string[] = [];
-  parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_WIDTH}" height="${CARD_HEIGHT}" viewBox="0 0 ${CARD_WIDTH} ${CARD_HEIGHT}" role="img" aria-label="Mochi stats card">`);
+  parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_WIDTH}" height="${CARD_HEIGHT}" viewBox="0 0 ${CARD_WIDTH} ${CARD_HEIGHT}" role="img" aria-label="${escapeXml(labels.ariaLabel)}">`);
   parts.push(`<rect width="${CARD_WIDTH}" height="${CARD_HEIGHT}" fill="${color.bg}"/>`);
   parts.push(`<rect x="24" y="24" width="${CARD_WIDTH - 48}" height="${CARD_HEIGHT - 48}" rx="28" fill="${color.surface}" stroke="${color.border}" stroke-width="2"/>`);
   parts.push(`<text x="72" y="116" font-family="${body}" font-size="26" letter-spacing="4" fill="${color.accent}">MOCHI</text>`);
-  parts.push(`<text x="72" y="184" font-family="${display}" font-size="62" font-weight="800" fill="${color.text}">${data.account ? escapeXml(clip(`${data.account}'s stats`, 26)) : "Play stats"}</text>`);
+  parts.push(`<text x="72" y="184" font-family="${display}" font-size="62" font-weight="800" fill="${color.text}">${escapeXml(clip(data.account ? labels.accountStats.replace("{account}", data.account) : labels.playStats, 26))}</text>`);
   parts.push(`<text x="72" y="228" font-family="${body}" font-size="28" fill="${color.muted}">${escapeXml(data.periodLabel)}</text>`);
   let y = 290;
   const tiles: Array<[string, string]> = [];
-  if (data.totalSeconds !== undefined) tiles.push(["TIME PLAYED", formatDuration(data.totalSeconds)]);
-  if (data.achievements) tiles.push(["ACHIEVEMENTS", `${data.achievements.unlocked} / ${data.achievements.total}`]);
+  if (data.totalSeconds !== undefined) tiles.push([labels.timePlayed, formatDuration(data.totalSeconds)]);
+  if (data.achievements) tiles.push([labels.achievements, `${data.achievements.unlocked} / ${data.achievements.total}`]);
   if (tiles.length) {
     const width = (CARD_WIDTH - 144 - (tiles.length - 1) * 24) / tiles.length;
     tiles.forEach(([label, value], i) => {
       const x = 72 + i * (width + 24);
       parts.push(`<rect x="${x}" y="${y}" width="${width}" height="150" rx="20" fill="${color.bg}" stroke="${color.border}" stroke-width="2"/>`);
-      parts.push(`<text x="${x + 28}" y="${y + 50}" font-family="${body}" font-size="22" letter-spacing="3" fill="${color.muted}">${label}</text>`);
+      parts.push(`<text x="${x + 28}" y="${y + 50}" font-family="${body}" font-size="22" letter-spacing="3" fill="${color.muted}">${escapeXml(label)}</text>`);
       parts.push(`<text x="${x + 28}" y="${y + 114}" font-family="${display}" font-size="56" font-weight="800" fill="${color.text}">${escapeXml(value)}</text>`);
     });
     y += 190;
   }
   if (data.games) {
-    parts.push(`<text x="72" y="${y + 20}" font-family="${body}" font-size="22" letter-spacing="3" fill="${color.muted}">TOP GAMES</text>`);
+    parts.push(`<text x="72" y="${y + 20}" font-family="${body}" font-size="22" letter-spacing="3" fill="${color.muted}">${escapeXml(labels.topGames)}</text>`);
     y += 48;
-    if (!data.games.length) parts.push(`<text x="72" y="${y + 50}" font-family="${body}" font-size="28" fill="${color.muted}">No games played in this period.</text>`);
+    if (!data.games.length) parts.push(`<text x="72" y="${y + 50}" font-family="${body}" font-size="28" fill="${color.muted}">${escapeXml(labels.noGamesPlayed)}</text>`);
     const max = data.games[0]?.seconds || 1;
     data.games.forEach((game, i) => {
       const top = y + i * 96;
@@ -103,7 +105,7 @@ export function buildCardSvg(data: CardData, palette: CardPalette, covers: CardC
       parts.push(`<rect x="176" y="${top + 52}" width="${CARD_WIDTH - 248}" height="12" rx="6" fill="${color.bg}"/><rect x="176" y="${top + 52}" width="${Math.max(10, Math.round(((CARD_WIDTH - 248) * game.seconds) / max))}" height="12" rx="6" fill="${color.accent}"/>`);
     });
   }
-  parts.push(`<text x="${CARD_WIDTH - 72}" y="${CARD_HEIGHT - 56}" text-anchor="end" font-family="${body}" font-size="20" fill="${color.muted}">Generated locally by Mochi</text>`);
+  parts.push(`<text x="${CARD_WIDTH - 72}" y="${CARD_HEIGHT - 56}" text-anchor="end" font-family="${body}" font-size="20" fill="${color.muted}">${escapeXml(labels.generatedLocally)}</text>`);
   parts.push("</svg>");
   return parts.join("");
 }
@@ -157,8 +159,8 @@ export async function blobToBase64(blob: Blob): Promise<string> {
 }
 
 /** Opens a save dialog and writes the PNG. Resolves to false when cancelled. */
-export async function savePng(blob: Blob): Promise<boolean> {
-  const destination = await save({ title: "Save share card", defaultPath: "mochi-stats.png", filters: [{ name: "PNG image", extensions: ["png"] }] });
+export async function savePng(blob: Blob, labels: Pick<CardLabels, "saveDialogTitle" | "pngImage"> = defaultCardLabels): Promise<boolean> {
+  const destination = await save({ title: labels.saveDialogTitle, defaultPath: "mochi-stats.png", filters: [{ name: labels.pngImage, extensions: ["png"] }] });
   if (!destination) return false;
   await invoke<void>("write_share_card", { destination, dataBase64: await blobToBase64(blob) });
   return true;

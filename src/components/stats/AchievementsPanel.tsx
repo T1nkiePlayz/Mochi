@@ -5,6 +5,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useApp } from "../../state/AppContext";
+import { useTranslation } from "../../lib/useTranslation";
+import { translate } from "../../lib/i18n";
+import { getTranslationLocale } from "../../lib/translationLocale";
 import { useSteamSync } from "../../state/useSteamSync";
 import { achievementCategories, progressText, rarityLabels, visibleAchievements, type AchievementCategory, type AchievementFilter, type AchievementProgress } from "../../lib/achievements";
 
@@ -12,24 +15,25 @@ const icons: Record<string, LucideIcon> = {
   Award, BadgeCheck, Boxes, CalendarCheck, CalendarDays, CalendarRange, Compass, Crown, Dices, Flame, FolderTree, Footprints, Gamepad, Gamepad2, Gift, Hourglass, Layers, Leaf, Library,
   Medal, Moon, Mountain, Palette, PartyPopper, PenLine, Puzzle, RotateCcw, Rocket, Shapes, Shuffle, Star, Sunrise, Tag, Timer, Trophy, Tv, Undo2, Wrench, Zap, Heart, Map: MapIcon,
 };
-const dateText = (ms: number) => new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+const dateText = (ms: number) => new Date(ms).toLocaleDateString(getTranslationLocale(), { day: "numeric", month: "short", year: "numeric" });
 const roman = ["", "I", "II", "III", "IV", "V", "VI", "VII"];
 
 /** Memoised: filter and tab changes re-render the grid, but most badges keep the same props. */
-export const AchievementBadge = memo(function AchievementBadge({ item, unlockedAt }: { item: AchievementProgress; unlockedAt?: number }) {
+export const AchievementBadge = memo(function AchievementBadge({ item, unlockedAt, translateText }: { item: AchievementProgress; unlockedAt?: number; translateText?: (message: string) => string }) {
+  const t = translateText ?? ((message: string) => translate(message, getTranslationLocale()));
   const { def } = item;
   const unlocked = unlockedAt !== undefined;
   const mystery = def.hidden && !unlocked;
   const Icon = mystery ? HelpCircle : icons[def.icon] ?? Trophy;
-  const status = unlocked ? `Unlocked ${dateText(unlockedAt)}` : mystery ? "Hidden" : progressText(item);
-  const tier = def.tierCount && def.tierCount > 1 && def.tier ? `Tier ${roman[def.tier] ?? def.tier} of ${roman[def.tierCount] ?? def.tierCount}` : "";
+  const status = unlocked ? t("Unlocked {date}").replace("{date}", dateText(unlockedAt)) : mystery ? t("Hidden") : progressText(item, t);
+  const tier = def.tierCount && def.tierCount > 1 && def.tier ? t("Tier {tier} of {count}").replace("{tier}", String(roman[def.tier] ?? def.tier)).replace("{count}", String(roman[def.tierCount] ?? def.tierCount)) : "";
   return (
     <li className={`ach-badge rarity-${def.rarity} ${unlocked ? "unlocked" : "locked"}`} data-category={def.category}>
       <div className="ach-icon" aria-hidden="true">{unlocked || mystery ? <Icon size={22} /> : <span className="ach-icon-locked"><Icon size={22} /><Lock size={11} /></span>}</div>
       <div className="ach-body">
-        <div className="ach-title"><strong>{mystery ? "Hidden achievement" : def.title}</strong><span className="ach-rarity">{rarityLabels[def.rarity]}</span></div>
-        <p>{mystery ? "Keep playing to find out what this is." : def.description}</p>
-        {!unlocked && !mystery && item.available && <div className="ach-progress"><div className="stat-meter" role="progressbar" aria-label={`${def.title} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(item.fraction * 100)} aria-valuetext={progressText(item)}><i style={{ width: `${Math.max(2, item.fraction * 100)}%` }} /></div></div>}
+        <div className="ach-title"><strong>{t(mystery ? "Hidden achievement" : def.title)}</strong><span className="ach-rarity">{t(rarityLabels[def.rarity])}</span></div>
+        <p>{t(mystery ? "Keep playing to find out what this is." : def.description)}</p>
+        {!unlocked && !mystery && item.available && <div className="ach-progress"><div className="stat-meter" role="progressbar" aria-label={t("{name} progress").replace("{name}", t(def.title))} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(item.fraction * 100)} aria-valuetext={progressText(item, t)}><i style={{ width: `${Math.max(2, item.fraction * 100)}%` }} /></div></div>}
         <small>{status}{tier && !mystery ? <span className="ach-tier"> · {tier}</span> : null}</small>
       </div>
     </li>
@@ -39,6 +43,7 @@ export const AchievementBadge = memo(function AchievementBadge({ item, unlockedA
 const statusOptions: Array<{ value: AchievementFilter["status"]; label: string }> = [{ value: "all", label: "All" }, { value: "unlocked", label: "Unlocked" }, { value: "locked", label: "Locked" }];
 
 export function AchievementsPanel({ progress, unlocked }: { progress: AchievementProgress[]; unlocked: Record<string, number> }) {
+  const t = useTranslation();
   const { lib } = useApp();
   const sync = useSteamSync(lib.library);
   const [category, setCategory] = useState<AchievementFilter["category"]>("all");
@@ -63,29 +68,29 @@ export function AchievementsPanel({ progress, unlocked }: { progress: Achievemen
 
   return (
     <section aria-labelledby="ach-heading" className="stats-card ach-panel">
-      <div className="stats-card-head"><h2 id="ach-heading">Achievements</h2><span className="stats-muted">{done} of {progress.length} unlocked</span></div>
-      <div className="stat-meter wide" role="progressbar" aria-label="Achievements unlocked" aria-valuemin={0} aria-valuemax={progress.length} aria-valuenow={done}><i style={{ width: `${(done / Math.max(1, progress.length)) * 100}%` }} /></div>
+      <div className="stats-card-head"><h2 id="ach-heading">{t("Achievements")}</h2><span className="stats-muted">{done} of {progress.length} {t("unlocked")}</span></div>
+      <div className="stat-meter wide" role="progressbar" aria-label={t("Achievements unlocked")} aria-valuemin={0} aria-valuemax={progress.length} aria-valuenow={done}><i style={{ width: `${(done / Math.max(1, progress.length)) * 100}%` }} /></div>
       <p className="stats-muted">Mochi's own achievements, tracked on this device from your play history and library. Tiered ones show the next tier to go for. Steam achievements for each game are in its Overview.</p>
       <div className="ach-filters">
-        <div className="ach-chips" role="group" aria-label="Achievement categories">
-          <button type="button" className="ach-chip" aria-pressed={category === "all"} onClick={() => setCategory("all")}>All <small>{done}/{progress.length}</small></button>
+        <div className="ach-chips" role="group" aria-label={t("Achievement categories")}>
+          <button type="button" className="ach-chip" aria-pressed={category === "all"} onClick={() => setCategory("all")}>{t("All")} <small>{done}/{progress.length}</small></button>
           {achievementCategories.map((name) => {
             const counts = perCategory.get(name);
-            return counts ? <button key={name} type="button" className="ach-chip" aria-pressed={category === name} onClick={() => setCategory(name)}>{name} <small>{counts.done}/{counts.total}</small></button> : null;
+            return counts ? <button key={name} type="button" className="ach-chip" aria-pressed={category === name} onClick={() => setCategory(name)}>{t(name)} <small>{counts.done}/{counts.total}</small></button> : null;
           })}
         </div>
-        <div className="ach-chips" role="group" aria-label="Achievement status">
-          {statusOptions.map((option) => <button key={option.value} type="button" className="ach-chip" aria-pressed={status === option.value} onClick={() => setStatus(option.value)}>{option.label}</button>)}
+        <div className="ach-chips" role="group" aria-label={t("Achievement status")}>
+          {statusOptions.map((option) => <button key={option.value} type="button" className="ach-chip" aria-pressed={status === option.value} onClick={() => setStatus(option.value)}>{t(option.label)}</button>)}
         </div>
       </div>
       {showSteamNote && (
         <div className="ach-steam-note" role="status">
-          <span>Steam achievements count once Steam data has been loaded. {sync.count ? "Load it for every Steam game in your library, or open a game's Overview." : "Import Steam games to use them."}</span>
-          {sync.count > 0 && <button type="button" className="secondary-button" onClick={() => void sync.start()} disabled={sync.running}>{sync.running ? `Syncing ${sync.done} of ${sync.total}…` : "Sync Steam achievements"}</button>}
+          <span>{t("Steam achievements count once Steam data has been loaded.")} {sync.count ? t("Load it for every Steam game in your library, or open a game's Overview.") : t("Import Steam games to use them.")}</span>
+          {sync.count > 0 && <button type="button" className="secondary-button" onClick={() => void sync.start()} disabled={sync.running} aria-label={t("Load Steam achievements for each game in your library.")}>{sync.running ? t("Syncing {done} of {total}…").replace("{done}", String(sync.done)).replace("{total}", String(sync.total)) : t("Sync Steam achievements")}</button>}
           {sync.message && !sync.running && <small>{sync.message}</small>}
         </div>
       )}
-      {shown.length ? <ul className="ach-grid">{shown.map((item) => <AchievementBadge key={item.def.id} item={item} unlockedAt={at(item)} />)}</ul> : <p className="stats-muted">Nothing matches these filters.</p>}
+      {shown.length ? <ul className="ach-grid">{shown.map((item) => <AchievementBadge key={item.def.id} item={item} unlockedAt={at(item)} translateText={t} />)}</ul> : <p className="stats-muted">{t("Nothing matches these filters.")}</p>}
     </section>
   );
 }
@@ -94,9 +99,9 @@ export function RecentAchievements({ progress, unlocked, onOpen }: { progress: A
   const recent = progress.filter((item) => unlocked[item.def.id] !== undefined).sort((a, b) => unlocked[b.def.id] - unlocked[a.def.id]).slice(0, 4);
   return (
     <section className="stats-card" aria-labelledby="recent-ach">
-      <div className="stats-card-head"><h2 id="recent-ach">Recent achievements</h2><button type="button" className="stats-link" onClick={onOpen}>View all</button></div>
+      <div className="stats-card-head"><h2 id="recent-ach">{t("Recent achievements")}</h2><button type="button" className="stats-link" onClick={onOpen}>{t("View all")}</button></div>
       {recent.length ? <ul className="ach-grid compact">{recent.map((item) => <AchievementBadge key={item.def.id} item={item} unlockedAt={unlocked[item.def.id]} />)}</ul>
-        : <p className="stats-muted">Nothing unlocked yet. Launch a game to earn your first one.</p>}
+        : <p className="stats-muted">{t("Nothing unlocked yet. Launch a game to earn your first one.")}</p>}
     </section>
   );
 }

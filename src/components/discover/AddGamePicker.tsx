@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Search, X } from "lucide-react";
+import { useTranslation } from "../../lib/useTranslation";
 import type { CfGame } from "../../lib/curseforge";
 import { entryBadges, searchGameCatalog, type CatalogEntry } from "../../lib/mods/gameCatalog";
 import type { NexusGame } from "../../lib/nexus";
@@ -46,10 +47,10 @@ export function AddGamePicker({ cfGames, nexusGames, cfEnabled, nexusEnabled, su
   }, [rows, supabase, igdbConfigured]);
 
   return <ModalShell label="Add a game to Discover" className="tofu-picker-window nexus-game-picker-window" onClose={onClose}>
-    <div className="modal-header"><div><p className="eyebrow">Discover</p><h2>Add a game</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button></div>
-    <p className="modal-description">Games on CurseForge need no account. Games on Nexus Mods list their mods without an account too (downloads need your Nexus key). A game on both is one entry.</p>
-    <label className="search-box nexus-game-search"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search games, e.g. Dragonwilds..." aria-label="Search games" data-autofocus /></label>
-    {!cfEnabled && !nexusEnabled && <p className="metadata-note" role="status">CurseForge and Nexus Mods are turned off in Settings.</p>}
+    <div className="modal-header"><div><p className="eyebrow">Discover</p><h2>{t("Add a game")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
+    <p className="modal-description">{t("Games on CurseForge need no account. Games on Nexus Mods list their mods without an account too (downloads need your Nexus key). A game on both is one entry.")}</p>
+    <label className="search-box nexus-game-search"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search games, e.g. Dragonwilds..." aria-label={t("Search games")} data-autofocus /></label>
+    {!cfEnabled && !nexusEnabled && <p className="metadata-note" role="status">{t("CurseForge and Nexus Mods are turned off in Settings.")}</p>}
     <div className="nexus-game-picker-list">
       {rows.map((entry) => <button key={entry.key} type="button" className="nexus-game-picker-row" onClick={() => onChoose(toStored(entry))}>
         <GameAvatar src={entry.iconUrl} fallbackSrcs={entry.nexus ? [resolvedIcons[entry.nexus.domain.toLocaleLowerCase()]].filter((url): url is string => Boolean(url)) : []} name={entry.name} />

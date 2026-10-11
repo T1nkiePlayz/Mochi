@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { backlogStatuses, NOTE_MAX, withBacklogNote, withBacklogStatus, withNextUp, type Backlog } from "../../lib/backlog";
 
 type Props = {
@@ -10,6 +11,7 @@ type Props = {
 
 /** Backlog status chips ("Want to play" ... "Dropped") plus a short note. Shared by the game page and the editor. */
 export function BacklogControl({ value, onChange, commit = "blur" }: Props) {
+  const t = useTranslation();
   const [note, setNote] = useState(value?.note ?? "");
   useEffect(() => setNote(value?.note ?? ""), [value?.note]);
   const save = (text: string) => { if (text.trim() !== (value?.note ?? "")) onChange(withBacklogNote(value, text)); };
@@ -19,7 +21,7 @@ export function BacklogControl({ value, onChange, commit = "blur" }: Props) {
       {backlogStatuses.map(({ id, label }) => <button type="button" key={id} className={`filter-chip ${value?.status === id ? "active" : ""}`} aria-pressed={value?.status === id} onClick={() => onChange(withBacklogStatus(value, id))}>{label}</button>)}
       {value && (value.status === "want" || value.status === "playing") && <button type="button" className={`filter-chip ${value.nextUp ? "active" : ""}`} aria-pressed={Boolean(value.nextUp)} title="Games marked Next up are picked first by What should I play?" onClick={() => onChange(withNextUp(value, !value.nextUp))}>Next up</button>}
     </div>
-    {value && <input className="backlog-note" value={note} maxLength={NOTE_MAX} placeholder="Note, e.g. recommended by a friend" aria-label="Backlog note"
+    {value && <input className="backlog-note" value={note} maxLength={NOTE_MAX} placeholder={t("Note, e.g. recommended by a friend")} aria-label={t("Backlog note")}
       onChange={(event) => { setNote(event.target.value); if (commit === "change") save(event.target.value); }}
       onBlur={() => save(note)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); save(note); } }} />}
   </div>;

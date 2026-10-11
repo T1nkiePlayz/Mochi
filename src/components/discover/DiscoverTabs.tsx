@@ -1,6 +1,7 @@
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { Plus, X } from "lucide-react";
 import { GameAvatar } from "./GameAvatar";
+import { useTranslation } from "../../lib/useTranslation";
 
 export type DiscoverTabItem = { id: string; label: string; iconUrl?: string; iconFallbackUrls?: string[]; icon?: ReactNode; hint?: string; removable?: boolean };
 
@@ -11,6 +12,7 @@ type Props = { tabs: DiscoverTabItem[]; active: string; onSelect: (id: string) =
  * (no reflow, no jumping). Arrow keys, Home and End move between tabs; the selected one is the only tab stop.
  */
 export function DiscoverTabs({ tabs, active, onSelect, onAdd, onRemove, label = "Game discovery" }: Props) {
+  const t = useTranslation();
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => { root.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" }); }, [active]);
 
@@ -25,18 +27,18 @@ export function DiscoverTabs({ tabs, active, onSelect, onAdd, onRemove, label = 
   };
 
   return <div className="discover-game-strip">
-    <div ref={root} className="discover-game-tabs" role="tablist" aria-label={label} onKeyDown={onKeyDown}>
+    <div ref={root} className="discover-game-tabs" role="tablist" aria-label={t(label)} onKeyDown={onKeyDown}>
       {tabs.map((tab) => {
         const selected = tab.id === active;
         return <div key={tab.id} className="discover-game-tab-wrap">
-          <button type="button" role="tab" id={`discover-tab-${tab.id}`} aria-selected={selected} tabIndex={selected ? 0 : -1} title={tab.hint ?? tab.label} className={`discover-game-tab${selected ? " active" : ""}${tab.removable ? " has-remove" : ""}`} onClick={() => onSelect(tab.id)}>
-          {tab.icon ? <span className="game-avatar game-avatar-glyph" aria-hidden="true">{tab.icon}</span> : <GameAvatar src={tab.iconUrl} fallbackSrcs={tab.iconFallbackUrls} name={tab.label} />}
-          <span className="discover-game-name">{tab.label}</span>
+          <button type="button" role="tab" id={`discover-tab-${tab.id}`} aria-selected={selected} tabIndex={selected ? 0 : -1} title={t(tab.hint ?? tab.label)} className={`discover-game-tab${selected ? " active" : ""}${tab.removable ? " has-remove" : ""}`} onClick={() => onSelect(tab.id)}>
+          {tab.icon ? <span className="game-avatar game-avatar-glyph" aria-hidden="true">{tab.icon}</span> : <GameAvatar src={tab.iconUrl} fallbackSrcs={tab.iconFallbackUrls} name={t(tab.label)} />}
+          <span className="discover-game-name">{t(tab.label)}</span>
           </button>
-          {tab.removable && onRemove && <button type="button" className="discover-game-remove" aria-label={`Remove ${tab.label} from Discover`} title={`Remove ${tab.label}`} onClick={(event) => { event.stopPropagation(); onRemove(tab.id); }}><X size={13} aria-hidden="true" /></button>}
+          {tab.removable && onRemove && <button type="button" className="discover-game-remove" aria-label={t("Remove {name} from Discover").replace("{name}", tab.label)} title={t("Remove {name}").replace("{name}", tab.label)} onClick={(event) => { event.stopPropagation(); onRemove(tab.id); }}><X size={13} aria-hidden="true" /></button>}
         </div>;
       })}
     </div>
-    {onAdd && <button className="discover-game-add" type="button" title="Add a game" aria-label="Add a game" onClick={onAdd}><Plus size={17} aria-hidden="true" /><span>Add game</span></button>}
+    {onAdd && <button className="discover-game-add" type="button" title={t("Add a game")} aria-label={t("Add a game")} onClick={onAdd}><Plus size={17} aria-hidden="true" /><span>{t("Add a game")}</span></button>}
   </div>;
 }

@@ -9,6 +9,7 @@ import { hasSeparateStore } from "../../lib/mods/targets";
 import type { ModLoader, Piko, Tofu } from "../../models";
 import { Select } from "../ui/Select";
 import { Checkbox, Field } from "../ui/Checkbox";
+import { useTranslation } from "../../lib/useTranslation";
 
 type Props = { piko: Piko; tofu: Tofu; onUpdate: (patch: Partial<Tofu>) => void; /** The Tofu settings form already has its own game version field. */ showVersion?: boolean };
 
@@ -19,6 +20,7 @@ const errorText = (error: unknown) => (error instanceof Error ? error.message : 
  * a folder picker for anything else, loader and game version for Minecraft, and the "keep this Tofu's mods apart" switch.
  */
 export function ModFolderEditor({ piko, tofu, onUpdate, showVersion = true }: Props) {
+  const t = useTranslation();
   const minecraft = isMinecraftJava(piko);
   const [locations, setLocations] = useState<ModLocation[] | null>(null);
   const [message, setMessage] = useState("");
@@ -61,9 +63,9 @@ export function ModFolderEditor({ piko, tofu, onUpdate, showVersion = true }: Pr
 
   return <div className="mod-folder-editor">
     <p className="metadata-note" role="status">{describeFolders(tofu)}</p>
-    <div className="mod-folder-list" role="group" aria-label="Detected mod folders">
-      {locations === null ? <p className="muted"><RefreshCw size={12} className="spin" /> Looking for mod folders...</p>
-        : locations.length === 0 ? <p className="muted">No mod folders were found automatically. Choose the folder yourself below.</p>
+    <div className="mod-folder-list" role="group" aria-label={t("Detected mod folders")}>
+      {locations === null ? <p className="muted"><RefreshCw size={12} className="spin" /> {t("Looking for mod folders...")}</p>
+        : locations.length === 0 ? <p className="muted">{t("No mod folders were found automatically. Choose the folder yourself below.")}</p>
         : locations.slice(0, 30).map((location) => <button key={location.id} type="button" className={`mod-folder-item ${tofu.gameDir === location.modsDir ? "active" : ""}`} aria-pressed={tofu.gameDir === location.modsDir} onClick={() => void choose(location)}>
           <strong>{location.label}</strong>
           <small>{location.modsDir}{location.exists ? "" : " (not created yet)"}</small>
@@ -71,13 +73,13 @@ export function ModFolderEditor({ piko, tofu, onUpdate, showVersion = true }: Pr
         </button>)}
     </div>
     <div className="mod-folder-actions">
-      <button type="button" className="secondary-button" onClick={() => void pick()}><FolderOpen size={14} /> Choose folder...</button>
-      <button type="button" className="secondary-button" onClick={() => void detect()} disabled={locations === null}><RefreshCw size={14} /> Detect again</button>
+      <button type="button" className="secondary-button" onClick={() => void pick()}><FolderOpen size={14} /> {t("Choose folder...")}</button>
+      <button type="button" className="secondary-button" onClick={() => void detect()} disabled={locations === null}><RefreshCw size={14} /> {t("Detect again")}</button>
     </div>
     {minecraft && <div className="form-row">
-      <Field label="Loader"><Select value={tofu.loader ?? ""} onChange={(value) => onUpdate({ loader: (value || undefined) as ModLoader | undefined })} label="Mod loader" searchable={false}
-        options={[{ value: "", label: "Not set" }, ...ALL_LOADERS.map((loader) => ({ value: loader, label: loaderLabels[loader] }))]} /></Field>
-      {showVersion && <Field label="Game version"><input value={tofu.version === "Local" ? "" : tofu.version} placeholder="1.21.1" maxLength={40} onChange={(event) => onUpdate({ version: event.target.value.trim() || "Local" })} /></Field>}
+      <Field label={t("Loader")}><Select value={tofu.loader ?? ""} onChange={(value) => onUpdate({ loader: (value || undefined) as ModLoader | undefined })} label="Mod loader" searchable={false}
+        options={[{ value: "", label: t("Not set") }, ...ALL_LOADERS.map((loader) => ({ value: loader, label: loaderLabels[loader] }))]} /></Field>
+      {showVersion && <Field label={t("Game version")}><input value={tofu.version === "Local" ? "" : tofu.version} placeholder={t("Game version, e.g. 1.21.1")} maxLength={40} onChange={(event) => onUpdate({ version: event.target.value.trim() || "Local" })} /></Field>}
     </div>}
     <Checkbox checked={separate} disabled={busy || !tofu.gameDir} onChange={(checked) => void toggleSeparate(checked)} label="Keep this Tofu's mods separate"
       description="Each Tofu keeps its own copy of its mods and Mochi places them in the game folder when you launch or switch Tofu, replacing only files it put there itself. Off: Tofus share the game folder and switching Tofu enables that Tofu's mods and disables the others'." />

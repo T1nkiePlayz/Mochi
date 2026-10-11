@@ -34,6 +34,7 @@ import { lookupTimeToBeat } from "../lib/igdb";
 import { formatPlaytime, formatRelativeTime } from "../lib/format";
 import { useApp } from "../state/AppContext";
 import { usernameOf } from "../state/useAccount";
+import { useTranslation } from "../lib/useTranslation";
 
 function MinecraftInstancesGroup({ piko, instances, onOpen, onPlay, onShowAll }: {
   piko: Piko;
@@ -42,6 +43,7 @@ function MinecraftInstancesGroup({ piko, instances, onOpen, onPlay, onShowAll }:
   onPlay: (piko: Piko, tofuId: string) => void;
   onShowAll: (piko: Piko) => void;
 }) {
+  const t = useTranslation();
   const listRef = useRef<HTMLDivElement>(null);
   const [hasOverflow, setHasOverflow] = useState(false);
   useEffect(() => {
@@ -54,11 +56,11 @@ function MinecraftInstancesGroup({ piko, instances, onOpen, onPlay, onShowAll }:
     return () => observer?.disconnect();
   }, [instances.length]);
 
-  return <div className={`tofu-entry-group${hasOverflow ? " has-overflow" : ""}`} role="group" aria-label={`${piko.name} instances`}>
-    <span className="tofu-entry-title">{piko.name} instances · {instances.length}</span>
+  return <div className={`tofu-entry-group${hasOverflow ? " has-overflow" : ""}`} role="group" aria-label={t("{name} instances").replace("{name}", piko.name)}>
+    <span className="tofu-entry-title">{piko.name} · {t("{count} instances").replace("{count}", String(instances.length))}</span>
     <div className="tofu-entry-list" ref={listRef}>{instances.map((tofu) => <TofuEntryCard key={tofu.id} piko={piko} tofu={tofu} onOpen={onOpen} onPlay={onPlay} />)}</div>
-    {hasOverflow && <button type="button" className="tofu-entry-more" onClick={() => onShowAll(piko)} aria-label={`Show all ${instances.length} ${piko.name} instances`}>
-      Show all {instances.length} <ChevronRight size={14} />
+    {hasOverflow && <button type="button" className="tofu-entry-more" onClick={() => onShowAll(piko)} aria-label={t("Show all {count} {name} instances").replace("{count}", String(instances.length)).replace("{name}", piko.name)}>
+      {t("Show all {count}").replace("{count}", String(instances.length))} <ChevronRight size={14} />
     </button>}
   </div>;
 }
@@ -66,7 +68,7 @@ import type { LibrarySort } from "../state/useLibrary";
 
 const viewIcons: Record<LibraryViewMode, typeof LayoutGrid> = { grid: LayoutGrid, compact: Grid3x3, list: List, shelves: Rows3, large: Maximize2 };
 
-const greeting = () => { const hour = new Date().getHours(); return hour < 5 || hour >= 18 ? "Good evening" : hour < 12 ? "Good morning" : "Good afternoon"; };
+const greeting = (t: (message: string) => string) => { const hour = new Date().getHours(); return hour < 5 || hour >= 18 ? t("Good evening") : hour < 12 ? t("Good morning") : t("Good afternoon"); };
 
 /** IGDB time-to-beat (hours) keyed by Piko id, for pikos that have an IGDB id. */
 async function loadPickerHours(pikos: Piko[]): Promise<Map<string, number>> {
@@ -77,6 +79,7 @@ async function loadPickerHours(pikos: Piko[]): Promise<Map<string, number>> {
 }
 
 export function LibraryView() {
+  const t = useTranslation();
   const app = useApp();
   const { lib, actions, sessions, cloud, add, account, credentials, platformCapabilities, collections } = app;
   const { selectedPiko, selectedTofu, gameDetailsId, search } = lib;
@@ -145,7 +148,7 @@ export function LibraryView() {
   const playById = useCallback((id: string) => { const piko = lib.library.find((item) => item.id === id); if (piko) { selectPiko(piko); void launchRef.current(piko); } }, [lib.library, selectPiko]);
   const grid = useGridKeyboard({ ids: gridIds, names: gridNames, play: playById, toggleFavorite });
 
-  const addButton = <button className="secondary-button" onClick={() => add.setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> Add Piko</button>;
+  const addButton = <button className="secondary-button" onClick={() => add.setShowAddPiko(true)}><MochiIcon name="plus" fallback={Plus} size={16} /> {t("Add Piko")}</button>;
 
   if (details) {
     return <GameDetails
@@ -177,24 +180,24 @@ export function LibraryView() {
       onShortcutSteam={(userId) => void actions.addToSteam(details, userId)}
       workspace={<>
         <section className="tofu-section">
-          <div className="section-heading"><div><p className="eyebrow">Environments</p><h3>Your Tofus</h3></div><button className="text-button" onClick={() => app.setShowTofuManager(true)}><MochiIcon name="manage" fallback={SlidersHorizontal} size={15} /> Manage</button></div>
+          <div className="section-heading"><div><p className="eyebrow">{t("Environments")}</p><h3>{t("Your Tofus")}</h3></div><button className="text-button" onClick={() => app.setShowTofuManager(true)}><MochiIcon name="manage" fallback={SlidersHorizontal} size={15} /> {t("Manage")}</button></div>
           <div className="tofu-grid">
             {selectedPiko.tofus.map((tofu) => (
               <button className={`tofu-card ${selectedTofu.id === tofu.id ? "active" : ""}`} key={tofu.id} onClick={() => lib.setSelectedTofuId(tofu.id)}>
-                <div className="tofu-card-top"><span className="tofu-symbol">🧊</span><span className={`ready-status ${tofu.status === "Ready" ? "" : "attention"}`}><span />{tofu.status}</span></div>
+                <div className="tofu-card-top"><span className="tofu-symbol">🧊</span><span className={`ready-status ${tofu.status === "Ready" ? "" : "attention"}`}><span />{t(tofu.status)}</span></div>
                 <strong>{tofu.name}</strong>
                 <span className="tofu-details">{tofu.version} <i /> {tofu.runtime}</span>
-                <span className="tofu-mods">{tofu.mods ? `${tofu.mods} mods installed` : "No mods installed"}</span>
+                <span className="tofu-mods">{tofu.mods ? t("{count} mods installed").replace("{count}", String(tofu.mods)) : t("No mods installed")}</span>
               </button>
             ))}
-            <button className="new-tofu-card" onClick={() => { lib.createTofu(); app.setShowTofuManager(true); }}><MochiIcon name="plus" fallback={Plus} size={17} /><span>New Tofu</span><small>Set up another environment</small></button>
+            <button className="new-tofu-card" onClick={() => { lib.createTofu(); app.setShowTofuManager(true); }}><MochiIcon name="plus" fallback={Plus} size={17} /><span>{t("New Tofu")}</span><small>{t("Set up another environment")}</small></button>
           </div>
         </section>
         <section className="details-strip">
           <div><span className="detail-label">Selected Tofu</span><strong>🧊 {selectedTofu.name}</strong></div>
           <div><span className="detail-label">Runtime</span><strong>{selectedTofu.runtime} <span className="muted">· {selectedTofu.version}</span></strong></div>
-          <div><span className="detail-label">Install location</span><strong className="path-text">{selectedTofu.path || "No folder chosen yet"}</strong></div>
-          <button className="icon-button" aria-label="Tofu settings" onClick={() => app.setShowTofuManager(true)}><MochiIcon name="settings" fallback={Settings} size={16} /></button>
+          <div><span className="detail-label">Install location</span><strong className="path-text">{selectedTofu.path || t("No folder chosen yet")}</strong></div>
+          <button className="icon-button" aria-label={t("Tofu settings")} onClick={() => app.setShowTofuManager(true)}><MochiIcon name="settings" fallback={Settings} size={16} /></button>
         </section>
       </>}
       mods={<GameMods key={`${details.id}:${selectedTofu.id}`} piko={details} tofu={selectedTofu} onUpdate={lib.updateSelectedTofu} />}
@@ -203,26 +206,26 @@ export function LibraryView() {
 
   const user = account.user;
   const heading = <section className="page-heading">
-    <div><p className="eyebrow">Your collection</p><h1>{greeting()}{user ? ", " + usernameOf(user) : ""}.</h1></div>
+    <div><p className="eyebrow">{t("Your collection")}</p><h1>{greeting(t)}{user ? ", " + usernameOf(user) : ""}.</h1></div>
     {addButton}
   </section>;
 
   if (!lib.library.length) {
-    return <>{heading}<div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>Your Mochi library is empty.</h2><p>Mochi starts clean. Add a game when you are ready.</p>{addButton}</div></>;
+    return <>{heading}<div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>{t("Your Mochi library is empty.")}</h2><p>{t("Mochi starts clean. Add a game when you are ready.")}</p>{addButton}</div></>;
   }
 
   return <>
     {heading}
     {lib.continuePlaying.length > 0 && !search.trim() && <section className="continue-playing">
-      <div className="section-heading"><div><p className="eyebrow">Jump back in</p><h3>Continue playing</h3></div></div>
+      <div className="section-heading"><div><p className="eyebrow">{t("Jump back in")}</p><h3>{t("Continue playing")}</h3></div></div>
       <div className="continue-grid">{lib.continuePlaying.map(({ piko, entry }) => <article className="continue-card" key={piko.id}>
         <button type="button" className="continue-main" onClick={() => { lib.selectPiko(piko); lib.setGameDetailsId(piko.id); }}>
           <GameArtwork className="continue-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} name={piko.name} kind={piko.kind} sourceId={piko.sourceId} />
-          <span className="continue-copy"><strong>{piko.name}</strong><small>{sessions.isRunning(piko.id) ? "Running now" : `Last played ${formatRelativeTime(entry.lastPlayed)}`} · {formatPlaytime(entry.seconds)} played</small></span>
+          <span className="continue-copy"><strong>{piko.name}</strong><small>{sessions.isRunning(piko.id) ? t("Running now") : t("Last played {time}").replace("{time}", formatRelativeTime(entry.lastPlayed))} · {formatPlaytime(entry.seconds)} {t("played")}</small></span>
         </button>
         {sessions.isRunning(piko.id)
-          ? <button type="button" className="icon-button continue-play stop-button" aria-label={`Stop ${piko.name}`} onClick={() => void actions.stopRunningGame(piko)}><X size={15} /></button>
-          : <button type="button" className="icon-button continue-play" aria-label={`Play ${piko.name}`} onClick={() => { lib.selectPiko(piko); void actions.launchGame(piko); }}><MochiIcon name="play" fallback={Play} size={15} fill="currentColor" /></button>}
+          ? <button type="button" className="icon-button continue-play stop-button" aria-label={t("Stop {name}").replace("{name}", piko.name)} onClick={() => void actions.stopRunningGame(piko)}><X size={15} /></button>
+          : <button type="button" className="icon-button continue-play" aria-label={t("Play {name}").replace("{name}", piko.name)} onClick={() => { lib.selectPiko(piko); void actions.launchGame(piko); }}><MochiIcon name="play" fallback={Play} size={15} fill="currentColor" /></button>}
       </article>)}</div>
       {actions.launchError && <p className="metadata-note">{actions.launchError}</p>}
     </section>}
@@ -231,19 +234,19 @@ export function LibraryView() {
       wishlist={{ active: showWishlist, count: wishlist.items.length, onToggle: () => setShowWishlist((on) => !on) }} />
     {showWishlist ? <WishlistPanel /> : <>
     <section className="library-toolbar">
-      <span className="library-count">{lib.visiblePikos.length} game{lib.visiblePikos.length === 1 ? "" : "s"}{search.trim() ? ` matching “${search.trim()}”` : ""}{(() => { if (lib.filter.kind !== "smart" || (lib.filter.id !== "backlog" && lib.filter.id !== "next-up")) return ""; const left = remainingHours(lib.visiblePikos.map((piko) => piko.id), lib.hours); return left.known ? ` · about ${left.total} h to beat (${left.known} with data)` : ""; })()}</span>
+      <span className="library-count">{t(lib.visiblePikos.length === 1 ? "{count} game" : "{count} games").replace("{count}", String(lib.visiblePikos.length))}{search.trim() ? ` · ${t("matching “{query}”").replace("{query}", search.trim())}` : ""}{(() => { if (lib.filter.kind !== "smart" || (lib.filter.id !== "backlog" && lib.filter.id !== "next-up")) return ""; const left = remainingHours(lib.visiblePikos.map((piko) => piko.id), lib.hours); return left.known ? ` · ${t("about {hours} h to beat ({count} with data)").replace("{hours}", String(left.total)).replace("{count}", String(left.known))}` : ""; })()}</span>
       <div className="library-toolbar-actions">
-        <button type="button" className="secondary-button view-switcher" title={`View: ${viewModeLabel(view)}. Click for the next view, Shift+click for the previous.`}
-          aria-label={`Library view: ${viewModeLabel(view)}. Activate to switch to ${viewModeLabel(cycleViewMode(view))}.`}
+        <button type="button" className="secondary-button view-switcher" title={t("View: {view}. Click for the next view, Shift+click for the previous.").replace("{view}", t(viewModeLabel(view)))}
+          aria-label={t("Library view: {view}. Activate to switch to {nextView}.").replace("{view}", t(viewModeLabel(view))).replace("{nextView}", t(viewModeLabel(cycleViewMode(view))))}
           onClick={(event) => changeView(event.shiftKey ? -1 : 1)}
           onKeyDown={(event) => { if (event.key === "ArrowLeft" || event.key === "ArrowUp") { event.preventDefault(); changeView(-1); } else if (event.key === "ArrowRight" || event.key === "ArrowDown") { event.preventDefault(); changeView(1); } }}>
-          <span className="view-switcher-icon" key={view}><ViewIcon size={14} /></span> <span className="view-switcher-label">{viewModeLabel(view)}</span>
+          <span className="view-switcher-icon" key={view}><ViewIcon size={14} /></span> <span className="view-switcher-label">{t(viewModeLabel(view))}</span>
           <span className="view-switcher-dots" aria-hidden="true">{viewModes.map((mode) => <i key={mode.id} className={mode.id === view ? "on" : ""} />)}</span>
         </button>
-        <span className="library-view-announce" role="status" aria-live="polite">{`${viewModeLabel(view)} view`}</span>
-        <button type="button" className="secondary-button" onClick={() => setShowPicker(true)}><Dices size={14} /> What should I play?</button>
-        <button type="button" className={`secondary-button ${selecting ? "active" : ""}`} aria-pressed={selecting} onClick={() => (selecting ? endSelecting() : setSelecting(true))}><CheckSquare size={14} /> {selecting ? "Done selecting" : "Select"}</button>
-        <div className="library-sort"><span>Sort by</span><Select<LibrarySort> label="Sort by" value={lib.librarySort} onChange={lib.setLibrarySort} align="end" options={[{ value: "category", label: "Category" }, { value: "name", label: "Name" }, { value: "recent", label: "Recently played" }, { value: "playtime", label: "Most played" }]} /></div>
+        <span className="library-view-announce" role="status" aria-live="polite">{`${t(viewModeLabel(view))} view`}</span>
+        <button type="button" className="secondary-button" onClick={() => setShowPicker(true)}><Dices size={14} /> {t("What should I play?")}</button>
+        <button type="button" className={`secondary-button ${selecting ? "active" : ""}`} aria-pressed={selecting} onClick={() => (selecting ? endSelecting() : setSelecting(true))}><CheckSquare size={14} /> {selecting ? t("Done selecting") : t("Select")}</button>
+        <div className="library-sort"><span>{t("Sort by")}</span><Select<LibrarySort> label={t("Sort by")} value={lib.librarySort} onChange={lib.setLibrarySort} align="end" options={[{ value: "category", label: "Category" }, { value: "name", label: t("Name") }, { value: "recent", label: t("Recently played") }, { value: "playtime", label: t("Most played") }]} /></div>
       </div>
     </section>
     {selecting && <BulkActionBar games={checkedGames} collections={collections.collections}
@@ -254,10 +257,10 @@ export function LibraryView() {
       onRemove={() => setRemoval(checkedGames)}
       onSelectAll={() => setChecked(new Set(lib.visiblePikos.map((piko) => piko.id)))}
       onDone={endSelecting} />}
-    {!lib.visiblePikos.length && <div className="empty-state library-no-match"><h2>No games match.</h2><p>Try another filter or clear the search.</p><button type="button" className="secondary-button" onClick={() => { lib.setFilter({ kind: "smart", id: "all" }); lib.setTagFilters([]); lib.setSearch(""); }}>Show everything</button></div>}
+    {!lib.visiblePikos.length && <div className="empty-state library-no-match"><h2>{t("No games match.")}</h2><p>Try another filter or clear the search.</p><button type="button" className="secondary-button" onClick={() => { lib.setFilter({ kind: "smart", id: "all" }); lib.setTagFilters([]); lib.setSearch(""); }}>{t("Show everything")}</button></div>}
     <section className="library-grid-view" data-view={view} data-groups={lib.groupedPikos.length} key={view} {...grid.gridProps}>
       {lib.groupedPikos.map(([category, games]) => <div className="library-category" key={category}>
-        <div className="section-heading"><div><p className="eyebrow">Category</p><h3>{category}</h3></div><span className="category-count">{games.length} game{games.length === 1 ? "" : "s"}</span></div>
+        <div className="section-heading"><div><p className="eyebrow">{t("Category")}</p><h3>{category}</h3></div><span className="category-count">{t(games.length === 1 ? "{count} game" : "{count} games").replace("{count}", String(games.length))}</span></div>
         <div className="game-card-grid">{games.map(cardWithInstances)}</div>
       </div>)}
     </section>
@@ -285,7 +288,7 @@ export function LibraryView() {
       onPlay={(piko) => { lib.selectPiko(piko); void actions.launchGame(piko); }} onClose={() => setShowPicker(false)} />}
     {showDuplicates && <DuplicatesDialog groups={duplicates.groups} onMerge={duplicates.merge} onDismiss={duplicates.dismiss} onClose={() => setShowDuplicates(false)} />}
     {showCollections && <CollectionManager state={collections} counts={collectionCounts} onClose={() => setShowCollections(false)} />}
-    {removal && <ConfirmDialog title={removal.length === 1 ? `Remove ${removal[0].name}?` : `Remove ${removal.length} games?`} message="They are removed from your Mochi library only, with their Tofus, tags and collection memberships. Nothing is uninstalled and no game files are deleted." items={removal.map((game) => game.name)} confirmLabel={removal.length === 1 ? "Remove" : `Remove ${removal.length} games`} danger
+    {removal && <ConfirmDialog title={removal.length === 1 ? t("Remove {name}?").replace("{name}", removal[0].name) : t("Remove {count} games?").replace("{count}", String(removal.length))} message={t("They are removed from your Mochi library only, with their Tofus, tags and collection memberships. Nothing is uninstalled and no game files are deleted.")} items={removal.map((game) => game.name)} confirmLabel={removal.length === 1 ? t("Remove") : t("Remove {count} games").replace("{count}", String(removal.length))} danger
       onCancel={() => setRemoval(null)}
       onConfirm={() => { removal.forEach((game) => void removeGameShortcut(game.id).catch(() => {})); lib.removeGames(removal.map((game) => game.id)); setChecked(new Set()); setRemoval(null); }} />}
     <LibraryModSearch query={search} nexusEnabled={credentials.status.nexus} supabase={supabase} />

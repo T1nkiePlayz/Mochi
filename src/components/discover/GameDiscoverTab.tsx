@@ -13,6 +13,7 @@ import { openExternalUrl } from "../../lib/platform";
 import type { Piko } from "../../models";
 import { ModsBrowser } from "../mods/ModsBrowser";
 import { useGameSourceChoice, type DiscoverGame } from "./useDiscoverGames";
+import { useTranslation } from "../../lib/useTranslation";
 
 type Props = {
   game: DiscoverGame;
@@ -58,11 +59,11 @@ export function GameDiscoverTab({ game, pikos, supabase, settings, below, refres
 
   return <section className="discover-section">
     <div className="discover-section-heading"><div>
-      <h3>{game.name} mods</h3>
+      <h3>{game.name} {t("mods")}</h3>
       <p>{sources.primary ? `From ${choice === "auto" && sources.extras.length ? "CurseForge, and Nexus Mods when CurseForge has few" : primaryLabel}.` : "No mod site is available for this game right now."}{sources.primary === "nexus" ? " Free Nexus accounts download the file on the Nexus site." : ""}</p>
     </div></div>
 
-    {sources.choices.length > 1 && <div className="mod-source-switch" role="group" aria-label="Mod source for this game"><span>Source</span>
+    {sources.choices.length > 1 && <div className="mod-source-switch" role="group" aria-label={t("Mod source for this game")}><span>{t("Source")}</span>
       {sources.choices.map((id) => <button key={id} type="button" className={choice === id ? "active" : ""} aria-pressed={choice === id} title={choiceHint[id]} onClick={() => setChoice(id)}>{choiceLabel[id]}</button>)}</div>}
 
     {info?.extended && <p className="metadata-note discover-extend-note" role="status">{info.note}{info.failed.length ? ` ${info.failed.join(", ")} did not answer.` : ""}</p>}
@@ -72,6 +73,6 @@ export function GameDiscoverTab({ game, pikos, supabase, settings, below, refres
     </p>}
     {source
       ? <ModsBrowser key={`${game.key}:${choice}:${refreshKey}:${below}:${sources.extras.join()}`} source={source} target={{ kind: "choose", pikos, ecosystem, gameName: game.name }} noun="mods" />
-      : <div className="discover-empty">This game is not available right now.</div>}
+      : <div className="discover-empty">{t("This game is not available right now.")}</div>}
   </section>;
 }

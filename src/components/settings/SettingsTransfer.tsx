@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { Download, Upload, X } from "lucide-react";
 import { useApp } from "../../state/AppContext";
 import { announce, useAccessibility } from "../../state/accessibility";
@@ -46,6 +47,7 @@ export function SettingsTransfer() {
 }
 
 function ImportSheet({ file, onClose, onDone }: { file: SettingsFile; onClose: () => void; onDone: (text: string) => void }) {
+  const t = useTranslation();
   const app = useApp();
   const { settings: accessibility, update: updateAccessibility } = useAccessibility();
   const present = SECTION_IDS.filter((id) => file.sections[id] !== undefined);
@@ -84,10 +86,10 @@ function ImportSheet({ file, onClose, onDone }: { file: SettingsFile; onClose: (
   return <div className="modal-backdrop" onClick={onClose}>
     <div role="dialog" aria-modal="true" aria-labelledby="settings-import-title" className="modal settings-import-modal" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === "Escape") onClose(); }}>
       <div className="modal-header">
-        <div><p className="eyebrow">Settings backup</p><h2 id="settings-import-title">Import settings</h2></div>
-        <button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button>
+        <div><p className="eyebrow">{t("Settings backup")}</p><h2 id="settings-import-title">{t("Import settings")}</h2></div>
+        <button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button>
       </div>
-      <p className="modal-description">Exported {created}{file.manifest.appVersion ? ` by Mochi ${file.manifest.appVersion}` : ""}. Nothing changes until you press Import.</p>
+      <p className="modal-description">Exported {created}{file.manifest.appVersion ? ` by Mochi ${file.manifest.appVersion}` : ""}. {t("Nothing changes until you press Import.")}</p>
       <div className="settings-import-list" role="list">
         {present.map((id) => {
           const entry = selection[id] ?? { enabled: false, mode: "merge" as ImportMode };
@@ -95,22 +97,22 @@ function ImportSheet({ file, onClose, onDone }: { file: SettingsFile; onClose: (
           return <div className="settings-import-row" role="listitem" key={id}>
             <label className="settings-import-check"><input type="checkbox" checked={entry.enabled} onChange={(event) => set(id, { enabled: event.target.checked })} /><span><strong>{sectionInfo[id].label}</strong><small>{sectionInfo[id].detail}</small></span></label>
             {sectionInfo[id].modes && <Select<ImportMode> label={`${sectionInfo[id].label}: how to apply`} value={entry.mode} options={MODES} disabled={!entry.enabled} onChange={(mode) => set(id, { mode })} align="end" />}
-            <small className="settings-import-summary" aria-live="polite">{entry.enabled ? summary?.lines.join(" · ") : "Skipped"}</small>
+            <small className="settings-import-summary" aria-live="polite">{entry.enabled ? summary?.lines.join(" · ") : t("Skipped")}</small>
           </div>;
         })}
         {file.themes.length > 0 && <div className="settings-import-row" role="listitem">
-          <strong>Themes</strong>
+          <strong>{t("Themes")}</strong>
           {file.themes.map((theme) => {
             const exists = installed.has(theme.id);
-            return <label className="settings-import-check" key={theme.id}><input type="checkbox" checked={themeIds.includes(theme.id)} disabled={exists} onChange={(event) => setThemeIds((current) => (event.target.checked ? [...current, theme.id] : current.filter((id) => id !== theme.id)))} /><span><strong>{theme.name}</strong><small>{exists ? "Already installed, kept as is" : `Install theme ${theme.id} v${theme.version}`}</small></span></label>;
+            return <label className="settings-import-check" key={theme.id}><input type="checkbox" checked={themeIds.includes(theme.id)} disabled={exists} onChange={(event) => setThemeIds((current) => (event.target.checked ? [...current, theme.id] : current.filter((id) => id !== theme.id)))} /><span><strong>{theme.name}</strong><small>{exists ? t("Already installed, kept as is") : t("Install theme {id} v{version}").replace("{id}", theme.id).replace("{version}", theme.version)}</small></span></label>;
           })}
         </div>}
         {present.length === 0 && file.themes.length === 0 && <p className="modal-description">This file has nothing to import.</p>}
       </div>
       {error && <p className="metadata-note settings-note" role="alert">{error}</p>}
       <div className="settings-import-actions">
-        <button type="button" className="secondary-button" onClick={onClose}>Cancel</button>
-        <button type="button" className="play-button" disabled={busy || nothing} onClick={() => void apply()}>{busy ? "Importing…" : "Import"}</button>
+        <button type="button" className="secondary-button" onClick={onClose}>{t("Cancel")}</button>
+        <button type="button" className="play-button" disabled={busy || nothing} onClick={() => void apply()}>{busy ? t("Importing…") : t("Import")}</button>
       </div>
     </div>
   </div>;

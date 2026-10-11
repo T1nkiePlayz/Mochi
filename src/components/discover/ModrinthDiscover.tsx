@@ -1,4 +1,5 @@
 import { DISCOVER_QUERY_EVENT } from "../../lib/discoverQuery";
+import { useTranslation } from "../../lib/useTranslation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Layers, RefreshCw, WifiOff } from "lucide-react";
 import { getModrinthProject, type ModrinthProject, type ModrinthProjectDetails, type ModrinthProjectType } from "../../lib/modrinth";
@@ -46,6 +47,7 @@ const cfLabels: Record<ModrinthProjectType, string> = { mod: "mods", modpack: "m
 const tabId = (tab: DiscoveryTab) => tab.kind === "game" ? tab.key : tab.kind;
 
 export function ModrinthDiscover({ tofu, pikos, supabase, nexusConfigured, igdbConfigured }: Props) {
+  const t = useTranslation();
   const { behavior, setActiveNav } = useApp();
   const settings = behavior.modSources;
   const discover = useDiscoverGames(settings, nexusConfigured, igdbConfigured, supabase);
@@ -134,12 +136,12 @@ export function ModrinthDiscover({ tofu, pikos, supabase, nexusConfigured, igdbC
       </>}
 
       {tab.kind === "minecraft" && (minecraftSources.length === 0 ? <p className="metadata-note" role="status">Modrinth and CurseForge are both turned off. <button type="button" className="text-button" onClick={openSettings}>Open Settings</button> to enable one.</p> : <>
-        {minecraftSources.length > 1 && <div className="mod-source-switch" role="group" aria-label="Mod source"><span>Source</span>{minecraftSources.map((id) => <button key={id} type="button" className={effective === id ? "active" : ""} aria-pressed={effective === id} onClick={() => setProvider(id as "modrinth" | "curseforge")}>{id === "modrinth" ? "Modrinth" : "CurseForge"}</button>)}</div>}
+        {minecraftSources.length > 1 && <div className="mod-source-switch" role="group" aria-label={t("Mod source for this game")}><span>{t("Source")}</span>{minecraftSources.map((id) => <button key={id} type="button" className={effective === id ? "active" : ""} aria-pressed={effective === id} onClick={() => setProvider(id as "modrinth" | "curseforge")}>{id === "modrinth" ? "Modrinth" : "CurseForge"}</button>)}</div>}
         {effective === "modrinth"
           ? <MinecraftBrowser key={refreshKey} category={tab.category} onCategory={(category) => setTab({ kind: "minecraft", category })} tofuVersion={tofu.version} busy={install.busyId !== ""} onView={(project, version) => void openDetails(project, version)} onChoose={(project) => setPicker({ project })} />
           : <>
-            <div className="discover-tabs" role="tablist" aria-label="Minecraft content categories">{minecraftTabs.map((item) => <button key={item.id} className={tab.category === item.id ? "active" : ""} type="button" role="tab" aria-selected={tab.category === item.id} onClick={() => setTab({ kind: "minecraft", category: item.id })}>{item.label}</button>)}</div>
-            <div className="mods-controls"><input className="compact-input" value={cfVersion} onChange={(event) => setCfVersion(event.target.value)} placeholder="Game version" aria-label="Game version" />{tab.category === "mod" && <Select value={cfLoader} onChange={setCfLoader} options={loaderOptions} label="Loader" searchable={false} />}</div>
+            <div className="discover-tabs" role="tablist" aria-label={t("Minecraft content categories")}>{minecraftTabs.map((item) => <button key={item.id} className={tab.category === item.id ? "active" : ""} type="button" role="tab" aria-selected={tab.category === item.id} onClick={() => setTab({ kind: "minecraft", category: item.id })}>{item.label}</button>)}</div>
+            <div className="mods-controls"><input className="compact-input" value={cfVersion} onChange={(event) => setCfVersion(event.target.value)} placeholder={t("Game version")} aria-label={t("Game version")} />{tab.category === "mod" && <Select value={cfLoader} onChange={setCfLoader} options={loaderOptions} label={t("Loader")} searchable={false} />}</div>
             <ModsBrowser key={`${refreshKey}:${tab.category}`} source={minecraftCfSource} target={{ kind: "choose", pikos, gameName: "Minecraft", ecosystem: { source: "curseforge", gameId: CF_MINECRAFT_ID }, tofuFilter: (target) => minecraftFilterFor(target, tab.category === "mod") }} filter={{ gameVersion: cfVersion || undefined, loader: cfLoader || undefined }} noun={cfLabels[tab.category]} />
           </>}
       </>)}

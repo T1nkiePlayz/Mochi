@@ -1,5 +1,6 @@
 import { Check, KeyRound, LoaderCircle, Plug } from "lucide-react";
 import { validateNexusApiKey, validateSteamGridDbKey, type ProviderCredential } from "../../lib/providerCredentials";
+import { useTranslation } from "../../lib/useTranslation";
 
 export type ServicesProps = {
   signedIn: boolean;
@@ -18,14 +19,15 @@ function Configured() {
 }
 
 export function ServicesStep(p: ServicesProps) {
+  const t = useTranslation();
   const { credentialStatus: status, credentialBusy: busy, saveCredential } = p;
   return (
     <section className="setup-page setup-form-page">
       <div className="setup-icon"><Plug size={22} /></div>
-      <h1>Connect your game services.</h1>
-      <p className="setup-description">Optional keys that unlock richer game pages. They are stored in your account vault and cannot be read back.</p>
+      <h1>{t("Connect your game services.")}</h1>
+      <p className="setup-description">{t("Optional keys that unlock richer game pages. They are stored in your account vault and cannot be read back.")}</p>
       {!p.signedIn ? (
-        <div className="setup-no-sources"><KeyRound size={20} /><strong>Sign in to add keys.</strong><span>You can do this later from Settings.</span></div>
+        <div className="setup-no-sources"><KeyRound size={20} /><strong>{t("Sign in to add keys.")}</strong><span>{t("You can do this later from Settings.")}</span></div>
       ) : !p.credentialStatusLoaded ? (
         <div className="setup-scan-state"><LoaderCircle size={20} className="spin" /><span>Checking your saved keys…</span></div>
       ) : (

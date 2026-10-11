@@ -14,6 +14,7 @@ import { ShareCardDialog } from "../components/stats/ShareCardDialog";
 import { usernameOf } from "../state/useAccount";
 import { Share2 } from "lucide-react";
 import { RecentSessions, YearInReview } from "../components/stats/SessionHistory";
+import { useTranslation } from "../lib/useTranslation";
 import { AchievementsPanel, RecentAchievements } from "../components/stats/AchievementsPanel";
 
 const RANGES = [{ value: 7, label: "7 days" }, { value: 30, label: "30 days" }, { value: 90, label: "90 days" }, { value: 365, label: "Year" }] as const;
@@ -28,6 +29,7 @@ function Card({ title, id, children, wide }: { title: string; id: string; childr
 }
 
 export function StatsView() {
+  const t = useTranslation();
   const { lib, playtime, sessions, setActiveNav, account } = useApp();
   const [sharing, setSharing] = useState(false);
   const [tab, setTab] = useState<"overview" | "achievements">("overview");
@@ -67,11 +69,11 @@ export function StatsView() {
   return (
     <div className="stats-view">
       <div className="page-heading stats-heading">
-        <div><p className="eyebrow">Your activity</p><h1>Stats</h1></div>
-        <Segmented kind="tab" label="Stats sections" value={tab} onChange={setTab} controls={(v) => `stats-panel-${v}`}
-          options={[{ value: "overview", label: "Overview" }, { value: "achievements", label: "Achievements" }]} />
+        <div><p className="eyebrow">{t("Your activity")}</p><h1>{t("Stats")}</h1></div>
+        <Segmented kind="tab" label={t("Stats sections")} value={tab} onChange={setTab} controls={(v) => `stats-panel-${v}`}
+          options={[{ value: "overview", label: t("Overview") }, { value: "achievements", label: t("Achievements") }]} />
       </div>
-      {failed && <p className="stats-note" role="status">Play history is unavailable right now. Showing what is cached.</p>}
+      {failed && <p className="stats-note" role="status">{t("Play history is unavailable right now. Showing what is cached.")}</p>}
 
       {tab === "achievements" ? (
         <div role="tabpanel" id="stats-panel-achievements"><AchievementsPanel progress={progress} unlocked={stored.unlocked} /></div>
@@ -80,36 +82,36 @@ export function StatsView() {
           {empty ? (
             <div className="empty-state stats-empty">
               <div className="empty-icon"><MochiIcon name="stats" fallback={BarChart3} size={23} /></div>
-              <h2>No playtime yet</h2>
-              <p>Launch a game from Mochi and your sessions will show up here: hours per day, favourites, streaks and more. Everything stays on this device.</p>
+              <h2>{t("No playtime yet")}</h2>
+              <p>{t("Launch a game from Mochi and your sessions will show up here: hours per day, favourites, streaks and more. Everything stays on this device.")}</p>
               <button type="button" className="secondary-button" onClick={() => setActiveNav("Library")}><Gamepad2 size={14} /> Open library</button>
             </div>
           ) : (
             <>
               <div className="stats-toolbar">
-                <Segmented label="Time range" value={range} options={RANGES.map((r) => ({ ...r }))} onChange={changeRange} />
+                <Segmented label={t("Time range")} value={range} options={RANGES.map((r) => ({ ...r, label: t(r.label) }))} onChange={changeRange} />
                 {<button type="button" className="secondary-button" onClick={() => setSharing(true)}><Share2 size={14} /> Share card</button>}
-                {analysis.historicSeconds > 0 && <span className="stats-muted">Plus {formatHours(analysis.historicSeconds)} played before Mochi kept history.</span>}
+                {analysis.historicSeconds > 0 && <span className="stats-muted">{t("Plus {hours} played before Mochi kept history.").replace("{hours}", formatHours(analysis.historicSeconds))}</span>}
               </div>
               <div className="stats-kpis">
-                <Kpi label="Time played" value={formatDuration(analysis.totalSeconds)} />
-                <Kpi label="Sessions" value={String(analysis.sessionCount)} />
-                <Kpi label="Average session" value={analysis.sessionCount ? formatDuration(analysis.averageSeconds) : "None"} />
-                <Kpi label="Longest session" value={analysis.longestSeconds ? formatDuration(analysis.longestSeconds) : "None"} />
-                <Kpi label="Games played" value={String(analysis.gamesPlayed)} />
-                <Kpi label="Current streak" value={`${streaks.current} day${streaks.current === 1 ? "" : "s"}`} hint={`Longest ${streaks.longest}`} />
+                <Kpi label={t("Time played")} value={formatDuration(analysis.totalSeconds)} />
+                <Kpi label={t("Sessions")} value={String(analysis.sessionCount)} />
+                <Kpi label={t("Average session")} value={analysis.sessionCount ? formatDuration(analysis.averageSeconds) : t("None")} />
+                <Kpi label={t("Longest session")} value={analysis.longestSeconds ? formatDuration(analysis.longestSeconds) : t("None")} />
+                <Kpi label={t("Games played")} value={String(analysis.gamesPlayed)} />
+                <Kpi label={t("Current streak")} value={`${streaks.current} ${t(streaks.current === 1 ? "day" : "days")}`} hint={t("Longest {count}").replace("{count}", String(streaks.longest))} />
               </div>
-              <Card id="st-days" title={weekly ? "Hours per week" : "Hours per day"} wide><StackedBars buckets={buckets} games={analysis.games} weekly={weekly} /></Card>
+              <Card id="st-days" title={weekly ? t("Hours per week") : t("Hours per day")} wide><StackedBars buckets={buckets} games={analysis.games} weekly={weekly} /></Card>
               <div className="stats-grid">
-                <Card id="st-top" title="Top games">{analysis.games.length ? <TopGames games={analysis.games} library={lib.library} /> : <p className="stats-muted">No games played in this range.</p>}</Card>
-                <Card id="st-hours" title="Time of day"><HourHistogram hours={analysis.hours} /></Card>
-                <Card id="st-week" title="Weekday pattern"><WeekdayPattern weekdays={analysis.weekdays} /></Card>
-                <Card id="st-comp" title="Library by source">{lib.library.length ? <Composition library={lib.library.filter((piko) => !isExtra(piko))} playtime={playtimeById} /> : <p className="stats-muted">Your library is empty.</p>}</Card>
+                <Card id="st-top" title={t("Top games")}>{analysis.games.length ? <TopGames games={analysis.games} library={lib.library} /> : <p className="stats-muted">{t("No games played in this range.")}</p>}</Card>
+                <Card id="st-hours" title={t("Time of day")}><HourHistogram hours={analysis.hours} /></Card>
+                <Card id="st-week" title={t("Weekday pattern")}><WeekdayPattern weekdays={analysis.weekdays} /></Card>
+                <Card id="st-comp" title={t("Library by source")}>{lib.library.length ? <Composition library={lib.library.filter((piko) => !isExtra(piko))} playtime={playtimeById} /> : <p className="stats-muted">{t("Your library is empty.")}</p>}</Card>
               </div>
-              <Card id="st-heat" title="Past year" wide><Heatmap totals={totals} /></Card>
+              <Card id="st-heat" title={t("Past year")} wide><Heatmap totals={totals} /></Card>
               <div className="stats-grid">
-                <Card id="st-recent" title="Recent sessions"><RecentSessions records={data} /></Card>
-                <Card id="st-year" title="Year in review"><YearInReview records={data} /></Card>
+                <Card id="st-recent" title={t("Recent sessions")}><RecentSessions records={data} /></Card>
+                <Card id="st-year" title={t("Year in review")}><YearInReview records={data} /></Card>
               </div>
               <RecentAchievements progress={progress} unlocked={stored.unlocked} onOpen={() => setTab("achievements")} />
             </>

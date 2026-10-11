@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { Download, FolderOpen, Play, Trash2, Upload } from "lucide-react";
 import { Select, type SelectOption } from "../ui/Select";
 import { useApp } from "../../state/AppContext";
@@ -30,13 +31,14 @@ function PackRow({ pack, onExport, onRemove }: { pack: SoundPackInfo; onExport: 
       {pack.description && <small>{pack.description}</small>}
     </span>
     <span className="sound-pack-actions">
-      <button type="button" className="secondary-button" onClick={onExport}><Download size={15} aria-hidden="true" /> Export</button>
-      <button type="button" className="secondary-button danger-outline" aria-label={`Remove ${pack.name}`} onClick={() => void confirmAction({ title: "Remove sound pack?", message: `${pack.name} will be deleted. Themes using it fall back to the Mochi sounds.`, confirmLabel: "Remove", danger: true }).then((ok) => ok && onRemove())}><Trash2 size={15} aria-hidden="true" /> Remove</button>
+      <button type="button" className="secondary-button" onClick={onExport}><Download size={15} aria-hidden="true" /> {t("Export")}</button>
+      <button type="button" className="secondary-button danger-outline" aria-label={`Remove ${pack.name}`} onClick={() => void confirmAction({ title: t("Remove sound pack?"), message: t("{name} will be deleted. Themes using it fall back to the Mochi sounds.").replace("{name}", pack.name), confirmLabel: t("Remove"), danger: true }).then((ok) => ok && onRemove())}><Trash2 size={15} aria-hidden="true" /> {t("Remove")}</button>
     </span>
   </li>;
 }
 
 export function SoundSection() {
+  const t = useTranslation();
   const { themeEngine } = useApp();
   const [settings, update] = useSoundSettings();
   const { packs, loaded } = useSoundPacks();
@@ -78,17 +80,17 @@ export function SoundSection() {
 
   const volume = Math.round(settings.volume * 100);
   return <>
-    <SettingsGroup title="Sound" subtitle="Interface sounds for Big Picture and the launcher" id="settings-sound">
-      <ToggleRow title="Sounds in Big Picture" description="Play sounds when you move, select, go back, launch a game and more." checked={settings.bigPicture} onChange={(bigPicture) => update({ bigPicture })} />
-      <ToggleRow title="Sounds in the launcher" description="Also play them in the regular window: clicks, switches, dialogs, downloads and notifications." checked={settings.launcher} onChange={(launcher) => update({ launcher })} />
-      <ToggleRow title="Mute" description="Silence every interface sound without changing the settings above." checked={settings.muted} onChange={(muted) => update({ muted })} />
+    <SettingsGroup title={t("Sound")} subtitle={t("Interface sounds for Big Picture and the launcher")} id="settings-sound">
+      <ToggleRow title={t("Sounds in Big Picture")} description={t("Play sounds when you move, select, go back, launch a game and more.")} checked={settings.bigPicture} onChange={(bigPicture) => update({ bigPicture })} />
+      <ToggleRow title={t("Sounds in the launcher")} description={t("Also play them in the regular window: clicks, switches, dialogs, downloads and notifications.")} checked={settings.launcher} onChange={(launcher) => update({ launcher })} />
+      <ToggleRow title="Mute" description={t("Silence every interface sound without changing the settings above.")} checked={settings.muted} onChange={(muted) => update({ muted })} />
       <label className="setting-row">
-        <span><strong>Volume</strong><small>Interface sounds only; game audio is unaffected. Now {volume}%.</small></span>
+        <span><strong>{t("Volume")}</strong><small>Interface sounds only; game audio is unaffected. Now {volume}%.</small></span>
         <input type="range" min={0} max={100} step={5} value={volume} aria-label="Interface sound volume" aria-valuetext={`${volume}%`} disabled={settings.muted}
           onChange={(event) => update({ volume: Number(event.target.value) / 100 })} onPointerUp={() => void preview("select")} onKeyUp={(event) => { if (event.key.startsWith("Arrow")) void preview("navigate"); }} />
       </label>
-      <div className="setting-row"><span><strong>Movement sounds</strong><small>The soft tick when focus moves with a controller or the arrow keys.</small></span>
-        <Select<MovementSounds> label="Movement sounds" value={settings.movement} options={MOVEMENT} onChange={(movement) => update({ movement })} align="end" /></div>
+      <div className="setting-row"><span><strong>{t("Movement sounds")}</strong><small>The soft tick when focus moves with a controller or the arrow keys.</small></span>
+        <Select<MovementSounds> label={t("Movement sounds")} value={settings.movement} options={MOVEMENT} onChange={(movement) => update({ movement })} align="end" /></div>
       <div className="setting-row"><span><strong>Sound pack</strong><small>Now playing: {resolvedName}. Themes can suggest a pack; “Match theme” follows it.</small></span>
         <Select<string> label="Sound pack" value={settings.pack} options={packOptions} onChange={(pack) => update({ pack })} align="end" /></div>
       <SoundFallbacks fallbacks={settings.fallbacks} packs={packs} loaded={loaded} onChange={(fallbacks) => update({ fallbacks })} />
@@ -99,7 +101,7 @@ export function SoundSection() {
         </div>
       </div>
     </SettingsGroup>
-    <SettingsGroup title="Sound packs" subtitle="A .zip or folder with a manifest.json that maps events to .wav, .ogg or .mp3 files" id="settings-sound-packs">
+    <SettingsGroup title={t("Sound packs")} subtitle="A .zip or folder with a manifest.json that maps events to .wav, .ogg or .mp3 files" id="settings-sound-packs">
       <div className="setting-row"><span><strong>Install a pack</strong><small>Up to 2 MiB per sound and 16 MiB per pack. WAV and MP3 work everywhere; Ogg may not play on older macOS, where Mochi's own sound is used instead.</small></span>
         <span className="sound-pack-actions">
           <button type="button" className="secondary-button" disabled={busy} onClick={() => void doImport("zip")}><Upload size={15} aria-hidden="true" /> Import .zip</button>

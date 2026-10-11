@@ -7,6 +7,7 @@ import { scanImportGames } from "../lib/sources";
 import type { MinecraftMode } from "../lib/minecraftCopy";
 import { SourceGamePicker } from "./import/SourceGamePicker";
 import { useApp } from "../state/AppContext";
+import { useTranslation } from "../lib/useTranslation";
 
 type ImportPickerProps = {
   onClose: () => void;
@@ -19,6 +20,7 @@ const manualSources: Array<{ id: ImportSourceId; name: string }> = [
 ];
 
 export function ImportPicker({ onClose, onImport, mode = "games" }: ImportPickerProps) {
+  const t = useTranslation();
   const { lib } = useApp();
   const launchers = mode === "launchers";
   const [manual, setManual] = useState<"closed" | "form" | "results">("closed");
@@ -49,8 +51,8 @@ export function ImportPicker({ onClose, onImport, mode = "games" }: ImportPicker
     <div className="modal-backdrop" onClick={onClose}>
       <div ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="import-title" className="modal import-picker-modal" onClick={(event) => event.stopPropagation()}>
         <div className="modal-header">
-          <div><p className="eyebrow">Game sources</p><h2 id="import-title">{launchers ? "Import game launchers" : "Import games"}</h2></div>
-          <button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button>
+          <div><p className="eyebrow">Game sources</p><h2 id="import-title">{launchers ? t("Import game launchers") : t("Import games")}</h2></div>
+          <button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button>
         </div>
 
         {manual === "form" ? (
@@ -84,7 +86,7 @@ export function ImportPicker({ onClose, onImport, mode = "games" }: ImportPicker
               sources={manualSource}
               existingLibrary={lib.library}
               scan={(id) => scanImportGames(id, libraryPath.trim())}
-              renderAction={({ games, minecraftMode }) => <button type="button" className="play-button" disabled={!games.length} onClick={() => onImport(games, { minecraftMode })}>Import {games.length} {games.length === 1 ? "game" : "games"}</button>}
+              renderAction={({ games, minecraftMode }) => <button type="button" className="play-button" disabled={!games.length} onClick={() => onImport(games, { minecraftMode })}>{t("Import selected games")} ({games.length})</button>}
             />
           </>
         ) : (
@@ -92,9 +94,9 @@ export function ImportPicker({ onClose, onImport, mode = "games" }: ImportPicker
             existingLibrary={lib.library}
             filter={launchers ? "launchers" : "all"}
             sidebarExtra={launchers ? undefined : sidebarExtra}
-            renderAction={({ games, sources, minecraftMode }) => (
+            renderAction={({ games, minecraftMode }) => (
               <button type="button" className="play-button" disabled={!games.length} onClick={() => onImport(games, { minecraftMode })}>
-                {launchers ? `Import ${games.length} ${games.length === 1 ? "launcher" : "launchers"}` : `Import ${games.length} ${games.length === 1 ? "game" : "games"} from ${sources.length} ${sources.length === 1 ? "source" : "sources"}`}
+                {launchers ? t("Import selected launchers") : t("Import selected games")} ({games.length})
               </button>
             )}
           />
