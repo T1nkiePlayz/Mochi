@@ -137,8 +137,8 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
     <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />
     {feed.loading && <div className="discover-grid mods-grid mods-preview-grid" aria-busy="true"><ProjectSkeletons count={4} /></div>}
     {!feed.loading && feed.items.length > 0 && <div className="discover-grid mods-grid mods-preview-grid">{feed.items.map((item) => <ModCard key={`${item.source}:${item.id}`} showSource={false} item={item} actionLabel={actionLabel} busy={busy} onView={setViewing} onAction={act} />)}</div>}
-    {feed.error && <div className="discover-error mods-preview-error" role="alert"><p>{feed.offline ? t("You appear to be offline.") : t("Could not load {items}.").replace("{items}", t(noun))}</p><small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> {t("Retry")}</button></div>}
-    {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty"><p>{t("No {items} to show yet.").replace("{items}", t(noun))}</p></div>}
+    {feed.error && <div className="discover-error mods-preview-error" role="alert"><p>{feed.offline ? t("You appear to be offline.") : t("Could not load {noun}.").replace("{noun}", t(noun))}</p><small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> {t("Retry")}</button></div>}
+    {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty"><p>{t("No {noun} to show yet.").replace("{noun}", t(noun))}</p></div>}
     {modals}
   </div>;
 
@@ -149,7 +149,7 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
       <div className="discover-select-wrap"><span>{t("Sort")}</span><Select value={sort} onChange={setSort} options={source.sorts.map((option) => ({ ...option, label: t(option.label) }))} label={t("Sort")} searchable={false} align="end" /></div>
     </div>
     <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />
-    {active > 0 && <p className="metadata-note" role="status">{t(active === 1 ? "1 download in progress. See Downloads." : "{count} downloads in progress. See Downloads.").replace("{count}", String(active))}</p>}
+    {active > 0 && <p className="metadata-note" role="status">{t(active === 1 ? "{count} download in progress. See Downloads." : "{count} downloads in progress. See Downloads.").replace("{count}", active.toLocaleString())}</p>}
     {!source.searchesServerSide && effectiveQuery && <p className="metadata-note">{t("Nexus Mods cannot search by text, so this filters the mods Mochi has loaded so far. Scroll to load more.")}</p>}
     <div className="mods-heading"><span aria-live="polite">{feed.loading ? t("Loading...") : `${feed.items.length.toLocaleString()} ${t("of")} ${feed.total.toLocaleString()} ${t(noun)}`}</span>{(source.id === "curseforge" || feed.items.some((item) => item.source === "curseforge")) && <CurseforgeCredit />}</div>
     {feed.loading && <div className="discover-grid mods-grid" aria-busy="true"><ProjectSkeletons count={6} /></div>}
