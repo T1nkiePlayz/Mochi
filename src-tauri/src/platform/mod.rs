@@ -287,12 +287,46 @@ pub fn open_path(path: &str) -> Result<(), String> {
     os::open_path(path)
 }
 
+/// Add conservative GStreamer ranks for AV1 decoders when the user has not explicitly
+/// configured them. Some WebKitGTK/GStreamer stacks advertise AV1 to YouTube but cannot
+/// reliably decode the selected stream, which produces YouTube's generic playback error.
+#[cfg(any(target_os = "linux", test))]
+fn gstreamer_feature_rank_with_av1_disabled(existing: Option<&str>) -> String {
+    let mut ranks: Vec<String> = existing
+        .unwrap_or_default()
+        .split(',')
+        .map(str::trim)
+        .filter(|rank| !rank.is_empty())
+        .map(str::to_owned)
+        .collect();
+
+    for decoder in ["avdec_av1", "av1dec"] {
+        // An explicit rank from the user takes precedence over Mochi's fallback.
+        let explicitly_configured = ranks.iter().any(|rank| {
+            rank.split_once(':').is_some_and(|(name, _)| name.trim() == decoder)
+        });
+        if !explicitly_configured {
+            ranks.push(format!("{decoder}:NONE"));
+        }
+    }
+    ranks.join(",")
+}
+
 /// WebKitGTK renders a blank window with some NVIDIA drivers unless DMA-BUF rendering is off.
 /// Respect an explicit setting from the user.
 #[cfg(target_os = "linux")]
 pub fn prepare_linux_webview_environment() {
     if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() && Path::new("/proc/driver/nvidia").exists() {
         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+
+    // WebKitGTK can choose an AV1 stream that its available GStreamer decoder cannot play.
+    // Disable AV1 decoders by default so YouTube negotiates a more widely supported codec.
+    // Respect a user's explicit rank for either decoder.
+    let existing_rank = std::env::var("GST_PLUGIN_FEATURE_RANK").ok();
+    let feature_rank = gstreamer_feature_rank_with_av1_disabled(existing_rank.as_deref());
+    if existing_rank.as_deref() != Some(feature_rank.as_str()) {
+        std::env::set_var("GST_PLUGIN_FEATURE_RANK", feature_rank);
     }
 
     // WebKitGTK's GStreamer integration launches gst-plugin-scanner as a helper process.
@@ -388,6 +422,35 @@ fn command_exists_cached(name: &str) -> bool {
 #[tauri::command(async)]
 pub fn check_launch_targets(targets: Vec<String>) -> Vec<bool> {
     targets.iter().take(5000).map(|target| launch_target_exists(target)).collect()
+}
+
+#[cfg(test)]
+mod gstreamer_feature_rank_tests {
+    use super::gstreamer_feature_rank_with_av1_disabled;
+
+    #[test]
+    fn disables_av1_decoders_without_discarding_existing_ranks() {
+        assert_eq!(
+            gstreamer_feature_rank_with_av1_disabled(Some("vp9dec:256")),
+            "vp9dec:256,avdec_av1:NONE,av1dec:NONE"
+        );
+    }
+
+    #[test]
+    fn does_not_override_explicit_user_decoder_ranks() {
+        assert_eq!(
+            gstreamer_feature_rank_with_av1_disabled(Some("avdec_av1:256, vp9dec:128")),
+            "avdec_av1:256,vp9dec:128,av1dec:NONE"
+        );
+    }
+
+    #[test]
+    fn adds_only_missing_av1_rank() {
+        assert_eq!(
+            gstreamer_feature_rank_with_av1_disabled(Some("av1dec:NONE")),
+            "av1dec:NONE,avdec_av1:NONE"
+        );
+    }
 }
 
 #[cfg(test)]
