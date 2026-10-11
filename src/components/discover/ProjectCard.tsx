@@ -17,6 +17,7 @@ type Props = {
 
 /** One Modrinth result. `content-visibility` (see features/discover.css) keeps long lists cheap. */
 export const ProjectCard = memo(function ProjectCard({ project, index, badge, chooseLabel = "Choose Tofu", busy, onView, onChoose }: Props) {
+  const t = useTranslation();
   return <article className="discover-card">
     {project.icon_url ? <DiscoveryImage src={project.icon_url} className="discover-card-icon" alt="" label={project.title} /> : <div className="discover-card-icon fallback"><PackageOpen size={20} /></div>}
     <div className="discover-card-copy">
