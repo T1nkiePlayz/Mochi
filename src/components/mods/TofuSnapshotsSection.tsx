@@ -58,7 +58,7 @@ export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
     </div>
     {error && <p className="metadata-note" role="alert">{error}</p>}
     {snapshots === null ? <p className="muted" role="status">{t("Loading snapshots…")}</p>
-      : !snapshots.length ? <p className="muted">No snapshots yet. One is saved automatically before mods are updated.</p>
+      : !snapshots.length ? <p className="muted">{t("No snapshots yet. One is saved automatically before mods are updated.")}</p>
       : <ul className="tofu-snapshot-list" aria-label="Snapshots">{snapshots.map((snapshot) => <li key={snapshot.id} className="tofu-snapshot">
         <div className="tofu-snapshot-text"><strong>{snapshot.reason || "Snapshot"}</strong><small>{when(snapshot.createdAt)} · {snapshot.files} mod{snapshot.files === 1 ? "" : "s"} · {formatBytes(snapshot.size)}{snapshot.isRestore ? " · safety copy" : ""}</small></div>
         <div className="tofu-snapshot-buttons">
