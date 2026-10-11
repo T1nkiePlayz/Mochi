@@ -173,7 +173,7 @@ export function getTranslationMessages(): string[] {
  * Translates a fully rendered UI message, including strings whose placeholders were already interpolated by the caller.
  * Exact catalogue matches stay fast; dynamic messages are matched against the existing placeholder templates.
  */
-let uiMessageTemplates: Array<{ source: string; pattern: RegExp; placeholders: number }> | null = null;
+let uiMessageTemplates: Array<{ source: string; pattern: RegExp; placeholders: number; staticLength: number }> | null = null;
 const uiMessageCache = new Map<string, string>();
 
 function escapeUiPattern(value: string): string {
@@ -184,7 +184,7 @@ function getUiMessageTemplates() {
   if (uiMessageTemplates) return uiMessageTemplates;
   const placeholder = /\{[^}]+\}/g;
   uiMessageTemplates = getTranslationMessages()
-    .filter((source) => placeholder.test(source) && source.replace(placeholder, "").trim().length > 0)
+    .filter((source) => /\{[^}]+\}/.test(source) && source.replace(placeholder, "").trim().length > 0)
     .map((source) => {
       placeholder.lastIndex = 0;
       const count = (source.match(placeholder) ?? []).length;
@@ -196,8 +196,9 @@ function getUiMessageTemplates() {
 }
 
 export function translateUiMessage(message: string, language: unknown = getTranslationLocale()): string {
-  if (hasTranslation(message, language)) return translate(message, language);
   const normalized = normalizeLanguage(language);
+  if (normalized === "en") return message;
+  if (hasTranslation(message, normalized)) return translate(message, normalized);
   const cacheKey = `${normalized}\\u0000${message}`;
   const cached = uiMessageCache.get(cacheKey);
   if (cached !== undefined) return cached;
