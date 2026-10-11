@@ -54,7 +54,7 @@ function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }
 
   const loadBackups = useCallback(async (key: string) => {
     try { const list = await listSaveBackups(key); setBackups((current) => ({ ...current, [key]: list })); }
-    catch (error) { setMessage(errorText(error)); }
+    catch (error) { setMessage(t(errorText(error))); }
   }, []);
   const toggle = (key: string) => { const next = expanded === key ? "" : key; setExpanded(next); if (next) void loadBackups(next); };
   const refresh = async (key: string) => { await Promise.all([load(), loadBackups(key)]); };
@@ -66,30 +66,30 @@ function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }
     try {
       const picked = await openDialog({ directory: true, multiple: false, title: `Choose a save folder for ${game.name}` });
       if (typeof picked === "string") patchGame((current) => ({ ...current, folders: addFolder(current.folders, picked) }));
-    } catch (error) { setMessage(errorText(error)); }
+    } catch (error) { setMessage(t(errorText(error))); }
   };
 
   const backUp = async (location: SaveLocation) => {
     setBusy(location.key); setMessage("");
     try { setMessage(t(describeResult(await createSaveBackup(game.id, location)))); await refresh(location.key); }
-    catch (error) { setMessage(errorText(error)); } finally { setBusy(""); }
+    catch (error) { setMessage(t(errorText(error))); } finally { setBusy(""); }
   };
   const restore = async (location: SaveLocation, backup: BackupInfo) => {
     if (!await confirmAction({ title: `Restore "${location.label}"?`, confirmLabel: "Restore", danger: true,
       message: `The saves in this folder are replaced by the backup from ${when(backup.createdAt)}. Mochi first backs up the current saves (kept as "Before restore"), so you can undo this.`, items: [location.path] })) return;
     setBusy(location.key); setMessage("");
     try { const result = await restoreSaveBackup(backup.id); setMessage(t("Restored {count} files.{safety}").replace("{count}", String(result.files)).replace("{safety}", result.safety ? ` ${t("Your previous saves were kept as a backup.")}` : "")); await refresh(location.key); }
-    catch (error) { setMessage(errorText(error)); } finally { setBusy(""); }
+    catch (error) { setMessage(t(errorText(error))); } finally { setBusy(""); }
   };
   const remove = async (location: SaveLocation, backup: BackupInfo) => {
     if (!await confirmAction({ title: "Delete this backup?", confirmLabel: "Delete backup", danger: true, message: "The backup file is deleted from this computer. The saves themselves are not touched.", items: [`${location.label}, ${when(backup.createdAt)} (${formatBytes(backup.size)})`] })) return;
-    try { await deleteSaveBackup(backup.id); await refresh(location.key); } catch (error) { setMessage(errorText(error)); }
+    try { await deleteSaveBackup(backup.id); await refresh(location.key); } catch (error) { setMessage(t(errorText(error))); }
   };
   const applyLimits = async () => {
     const next = { keep: Math.round(Number(keep)), maxTotalBytes: Math.round(Number(cap) * GB) };
     if (!Number.isFinite(next.keep) || !Number.isFinite(next.maxTotalBytes) || next.keep < 1) { setMessage(t("Enter how many backups to keep (1 or more) and a size limit in GB.")); return; }
     try { const saved = await setBackupSettings(next); setSettings(saved); setKeep(String(saved.keep)); setCap(String(Math.round(saved.maxTotalBytes / GB * 10) / 10)); setMessage(t("Limits saved. Older backups beyond them were removed.")); void load(); }
-    catch (error) { setMessage(errorText(error)); }
+    catch (error) { setMessage(t(errorText(error))); }
   };
 
   const groups = groupLocations(locations ?? []);

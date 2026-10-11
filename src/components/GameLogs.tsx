@@ -71,7 +71,7 @@ function GameLogsModal({ game, onClose }: { game: Piko; onClose: () => void }) {
       const chunk = await readGameLog(game.id, sessionId, offset.current);
       offset.current = chunk.offset;
       if (chunk.text || chunk.reset || chunk.cutStart) setText((previous) => appendLog(previous, chunk));
-    } catch (error) { setMessage(errorText(error)); }
+    } catch (error) { setMessage(t(errorText(error))); }
   }, [game.id, sessionId]);
 
   // A newly chosen session starts from its newest part; following then continues from where the last read ended.
@@ -96,7 +96,7 @@ function GameLogsModal({ game, onClose }: { game: Piko; onClose: () => void }) {
     const count = list?.sessions.length ?? 0;
     if (!await confirmAction({ title: `Clear logs for ${game.name}?`, danger: true, confirmLabel: "Clear logs", message: "Captured output is deleted from this computer. This cannot be undone.", items: [`${count} saved log session${count === 1 ? "" : "s"}`] })) return;
     try { const count = await clearGameLogs(game.id); setMessage(t("Removed {count} logs.").replace("{count}", String(count))); setText(""); offset.current = undefined; await loadList(); }
-    catch (error) { setMessage(errorText(error)); }
+    catch (error) { setMessage(t(errorText(error))); }
   };
 
   const empty = !current;

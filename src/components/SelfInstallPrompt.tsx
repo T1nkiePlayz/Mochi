@@ -6,13 +6,13 @@ import { selfInstallApply, selfInstallSkip, selfInstallStatus, selfInstallVerify
 
 type Phase = { kind: "idle" } | { kind: "busy"; text: string } | { kind: "error"; message: string };
 
-export function unverifiedMessage(status: SelfInstallStatus, result: VerifyResult["status"]): string {
+export function unverifiedMessage(status: SelfInstallStatus, result: VerifyResult["status"], t: (message: string) => string = (message) => message): string {
   const base = result === "offline"
-    ? "You're offline, so Mochi couldn't check this download against the signed release on GitHub."
+    ? t("You're offline, so Mochi couldn't check this download against the signed release on GitHub.")
     : result === "unavailable"
-      ? `There's no signed release on GitHub for Mochi ${status.version}, so this download couldn't be checked.`
-      : `This file doesn't match the signed release of Mochi ${status.version}. It may be damaged or modified.`;
-  return base + (status.firstInstall ? " Install it anyway?" : ` Replace the installed version (${status.installedVersion ?? "current version"}) with this one anyway?`);
+      ? t("There's no signed release on GitHub for Mochi {version}, so this download couldn't be checked.").replace("{version}", status.version)
+      : t("This file doesn't match the signed release of Mochi {version}. It may be damaged or modified.").replace("{version}", status.version);
+  return base + (status.firstInstall ? ` ${t("Install it anyway?")}` : ` ${t("Replace the installed version ({version}) with this one anyway?").replace("{version}", status.installedVersion ?? t("current version"))}`);
 }
 
 /** Verifies a freshly opened build before it installs over the managed copy. Mounted once in AppProvider. */
@@ -47,7 +47,7 @@ export function SelfInstallPrompt() {
       setPhase({ kind: "idle" });
       const ok = await confirmAction({
         title: "This version of Mochi couldn't be verified",
-        message: unverifiedMessage(found, result.status),
+        message: unverifiedMessage(found, result.status, t),
         items: [`From: ${found.sourcePath}`, `To: ${found.targetPath}`],
         confirmLabel: found.firstInstall ? "Install anyway" : "Replace anyway",
         danger: true,
