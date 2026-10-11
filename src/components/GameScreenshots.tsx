@@ -35,7 +35,7 @@ export function GameScreenshots({ game }: { game: Piko }) {
   }, [game.id, game.name, shared, gameFolders, more]);
 
   const addFolder = useCallback(async () => {
-    const chosen = await openDialog({ title: t("Choose a screenshot folder"), directory: true, multiple: false }).catch(() => null);
+    const chosen = await openDialog({ title: t("Add folder"), directory: true, multiple: false }).catch(() => null);
     if (typeof chosen !== "string" || !chosen) return;
     lib.updateGame(game.id, { screenshotFolders: [...new Set([...(game.screenshotFolders ?? []), chosen])].slice(0, 10) });
   }, [game.id, game.screenshotFolders, lib]);
@@ -43,10 +43,10 @@ export function GameScreenshots({ game }: { game: Piko }) {
 
   const fresh = new Set(newSince(files, seenAtOpen).map((file) => file.path));
   const visible = more ? files : files.slice(0, SHOWN);
-  return <section className="game-details-section game-screenshots" aria-label={t("Screenshots of {name}").replace("{name}", game.name)}>
+  return <section className="game-details-section game-screenshots" aria-label={t("Your screenshots")}>
     <div className="discover-section-heading"><div><h3>{t("Your screenshots")}{fresh.size > 0 && <span className="backlog-badge">{fresh.size} new</span>}</h3><p>{t("From Steam and your folders. Files are only read, never changed.")}</p></div>
       <button type="button" className="secondary-button" onClick={() => void addFolder()}><FolderPlus size={14} /> {t("Add folder")}</button></div>
-    {(game.screenshotFolders ?? []).length > 0 && <ul className="screenshot-folders">{(game.screenshotFolders ?? []).map((folder) => <li key={folder}><span title={folder}>{folder}</span><button type="button" className="icon-button" aria-label={t("Stop using {name}").replace("{name}", folder)} onClick={() => removeFolder(folder)}><X size={14} /></button></li>)}</ul>}
+    {(game.screenshotFolders ?? []).length > 0 && <ul className="screenshot-folders">{(game.screenshotFolders ?? []).map((folder) => <li key={folder}><span title={folder}>{folder}</span><button type="button" className="icon-button" aria-label={t("Remove folder")} onClick={() => removeFolder(folder)}><X size={14} /></button></li>)}</ul>}
     {files.length === 0 ? <p className="metadata-note">{t("No screenshots found yet. Steam's are picked up automatically; add a folder for other launchers.")}</p>
       : <div className="screenshot-grid">{visible.map((file) => <button type="button" key={file.path} className="screenshot-item" title={new Date(file.modified * 1000).toLocaleString(getTranslationLocale())} onClick={() => void openPath(file.path).catch(() => {})}>
         {thumbs.get(file.path) ? <img src={thumbs.get(file.path)} alt="" loading="lazy" decoding="async" /> : <span className="screenshot-pending" />}{fresh.has(file.path) && <span className="screenshot-new">{t("New")}</span>}</button>)}</div>}
