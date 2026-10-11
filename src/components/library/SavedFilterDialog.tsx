@@ -39,27 +39,27 @@ export function SavedFilterDialog({ initial, existing, hoursAvailable, onSave, o
   return <div className="modal-backdrop" onClick={onClose}>
     <form className="modal saved-filter-dialog" role="dialog" aria-modal="true" aria-label={existing ? "Edit saved filter" : "Save filter"} onClick={(event) => event.stopPropagation()} onSubmit={submit}
       onKeyDown={(event) => { if (event.key === "Escape") onClose(); }}>
-      <div className="modal-header"><div><p className="eyebrow">Library</p><h2>{existing ? "Edit saved filter" : "Save filter"}</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button></div>
-      <label className="field">Name<input value={name} maxLength={40} placeholder="e.g. Short and unplayed" autoFocus onChange={(event) => setName(event.target.value)} /></label>
-      <fieldset className="field"><legend>Backlog status (any of)</legend>
+      <div className="modal-header"><div><p className="eyebrow">{t("Library")}</p><h2>{existing ? t("Edit saved filter") : t("Save filter")}</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button></div>
+      <label className="field">Name<input value={name} maxLength={40} placeholder={t("e.g. Short and unplayed")} autoFocus onChange={(event) => setName(event.target.value)} /></label>
+      <fieldset className="field"><legend>{t("Backlog status (any of)")}</legend>
         <div className="filter-row">{backlogStatuses.map(({ id, label }) => <button type="button" key={id} className={`filter-chip ${status.includes(id) ? "active" : ""}`} aria-pressed={status.includes(id)} onClick={() => toggleStatus(id)}>{label}</button>)}</div>
       </fieldset>
       <div className="filter-row">
-        <label><input type="checkbox" checked={nextUp} onChange={(event) => setNextUp(event.target.checked)} /> Next up</label>
-        <label><input type="checkbox" checked={favorite} onChange={(event) => setFavorite(event.target.checked)} /> Favourite</label>
-        <label><input type="checkbox" checked={installed} onChange={(event) => setInstalled(event.target.checked)} /> Installed</label>
-        <label>Played <select value={played} onChange={(event) => setPlayed(event.target.value as typeof played)}><option value="">Any</option><option value="unplayed">Never</option><option value="played">Already</option></select></label>
+        <label><input type="checkbox" checked={nextUp} onChange={(event) => setNextUp(event.target.checked)} /> {t("Next up")}</label>
+        <label><input type="checkbox" checked={favorite} onChange={(event) => setFavorite(event.target.checked)} /> {t("Favourite")}</label>
+        <label><input type="checkbox" checked={installed} onChange={(event) => setInstalled(event.target.checked)} /> {t("Installed")}</label>
+        <label>{t("Played")} <select value={played} onChange={(event) => setPlayed(event.target.value as typeof played)}><option value="">{t("Any")}</option><option value="unplayed">{t("Never")}</option><option value="played">{t("Already")}</option></select></label>
       </div>
-      <label className="field">Tags (all of, comma separated)<input value={tags} onChange={(event) => setTags(event.target.value)} placeholder={t("co-op, couch")} /></label>
-      <label className="field">Genres (any of, comma separated)<input value={categories} onChange={(event) => setCategories(event.target.value)} placeholder={t("Adventure, Puzzle")} /></label>
+      <label className="field">{t("Tags (all of, comma separated)")}<input value={tags} onChange={(event) => setTags(event.target.value)} placeholder={t("co-op, couch")} /></label>
+      <label className="field">{t("Genres (any of, comma separated)")}<input value={categories} onChange={(event) => setCategories(event.target.value)} placeholder={t("Adventure, Puzzle")} /></label>
       <div className="filter-row">
-        <label>Hours to beat, from <input type="number" min={0} max={2000} value={minHours} onChange={(event) => setMinHours(event.target.value)} style={{ width: "5em" }} /></label>
-        <label>to <input type="number" min={0} max={2000} value={maxHours} onChange={(event) => setMaxHours(event.target.value)} style={{ width: "5em" }} /></label>
+        <label>{t("Hours to beat, from")} <input type="number" min={0} max={2000} value={minHours} onChange={(event) => setMinHours(event.target.value)} style={{ width: "5em" }} /></label>
+        <label>{t("to")} <input type="number" min={0} max={2000} value={maxHours} onChange={(event) => setMaxHours(event.target.value)} style={{ width: "5em" }} /></label>
       </div>
       {ruleUsesHours(rule) && <p className="metadata-note">{hoursAvailable ? "Only games with IGDB time-to-beat data can match an hours range." : "Hours come from IGDB: connect it under Settings > Mod & metadata providers, and open What should I play? once to fetch them."}</p>}
       <div className="modal-actions">
-        {existing && onDelete && <button type="button" className="secondary-button danger-outline" onClick={onDelete}>Delete</button>}
-        <button type="button" className="secondary-button" onClick={onClose}>Cancel</button>
+        {existing && onDelete && <button type="button" className="secondary-button danger-outline" onClick={onDelete}>{t("Delete")}</button>}
+        <button type="button" className="secondary-button" onClick={onClose}>{t("Cancel")}</button>
         <button type="submit" className="play-button" disabled={!valid}>{existing ? "Save" : "Save filter"}</button>
       </div>
     </form>

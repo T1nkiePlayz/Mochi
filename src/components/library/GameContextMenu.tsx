@@ -24,6 +24,7 @@ type Props = {
 
 /** Right-click / long-press / menu-key menu for a game card. */
 export function GameContextMenu({ game, x, y, collections, canOpenFolder, onClose, onPlay, onFavorite, onToggleCollection, onCreateCollection, onBacklog, onEdit, onOpenFolder, onRemove }: Props) {
+  const t = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<"menu" | "collections" | "backlog">("menu");
   const [position, setPosition] = useState({ x, y });
@@ -47,17 +48,17 @@ export function GameContextMenu({ game, x, y, collections, canOpenFolder, onClos
 
   return <div ref={ref} className="game-context-menu" role="menu" aria-label={`Actions for ${game.name}`} style={{ left: position.x, top: position.y }} onKeyDown={onKeyDown} onContextMenu={(event) => event.preventDefault()}>
     {view === "menu" ? <>
-      <button type="button" role="menuitem" onClick={run(onPlay)}><Play size={14} /> Play</button>
-      <button type="button" role="menuitem" onClick={run(onFavorite)}><Heart size={14} fill={game.favorite ? "currentColor" : "none"} /> {game.favorite ? "Remove from favourites" : "Add to favourites"}</button>
-      <button type="button" role="menuitem" aria-haspopup="true" onClick={() => setView("collections")}><FolderPlus size={14} /> Add to collection…</button>
-      <button type="button" role="menuitem" aria-haspopup="true" onClick={() => setView("backlog")}><Bookmark size={14} /> Backlog…</button>
-      <button type="button" role="menuitem" onClick={run(onEdit)}><Pencil size={14} /> Edit</button>
-      {canOpenFolder && <button type="button" role="menuitem" onClick={run(onOpenFolder)}><FolderOpen size={14} /> Open folder</button>}
-      <button type="button" role="menuitem" className="danger" onClick={run(onRemove)}><Trash2 size={14} /> Remove</button>
+      <button type="button" role="menuitem" onClick={run(onPlay)}><Play size={14} /> {t("Play")}</button>
+      <button type="button" role="menuitem" onClick={run(onFavorite)}><Heart size={14} fill={game.favorite ? "currentColor" : "none"} /> {game.favorite ? t("Remove from favourites") : t("Add to favourites")}</button>
+      <button type="button" role="menuitem" aria-haspopup="true" onClick={() => setView("collections")}><FolderPlus size={14} /> {t("Add to collection…")}</button>
+      <button type="button" role="menuitem" aria-haspopup="true" onClick={() => setView("backlog")}><Bookmark size={14} /> {t("Backlog…")}</button>
+      <button type="button" role="menuitem" onClick={run(onEdit)}><Pencil size={14} /> {t("Edit")}</button>
+      {canOpenFolder && <button type="button" role="menuitem" onClick={run(onOpenFolder)}><FolderOpen size={14} /> {t("Open folder")}</button>}
+      <button type="button" role="menuitem" className="danger" onClick={run(onRemove)}><Trash2 size={14} /> {t("Remove")}</button>
     </> : view === "backlog" ? <>
-      <button type="button" role="menuitem" onClick={() => setView("menu")}>← Back</button>
+      <button type="button" role="menuitem" onClick={() => setView("menu")}>{t("← Back")}</button>
       {backlogStatuses.map(({ id, label }) => <button type="button" key={id} role="menuitemradio" aria-checked={game.backlog?.status === id} onClick={run(() => onBacklog(withBacklogStatus(game.backlog, id)))}><Check size={14} style={{ opacity: game.backlog?.status === id ? 1 : 0 }} /> {label}</button>)}
-      {game.backlog && <button type="button" role="menuitem" onClick={run(() => onBacklog(undefined))}>Remove from backlog</button>}
+      {game.backlog && <button type="button" role="menuitem" onClick={run(() => onBacklog(undefined))}>{t("Remove from backlog")}</button>}
     </> : <>
       <button type="button" role="menuitem" onClick={() => setView("menu")}>← Back</button>
       <CollectionPicker collections={collections} games={[game]} onToggle={onToggleCollection} onCreate={onCreateCollection} />
