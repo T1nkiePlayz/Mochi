@@ -8,7 +8,6 @@ import { useTranslation } from "../../lib/useTranslation";
 type Option<T extends string> = { value: T; label: string };
 
 export function A11yChoice<T extends string>({ title, description, value, options, onChange }: { title: string; description: string; value: T; options: Array<Option<T>>; onChange: (value: T) => void }) {
-  const t = useTranslation();
   const id = useId();
   return <div className="a11y-control" role="group" aria-labelledby={id}>
     <div className="a11y-control-head"><span><strong id={id}>{title}</strong><small>{description}</small></span></div>
@@ -58,7 +57,7 @@ export function AccessibilitySection() {
       <A11yPreview />
       <div className="a11y-actions">
         <button type="button" className="secondary-button" onClick={() => { reset(); announce(t("Accessibility settings reset to defaults.")); }}><RotateCcw size={14} aria-hidden="true" /> {t("Reset to defaults")}</button>
-        <button type="button" className="secondary-button" onClick={openShortcuts}>Keyboard shortcuts</button>
+        <button type="button" className="secondary-button" onClick={openShortcuts}>{t("Keyboard shortcuts")}</button>
       </div>
     </SettingsGroup>
 

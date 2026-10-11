@@ -13,6 +13,7 @@ type Props = { tabs: DiscoverTabItem[]; active: string; onSelect: (id: string) =
  */
 export function DiscoverTabs({ tabs, active, onSelect, onAdd, onRemove, label = "Game discovery" }: Props) {
   const t = useTranslation();
+  const t = useTranslation();
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => { root.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" }); }, [active]);
 
@@ -35,7 +36,7 @@ export function DiscoverTabs({ tabs, active, onSelect, onAdd, onRemove, label = 
           {tab.icon ? <span className="game-avatar game-avatar-glyph" aria-hidden="true">{tab.icon}</span> : <GameAvatar src={tab.iconUrl} fallbackSrcs={tab.iconFallbackUrls} name={tab.label} />}
           <span className="discover-game-name">{tab.label}</span>
           </button>
-          {tab.removable && onRemove && <button type="button" className="discover-game-remove" aria-label={`Remove ${tab.label} from Discover`} title={`Remove ${tab.label}`} onClick={(event) => { event.stopPropagation(); onRemove(tab.id); }}><X size={13} aria-hidden="true" /></button>}
+          {tab.removable && onRemove && <button type="button" className="discover-game-remove" aria-label={t("Remove {name} from Discover").replace("{name}", tab.label)} title={t("Remove {name}").replace("{name}", tab.label)} onClick={(event) => { event.stopPropagation(); onRemove(tab.id); }}><X size={13} aria-hidden="true" /></button>}
         </div>;
       })}
     </div>

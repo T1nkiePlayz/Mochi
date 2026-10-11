@@ -9,16 +9,17 @@ import { useGameVersions } from "./useGameVersions";
 import { useModrinthFeed } from "./useModrinthFeed";
 import { useSentinel } from "./useSentinel";
 import { projectTypeLabel } from "./utils";
+import { useTranslation } from "../../lib/useTranslation";
 
 export const minecraftTabs: Array<{ id: ModrinthProjectType; label: string; title: string; description: string }> = [
-  { id: "mod", label: "Mods", title: "Mods", description: "Browse Minecraft mods from Modrinth." },
-  { id: "modpack", label: "Modpacks", title: "Modpacks", description: "Curated packs ready to add to a Tofu." },
-  { id: "resourcepack", label: "Resource Packs", title: "Resource Packs", description: "Texture and sound packs for Minecraft." },
-  { id: "shader", label: "Shaders", title: "Shaders", description: "Shader packs for lighting and atmosphere." },
+  { id: "mod", label: "Mods", title: t("Mods"), description: t("Browse Minecraft mods from Modrinth.") },
+  { id: "modpack", label: "Modpacks", title: t("Modpacks"), description: t("Curated packs ready to add to a Tofu.") },
+  { id: "resourcepack", label: "Resource Packs", title: t("Resource Packs"), description: t("Texture and sound packs for Minecraft.") },
+  { id: "shader", label: "Shaders", title: t("Shaders"), description: t("Shader packs for lighting and atmosphere.") },
 ];
 
 const loaderOptions: SelectOption[] = [
-  { value: "", label: "Any loader", icon: <Layers size={14} /> },
+  { value: "", label: t("Any loader"), icon: <Layers size={14} /> },
   { value: "fabric", label: "Fabric", icon: <Shirt size={14} /> },
   { value: "forge", label: "Forge", icon: <Hammer size={14} /> },
   { value: "neoforge", label: "NeoForge", icon: <Flame size={14} /> },
@@ -89,10 +90,10 @@ export function MinecraftBrowser({ category, onCategory, tofuVersion, busy, onVi
       <div className="discover-section-heading"><div><h3>{tab.title}</h3><p>{tab.description}</p></div><span aria-live="polite">{feed.loading ? "Loading..." : `${feed.items.length.toLocaleString()} of ${feed.total.toLocaleString()} projects`}</span></div>
       {feed.loading && <div className="discover-grid" aria-busy="true"><ProjectSkeletons count={9} /></div>}
       {!feed.loading && feed.items.length > 0 && <div className="discover-grid">{feed.items.map((project) => <ProjectCard key={project.project_id} project={project} badge={projectTypeLabel(project.project_type)} chooseLabel="Choose Tofu instance" busy={busy} onView={view} onChoose={choose} />)}</div>}
-      {feed.error && <div className="discover-error" role="alert"><p>{feed.items.length ? "Could not load more projects." : "Could not load projects from Modrinth."}</p><small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> Retry</button></div>}
+      {feed.error && <div className="discover-error" role="alert"><p>{feed.items.length ? t("Could not load more projects.") : t("Could not load projects from Modrinth.")}</p><small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> Retry</button></div>}
       {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty">
         <p>No {projectTypeLabel(category).toLowerCase()} projects match{filtered ? " these filters" : ""}.</p>
-        {filtered && <button type="button" className="secondary-button" onClick={() => { setSearch(""); setDebounced(""); setGameVersion(""); setLoader(""); }}>Clear filters</button>}
+        {filtered && <button type="button" className="secondary-button" onClick={() => { setSearch(""); setDebounced(""); setGameVersion(""); setLoader(""); }}>{t("Clear filters")}</button>}
       </div>}
       {feed.loadingMore && !feed.loading && <div className="discover-grid" aria-busy="true"><ProjectSkeletons count={3} /></div>}
       <div ref={sentinel} className="discover-sentinel" aria-hidden="true" />
