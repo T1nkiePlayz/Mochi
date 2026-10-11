@@ -4,6 +4,7 @@ import { confirmAction } from "../../lib/confirm";
 import { formatBytes } from "../../lib/format";
 import { cleanSnapshotError, createTofuSnapshot, deleteTofuSnapshot, lastWorkingSnapshot, listTofuSnapshots, restoreTofuSnapshot, snapshotFolders, type SnapshotInfo } from "../../lib/mods/snapshots";
 import { useApp } from "../../state/AppContext";
+import { useTranslation } from "../../lib/useTranslation";
 import { getTranslationLocale } from "../../lib/translationLocale";
 import type { Tofu } from "../../models";
 
@@ -13,6 +14,7 @@ const when = (ms: number) => new Date(ms).toLocaleString(getTranslationLocale(),
 /** Saved states of one Tofu's mods (taken before updates and installs) with one-click restore. */
 export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
   const { notifications: { notify } } = useApp();
+  const t = useTranslation();
   const [snapshots, setSnapshots] = useState<SnapshotInfo[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -21,7 +23,7 @@ export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
 
   const load = useCallback(async (id: string) => {
     try { const list = await listTofuSnapshots(id); if (current.current === id) { setSnapshots(list); setError(""); } }
-    catch (reason) { if (current.current === id) { setSnapshots([]); setError(errorText(reason, "Could not read the snapshots.")); } }
+    catch (reason) { if (current.current === id) { setSnapshots([]); setError(errorText(reason, t("Could not read the snapshots."))); } }
   }, []);
   useEffect(() => { setSnapshots(null); setError(""); void load(tofu.id); }, [tofu.id, load]);
 
