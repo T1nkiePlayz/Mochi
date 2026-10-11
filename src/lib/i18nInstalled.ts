@@ -114,3 +114,47 @@ Object.assign(installedMessages, Object.fromEntries(extraDynamicKeys.map((messag
   message,
   Object.fromEntries(Object.entries(extraDynamicValues).map(([locale, values]) => [locale, values[index]])),
 ])));
+
+const issueTitleKeys = [
+  "{name} exists twice",
+  "{name} is installed twice",
+  "{name} is for a different loader",
+  "{name} is for a different game version",
+  "{name} does not work with {other}",
+  "{name} is switched off",
+  "{name} is missing",
+] as const;
+const issueTitleValues: Record<string, string[]> = {
+  "ar": ["يوجد {name} مرتين", "تم تثبيت {name} مرتين", "{name} مخصص لمحمل مختلف", "{name} مخصص لإصدار مختلف من اللعبة", "{name} لا يعمل مع {other}", "{name} متوقف", "{name} غير موجود"],
+  "bg": ["{name} съществува два пъти", "{name} е инсталиран два пъти", "{name} е за друг мод лоудър", "{name} е за друга версия на играта", "{name} не работи с {other}", "{name} е изключен", "{name} липсва"],
+  "zh-Hans": ["{name} 存在两个副本", "{name} 已安装两次", "{name} 适用于不同的模组加载器", "{name} 适用于不同的游戏版本", "{name} 与 {other} 不兼容", "{name} 已关闭", "缺少 {name}"],
+  "zh-Hant": ["{name} 有兩個副本", "{name} 已安裝兩次", "{name} 適用於不同的模組載入器", "{name} 適用於不同的遊戲版本", "{name} 與 {other} 不相容", "{name} 已關閉", "缺少 {name}"],
+  "cs": ["{name} existuje dvakrát", "{name} je nainstalován dvakrát", "{name} je určen pro jiný mod loader", "{name} je určen pro jinou verzi hry", "{name} nefunguje s {other}", "{name} je vypnutý", "{name} chybí"],
+  "da": ["{name} findes to gange", "{name} er installeret to gange", "{name} er til en anden mod-loader", "{name} er til en anden spilversion", "{name} fungerer ikke med {other}", "{name} er slået fra", "{name} mangler"],
+  "nl": ["{name} bestaat twee keer", "{name} is twee keer geïnstalleerd", "{name} is voor een andere modloader", "{name} is voor een andere gameversie", "{name} werkt niet met {other}", "{name} is uitgeschakeld", "{name} ontbreekt"],
+  "fi": ["{name} on kahdesti", "{name} on asennettu kahdesti", "{name} on tarkoitettu toiselle modilataajalle", "{name} on tarkoitettu toiselle peliversiolle", "{name} ei toimi yhdessä modin {other} kanssa", "{name} on poistettu käytöstä", "{name} puuttuu"],
+  "fr": ["{name} existe en double", "{name} est installé en double", "{name} est destiné à un autre chargeur de mods", "{name} est destiné à une autre version du jeu", "{name} ne fonctionne pas avec {other}", "{name} est désactivé", "{name} est manquant"],
+  "de": ["{name} ist doppelt vorhanden", "{name} ist doppelt installiert", "{name} ist für einen anderen Mod-Loader", "{name} ist für eine andere Spielversion", "{name} funktioniert nicht mit {other}", "{name} ist deaktiviert", "{name} fehlt"],
+  "el": ["Το {name} υπάρχει δύο φορές", "Το {name} είναι εγκατεστημένο δύο φορές", "Το {name} είναι για διαφορετικό mod loader", "Το {name} είναι για διαφορετική έκδοση παιχνιδιού", "Το {name} δεν λειτουργεί με το {other}", "Το {name} είναι απενεργοποιημένο", "Λείπει το {name}"],
+  "hu": ["A(z) {name} kétszer szerepel", "A(z) {name} kétszer van telepítve", "A(z) {name} más modbetöltőhöz készült", "A(z) {name} más játékverzióhoz készült", "A(z) {name} nem működik együtt ezzel: {other}", "A(z) {name} ki van kapcsolva", "Hiányzik: {name}"],
+  "id": ["{name} ada dua kali", "{name} terpasang dua kali", "{name} dibuat untuk pemuat mod lain", "{name} dibuat untuk versi game lain", "{name} tidak cocok dengan {other}", "{name} dinonaktifkan", "{name} tidak ditemukan"],
+  "it": ["{name} è presente due volte", "{name} è installato due volte", "{name} è per un loader diverso", "{name} è per una versione diversa del gioco", "{name} non funziona con {other}", "{name} è disattivato", "{name} è mancante"],
+  "ja": ["{name} が重複しています", "{name} が二重にインストールされています", "{name} は別の Mod ローダー向けです", "{name} は別のゲームバージョン向けです", "{name} は {other} と互換性がありません", "{name} は無効です", "{name} がありません"],
+  "ko": ["{name}이(가) 중복됩니다", "{name}이(가) 두 번 설치되었습니다", "{name}은(는) 다른 모드 로더용입니다", "{name}은(는) 다른 게임 버전용입니다", "{name}은(는) {other}와(과) 호환되지 않습니다", "{name}이(가) 꺼져 있습니다", "{name}이(가) 없습니다"],
+  "no": ["{name} finnes to ganger", "{name} er installert to ganger", "{name} er for en annen mod-laster", "{name} er for en annen spillversjon", "{name} fungerer ikke med {other}", "{name} er slått av", "{name} mangler"],
+  "pl": ["{name} występuje dwukrotnie", "{name} jest zainstalowany dwukrotnie", "{name} jest przeznaczony dla innego loadera", "{name} jest przeznaczony dla innej wersji gry", "{name} nie działa z {other}", "{name} jest wyłączony", "Brakuje {name}"],
+  "pt": ["{name} existe duas vezes", "{name} está instalado duas vezes", "{name} destina-se a outro carregador de mods", "{name} destina-se a outra versão do jogo", "{name} não funciona com {other}", "{name} está desativado", "Falta {name}"],
+  "pt-BR": ["{name} aparece duas vezes", "{name} está instalado duas vezes", "{name} é para outro carregador de mods", "{name} é para outra versão do jogo", "{name} não funciona com {other}", "{name} está desativado", "Falta {name}"],
+  "ro": ["{name} apare de două ori", "{name} este instalat de două ori", "{name} este pentru alt încărcător de moduri", "{name} este pentru altă versiune a jocului", "{name} nu funcționează cu {other}", "{name} este dezactivat", "Lipsește {name}"],
+  "ru": ["{name} встречается дважды", "{name} установлен дважды", "{name} предназначен для другого загрузчика модов", "{name} предназначен для другой версии игры", "{name} несовместим с {other}", "{name} отключён", "Отсутствует {name}"],
+  "es": ["{name} aparece dos veces", "{name} está instalado dos veces", "{name} предназначado para otro cargador de mods", "{name} es para otra versión del juego", "{name} no funciona con {other}", "{name} está desactivado", "Falta {name}"],
+  "sv": ["{name} finns två gånger", "{name} är installerad två gånger", "{name} är för en annan moddladdare", "{name} är för en annan spelversion", "{name} fungerar inte med {other}", "{name} är avstängd", "{name} saknas"],
+  "th": ["พบ {name} ซ้ำสองรายการ", "ติดตั้ง {name} ซ้ำสองครั้ง", "{name} ใช้กับตัวโหลดม็อดอื่น", "{name} ใช้กับเกมเวอร์ชันอื่น", "{name} ใช้ร่วมกับ {other} ไม่ได้", "{name} ปิดใช้งานอยู่", "ไม่พบ {name}"],
+  "tr": ["{name} iki kez mevcut", "{name} iki kez yüklenmiş", "{name} farklı bir mod yükleyicisi içindir", "{name} farklı bir oyun sürümü içindir", "{name}, {other} ile çalışmıyor", "{name} kapalı", "{name} eksik"],
+  "uk": ["{name} наявний двічі", "{name} встановлено двічі", "{name} призначений для іншого завантажувача модів", "{name} призначений для іншої версії гри", "{name} не працює з {other}", "{name} вимкнено", "Бракує {name}"],
+  "vi": ["{name} xuất hiện hai lần", "{name} được cài đặt hai lần", "{name} dành cho trình tải mod khác", "{name} dành cho phiên bản trò chơi khác", "{name} không hoạt động với {other}", "{name} đang tắt", "Thiếu {name}"],
+};
+Object.assign(installedMessages, Object.fromEntries(issueTitleKeys.map((message, index) => [
+  message,
+  Object.fromEntries(Object.entries(issueTitleValues).map(([locale, values]) => [locale, values[index]])),
+])));
