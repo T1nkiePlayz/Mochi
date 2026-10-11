@@ -37,6 +37,7 @@ function PackRow({ pack, onExport, onRemove }: { pack: SoundPackInfo; onExport: 
 }
 
 export function SoundSection() {
+  const t = useTranslation();
   const { themeEngine } = useApp();
   const [settings, update] = useSoundSettings();
   const { packs, loaded } = useSoundPacks();
@@ -78,10 +79,10 @@ export function SoundSection() {
 
   const volume = Math.round(settings.volume * 100);
   return <>
-    <SettingsGroup title="Sound" subtitle="Interface sounds for Big Picture and the launcher" id="settings-sound">
-      <ToggleRow title="Sounds in Big Picture" description="Play sounds when you move, select, go back, launch a game and more." checked={settings.bigPicture} onChange={(bigPicture) => update({ bigPicture })} />
-      <ToggleRow title="Sounds in the launcher" description="Also play them in the regular window: clicks, switches, dialogs, downloads and notifications." checked={settings.launcher} onChange={(launcher) => update({ launcher })} />
-      <ToggleRow title="Mute" description="Silence every interface sound without changing the settings above." checked={settings.muted} onChange={(muted) => update({ muted })} />
+    <SettingsGroup title={t("Sound")} subtitle={t("Interface sounds for Big Picture and the launcher")} id="settings-sound">
+      <ToggleRow title={t("Sounds in Big Picture")} description={t("Play sounds when you move, select, go back, launch a game and more.")} checked={settings.bigPicture} onChange={(bigPicture) => update({ bigPicture })} />
+      <ToggleRow title={t("Sounds in the launcher")} description={t("Also play them in the regular window: clicks, switches, dialogs, downloads and notifications.")} checked={settings.launcher} onChange={(launcher) => update({ launcher })} />
+      <ToggleRow title="Mute" description={t("Silence every interface sound without changing the settings above.")} checked={settings.muted} onChange={(muted) => update({ muted })} />
       <label className="setting-row">
         <span><strong>Volume</strong><small>Interface sounds only; game audio is unaffected. Now {volume}%.</small></span>
         <input type="range" min={0} max={100} step={5} value={volume} aria-label="Interface sound volume" aria-valuetext={`${volume}%`} disabled={settings.muted}
@@ -99,7 +100,7 @@ export function SoundSection() {
         </div>
       </div>
     </SettingsGroup>
-    <SettingsGroup title="Sound packs" subtitle="A .zip or folder with a manifest.json that maps events to .wav, .ogg or .mp3 files" id="settings-sound-packs">
+    <SettingsGroup title={t("Sound packs")} subtitle="A .zip or folder with a manifest.json that maps events to .wav, .ogg or .mp3 files" id="settings-sound-packs">
       <div className="setting-row"><span><strong>Install a pack</strong><small>Up to 2 MiB per sound and 16 MiB per pack. WAV and MP3 work everywhere; Ogg may not play on older macOS, where Mochi's own sound is used instead.</small></span>
         <span className="sound-pack-actions">
           <button type="button" className="secondary-button" disabled={busy} onClick={() => void doImport("zip")}><Upload size={15} aria-hidden="true" /> Import .zip</button>
