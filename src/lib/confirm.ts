@@ -34,12 +34,13 @@ export function confirmAction(request: ConfirmRequest): Promise<boolean> {
   };
   // Without a mounted host (tests, early start-up) fall back to the native prompt rather than silently proceeding.
   if (!listeners.size) {
-    try { return Promise.resolve(typeof window !== "undefined" && window.confirm(`${localized.title}\\n\\n${localized.message}`)); } catch { return Promise.resolve(false); }
+    try { return Promise.resolve(typeof window !== "undefined" && window.confirm(`${localized.title}\n\n${localized.message}`)); } catch { return Promise.resolve(false); }
   }
   return new Promise((resolve) => {
     queue = [...queue, { ...localized, id: ++seq, resolve }];
     emit();
   });
+}
 
 /** Answers the oldest open request. */
 export function answerConfirm(id: number, ok: boolean) {
