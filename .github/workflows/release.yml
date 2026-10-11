@@ -317,6 +317,17 @@ jobs:
           gh release download "$TAG" --pattern '*.dmg' --pattern '*.AppImage' --pattern '*.deb' --pattern '*.rpm'
           ls -l
           [[ -n "$(ls -A)" ]] || { echo "::error::No release files were found to sign."; exit 1; }
+          # AppImage replacement verification is only useful when the Linux release artifact is present.
+          shopt -s nullglob
+          appimages=( *.AppImage )
+          [[ ${#appimages[@]} -gt 0 ]] || { echo "::error::Release tag $TAG has no AppImage; refusing to publish an incomplete Linux release."; exit 1; }
+          for appimage in "${appimages[@]}"; do
+            [[ -s "$appimage" ]] || { echo "::error::AppImage is empty: $appimage"; exit 1; }
+            file "$appimage"
+            # AppImages are ELF executables. Catch HTML error pages or other incorrectly uploaded artifacts.
+            magic="$(od -An -tx1 -N4 "$appimage" | tr -d ' \n')"
+            [[ "$magic" == "7f454c46" ]] || { echo "::error::AppImage is not an ELF executable: $appimage"; exit 1; }
+          done
           sha256sum -- * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
@@ -349,6 +360,19 @@ jobs:
           jq -e '[.linux[], .macos[]] | all(.sha256 | test("^[0-9a-f]{64}$"))' install-hashes.json >/dev/null \
             || { echo "::error::install-hashes.json contains a malformed SHA-256."; exit 1; }
           cat install-hashes.json
+          # Fail the release if the signed replacement manifest doesn't cover every uploaded AppImage exactly.
+          jq -e --argjson expected "$(printf '%s\n' ../assets/*.AppImage | xargs -n1 basename | jq -R . | jq -s .)" '
+            (.linux | map(.name) | sort) == ($expected | sort)
+          ' install-hashes.json >/dev/null || {
+            echo "::error::install-hashes.json Linux entries do not match the AppImage release assets."
+            exit 1
+          }
+          while IFS= read -r appimage; do
+            name="$(basename "$appimage")"
+            expected="$(jq -r --arg name "$name" '.linux[] | select(.name == $name) | .sha256' install-hashes.json)"
+            actual="$(sha256sum "$appimage" | cut -d' ' -f1)"
+            [[ "$expected" == "$actual" ]] || { echo "::error::Replacement hash mismatch for $name"; exit 1; }
+          done < <(printf '%s\n' ../assets/*.AppImage)
           # Same key and format as the updater .sig files; the CLI reads the key from the TAURI_SIGNING_* variables.
           npx --yes @tauri-apps/cli@2.12 signer sign install-hashes.json
           test -s install-hashes.json.sig
