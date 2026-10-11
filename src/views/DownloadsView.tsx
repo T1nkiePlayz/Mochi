@@ -65,7 +65,7 @@ export function DownloadsView() {
           <section className="download-group" key={group.tofuId} aria-label={group.tofuName}>
             <div className="download-group-heading"><strong>{group.tofuName}</strong><span>{group.items.length} {group.items.length === 1 ? "download" : "downloads"}</span></div>
             <div className="download-list">{group.items.map((download) => {
-              const row = describeDownload(download);
+              const row = describeDownload(download, t);
               return <article className={`download-row is-${row.state}`} key={download.id}>
                 <div className="download-row-copy"><strong>{download.itemName}</strong><small>{download.filename} · {downloadKind(download)} · {providerLabels[download.provider]}</small></div>
                 <div className="download-progress-wrap">

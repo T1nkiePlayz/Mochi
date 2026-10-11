@@ -15,6 +15,19 @@ describe("describeDownload", () => {
     expect(describeDownload(entry({ status: "failed" })).detail).toBe("Failed");
     expect(describeDownload(entry({ status: "cancelled" }))).toMatchObject({ state: "cancelled", canCancel: false });
   });
+  it("translates visible status and progress details when a translator is supplied", () => {
+    const messages: Record<string, string> = {
+      "Failed": "Échec", "Cancelled": "Annulé", "Completed": "Terminé", "added to": "ajouté à",
+      "{percent}% · {downloaded} of {total}": "{percent}% · {downloaded} sur {total}",
+      "{downloaded} downloaded": "{downloaded} téléchargés",
+    };
+    const t = (message: string) => messages[message] ?? message;
+    expect(describeDownload(entry({ status: "failed" }), t).detail).toBe("Échec");
+    expect(describeDownload(entry({ status: "cancelled" }), t).detail).toBe("Annulé");
+    expect(describeDownload(entry({ status: "completed", total: 1024, tofuName: "Pack" }), t).detail).toBe("Terminé · 1 KiB · ajouté à Pack");
+    expect(describeDownload(entry({ downloaded: 512, total: 1024 }), t).detail).toBe("50% · 1 KiB sur 1 KiB");
+    expect(describeDownload(entry({ downloaded: 2048 }), t).detail).toBe("2 KiB téléchargés");
+  });
   it("never reports more than 100 percent", () => {
     expect(describeDownload(entry({ downloaded: 5000, total: 1000 })).percent).toBe(100);
   });

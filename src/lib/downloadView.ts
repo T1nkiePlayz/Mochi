@@ -16,15 +16,15 @@ export type DownloadRow = {
 };
 
 /** Everything the Downloads list shows for one entry, so the view only lays it out. */
-export function describeDownload(entry: DownloadEntry): DownloadRow {
+export function describeDownload(entry: DownloadEntry, t: (message: string) => string = (message) => message): DownloadRow {
   const percent = entry.total ? Math.min(100, Math.round((entry.downloaded / entry.total) * 100)) : null;
   switch (entry.status) {
-    case "failed": return { percent, state: "failed", detail: entry.error || "Failed", canCancel: false };
-    case "cancelled": return { percent, state: "cancelled", detail: "Cancelled", canCancel: false };
-    case "completed": return { percent: 100, state: "done", detail: `${entry.total ? `Completed · ${formatBytes(entry.total)}` : "Completed"} · added to ${entry.tofuName}`, canCancel: false };
+    case "failed": return { percent, state: "failed", detail: entry.error || t("Failed"), canCancel: false };
+    case "cancelled": return { percent, state: "cancelled", detail: t("Cancelled"), canCancel: false };
+    case "completed": return { percent: 100, state: "done", detail: `${entry.total ? `${t("Completed")} · ${formatBytes(entry.total)}` : t("Completed")} · ${t("added to")} ${entry.tofuName}`, canCancel: false };
     default: return {
       percent, state: "active", canCancel: true,
-      detail: entry.total ? `${percent}% · ${formatBytes(entry.downloaded)} of ${formatBytes(entry.total)}` : `${formatBytes(entry.downloaded)} downloaded`,
+      detail: entry.total ? t("{percent}% · {downloaded} of {total}").replace("{percent}", String(percent)).replace("{downloaded}", formatBytes(entry.downloaded)).replace("{total}", formatBytes(entry.total)) : t("{downloaded} downloaded").replace("{downloaded}", formatBytes(entry.downloaded)),
     };
   }
 }
