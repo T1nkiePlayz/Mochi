@@ -23,18 +23,18 @@ export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
 
   const load = useCallback(async (id: string) => {
     try { const list = await listTofuSnapshots(id); if (current.current === id) { setSnapshots(list); setError(""); } }
-    catch (reason) { if (current.current === id) { setSnapshots([]); setError(errorText(reason, t("Could not read the snapshots."))); } }
+    catch (reason) { if (current.current === id) { const detail = errorText(reason, ""); setSnapshots([]); setError(detail ? `${t("Could not read the snapshots.")} ${detail}` : t("Could not read the snapshots.")); } }
   }, [t]);
   useEffect(() => { setSnapshots(null); setError(""); void load(tofu.id); }, [tofu.id, load]);
 
   const run = async (work: () => Promise<void>, failure: string) => {
     if (busy) return;
     setBusy(true);
-    try { await work(); } catch (reason) { const message = errorText(reason, failure); setError(message); notify(failure, message); }
+    try { await work(); } catch (reason) { const detail = errorText(reason, ""); const translated = detail ? t(detail) : ""; const message = translated && translated !== detail ? translated : detail ? `${t(failure)} ${detail}` : t(failure); setError(message); notify(t(failure), message); }
     finally { setBusy(false); await load(tofu.id); }
   };
   const restore = async (snapshot: SnapshotInfo) => {
-    const ok = await confirmAction({ title: `${t("Restore the Tofu")} “${tofu.name}”?`, confirmLabel: "Restore", message: t("Mod files and records in its content folders are put back as they were then. Anything added since is removed, but the current state is saved first so you can undo this."), items: [`${when(snapshot.createdAt)} · ${snapshot.reason}`, `${snapshot.files} files · ${formatBytes(snapshot.size)}`] });
+    const ok = await confirmAction({ title: `${t("Restore the Tofu")} “${tofu.name}”?`, confirmLabel: t("Restore"), message: t("Mod files and records in its content folders are put back as they were then. Anything added since is removed, but the current state is saved first so you can undo this."), items: [`${when(snapshot.createdAt)} · ${t(snapshot.reason || "Snapshot")}`, t("{count} files · {size}.").replace("{count}", String(snapshot.files)).replace("{size}", formatBytes(snapshot.size))] });
     if (!ok) return;
     await run(async () => {
       const report = await restoreTofuSnapshot(tofu.id, snapshot.id);
@@ -60,7 +60,7 @@ export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
     {snapshots === null ? <p className="muted" role="status">{t("Loading snapshots…")}</p>
       : !snapshots.length ? <p className="muted">{t("No snapshots yet. One is saved automatically before mods are updated.")}</p>
       : <ul className="tofu-snapshot-list" aria-label={t("Snapshots")}>{snapshots.map((snapshot) => <li key={snapshot.id} className="tofu-snapshot">
-        <div className="tofu-snapshot-text"><strong>{snapshot.reason || t("Snapshot")}</strong><small>{when(snapshot.createdAt)} · {snapshot.files} mod{snapshot.files === 1 ? "" : "s"} · {formatBytes(snapshot.size)}{snapshot.isRestore ? " · safety copy" : ""}</small></div>
+        <div className="tofu-snapshot-text"><strong>{t(snapshot.reason || "Snapshot")}</strong><small>{when(snapshot.createdAt)} · {t("{count} mods").replace("{count}", String(snapshot.files))} · {formatBytes(snapshot.size)}{snapshot.isRestore ? ` · ${t("Safety copy")}` : ""}</small></div>
         <div className="tofu-snapshot-buttons">
           <button type="button" className="secondary-button" disabled={busy} aria-label={t("Restore the snapshot from {date}").replace("{date}", when(snapshot.createdAt))} onClick={() => void restore(snapshot)}><RotateCcw size={14}/> {t("Restore")}</button>
           <button type="button" className="icon-button" disabled={busy} aria-label={t("Delete the snapshot from {date}").replace("{date}", when(snapshot.createdAt))} title={t("Delete")} onClick={() => void remove(snapshot)}><Trash2 size={14}/></button>
