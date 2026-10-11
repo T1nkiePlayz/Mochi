@@ -1,4 +1,5 @@
 import { useApp } from "../../state/AppContext";
+import { useTranslation } from "../../lib/useTranslation";
 import { SettingsGroup, ToggleRow } from "./Section";
 
 /** The optional Deals tab and game news. Both are off by default. */

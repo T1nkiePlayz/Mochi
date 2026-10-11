@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { getVersion } from "@tauri-apps/api/app";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Download, FolderOpen, Upload } from "lucide-react";

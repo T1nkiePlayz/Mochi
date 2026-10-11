@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { getVersion } from "@tauri-apps/api/app";
 import { getPlatformCapabilities } from "../../lib/platform";
 import { buildDiagnostics } from "../../lib/diagnostics";

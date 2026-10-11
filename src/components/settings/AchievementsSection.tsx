@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { useApp } from "../../state/AppContext";
 import { useStoredAchievements } from "../../state/useAchievements";
 import { clearAllAchievements, setAchievementCloudSetting, useAchievementCloudAvailability, useAchievementCloudStatus } from "../../state/useAchievementsCloud";

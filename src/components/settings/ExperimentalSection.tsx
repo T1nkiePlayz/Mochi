@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { useExperimentalStatus } from "../../state/useExperimental";
 import { SettingsGroup } from "./Section";
 
@@ -15,7 +16,7 @@ export function ExperimentalSection() {
   return <SettingsGroup title={t("Experimental")} subtitle={t("Unfinished features. They may change, break, or disappear.")} id="settings-experimental">
     {features.map((feature) => <label className="setting-row" key={feature.id}>
       <span>
-        <strong>{feature.name}{newOnOpen.current?.includes(feature.id) && <span className="experimental-new-badge">New</span>}</strong>
+        <strong>{feature.name}{newOnOpen.current?.includes(feature.id) && <span className="experimental-new-badge">{t("New")}</span>}</strong>
         <small>{feature.description}</small>
         <small className="experimental-since">Added in Mochi {feature.since}</small>
       </span>

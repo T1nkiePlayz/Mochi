@@ -20,7 +20,7 @@ const PROMPT_STYLES: Array<{ value: PromptStyle; label: string; description?: st
   { value: "keyboard", label: "Keyboard" },
 ];
 
-const SPEEDS: Array<{ value: RepeatSpeed; label: string }> = [{ value: "slow", label: t("Slow") }, { value: "normal", label: t("Normal") }, { value: "fast", label: t("Fast") }];
+const SPEEDS: Array<{ value: RepeatSpeed; label: string }> = [{ value: "slow", label: "Slow" }, { value: "normal", label: "Normal" }, { value: "fast", label: "Fast" }];
 
 export function ControllerSection() {
   const t = useTranslation();
@@ -38,9 +38,9 @@ export function ControllerSection() {
       <input type="range" min={10} max={80} step={5} value={Math.round(settings.deadZone * 100)} aria-label="Stick dead zone" onChange={(event) => update({ deadZone: Number(event.target.value) / 100 })} />
     </label>
     <div className="setting-row"><span><strong>Repeat speed</strong><small>How quickly movement repeats while you hold a direction.</small></span>
-      <Select<RepeatSpeed> label="Repeat speed" value={settings.repeatSpeed} options={SPEEDS.map((option) => ({ ...option, label: t(option.label) }))} onChange={(repeatSpeed) => update({ repeatSpeed })} align="end" /></div>
+      <Select<RepeatSpeed> label={t("Repeat speed")} value={settings.repeatSpeed} options={SPEEDS.map((option) => ({ ...option, label: t(option.label) }))} onChange={(repeatSpeed) => update({ repeatSpeed })} align="end" /></div>
     <div className="setting-row"><span><strong>{t("Button prompts")}</strong><small>Which button icons Mochi shows.</small></span>
-      <Select<PromptStyle> label="Button prompts" value={settings.promptStyle} options={PROMPT_STYLES.map((option) => ({ ...option, label: t(option.label), description: option.description ? t(option.description) : undefined }))} onChange={(promptStyle) => update({ promptStyle })} align="end" /></div>
+      <Select<PromptStyle> label={t("Button prompts")} value={settings.promptStyle} options={PROMPT_STYLES.map((option) => ({ ...option, label: t(option.label), description: option.description ? t(option.description) : undefined }))} onChange={(promptStyle) => update({ promptStyle })} align="end" /></div>
     <ToggleRow title={t("On-screen keyboard")} description={t("Open a built-in keyboard when you confirm a text field with a controller.")} checked={settings.onScreenKeyboard} onChange={(onScreenKeyboard) => update({ onScreenKeyboard })} />
     <div className="setting-row controller-list-row"><span><strong>Connected controllers</strong>
       <small>{pads.length ? t("Press any button to test; the last action appears on the right.") : t("No controller detected. Connect one by cable or Bluetooth.")}</small>
