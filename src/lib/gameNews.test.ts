@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canPoll, dueApps, emptyNewsState, mergeNews, modUpdateNews, NEWS_CYCLE_CAP, NEWS_INTERVAL_MS, NEWS_MAX_ITEMS, parseNewsState, resetNewsLanguage, takeUnseen, steamNewsLanguage, unreadCount, type NewsItem } from "./gameNews";
+import { canPoll, dueApps, emptyNewsState, mergeNews, newsForLocale, modUpdateNews, NEWS_CYCLE_CAP, NEWS_INTERVAL_MS, NEWS_MAX_ITEMS, parseNewsState, resetNewsLanguage, takeUnseen, steamNewsLanguage, unreadCount, type NewsItem } from "./gameNews";
 import { listItems, summarise } from "./notifyBatch";
 
 const item = (gid: string, appid = 1, date = 100): NewsItem => ({ gid, appid, game: "G", title: `T${gid}`, url: "https://x/", feedLabel: "", date, summary: "" });
@@ -23,6 +23,16 @@ describe("resetNewsLanguage", () => {
     const state = { ...emptyNewsState("english"), checked: { 440: 123 }, seen: ["old-news-id", "mod:/mod.jar:2"], items: [item("old-news-id")], readAt: 456 };
     expect(resetNewsLanguage(state, "french")).toEqual({ ...emptyNewsState("french"), seen: ["mod:/mod.jar:2"] });
     expect(resetNewsLanguage(state, "english")).toBe(state);
+  });
+});
+
+describe("newsForLocale", () => {
+  it("never exposes cached announcements from a different launcher language", () => {
+    const english = { ...emptyNewsState("english"), items: [item("english-post")] };
+    const french = { ...emptyNewsState("french"), items: [item("french-post")] };
+    expect(newsForLocale(english, "fr")).toEqual([]);
+    expect(newsForLocale(french, "fr-FR").map((entry) => entry.gid)).toEqual(["french-post"]);
+    expect(newsForLocale(english, "en-AU").map((entry) => entry.gid)).toEqual(["english-post"]);
   });
 });
 
