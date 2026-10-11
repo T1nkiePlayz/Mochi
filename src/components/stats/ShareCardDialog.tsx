@@ -38,11 +38,11 @@ export function ShareCardDialog({ records, library, unlocked, totalAchievements,
 
   const toggle = (key: keyof Omit<ShareOptions, "period">, value: boolean) => setOptions((current) => ({ ...current, [key]: value }));
   const run = async (action: (blob: Blob) => Promise<string>) => {
-    setBusy(true); setMessage("");
-    try { setMessage(await action(await svgToPng(svg, 1))); } catch (error) { setMessage(error instanceof Error ? error.message : "Something went wrong."); } finally { setBusy(false); }
+    setBusy(true); setMessage(t("Preparing image…"));
+    try { setMessage(await action(await svgToPng(svg, 1))); } catch (error) { setMessage(error instanceof Error ? error.message : t("Something went wrong.")); } finally { setBusy(false); }
   };
-  const onSave = () => run(async (blob) => ((await savePng(blob)) ? "Saved." : ""));
-  const onCopy = () => run(async (blob) => ((await copyPng(blob)) === "copied" ? "Copied to the clipboard." : "Copying images is not supported here. Use Save PNG instead."));
+  const onSave = () => run(async (blob) => ((await savePng(blob)) ? t("Saved.") : ""));
+  const onCopy = () => run(async (blob) => ((await copyPng(blob)) === "copied" ? t("Copied to the clipboard.") : t("Copying images is not supported here. Use Save PNG instead.")));
 
   return (
     <ModalShell label="Share card" className="modal share-card-modal" onClose={onClose}>
