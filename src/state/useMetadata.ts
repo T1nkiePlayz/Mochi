@@ -174,7 +174,7 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
 
   /** Looks games up (3 at a time), caches artwork on disk and writes the results into the library. */
   const enrich = async (games: Piko[], options: Options = {}) => {
-    const targets = games.filter((game) => anyProvider(game, options.only, options.includeSteam));
+    const targets = games.filter((game) => anyProvider(game, options.only, options.includeSteam, options.allProviders));
     if (!targets.length) return;
     const jobId = startProgress("Updating your library", `Finding metadata for ${targets.length} games…`, targets.length);
     const updated = await run(targets, options, (done) => updateProgress(jobId, { value: done, total: targets.length }, `Looking up games: ${done} of ${targets.length}`));
