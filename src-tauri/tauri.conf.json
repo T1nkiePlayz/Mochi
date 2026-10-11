@@ -21,6 +21,7 @@
       }
     ],
     "security": {
+      "useHttpsScheme": true,
       "assetProtocol": {
         "enable": true,
         "scope": [
