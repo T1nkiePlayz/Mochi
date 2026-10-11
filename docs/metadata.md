@@ -17,7 +17,8 @@ Keys are stored server-side in Supabase Vault; the launcher only learns whether 
 
 ## Merge policy (`src/lib/metadata/merge.ts`)
 
-- **Automatic**: text from IGDB, falling back to the Steam Store for Steam games. Artwork: SteamGridDB (prefers 600x900) if a key is saved, then the IGDB cover, then Steam CDN art. Each artwork candidate is downloaded in order; the first that downloads wins.
+- **Automatic**: text from IGDB first, with missing fields filled by the Steam Store for Steam-linked games. Artwork for Steam-linked games tries Steam CDN art first, then SteamGridDB (prefers 600x900) when configured, then IGDB. Non-Steam games skip the Steam tier and try SteamGridDB, then IGDB. Each provider and each candidate image is tried in order; a missing result or failed image download advances to the next candidate.
+- **Offline artwork**: previously cached artwork remains available offline. A forced refresh downloads and validates its replacement before swapping files, so a failed/offline refresh cannot delete the last working cached cover. New artwork still requires a connection at least once.
 - **IGDB only** / **SteamGridDB only** restrict lookups to that provider. SteamGridDB has no text, so text is left alone.
 - Fields the user edited (`lockedFields`) and artwork with `artworkSource === "custom"` are never overwritten, including by "Refresh all".
 

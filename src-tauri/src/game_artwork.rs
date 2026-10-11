@@ -73,18 +73,27 @@ pub async fn cache_game_artwork(app: AppHandle, url: String, cache_key: String, 
     let hit = {
         let base = base.clone();
         crate::util::blocking(move || {
-            if force == Some(true) { remove_cached(&base); }
+            // A forced refresh must bypass the cache, not delete it before the replacement is ready.
+            if force == Some(true) { return Ok(None); }
             find_cached(&base).map(|existing| data_url(&existing)).transpose()
         }).await??
     };
     if let Some(cached) = hit { return Ok(cached); }
+    // Do not touch the current file until a valid replacement has been downloaded.
+    // This preserves the last working cover when refreshes fail or the user goes offline.
     let bytes = download_allowed_artwork(&url).await?;
     let extension = sniff_image_extension(&bytes).ok_or("The artwork server returned an unsupported artwork format.")?;
     crate::util::blocking(move || {
-        // Another request for the same key may have finished first; keep whichever file is already there.
-        if let Some(existing) = find_cached(&base) { return data_url(&existing); }
+        // Another non-forced request may have filled the cache while this request was downloading.
+        if force != Some(true) {
+            if let Some(existing) = find_cached(&base) { return data_url(&existing); }
+        }
         let path = base.with_extension(extension);
         write_atomic(&path, &bytes)?;
+        // The new file is safely written; now remove stale files with other extensions.
+        for old_extension in CACHE_EXTENSIONS {
+            if old_extension != extension { let _ = fs::remove_file(base.with_extension(old_extension)); }
+        }
         data_url(&path)
     }).await?
 }

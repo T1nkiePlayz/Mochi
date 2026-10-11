@@ -71,11 +71,31 @@ export function scrollParent(element: Element | null): HTMLElement {
 
 const reducedMotion = () => document.documentElement.getAttribute("data-reduce-motion") === "true" || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-export function focusElement(element: HTMLElement): void {
+export function focusElement(element: HTMLElement, direction?: Direction): void {
   element.focus({ preventScroll: true });
-  // "auto" can still animate when a scroll container has scroll-behavior: smooth.
-  // Use "instant" in Big Picture so controller focus never makes the library glide.
   const inBigPicture = Boolean(element.closest("[data-bp-root]"));
+
+  // A focused Big Picture card scales beyond its layout box. scrollIntoView() can treat
+  // that transformed box as vertically clipped and nudge the entire stage while moving
+  // horizontally across a shelf. For left/right moves, only reveal the card horizontally
+  // inside its horizontal scroller; never adjust the stage's vertical scroll position.
+  if (inBigPicture && (direction === "left" || direction === "right")) {
+    const elementRect = element.getBoundingClientRect();
+    for (let node = element.parentElement; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (!["auto", "scroll", "overlay"].includes(style.overflowX) || node.scrollWidth <= node.clientWidth) continue;
+      const rect = node.getBoundingClientRect();
+      const leftEdge = rect.left + node.clientLeft;
+      const rightEdge = leftEdge + node.clientWidth;
+      if (elementRect.left < leftEdge) node.scrollLeft -= leftEdge - elementRect.left;
+      else if (elementRect.right > rightEdge) node.scrollLeft += elementRect.right - rightEdge;
+      break;
+    }
+    return;
+  }
+
+  // "auto" can still animate when a scroll container has scroll-behavior: smooth.
+  // Use instant scrolling in Big Picture so controller focus never makes the library glide.
   element.scrollIntoView({ block: "nearest", inline: "nearest", behavior: inBigPicture || reducedMotion() ? "instant" : "smooth" });
 }
 
@@ -92,7 +112,7 @@ export function moveFocus(direction: Direction): boolean {
   }
   const candidates = all.filter((element) => element !== active && !element.contains(active) && !active.contains(element)).map((item) => ({ item, rect: item.getBoundingClientRect() }));
   const target = pickNeighbor(active.getBoundingClientRect(), candidates, direction);
-  if (target) { focusElement(target); return true; }
+  if (target) { focusElement(target, direction); return true; }
   // Nothing further that way: let long pages scroll instead.
   if (direction === "up" || direction === "down") {
     const parent = scrollParent(active);
