@@ -27,7 +27,7 @@ export function TofuShareSection({ piko, tofu, onCreateTofu }: { piko: Piko; tof
   const build = async () => {
     if (identify && isOnline()) {
       const unknown = countUnidentified(await listTofuFiles(piko, tofu));
-      if (unknown) { setStatus(`Identifying ${unknown} unknown file${unknown === 1 ? "" : "s"}…`); await scanTofuMods(piko, tofu, behavior.modSources, credentials.status.nexus && Boolean(supabase)).catch(() => undefined); }
+      if (unknown) { setStatus(t("Identifying unknown files…")); await scanTofuMods(piko, tofu, behavior.modSources, credentials.status.nexus && Boolean(supabase)).catch(() => undefined); }
     }
     setStatus(t("Reading the mod list…"));
     return exportTofuPack(piko, tofu);
