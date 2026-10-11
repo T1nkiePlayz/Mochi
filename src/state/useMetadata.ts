@@ -45,7 +45,7 @@ export async function cacheArtwork(piko: Piko): Promise<void> {
   await cacheArtworkUrl(piko.artworkUrl, piko.artworkCacheKey);
 }
 
-type Options = { force?: boolean; /** Also ask the keyless Steam Store for Steam games, even when the "Metadata source" setting excludes it. */ includeSteam?: boolean; /** Ask only this provider (per-provider refresh); default is the "Metadata source" setting. */ only?: ProviderId };
+type Options = { force?: boolean; allProviders?: boolean; /** Also ask the keyless Steam Store for Steam games, even when the "Metadata source" setting excludes it. */ includeSteam?: boolean; /** Ask only this provider (per-provider refresh); default is the "Metadata source" setting. */ only?: ProviderId };
 type Outcome = { piko: Piko; changed: boolean };
 
 /**
@@ -55,6 +55,8 @@ type Outcome = { piko: Piko; changed: boolean };
  */
 export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = false, provider = "auto", setLibrary, notify, startProgress, updateProgress }: Params) {
   const [refreshBusy, setRefreshBusy] = useState(false);
+  const [refreshingProvider, setRefreshingProvider] = useState<ProviderId | null>(null);
+  const [refreshingAll, setRefreshingAll] = useState(false);
   const busyRef = useRef(false);
   // Provider-wide cool-down after a 429, shared by all workers.
   const pausedUntil = useRef<Record<string, number>>({});
@@ -107,11 +109,21 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
     const wantsArt = !(piko.lockedFields ?? []).includes("artwork") && piko.artworkSource !== "custom";
     if (wantsArt) {
       let firstCandidate: ArtChoice | undefined;
-      artSearch: for (const id of plan.art) {
-        for (const candidate of (await ask(id)).art ?? []) {
-          firstCandidate ??= candidate;
-          // Only discard the cached file when the artwork actually changes, so a failed download keeps the old one.
-          if (await cacheArtworkUrl(candidate.url, cacheKey, candidate.url !== piko.artworkUrl)) { art = candidate; break artSearch; }
+      if (options.allProviders) {
+        // Refresh every configured artwork provider, even if a higher-priority source returns a usable image.
+        // Only cache the selected image afterwards so the on-disk file always matches the library's artwork URL.
+        const candidates = (await Promise.all(plan.art.map(async (id) => (await ask(id)).art ?? []))).flat();
+        firstCandidate = candidates[0];
+        for (const candidate of candidates) {
+          if (await cacheArtworkUrl(candidate.url, cacheKey, candidate.url !== piko.artworkUrl)) { art = candidate; break; }
+        }
+      } else {
+        artSearch: for (const id of plan.art) {
+          for (const candidate of (await ask(id)).art ?? []) {
+            firstCandidate ??= candidate;
+            // Only discard the cached file when the artwork actually changes, so a failed download keeps the old one.
+            if (await cacheArtworkUrl(candidate.url, cacheKey, candidate.url !== piko.artworkUrl)) { art = candidate; break artSearch; }
+          }
         }
       }
       // Nothing could be downloaded (offline?): keep the best remote URL so artwork appears once online.
@@ -151,18 +163,18 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
       if (options.only && options.only !== special.provider) return { text: [], art: [] };
       return planProviders(special.provider, ready, null);
     }
-    const plan = planProviders(options.only ?? provider, ready, steamAppIdOf(game));
+    const plan = planProviders(options.allProviders ? "auto" : options.only ?? provider, ready, steamAppIdOf(game));
     return options.includeSteam ? withSteam(plan, steamAppIdOf(game)) : plan;
   };
   const specialLauncher = (piko: Piko) => piko.kind === "launcher" && Boolean(piko.launcherId && GAME_LAUNCHER_METADATA[piko.launcherId as keyof typeof GAME_LAUNCHER_METADATA]);
-  const anyProvider = (game: Piko, only?: ProviderId, includeSteam?: boolean) => { const plan = planFor(game, { only, includeSteam }); return plan.text.length + plan.art.length > 0; };
+  const anyProvider = (game: Piko, only?: ProviderId, includeSteam?: boolean, allProviders = false) => { const plan = planFor(game, { only, includeSteam, allProviders }); return plan.text.length + plan.art.length > 0; };
 
   const commit = (updated: Map<string, Piko>) =>
     setLibrary((current) => current.map((piko) => updated.get(piko.id) ? mergeInto(piko, updated.get(piko.id)!) : piko));
 
   /** Looks games up (3 at a time), caches artwork on disk and writes the results into the library. */
   const enrich = async (games: Piko[], options: Options = {}) => {
-    const targets = games.filter((game) => anyProvider(game, options.only, options.includeSteam));
+    const targets = games.filter((game) => anyProvider(game, options.only, options.includeSteam, options.allProviders));
     if (!targets.length) return;
     const jobId = startProgress("Updating your library", `Finding metadata for ${targets.length} games…`, targets.length);
     const updated = await run(targets, options, (done) => updateProgress(jobId, { value: done, total: targets.length }, `Looking up games: ${done} of ${targets.length}`));
@@ -178,29 +190,31 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
   };
 
   /** Clears the lookup caches and re-fetches every game from the requested scope. */
-  const refreshScope = async (library: Piko[], only?: ProviderId) => {
+  const refreshScope = async (library: Piko[], only?: ProviderId, allProviders = false) => {
     if (busyRef.current) return;
     busyRef.current = true;
     setRefreshBusy(true);
-    const label = only ? providers[only].label : "metadata";
+    setRefreshingProvider(only ?? null);
+    setRefreshingAll(!only);
+    const label = only ? providers[only].label : allProviders ? "all providers" : "metadata";
     try {
       clearProviderCaches(user?.id, only);
       if (!only || only === "igdb") removeKey(igdbCacheKey(user?.id));
       // Launchers (Steam, Lutris...) are shortcuts, not games: looking them up would overwrite their name and art.
-      const candidates = library.filter((piko) => (piko.kind !== "launcher" || specialLauncher(piko)) && anyProvider(piko, only));
+      const candidates = library.filter((piko) => (piko.kind !== "launcher" || specialLauncher(piko)) && anyProvider(piko, only, allProviders, allProviders));
       notify(`${only ? label : "Metadata"} refresh started`, `Refreshing ${label === "metadata" ? "metadata" : `${label} data`} for ${candidates.length} library games.`);
-      await enrich(candidates, { force: true, only });
+      await enrich(candidates, { force: true, only, allProviders, includeSteam: allProviders });
       if ((!only || only === "igdb") && ready.igdb) await refreshLauncherLogos(library);
       notify(`${only ? label : "Metadata"} refresh finished`, `Updated ${label === "metadata" ? "metadata" : `${label} data`} for ${candidates.length} library games.`);
     } catch (error) {
       notify("Metadata refresh failed", error instanceof Error ? error.message : "Could not refresh game metadata.");
-    } finally { busyRef.current = false; setRefreshBusy(false); }
+    } finally { busyRef.current = false; setRefreshBusy(false); setRefreshingProvider(null); setRefreshingAll(false); }
   };
 
   /** Refresh just this provider. Keeping the source required prevents a provider row from falling back to Auto/all. */
   const refreshProvider = (library: Piko[], source: ProviderId) => refreshScope(library, source);
   /** Refresh using the user's configured metadata source. */
-  const refreshAll = (library: Piko[]) => refreshScope(library);
+  const refreshAll = (library: Piko[]) => refreshScope(library, undefined, true);
 
   /** How many library games each provider could refresh right now (0 means its button stays disabled). */
   const refreshableCount = (library: Piko[], only: ProviderId) => library.filter((piko) => (piko.kind !== "launcher" || specialLauncher(piko)) && anyProvider(piko, only)).length;
@@ -264,7 +278,7 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
     }
   };
 
-  return { enrich, enrichImported, refreshAll, refreshProvider, refreshGame, findMissingCovers, missingCovers, refreshBusy, refreshableCount, ready };
+  return { enrich, enrichImported, refreshAll, refreshProvider, refreshGame, findMissingCovers, missingCovers, refreshBusy, refreshingProvider, refreshingAll, refreshableCount, ready };
 }
 
 /** Applies only the metadata fields from a fresh result onto the live Piko, so edits made while it ran are kept. */
