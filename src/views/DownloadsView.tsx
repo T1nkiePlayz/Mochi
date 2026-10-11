@@ -28,6 +28,11 @@ export function DownloadsView() {
     const translated = t(detail);
     setError(translated !== detail ? translated : `${t("That did not work.")} ${detail}`);
   };
+  const cancelDownload = async (id: string) => {
+    const ok = await confirmAction({ title: t("Cancel this download?"), message: t("The download will stop. You can start it again from the mod page."), confirmLabel: t("Cancel"), danger: true });
+    if (!ok) return;
+    await cancelModDownload(id).catch(report);
+  };
   const clearFinished = async () => {
     const count = downloads.filter((entry) => entry.status !== "downloading").length;
     if (!count || !await confirmAction({ title: t("Clear finished downloads?"), message: t(count === 1 ? "Removes {count} finished download from the list. Downloaded files stay on disk." : "Removes {count} finished downloads from the list. Downloaded files stay on disk.").replace("{count}", String(count)), confirmLabel: t("Clear") })) return;
@@ -80,7 +85,7 @@ export function DownloadsView() {
                   <small role={row.state === "failed" ? "alert" : undefined}>{row.detail}</small>
                 </div>
                 <div className="download-row-actions">
-                  {row.canCancel && <button type="button" className="icon-button" aria-label={t("Cancel {name}").replace("{name}", download.itemName)} title={t("Cancel")} onClick={() => void cancelModDownload(download.id).catch(report)}><X size={15} /></button>}
+                  {row.canCancel && <button type="button" className="icon-button" aria-label={t("Cancel {name}").replace("{name}", download.itemName)} title={t("Cancel")} onClick={() => void cancelDownload(download.id)}><X size={15} /></button>}
                   {download.dir && <button type="button" className="icon-button" aria-label={t("Open folder of {name}").replace("{name}", download.itemName)} title={t("Open folder")} onClick={() => void openPath(download.dir).catch(report)}><FolderOpen size={15} /></button>}
                 </div>
               </article>;
