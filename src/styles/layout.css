@@ -52,6 +52,21 @@
   }
   /* Do not force a compositor layer for the Library content. The translate3d/backface workaround
      caused persistent scroll flashes in WebKit; leave layer promotion to the browser. */
+  /* Hover transforms and filters can toggle repeatedly as cards pass beneath the pointer during scrolling.
+     Temporarily remove pointer hover from Library cards and stop their transitions/animations until scrolling settles. */
+  .main-content-library.is-scrolling .game-card,
+  .main-content-library.is-scrolling .game-card * {
+    pointer-events: none !important;
+  }
+  .main-content-library.is-scrolling .game-card,
+  .main-content-library.is-scrolling .game-card:hover,
+  .main-content-library.is-scrolling .game-card-art,
+  .main-content-library.is-scrolling .game-card:hover .game-card-art {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
   .content { min-width: 0 !important; width: 100% !important; margin-inline: auto !important; max-width: max(var(--mochi-content-max-width, 1160px), min(72vw, 2200px)) !important; }
   .content > * { min-width: 0; max-width: 100%; }
   .content img, .content video, .content canvas { max-width: 100%; }
