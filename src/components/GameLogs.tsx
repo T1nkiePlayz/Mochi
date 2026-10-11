@@ -103,9 +103,9 @@ function GameLogsModal({ game, onClose }: { game: Piko; onClose: () => void }) {
   return <ModalShell label={`${game.name} logs`} className="modal game-logs-modal" onClose={onClose}>
     <div className="modal-header"><div><p className="eyebrow">{game.name}</p><h2>{t("Game logs")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
     <div className="game-logs-toolbar">
-      <label>Session
+      <label>{t("Session")}
         <select className="compact-input" value={sessionId} onChange={(event) => setSessionId(event.target.value)} disabled={empty} aria-label={t("Log session")}>
-          {list?.sessions.map((item) => <option key={item.id} value={item.id}>{when(item.startedAt)} · {item.direct ? formatBytes(item.size) : "not captured"}</option>)}
+          {list?.sessions.map((item) => <option key={item.id} value={item.id}>{when(item.startedAt)} · {item.direct ? formatBytes(item.size) : t("not captured")}</option>)}
           {empty && <option value="">{t("No sessions yet")}</option>}
         </select>
       </label>
@@ -113,16 +113,16 @@ function GameLogsModal({ game, onClose }: { game: Piko; onClose: () => void }) {
       <button type="button" className="secondary-button" onClick={() => { void loadList(); void read(); }}><RefreshCw size={13} /> {t("Refresh")}</button>
       <button type="button" className="secondary-button" onClick={() => void copy()} disabled={!text}><Copy size={13} /> {t("Copy")}</button>
       {modTofu && <button type="button" className="secondary-button" onClick={() => void findSuspects()} disabled={!text} title={t("Looks in this log for the mods it names")}><Search size={13} /> {t("Find suspect mods")}</button>}
-      <button type="button" className="secondary-button" onClick={() => list?.dir && void openPath(list.dir).catch((error) => setMessage(errorText(error)))} disabled={!list?.dir}><FolderOpen size={13} /> {t("Open folder")}</button>
+      <button type="button" className="secondary-button" onClick={() => list?.dir && void openPath(list.dir).catch((error) => setMessage(t(errorText(error))))} disabled={!list?.dir}><FolderOpen size={13} /> {t("Open folder")}</button>
       <button type="button" className="secondary-button danger-outline" onClick={() => void clear()} disabled={empty}><Trash2 size={13} /> {t("Clear")}</button>
     </div>
     {message && <p className="metadata-note" role="status">{message}</p>}
     {suspects && modTofu && (suspects.length
       ? <ConflictIssues issues={suspects} tofu={modTofu} onFixed={async () => setSuspects(await findCrashSuspects(game, modTofu, text))} />
       : <p className="metadata-note" role="status">{t("No installed mod is named in this log.")}</p>)}
-    {empty ? <p className="muted game-logs-empty">{running ? "The game is running but no log was captured for it." : "Nothing has been captured yet. Start the game from Mochi and its output appears here."}</p>
-      : !current.direct ? <p className="muted game-logs-empty" role="status">{handoffHelp(platform)}</p>
+    {empty ? <p className="muted game-logs-empty">{running ? t("The game is running but no log was captured for it.") : t("Nothing has been captured yet. Start the game from Mochi and its output appears here.")}</p>
+      : !current.direct ? <p className="muted game-logs-empty" role="status">{t(handoffHelp(platform))}</p>
       : <pre className="game-logs-view" ref={view} tabIndex={0} aria-label={t("Log output")}>{text || (running ? t("Waiting for output...") : t("This session wrote no output."))}</pre>}
-    <small className="metadata-note">{t("Logs stay on this computer, the newest 8 sessions per game are kept and very long logs are shortened.")}</small>
+    <small className="metadata-note">{t("{t("Logs stay on this computer, the newest 8 sessions per game are kept and very long logs are shortened.")}")}</small>
   </ModalShell>;
 }
