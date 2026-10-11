@@ -33,7 +33,7 @@ export function DownloadsView() {
       <p className="eyebrow">{t("Activity")}</p><h2>{t("Downloads")}</h2>
       <p>Mods, resource packs and shaders from Modrinth, CurseForge and Nexus Mods download here and keep going while Mochi is hidden in the tray. Finished downloads stay in this list for 10 minutes.</p>
     </div>
-    <section className="download-group download-pacing" aria-label="Download controls">
+    <section className="download-group download-pacing" aria-label={t("Download controls")}>
       <div className="download-group-heading"><div className="download-control-heading-copy"><strong>{t("Download controls")}</strong><small>Manage bandwidth and when downloads are allowed to run.</small></div><span className={held ? "download-control-status held" : "download-control-status"}><i />{held ? (prefs.paused ? "Paused" : "Scheduled wait") : "Downloads enabled"}</span></div>
       <div className="download-control-body">
         <div className="download-control-primary">
@@ -54,7 +54,7 @@ export function DownloadsView() {
       <small className="metadata-note">Pausing holds running downloads in place, although a server may drop a connection that waits too long. Settings apply while Mochi is open.</small>
     </section>
     {error && <p className="auth-error" role="alert">{error}</p>}
-    {updating.length > 0 && <section className="download-group download-updates" aria-label="Mod updates">
+    {updating.length > 0 && <section className="download-group download-updates" aria-label={t("Mod updates")}>
       <div className="download-group-heading"><strong>Mod updates</strong><button type="button" className="text-button" onClick={() => setActiveNav("Installed")}>Open Mods &amp; Content</button></div>
       <ul className="download-update-list">{updating.map(({ piko, tofu, state }) => <li key={tofu.id}><span>{piko.name}: {tofu.name}</span><small>{state.updating.length ? t("Updating {count}…").replace("{count}", String(state.updating.length)) : t(updateCount(state) === 1 ? "{count} update available" : "{count} updates available").replace("{count}", String(updateCount(state)))}</small></li>)}</ul>
     </section>}
@@ -76,7 +76,7 @@ export function DownloadsView() {
                 </div>
                 <div className="download-row-actions">
                   {row.canCancel && <button type="button" className="icon-button" aria-label={t("Cancel {name}").replace("{name}", download.itemName)} title="Cancel" onClick={() => void cancelModDownload(download.id).catch(report)}><X size={15} /></button>}
-                  {download.dir && <button type="button" className="icon-button" aria-label={t("Open folder of {name}").replace("{name}", download.itemName)} title="Open folder" onClick={() => void openPath(download.dir).catch(report)}><FolderOpen size={15} /></button>}
+                  {download.dir && <button type="button" className="icon-button" aria-label={t("Open folder of {name}").replace("{name}", download.itemName)} title={t("Open folder")} onClick={() => void openPath(download.dir).catch(report)}><FolderOpen size={15} /></button>}
                 </div>
               </article>;
             })}</div>
