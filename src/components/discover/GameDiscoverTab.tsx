@@ -34,6 +34,7 @@ const choiceHint: Record<GameSourceChoice, string> = {
 
 /** One game's mods: a source switcher when two sites list it, automatic extension when the first site has too few, and honest notes. */
 export function GameDiscoverTab({ game, pikos, supabase, settings, below, refreshKey }: Props) {
+  const t = useTranslation();
   const [choice, setChoice] = useGameSourceChoice(game.key);
   const sources = resolveGameSources({ onCurseforge: Boolean(game.cf), onNexus: Boolean(game.nexusDomain), choice }, settings);
   const [info, setInfo] = useState<ExtendInfo | null>(null);
@@ -64,7 +65,7 @@ export function GameDiscoverTab({ game, pikos, supabase, settings, below, refres
     </div></div>
 
     {sources.choices.length > 1 && <div className="mod-source-switch" role="group" aria-label={t("Mod source for this game")}><span>{t("Source")}</span>
-      {sources.choices.map((id) => <button key={id} type="button" className={choice === id ? "active" : ""} aria-pressed={choice === id} title={choiceHint[id]} onClick={() => setChoice(id)}>{choiceLabel[id]}</button>)}</div>}
+      {sources.choices.map((id) => <button key={id} type="button" className={choice === id ? "active" : ""} aria-pressed={choice === id} title={t(choiceHint[id])} onClick={() => setChoice(id)}>{t(choiceLabel[id])}</button>)}</div>}
 
     {info?.extended && <p className="metadata-note discover-extend-note" role="status">{info.note}{info.failed.length ? ` ${info.failed.join(", ")} did not answer.` : ""}</p>}
     {fewOnCurseforge && game.cf && <p className="metadata-note discover-limit-note" role="note">

@@ -45,7 +45,6 @@ function Row({ choice, onInstall, t }: { choice: TofuChoice; onInstall: (tofu: T
 /** Pick the Tofu that receives a download. Minecraft content shows only Minecraft instances; other games only their own. */
 export function TofuPicker({ title, description, pikos, ecosystem, gameName, metas, onClose, onInstall }: Props) {
   const t = useTranslation();
-  const t = useTranslation();
   const choices = useMemo(() => buildTofuChoices({ pikos, ecosystem, gameName, metas }), [pikos, ecosystem, gameName, metas]);
   const text = description ?? (choices.kind === "minecraft" ? "Only Minecraft instances are listed, by loader and newest version. Incompatible ones can still be installed on purpose." : "Choose the Tofu instance that should receive this download.");
   return <ModalShell label={`Choose Tofu instance for ${title}`} className="tofu-picker-window" onClose={onClose}>

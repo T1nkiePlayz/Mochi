@@ -96,6 +96,7 @@ export function AchievementsPanel({ progress, unlocked }: { progress: Achievemen
 }
 
 export function RecentAchievements({ progress, unlocked, onOpen }: { progress: AchievementProgress[]; unlocked: Record<string, number>; onOpen: () => void }) {
+  const t = useTranslation();
   const recent = progress.filter((item) => unlocked[item.def.id] !== undefined).sort((a, b) => unlocked[b.def.id] - unlocked[a.def.id]).slice(0, 4);
   return (
     <section className="stats-card" aria-labelledby="recent-ach">

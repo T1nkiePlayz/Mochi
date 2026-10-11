@@ -13,12 +13,12 @@ const PAGE = 200;
 const columns: Array<{ key: SortKey; label: string }> = [{ key: "name", label: "Name" }, { key: "category", label: "Kind" }, { key: "bytes", label: "Size" }];
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
-function SizeCell({ row, max }: { row: StorageRow; max: number }) {
+function SizeCell({ row, max, t }: { row: StorageRow; max: number; t: (message: string) => string }) {
   const size = row.measurement;
   if (!size) return <span className="storage-skeleton" aria-label={t("Measuring")} />;
   if (size.error) return <span className="storage-error" title={size.error}>{t("Unavailable")}</span>;
   const width = max > 0 ? Math.max(size.bytes > 0 ? 2 : 0, (size.bytes / max) * 100) : 0;
-  return <span className="storage-size" title={size.truncated ? "A very large folder: this is a lower bound." : `${size.files.toLocaleString()} files`}>
+  return <span className="storage-size" title={size.truncated ? t("A very large folder: this is a lower bound.") : t("{count} files").replace("{count}", size.files.toLocaleString())}>
     <span className="storage-size-bar" aria-hidden="true"><span className={`storage-fill storage-cat-${row.category}`} style={{ width: `${width}%` }} /></span>
     <span>{size.truncated ? "≥ " : ""}{formatBytes(size.bytes)}{!size.done && " …"}</span>
   </span>;
@@ -103,7 +103,7 @@ export function StorageSection() {
             {shown.map((row) => <tr key={row.key}>
               <td className="storage-name"><strong>{row.name}</strong>{row.inside && <small>Included in {categoryLabels[row.inside]}</small>}</td>
               <td>{categoryLabels[row.category]}</td>
-              <td><SizeCell row={row} max={max} /></td>
+              <td><SizeCell row={row} max={max} t={t} /></td>
               <td className="storage-share-col">{row.inside ? "" : formatShare(row.measurement && !row.measurement.error ? row.measurement.bytes : null, totals.total)}</td>
               <td className="storage-row-actions">{row.path && <button type="button" className="secondary-button storage-open" onClick={() => open(row.path!)} aria-label={`Open folder of ${row.name}`}><FolderOpen size={14} aria-hidden="true" />Open</button>}</td>
             </tr>)}

@@ -23,16 +23,16 @@ const MOVEMENT: Array<SelectOption<MovementSounds>> = [
 const packName = (pack: ResolvedPack) => pack.installed?.name ?? BUILTIN_PACKS.find((item) => item.id === pack.id)?.name ?? "Mochi";
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
-function PackRow({ pack, onExport, onRemove }: { pack: SoundPackInfo; onExport: () => void; onRemove: () => void }) {
+function PackRow({ pack, onExport, onRemove, t }: { pack: SoundPackInfo; onExport: () => void; onRemove: () => void; t: (message: string) => string }) {
   return <li className="sound-pack">
     <span className="sound-pack-info">
       <strong>{pack.name}</strong>
-      <small>{[pack.author && `by ${pack.author}`, `v${pack.version}`, `${pack.events.length} of ${SOUND_EVENTS.length} sounds`, formatBytes(pack.sizeBytes)].filter(Boolean).join(" · ")}</small>
+      <small>{[pack.author && `${t("by")} ${pack.author}`, `v${pack.version}`, t("{count} of {total} sounds").replace("{count}", String(pack.events.length)).replace("{total}", String(SOUND_EVENTS.length)), formatBytes(pack.sizeBytes)].filter(Boolean).join(" · ")}</small>
       {pack.description && <small>{pack.description}</small>}
     </span>
     <span className="sound-pack-actions">
       <button type="button" className="secondary-button" onClick={onExport}><Download size={15} aria-hidden="true" /> {t("Export")}</button>
-      <button type="button" className="secondary-button danger-outline" aria-label={`Remove ${pack.name}`} onClick={() => void confirmAction({ title: t("Remove sound pack?"), message: t("{name} will be deleted. Themes using it fall back to the Mochi sounds.").replace("{name}", pack.name), confirmLabel: t("Remove"), danger: true }).then((ok) => ok && onRemove())}><Trash2 size={15} aria-hidden="true" /> {t("Remove")}</button>
+      <button type="button" className="secondary-button danger-outline" aria-label={t("Remove {name}").replace("{name}", pack.name)} onClick={() => void confirmAction({ title: t("Remove sound pack?"), message: t("{name} will be deleted. Themes using it fall back to the Mochi sounds.").replace("{name}", pack.name), confirmLabel: t("Remove"), danger: true }).then((ok) => ok && onRemove())}><Trash2 size={15} aria-hidden="true" /> {t("Remove")}</button>
     </span>
   </li>;
 }

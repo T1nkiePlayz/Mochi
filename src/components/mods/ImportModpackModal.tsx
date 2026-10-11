@@ -51,11 +51,11 @@ export function ImportModpackModal({ piko, tofu, onCreateTofu, onClose }: Props)
       const ctx = { piko, sources: behavior.modSources, nexusKey: credentials.status.nexus && Boolean(supabase), pack: parsed };
       const built = await buildImportPlan(parsed, intoNew ? null : tofu, ctx, { signal: run, onProgress: (done, total) => { if (!run.aborted) setProgress([done, total]); } });
       if (!run.aborted) { setPlan(built); setProgress(null); }
-    } catch (reason) { setProgress(null); setError(reason instanceof MochipackError ? reason.message : errorText(reason)); }
+    } catch (reason) { setProgress(null); setError(reason instanceof MochipackError ? reason.message : errorText(reason, t)); }
   };
   const chooseFile = async () => {
     try { const content = await pickPackFile(); if (content !== null) { setText(content.length > 4000 ? "" : content); await load(content); } }
-    catch (reason) { setError(errorText(reason)); }
+    catch (reason) { setError(errorText(reason, t)); }
   };
 
   const summary = useMemo(() => (plan ? summarizePlan(plan.items, includeDisabled) : null), [plan, includeDisabled]);
@@ -70,7 +70,7 @@ export function ImportModpackModal({ piko, tofu, onCreateTofu, onClose }: Props)
       const done = await runImport(plan, target, pack, includeDisabled);
       setReport(done);
       notify("Modpack import started", `${done.queued} download${done.queued === 1 ? "" : "s"} queued for ${target.name}. Progress is in Downloads.`);
-    } catch (reason) { setError(errorText(reason)); }
+    } catch (reason) { setError(errorText(reason, t)); }
     finally { setBusy(false); }
   };
 

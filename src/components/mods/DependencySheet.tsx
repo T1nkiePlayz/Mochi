@@ -38,7 +38,7 @@ export function DependencySheet({ prompt }: { prompt: DependencyPrompt }) {
   const done = plan.entries.filter((entry) => entry.status === "already-installed");
   const total = chosen.length + 1;
   return <ModalShell label={`Dependencies of ${item.name}`} className="tofu-picker-window dependency-sheet" onClose={() => answer(null)}>
-    <div className="modal-header"><div><p className="eyebrow">Install {item.name}</p><h2>Dependencies</h2></div><button type="button" className="icon-button" aria-label={t("Cancel")} onClick={() => answer(null)}><X size={17} /></button></div>
+    <div className="modal-header"><div><p className="eyebrow">{t("Install")} {item.name}</p><h2>{t("Dependencies")}</h2></div><button type="button" className="icon-button" aria-label={t("Cancel")} onClick={() => answer(null)}><X size={17} /></button></div>
     <div className="dep-body">
     <p className="modal-description">{item.name} needs {plan.entries.length === 1 ? "another mod" : `${plan.entries.length || "no other"} mods`} to work. Checked ones are downloaded first, with the same checks as any download.</p>
     {plan.warnings.map((warning) => <p key={`${warning.declaredBy}>${warning.name}`} className="metadata-note dep-warning" role="alert"><AlertTriangle size={13} aria-hidden="true" /> {warning.declaredBy} is marked incompatible with {warning.installedTitle}, which is installed. <button type="button" className="secondary-button dep-link" onClick={() => open(warning.pageUrl)}>{t("View")}</button></p>)}
@@ -49,7 +49,7 @@ export function DependencySheet({ prompt }: { prompt: DependencyPrompt }) {
     </ul>
     {manual.length > 0 && <>
       <h3 className="tofu-picker-heading dep-heading">{t("Needs you")}</h3>
-      <ul className="dep-list" aria-label={t("Requirements Mochi cannot install")}>{manual.map((entry) => <Row key={entry.key} entry={entry} checked={false} onChange={() => undefined} />)}</ul>
+      <ul className="dep-list" aria-label={t("Requirements Mochi cannot install")}>{manual.map((entry) => <Row key={entry.key} entry={entry} checked={false} onChange={() => undefined} t={t} />)}</ul>
     </>}
     {plan.truncated && <p className="metadata-note" role="note">The dependency chain is very long, so Mochi stopped looking. Check the mod's page for the rest.</p>}
     {plan.notes.map((note) => <p key={note} className="metadata-note" role="note">{note}</p>)}

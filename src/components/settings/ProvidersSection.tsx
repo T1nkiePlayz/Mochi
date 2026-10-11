@@ -26,7 +26,7 @@ type CfState = "checking" | "reachable" | "not_configured" | "offline" | "error"
 const cfStateText: Record<CfState, string> = { checking: "Checking...", reachable: "Reachable", not_configured: "Not configured on the server", offline: "Offline", error: "Unavailable" };
 
 /** A cheap one-item `games` request tells whether the proxy works. Nothing it returns is kept. */
-function CurseforgeCard({ enabled }: { enabled: boolean }) {
+function CurseforgeCard({ enabled, t }: { enabled: boolean; t: (message: string) => string }) {
   const [state, setState] = useState<CfState>("checking");
   useEffect(() => {
     if (!enabled) return;
@@ -106,7 +106,7 @@ export function ProvidersSection() {
         </> : signIn}
         {user && c.status.nexus && <NexusMembership />}
       </div>
-      <CurseforgeCard enabled={behavior.modSources.curseforge} />
+      <CurseforgeCard t={t} enabled={behavior.modSources.curseforge} />
     </div>
     {c.message && <small className="metadata-note settings-note" role="status">{c.message}</small>}
   </SettingsGroup>;
