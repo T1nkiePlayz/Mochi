@@ -94,7 +94,7 @@ function Shell() {
   return <div className="app-shell">
     <SkipLink />
     <Sidebar />
-    <main className="main-content" id="main-content" tabIndex={-1}>
+    <main className={`main-content${app.activeNav === "Library" ? " main-content-library" : ""}`} id="main-content" tabIndex={-1}>
       <Topbar />
       <UpdateBanner />
       <div className="content">
