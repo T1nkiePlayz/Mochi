@@ -43,7 +43,7 @@ export function SteamAchievements({ appid, gameName }: { appid: number; gameName
 
   const save = (event: FormEvent) => { event.preventDefault(); writeSteamConfig(config); void refresh(); };
   const status = result?.status;
-  const problem = !data && result && status !== "no-achievements" ? result.message || "Achievements are unavailable right now." : null;
+  const problem = !data && result && status !== "no-achievements" ? result.message || t("Achievements are unavailable right now.") : null;
   const busy = status === "rate-limited";
   const needsSetup = status === "private" || status === "no-steam-user";
 
