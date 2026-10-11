@@ -1,5 +1,3 @@
-import type { PaletteItem } from "./palette";
-
 export function translateCommandTitle(title: string, t: (message: string) => string) {
   // Translate the UI-owned part of generated titles, preserving game, theme,
   // profile, and other runtime names exactly as supplied by the user.
