@@ -25,15 +25,15 @@ export function LanguageSection() {
     setBehavior((current) => current.language === nextLanguage ? current : { ...current, language: nextLanguage });
   };
 
-  return <SettingsGroup title={t("Language")} subtitle={t("Choose the language used throughout Mochi.")} id="settings-language">
+  return <SettingsGroup title={t("Language")} subtitle={t("Launcher-wide language preference")} id="settings-language">
     <div className="language-settings">
       <div className="language-settings-summary">
         <div className="language-settings-description">
           <strong><Languages size={16} aria-hidden="true" /> {t("Display language")}</strong>
-          <small>{t("Game news follows this language automatically. Some provider content may remain in its original language.")}</small>
+          <small>Game news follows this language automatically. Some provider content may remain in its original language.</small>
         </div>
         <div className="language-current" aria-live="polite">
-          <span>{t("Current language")}</span>
+          <span>Current language</span>
           <strong lang={selectedLanguage.locale}>{selectedLanguage.name}</strong>
         </div>
       </div>
@@ -44,13 +44,13 @@ export function LanguageSection() {
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder={t("Search languages by name…")}
-          aria-label={t("Search languages")}
+          placeholder="Search languages by name…"
+          aria-label="Search languages"
         />
-        {query && <button type="button" className="language-search-clear" onClick={() => setQuery("")} aria-label={t("Clear language search")}>×</button>}
+        {query && <button type="button" className="language-search-clear" onClick={() => setQuery("")} aria-label="Clear language search">×</button>}
       </label>
 
-      <div className="language-options" role="group" aria-label={t("Available languages")}>
+      <div className="language-options" role="group" aria-label="Available languages">
         {visibleLanguages.map((item) => {
           const selected = item.code === language;
           return <button
@@ -69,8 +69,8 @@ export function LanguageSection() {
           </button>;
         })}
       </div>
-      {!visibleLanguages.length && <p className="language-no-results">{t("No languages match your search.")}</p>}
-      <p className="language-settings-footnote">{t("Language changes apply immediately. Your choice is saved with Mochi settings.")}</p>
+      {!visibleLanguages.length && <p className="language-no-results">No languages match your search.</p>}
+      <p className="language-settings-footnote">Language changes apply immediately. Your choice is saved with Mochi settings.</p>
     </div>
   </SettingsGroup>;
 }
