@@ -91,7 +91,7 @@ export function StatsView() {
               <div className="stats-toolbar">
                 <Segmented label="Time range" value={range} options={RANGES.map((r) => ({ ...r, label: t(r.label) }))} onChange={changeRange} />
                 {<button type="button" className="secondary-button" onClick={() => setSharing(true)}><Share2 size={14} /> Share card</button>}
-                {analysis.historicSeconds > 0 && <span className="stats-muted">Plus {formatHours(analysis.historicSeconds)} played before Mochi kept history.</span>}
+                {analysis.historicSeconds > 0 && <span className="stats-muted">{t("Plus {hours} played before Mochi kept history.").replace("{hours}", formatHours(analysis.historicSeconds))}</span>}
               </div>
               <div className="stats-kpis">
                 <Kpi label="Time played" value={formatDuration(analysis.totalSeconds)} />

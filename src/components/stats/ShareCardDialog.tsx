@@ -20,7 +20,8 @@ export function ShareCardDialog({ records, library, unlocked, totalAchievements,
   const tried = useRef(new Set<string>());
   const palette = useMemo(() => readPalette(), []);
   const data = useMemo(() => buildCardData({ records, library, unlocked, totalAchievements, username, options }), [records, library, unlocked, totalAchievements, username, options]);
-  const svg = useMemo(() => buildCardSvg(data, palette, covers), [data, palette, covers]);
+  const cardLabels = useMemo(() => ({ ariaLabel: t("Mochi stats card"), playStats: t("Play stats"), accountStats: t("Stats for {account}"), timePlayed: t("Time played"), achievements: t("Achievements"), topGames: t("Top games"), noGamesPlayed: t("No games played in this period."), generatedLocally: t("Generated locally by Mochi"), saveDialogTitle: t("Save share card"), pngImage: t("PNG image") }), [t]);
+  const svg = useMemo(() => buildCardSvg(data, palette, covers, cardLabels), [data, palette, covers, cardLabels]);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,9 +40,9 @@ export function ShareCardDialog({ records, library, unlocked, totalAchievements,
   const toggle = (key: keyof Omit<ShareOptions, "period">, value: boolean) => setOptions((current) => ({ ...current, [key]: value }));
   const run = async (action: (blob: Blob) => Promise<string>) => {
     setBusy(true); setMessage(t("Preparing image…"));
-    try { setMessage(await action(await svgToPng(svg, 1))); } catch (error) { setMessage(error instanceof Error ? error.message : t("Something went wrong.")); } finally { setBusy(false); }
+    try { setMessage(await action(await svgToPng(svg, 1))); } catch (error) { setMessage(error instanceof Error ? t(error.message) : t("Something went wrong.")); } finally { setBusy(false); }
   };
-  const onSave = () => run(async (blob) => ((await savePng(blob)) ? t("Saved.") : ""));
+  const onSave = () => run(async (blob) => ((await savePng(blob, { saveDialogTitle: t("Save share card"), pngImage: t("PNG image") })) ? t("Saved.") : ""));
   const onCopy = () => run(async (blob) => ((await copyPng(blob)) === "copied" ? t("Copied to the clipboard.") : t("Copying images is not supported here. Use Save PNG instead.")));
 
   return (
