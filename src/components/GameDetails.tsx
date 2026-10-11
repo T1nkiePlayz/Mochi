@@ -123,7 +123,7 @@ export function GameDetails({ game, capabilities, cloudStatus, running, playtime
         <ShortcutMenu loadTargets={getShortcutTargets} onLocation={onShortcutLocation} onSteam={onShortcutSteam} />
         <button type="button" className="secondary-button danger-outline" onClick={onRemove}><Trash2 size={14}/> {t("Remove")}</button>
       </div>
-      {launchError && <p className="auth-error launch-error">{launchError}</p>}
+      {launchError && <p className="auth-error launch-error">{t(launchError)}</p>}
       {memberOf.length > 0 && <div className="details-collections" aria-label={t("Collections")}>{memberOf.map((collection) => <span key={collection.id}>{collection.icon ? `${collection.icon} ` : ""}{collection.name}</span>)}</div>}
       <div className="details-backlog"><span className="detail-label">{t("Backlog")}</span><BacklogControl value={game.backlog} onChange={onBacklogChange} /></div>
       <div className="details-tags"><span className="detail-label">{t("Tags")}</span><TagEditor tags={game.tags ?? []} suggestions={tagSuggestions} onChange={onTagsChange} /></div>
