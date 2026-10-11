@@ -49,7 +49,7 @@ export function TofuShareSection({ piko, tofu, onCreateTofu }: { piko: Piko; tof
         if (!code) { setStatus(""); notify(t("Too big for a short code"), t("Use Export file instead.")); return; }
         await navigator.clipboard.writeText(code);
         setStatus(`Code copied (${code.length} characters). ${describe(pack.mods.length, pack.unknown.length, omitted)}`);
-        notify("Code copied", "Paste it into Import modpack on another device.");
+        notify(t("Code copied"), t("Paste it into Import modpack on another device."));
       }
     } catch (error) { setStatus(""); notify(kind === "file" ? "Export failed" : "Could not copy the code", errorText(error, "Something went wrong.")); }
     finally { setBusy(""); }
