@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Behavior } from "./settings";
 import { createNotifyBatcher, type NotifyBatcher } from "../lib/notifyBatch";
-import { translate } from "../lib/i18n";
+import { translateUiMessage } from "../lib/i18n";
 
 export type AppNotification = { id: string; title: string; message: string; createdAt: number; progress?: { value: number; total: number } };
 
@@ -15,8 +15,8 @@ export function useNotifications(behavior: Behavior) {
   const deliver = useCallback((title: string, message: string) => {
     const current = behaviorRef.current;
     if (!current.notificationsEnabled) return;
-    const localizedTitle = translate(title);
-    const localizedMessage = translate(message);
+    const localizedTitle = translateUiMessage(title);
+    const localizedMessage = translateUiMessage(message);
     if (current.inAppNotifications) setNotifications((list) => [{ id: crypto.randomUUID(), title: localizedTitle, message: localizedMessage, createdAt: Date.now() }, ...list].slice(0, 20));
     if (current.systemNotifications) void invoke("send_system_notification", { title: localizedTitle, body: localizedMessage }).catch(() => {});
   }, []);
