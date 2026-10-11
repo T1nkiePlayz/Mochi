@@ -30,7 +30,7 @@ export function A11yPreview() {
   const { settings } = useAccessibility();
   return <div className="a11y-preview" aria-label={t("Live preview of your accessibility settings")} role="group">
     <h4>{t("Preview")}</h4>
-    <p>{t("Mochi keeps your games in one calm place.")} <a href="https://github.com/T1nkiePlayz/Mochi" onClick={(event) => event.preventDefault()}>{t("This is a link")}</a>, and {t("This is body text at your chosen size and spacing.")}</p>
+    <p>{t("Mochi keeps your games in one calm place.")} <a href="https://github.com/T1nkiePlayz/Mochi" onClick={(event) => event.preventDefault()}>{t("This is a link")}</a> {t("and this is body text at your chosen size and spacing.")}</p>
     <div className="a11y-preview-row">
       <button type="button" className="play-button">{t("Play")}</button>
       <button type="button" className="secondary-button">{t("Details")}</button>

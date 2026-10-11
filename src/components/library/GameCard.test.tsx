@@ -8,6 +8,7 @@ const artworkRenders = vi.fn();
 vi.mock("../GameArtwork", () => ({ GameArtwork: () => { artworkRenders(); return null; } }));
 
 import { GameCard } from "./GameCard";
+import { AppProvider } from "../../state/AppContext";
 
 const game = (id: string): Piko => ({ id, name: `Game ${id}`, description: "", accent: "#fff", artwork: "", tofus: [] });
 const games = ["a", "b", "c"].map(game);
@@ -25,7 +26,7 @@ afterEach(() => { cleanup(); artworkRenders.mockClear(); Object.values(handlers)
 
 describe("GameCard", () => {
   it("re-renders only the cards whose props changed", () => {
-    render(<Grid />);
+    render(<AppProvider><Grid /></AppProvider>);
     expect(artworkRenders).toHaveBeenCalledTimes(3);
     fireEvent.click(screen.getByText("select b"));
     // a loses and b gains the selected state; c is untouched.

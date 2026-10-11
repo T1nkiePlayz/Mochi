@@ -36,7 +36,7 @@ export function DuplicatesDialog({ groups, onMerge, onDismiss, onClose }: Props)
   return <div className="modal-backdrop" onClick={onClose}>
     <div className="modal duplicates-dialog" role="dialog" aria-modal="true" aria-labelledby="duplicates-title" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); onClose(); } }}>
       <div className="modal-header"><div><p className="eyebrow">{t("Library")}</p><h2 id="duplicates-title">{t("Games that appear more than once")}</h2></div><button type="button" ref={close} className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
-      <p className="modal-description">{t("Merging keeps one entry and lets you choose which launcher to play it with.")} The other entries are kept inside it, so you can unmerge from the game's page at any time. No game files are touched.</p>
+      <p className="modal-description">{t("Merging keeps one entry and lets you choose which launcher to play it with.")} {t("The other entries are kept inside it, so you can unmerge from the game’s page at any time. No game files are touched.")}</p>
       <ul className="duplicates-groups">
         {groups.map((group) => {
           const ids = group.members.filter((piko) => !unticked.has(piko.id)).map((piko) => piko.id);

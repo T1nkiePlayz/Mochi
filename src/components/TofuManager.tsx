@@ -118,7 +118,7 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
           <LinkedPackSection tofu={selected} onPatch={(change) => onChange(tofus.map((tofu) => tofu.id === selected.id ? change(tofu) : tofu))} />
         </Section>}
 
-        <Section title="Mod folders" description="Where this Tofu's mods live and where the game loads them from.">
+        <Section title={t("Mod folders")} description={t("Where this Tofu’s mods live and where the game loads them from.")}>
           <ModFolderEditor key={selected.id} piko={piko} tofu={selected} onUpdate={patch} showVersion={false} />
           <Checkbox checked={selected.extractArchives === true} onChange={(checked) => patch({ extractArchives: checked })} label="Extract .zip downloads into the folder"
             description={t("For games whose mods are archives. A downloaded .zip is unpacked into the content folder and the archive is removed.")} />
@@ -130,19 +130,19 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
 
         {selected.path && <Section title={t("Mod check")} description={t("Looks for duplicates, mods for another game version or loader, and missing required mods. Works offline from what Mochi saved when the mods were installed.")}>
           <div className="conflict-check-row"><button type="button" className="secondary-button" disabled={checking} onClick={() => void runCheck()}><ShieldCheck size={14}/> {checking ? t("Checking…") : t("Check mods")}</button>
-            {checked?.tofuId === selected.id && <span className="conflict-message" role="status" aria-live="polite">{summarizeIssues(checked.issues)}</span>}</div>
+            {checked?.tofuId === selected.id && <span className="conflict-message" role="status" aria-live="polite">{t(summarizeIssues(checked.issues))}</span>}</div>
           {checked?.tofuId === selected.id && checked.issues.length > 0 && <ConflictIssues issues={checked.issues} tofu={selected} onFixed={runCheck} />}
           <Checkbox checked={selected.skipModCheck !== true} onChange={(on) => patch({ skipModCheck: on ? undefined : true })} label="Check mods before launching" description={t("Shows a warning with fixes first. You can always launch anyway.")} />
         </Section>}
 
-        <Section title={t("Share")} description="Export this Tofu's mod list as a small .mochipack file or code (ids and hashes only), or import one.">
+        <Section title={t("Share")} description={t("Export this Tofu's mod list as a small .mochipack file or code (ids and hashes only), or import one.")}>
           <TofuShareSection piko={piko} tofu={selected} onCreateTofu={createImported} />
         </Section>
 
         <Section title={t("Launch settings")}>
           {compat.length > 0 && <Field label={t("Compatibility runtime")} hint={t("Used for Windows programs (.exe). Native games ignore it.")}><Select value={launch.runtime ?? ""} onChange={(value) => patchLaunch({ runtime: value || undefined })} label={t("Compatibility runtime")} searchable={false} options={[{ value: "", label: t("Automatic") }, ...compat.map((runtime) => ({ value: runtime.id, label: runtime.name }))]} /></Field>}
           {wrappers.length > 0 && <div className="tofu-settings-wrappers" role="group" aria-label={t("Wrappers")}><span className="mochi-field-label">{t("Wrappers")}</span>
-            {wrappers.map((wrapper) => <Switch key={wrapper.id} label={wrapper.name} checked={launch.wrappers.includes(wrapper.id)} onChange={(on) => patchLaunch({ wrappers: on ? [...launch.wrappers, wrapper.id] : launch.wrappers.filter((id) => id !== wrapper.id) })} />)}
+            {wrappers.map((wrapper) => <Switch key={wrapper.id} label={t(wrapper.name)} checked={launch.wrappers.includes(wrapper.id)} onChange={(on) => patchLaunch({ wrappers: on ? [...launch.wrappers, wrapper.id] : launch.wrappers.filter((id) => id !== wrapper.id) })} />)}
           </div>}
           <Field label={t("Launch arguments")}><input value={launch.args} placeholder={t("--fullscreen -windowed")} onChange={(e) => patchLaunch({ args: e.target.value })} /></Field>
           <Field label={t("Environment variables")} hint={t("One KEY=value per line.")}><textarea rows={3} value={launch.env} placeholder={"DXVK_HUD=fps\nMANGOHUD=1"} onChange={(e) => patchLaunch({ env: e.target.value })} spellCheck={false} /></Field>

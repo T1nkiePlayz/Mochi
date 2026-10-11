@@ -38,7 +38,7 @@ export function DownloadsView() {
       <div className="download-control-body">
         <div className="download-control-primary">
           <div><strong>{prefs.paused ? "Downloads are paused" : held ? "Waiting for your schedule" : "Downloads can run"}</strong><small>{prefs.paused ? "Resume when you're ready to continue." : held ? "Downloads will resume automatically during your allowed hours." : "Your active downloads will continue in the background."}</small></div>
-          <button type="button" className="secondary-button" aria-pressed={prefs.paused} onClick={() => setPrefs((current) => ({ ...current, paused: !current.paused }))}>{prefs.paused ? <><Play size={14} /> Resume all</> : <><Pause size={14} /> Pause all</>}</button>
+          <button type="button" className="secondary-button" aria-pressed={prefs.paused} onClick={() => setPrefs((current) => ({ ...current, paused: !current.paused }))}>{prefs.paused ? <><Play size={14} /> {t("Resume all")}</> : <><Pause size={14} /> {t("Pause all")}</>}</button>
         </div>
         <div className="download-control-grid">
           <label className="download-pacing-field download-speed-field"><span>{t("Bandwidth limit")}</span><select value={prefs.limitKiB} onChange={(event) => setPrefs((current) => ({ ...current, limitKiB: Number(event.target.value) }))}>{speedLimits.map((item) => <option key={item.kib} value={item.kib}>{item.label}</option>)}</select><small>{t("Shared across active downloads")}</small></label>
@@ -51,9 +51,9 @@ export function DownloadsView() {
           </div>
         </div>
       </div>
-      <small className="metadata-note">Pausing holds running downloads in place, although a server may drop a connection that waits too long. Settings apply while Mochi is open.</small>
+      <small className="metadata-note">{t("Pausing holds running downloads in place, although a server may drop a connection that waits too long. Settings apply while Mochi is open.")}</small>
     </section>
-    {error && <p className="auth-error" role="alert">{error}</p>}
+    {error && <p className="auth-error" role="alert">{t(error)}</p>}
     {updating.length > 0 && <section className="download-group download-updates" aria-label={t("Mod updates")}>
       <div className="download-group-heading"><strong>{t("Mod updates")}</strong><button type="button" className="text-button" onClick={() => setActiveNav("Installed")}>{t("Open Mods &amp; Content")}</button></div>
       <ul className="download-update-list">{updating.map(({ piko, tofu, state }) => <li key={tofu.id}><span>{piko.name}: {tofu.name}</span><small>{state.updating.length ? t("Updating {count}…").replace("{count}", String(state.updating.length)) : t(updateCount(state) === 1 ? "{count} update available" : "{count} updates available").replace("{count}", String(updateCount(state)))}</small></li>)}</ul>
@@ -62,14 +62,14 @@ export function DownloadsView() {
     {!downloads.length ? <div className="download-empty"><div className="empty-icon"><MochiIcon name="downloads" fallback={Download} size={22} /></div><h3>{t("No active downloads")}</h3><p>{t("Nothing is downloading right now.")}</p></div> : (
       <div className="download-groups">
         {groups.map((group) => (
-          <section className="download-group" key={group.tofuId} aria-label={group.tofuName}>
+          <section className="download-group" key={group.tofuId} aria-label={t(group.tofuName)}>
             <div className="download-group-heading"><strong>{group.tofuName}</strong><span>{group.items.length} {group.items.length === 1 ? "download" : "downloads"}</span></div>
             <div className="download-list">{group.items.map((download) => {
               const row = describeDownload(download, t);
               return <article className={`download-row is-${row.state}`} key={download.id}>
                 <div className="download-row-copy"><strong>{download.itemName}</strong><small>{download.filename} · {t(downloadKind(download))} · {providerLabels[download.provider]}</small></div>
                 <div className="download-progress-wrap">
-                  <div className={"download-progress " + (row.state === "active" && row.percent === null ? "indeterminate" : row.state === "failed" || row.state === "cancelled" ? "failed" : "")} role="progressbar" aria-label={t("Download {name}").replace("{name}", download.itemName)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={row.percent ?? undefined} aria-valuetext={row.detail}>
+                  <div className={"download-progress " + (row.state === "active" && row.percent === null ? "indeterminate" : row.state === "failed" || row.state === "cancelled" ? "failed" : "")} role="progressbar" aria-label={t("Download {name}").replace("{name}", download.itemName)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={row.percent ?? undefined} aria-valuetext={t(row.detail)}>
                     <span style={{ width: row.percent !== null && row.state !== "failed" && row.state !== "cancelled" ? `${row.percent}%` : undefined }} />
                   </div>
                   <small role={row.state === "failed" ? "alert" : undefined}>{row.detail}</small>

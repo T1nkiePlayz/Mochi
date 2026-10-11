@@ -84,13 +84,13 @@ export function StatsView() {
               <div className="empty-icon"><MochiIcon name="stats" fallback={BarChart3} size={23} /></div>
               <h2>{t("No playtime yet")}</h2>
               <p>{t("Launch a game from Mochi and your sessions will show up here: hours per day, favourites, streaks and more. Everything stays on this device.")}</p>
-              <button type="button" className="secondary-button" onClick={() => setActiveNav("Library")}><Gamepad2 size={14} /> Open library</button>
+              <button type="button" className="secondary-button" onClick={() => setActiveNav("Library")}><Gamepad2 size={14} /> {t("Open library")}</button>
             </div>
           ) : (
             <>
               <div className="stats-toolbar">
                 <Segmented label={t("Time range")} value={range} options={RANGES.map((r) => ({ ...r, label: t(r.label) }))} onChange={changeRange} />
-                {<button type="button" className="secondary-button" onClick={() => setSharing(true)}><Share2 size={14} /> Share card</button>}
+                {<button type="button" className="secondary-button" onClick={() => setSharing(true)}><Share2 size={14} /> {t("Share card")}</button>}
                 {analysis.historicSeconds > 0 && <span className="stats-muted">{t("Plus {hours} played before Mochi kept history.").replace("{hours}", formatHours(analysis.historicSeconds))}</span>}
               </div>
               <div className="stats-kpis">

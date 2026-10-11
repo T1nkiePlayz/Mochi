@@ -194,9 +194,9 @@ export function LibraryView() {
           </div>
         </section>
         <section className="details-strip">
-          <div><span className="detail-label">Selected Tofu</span><strong>🧊 {selectedTofu.name}</strong></div>
-          <div><span className="detail-label">Runtime</span><strong>{selectedTofu.runtime} <span className="muted">· {selectedTofu.version}</span></strong></div>
-          <div><span className="detail-label">Install location</span><strong className="path-text">{selectedTofu.path || t("No folder chosen yet")}</strong></div>
+          <div><span className="detail-label">{t("Selected Tofu")}</span><strong>🧊 {selectedTofu.name}</strong></div>
+          <div><span className="detail-label">{t("Runtime")}</span><strong>{t(selectedTofu.runtime)} <span className="muted">· {selectedTofu.version}</span></strong></div>
+          <div><span className="detail-label">{t("Install location")}</span><strong className="path-text">{selectedTofu.path || t("No folder chosen yet")}</strong></div>
           <button className="icon-button" aria-label={t("Tofu settings")} onClick={() => app.setShowTofuManager(true)}><MochiIcon name="settings" fallback={Settings} size={16} /></button>
         </section>
       </>}
@@ -227,7 +227,7 @@ export function LibraryView() {
           ? <button type="button" className="icon-button continue-play stop-button" aria-label={t("Stop {name}").replace("{name}", piko.name)} onClick={() => void actions.stopRunningGame(piko)}><X size={15} /></button>
           : <button type="button" className="icon-button continue-play" aria-label={t("Play {name}").replace("{name}", piko.name)} onClick={() => { lib.selectPiko(piko); void actions.launchGame(piko); }}><MochiIcon name="play" fallback={Play} size={15} fill="currentColor" /></button>}
       </article>)}</div>
-      {actions.launchError && <p className="metadata-note">{actions.launchError}</p>}
+      {actions.launchError && <p className="metadata-note">{t(actions.launchError)}</p>}
     </section>}
     <DuplicatesNotice count={duplicates.groups.length} onReview={() => setShowDuplicates(true)} />
     <LibraryFilterBar lib={lib} collections={collections.collections} tags={allTags} onManageCollections={() => setShowCollections(true)}
@@ -257,16 +257,16 @@ export function LibraryView() {
       onRemove={() => setRemoval(checkedGames)}
       onSelectAll={() => setChecked(new Set(lib.visiblePikos.map((piko) => piko.id)))}
       onDone={endSelecting} />}
-    {!lib.visiblePikos.length && <div className="empty-state library-no-match"><h2>{t("No games match.")}</h2><p>Try another filter or clear the search.</p><button type="button" className="secondary-button" onClick={() => { lib.setFilter({ kind: "smart", id: "all" }); lib.setTagFilters([]); lib.setSearch(""); }}>{t("Show everything")}</button></div>}
+    {!lib.visiblePikos.length && <div className="empty-state library-no-match"><h2>{t("No games match.")}</h2><p>{t("Try another filter or clear the search.")}</p><button type="button" className="secondary-button" onClick={() => { lib.setFilter({ kind: "smart", id: "all" }); lib.setTagFilters([]); lib.setSearch(""); }}>{t("Show everything")}</button></div>}
     <section className="library-grid-view" data-view={view} data-groups={lib.groupedPikos.length} key={view} {...grid.gridProps}>
       {lib.groupedPikos.map(([category, games]) => <div className="library-category" key={category}>
-        <div className="section-heading"><div><p className="eyebrow">{t("Category")}</p><h3>{category}</h3></div><span className="category-count">{t(games.length === 1 ? "{count} game" : "{count} games").replace("{count}", String(games.length))}</span></div>
+        <div className="section-heading"><div><p className="eyebrow">{t("Category")}</p><h3>{t(category)}</h3></div><span className="category-count">{t(games.length === 1 ? "{count} game" : "{count} games").replace("{count}", String(games.length))}</span></div>
         <div className="game-card-grid">{games.map(cardWithInstances)}</div>
       </div>)}
     </section>
-    {lib.extraPikos.length > 0 && <section className="library-extras" aria-label="Soundtracks and extras">
+    {lib.extraPikos.length > 0 && <section className="library-extras" aria-label={t("Soundtracks and extras")}>
       <button type="button" className="text-button library-extras-toggle" aria-expanded={showExtras} aria-controls="library-extras-grid" onClick={() => setShowExtras(!showExtras)}>
-        {showExtras ? <ChevronDown size={14} /> : <ChevronRight size={14} />} Soundtracks &amp; extras ({lib.extraPikos.length})
+        {showExtras ? <ChevronDown size={14} /> : <ChevronRight size={14} />} {t("Soundtracks & extras ({count})").replace("{count}", String(lib.extraPikos.length))}
       </button>
       {showExtras && <div className="game-card-grid" id="library-extras-grid">{lib.extraPikos.map((piko) => <GameCard key={piko.id} piko={piko}
         selected={selectedPiko.id === piko.id} running={sessions.isRunning(piko.id)} cloudStatus={cloudStatusFor(piko, cloudCtx)}
