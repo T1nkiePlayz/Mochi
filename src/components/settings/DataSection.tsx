@@ -62,6 +62,7 @@ export function DataSection() {
     finally { setBusy(null); }
   };
   return <SettingsGroup title="Data & privacy" subtitle="Local-first storage" id="settings-data">
+    <div className="setting-row"><span><strong>Refresh all metadata</strong><small>Refresh every available provider for games in your library. Manually locked fields and artwork you chose yourself are preserved.</small></span><button type="button" className="secondary-button" disabled={metadata.refreshBusy || lib.library.length === 0} onClick={() => void metadata.refreshAll(lib.library)}>{metadata.refreshingAll ? "Refreshing all…" : "Refresh all metadata"}</button></div>
     <div className="data-source-list" role="list" aria-label="Metadata sources">
       {dataSources.map((source) => {
         const provider = source.id === "igdb" || source.id === "steamgriddb" || source.id === "steam" ? source.id : null;
