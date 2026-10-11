@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { AlertTriangle, CheckCircle2, ExternalLink, HelpCircle, X } from "lucide-react";
 import { openExternalUrl } from "../../lib/platform";
 import { type DependencyEntry } from "../../lib/mods/dependencies";
@@ -20,13 +21,14 @@ function Row({ entry, checked, onChange }: { entry: DependencyEntry; checked: bo
     {entry.status === "install"
       ? <Checkbox checked={checked} onChange={onChange} label={entry.name} description={description} />
       : <div className="dep-row-text"><strong>{entry.name}</strong><small>{description}</small></div>}
-    <span className={`compat-badge dep-badge dep-${entry.status}`}><Icon size={12} aria-hidden="true" />{statusText[entry.status]}</span>
-    {(entry.status === "unavailable" || entry.status === "external") && entry.pageUrl && <PageLink url={entry.pageUrl} label="Open page" />}
+    <span className={`compat-badge dep-badge dep-${entry.status}`}><Icon size={12} aria-hidden="true" />{t(statusText[entry.status])}</span>
+    {(entry.status === "unavailable" || entry.status === "external") && entry.pageUrl && <PageLink url={entry.pageUrl} label={t("Open page")} />}
   </li>;
 }
 
 /** "This mod needs these": the mod, its required dependencies with checkboxes, anything to do by hand, and conflict warnings. */
 export function DependencySheet({ prompt }: { prompt: DependencyPrompt }) {
+  const t = useTranslation();
   const { item, plan, answer } = prompt;
   const installable = useMemo(() => plan.entries.filter((entry) => entry.status === "install"), [plan]);
   const [skipped, setSkipped] = useState<ReadonlySet<string>>(new Set());
@@ -36,12 +38,12 @@ export function DependencySheet({ prompt }: { prompt: DependencyPrompt }) {
   const done = plan.entries.filter((entry) => entry.status === "already-installed");
   const total = chosen.length + 1;
   return <ModalShell label={`Dependencies of ${item.name}`} className="tofu-picker-window dependency-sheet" onClose={() => answer(null)}>
-    <div className="modal-header"><div><p className="eyebrow">Install {item.name}</p><h2>Dependencies</h2></div><button type="button" className="icon-button" aria-label="Cancel" onClick={() => answer(null)}><X size={17} /></button></div>
+    <div className="modal-header"><div><p className="eyebrow">Install {item.name}</p><h2>Dependencies</h2></div><button type="button" className="icon-button" aria-label={t("Cancel")} onClick={() => answer(null)}><X size={17} /></button></div>
     <div className="dep-body">
     <p className="modal-description">{item.name} needs {plan.entries.length === 1 ? "another mod" : `${plan.entries.length || "no other"} mods`} to work. Checked ones are downloaded first, with the same checks as any download.</p>
     {plan.warnings.map((warning) => <p key={`${warning.declaredBy}>${warning.name}`} className="metadata-note dep-warning" role="alert"><AlertTriangle size={13} aria-hidden="true" /> {warning.declaredBy} is marked incompatible with {warning.installedTitle}, which is installed. <button type="button" className="secondary-button dep-link" onClick={() => open(warning.pageUrl)}>View</button></p>)}
-    <ul className="dep-list" aria-label="Mod and dependencies">
-      <li className="dep-row"><Checkbox checked disabled onChange={() => undefined} label={item.name} description="The mod you chose" /><span className="compat-badge dep-badge dep-install"><CheckCircle2 size={12} aria-hidden="true" />Will install</span></li>
+    <ul className="dep-list" aria-label={t("Mod and dependencies")}>
+      <li className="dep-row"><Checkbox checked disabled onChange={() => undefined} label={item.name} description={t("The mod you chose")} /><span className="compat-badge dep-badge dep-install"><CheckCircle2 size={12} aria-hidden="true" />Will install</span></li>
       {installable.map((entry) => <Row key={entry.key} entry={entry} checked={!skipped.has(entry.key)} onChange={(on) => toggle(entry.key, on)} />)}
       {done.map((entry) => <Row key={entry.key} entry={entry} checked={false} onChange={() => undefined} />)}
     </ul>

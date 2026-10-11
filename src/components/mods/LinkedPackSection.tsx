@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { openExternalUrl } from "../../lib/platform";
 import type { Tofu } from "../../models";
 import { rematchPack, unlinkPack } from "../../lib/mods/packLink";
@@ -8,6 +9,7 @@ const HOW = { managed: "recorded by your launcher", index: "from the pack's mani
 
 /** "Linked modpack: <name> · Unlink" for a Minecraft instance. Names, icons and descriptions are fetched live (CurseForge ones are never saved). */
 export function LinkedPackSection({ tofu, onPatch }: { tofu: Tofu; onPatch: (change: (tofu: Tofu) => Tofu) => void }) {
+  const t = useTranslation();
   const pack = tofu.pack;
   const [info, setInfo] = useState<LinkedPackInfo | null>(null);
   const [error, setError] = useState("");
@@ -29,7 +31,7 @@ export function LinkedPackSection({ tofu, onPatch }: { tofu: Tofu; onPatch: (cha
     <div className="tofu-settings-inline">
       {info?.iconUrl && <img src={info.iconUrl} alt="" width={40} height={40} loading="lazy" decoding="async" style={{ borderRadius: 8 }} />}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <strong>Linked modpack: {info?.name ?? (error ? `${site} pack ${pack.projectId}` : "Loading…")}</strong>
+        <strong>Linked modpack: {info?.name ?? (error ? `${site} pack ${pack.projectId}` : t("Loading…"))}</strong>
         <small className="muted" style={{ display: "block" }}>{site} · {HOW[pack.matchedBy]}</small>
       </div>
       <button type="button" className="secondary-button" onClick={() => onPatch(unlinkPack(Date.now()))}>Unlink</button>

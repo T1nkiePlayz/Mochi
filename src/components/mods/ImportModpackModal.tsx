@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { ExternalLink, FileUp, X } from "lucide-react";
 import { MochipackError, parseMochipackInput, type MochiPack } from "../../lib/mods/mochipack";
 import { compatibilityNotes, downloadable, gameMismatch, summarizePlan, type ImportReport, type PlanItem } from "../../lib/mods/mochipackPlan";
@@ -13,13 +14,14 @@ import { Checkbox } from "../ui/Checkbox";
 import { ModalShell } from "./ModalShell";
 
 type Props = { piko: Piko; tofu: Tofu; onCreateTofu: (name: string, version?: string, loader?: Tofu["loader"]) => Tofu | null; onClose: () => void };
-const errorText = (error: unknown) => (error instanceof Error ? error.message : typeof error === "string" ? error : "Something went wrong.");
+const errorText = (error: unknown, t: (message: string) => string) => (error instanceof Error ? error.message : typeof error === "string" ? error : t("Something went wrong."))
 const SHOWN = 150;
 const LABEL: Record<PlanItem["availability"]["status"], string> = { ready: "Ready", manual: "Manual download", unavailable: "Unavailable", changed: "Changed" };
 const PROVIDER: Record<string, string> = { modrinth: "Modrinth", curseforge: "CurseForge", nexus: "Nexus Mods" };
 
 /** Preview and install a `.mochipack` (file or pasted code) into a new or the current Tofu. */
 export function ImportModpackModal({ piko, tofu, onCreateTofu, onClose }: Props) {
+  const t = useTranslation();
   const { notifications: { notify }, behavior, credentials } = useApp();
   const [text, setText] = useState("");
   const [pack, setPack] = useState<MochiPack | null>(null);
@@ -76,14 +78,14 @@ export function ImportModpackModal({ piko, tofu, onCreateTofu, onClose }: Props)
   const toInstall = plan ? downloadable(plan.items, includeDisabled).length : 0;
   const link = (item: PlanItem) => item.availability.status === "manual" && item.availability.pageUrl ? <button type="button" className="secondary-button" onClick={() => void openExternalUrl(item.availability.status === "manual" ? item.availability.pageUrl ?? "" : "").catch(() => undefined)}><ExternalLink size={11}/> Open page</button> : null;
 
-  return <ModalShell label="Import modpack" className="modal import-pack-modal" onClose={onClose}>
-    <div className="modal-header"><div><p className="eyebrow">{piko.name}</p><h2>Import modpack</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17}/></button></div>
+  return <ModalShell label={t("Import modpack")} className="modal import-pack-modal" onClose={onClose}>
+    <div className="modal-header"><div><p className="eyebrow">{piko.name}</p><h2>{t("Import modpack")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17}/></button></div>
     <div className="import-pack-body">
       {report ? <div className="import-pack-report" role="status">
         <p><strong>{report.queued}</strong> download{report.queued === 1 ? "" : "s"} queued. Each file is checked against its checksum; failures show in Downloads.</p>
-        {report.failed.length > 0 && <ReportList title="Could not start" rows={report.failed.map((entry) => `${titleFromFile(entry.item.mod.fileName)}: ${entry.error}`)} />}
-        {report.changed.length > 0 && <ReportList title="Changed since the pack was made (skipped)" rows={report.changed.map((item) => item.mod.fileName)} />}
-        {report.manual.length > 0 && <ReportList title="Download these by hand" rows={report.manual.map((item) => item.mod.fileName)} />}
+        {report.failed.length > 0 && <ReportList title={t("Could not start")} rows={report.failed.map((entry) => `${titleFromFile(entry.item.mod.fileName)}: ${entry.error}`)} />}
+        {report.changed.length > 0 && <ReportList title={t("Changed since the pack was made (skipped)")} rows={report.changed.map((item) => item.mod.fileName)} />}
+        {report.manual.length > 0 && <ReportList title={t("Download these by hand")} rows={report.manual.map((item) => item.mod.fileName)} />}
         {report.unavailable.length > 0 && <ReportList title="Not available" rows={report.unavailable.map((item) => `${item.mod.fileName}: ${item.availability.status === "unavailable" ? item.availability.reason : ""}`)} />}
         {report.unknownFiles > 0 && <p className="muted">{report.unknownFiles} file{report.unknownFiles === 1 ? " was" : "s were"} not matched to any site when the pack was made. They are not installed.</p>}
       </div> : <>
@@ -103,11 +105,11 @@ export function ImportModpackModal({ piko, tofu, onCreateTofu, onClose }: Props)
           {progress && <p className="muted" role="status">Checking availability… {progress[0]} / {progress[1]}</p>}
           {plan && summary && <>
             <p className="import-pack-summary" role="status">{summary.ready} ready · {summary.manual} manual · {summary.unavailable} unavailable{summary.changed ? ` · ${summary.changed} changed` : ""}{plan.alreadyInstalled.length ? ` · ${plan.alreadyInstalled.length} already installed` : ""}{pack.unknown.length ? ` · ${pack.unknown.length} unidentified in pack` : ""}</p>
-            {pack.mods.some((mod) => !mod.enabled) && <Checkbox checked={includeDisabled} onChange={setIncludeDisabled} label="Also install mods that were switched off in the pack" description="They are installed switched on." />}
+            {pack.mods.some((mod) => !mod.enabled) && <Checkbox checked={includeDisabled} onChange={setIncludeDisabled} label={t("Also install mods that were switched off in the pack")} description="They are installed switched on." />}
             <ul className="import-pack-list" aria-label="Mods in the pack">{rows.map((item) => <li key={`${item.mod.provider}:${item.mod.projectId}:${item.mod.fileId}`} className={`import-pack-row is-${item.availability.status}`}>
               <div className="import-pack-row-text"><strong>{titleFromFile(item.mod.fileName)}</strong><small>{item.mod.fileName} · {PROVIDER[item.mod.provider]}{item.mod.folder !== "mods" ? ` · ${item.mod.folder}` : ""}{!item.mod.enabled ? " · off in pack" : ""}</small>
                 {item.availability.status !== "ready" && <small className="import-pack-reason">{item.availability.reason}</small>}</div>
-              <span className={`chip import-pack-status is-${item.availability.status}`}>{LABEL[item.availability.status]}</span>{link(item)}
+              <span className={`chip import-pack-status is-${item.availability.status}`}>{t(LABEL[item.availability.status])}</span>{link(item)}
             </li>)}</ul>
             {plan.items.length > SHOWN && !showAll && <button type="button" className="secondary-button" onClick={() => setShowAll(true)}>Show all {plan.items.length}</button>}
           </>}

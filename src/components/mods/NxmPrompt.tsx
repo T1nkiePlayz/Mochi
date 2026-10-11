@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { Download, X } from "lucide-react";
 import { startModDownload } from "../../lib/downloads";
 import { getNexusDownload, getNexusFiles, getNexusModDetail } from "../../lib/nexus";
@@ -18,6 +19,7 @@ const errorText = (error: unknown) => (error instanceof Error ? error.message : 
 
 /** Shows the oldest waiting nxm:// link (one at a time). */
 export function NxmPrompt() {
+  const t = useTranslation();
   const queue = useNxmQueue();
   const url = queue[0];
   if (!url) return null;
@@ -83,12 +85,12 @@ function NxmDialog({ url, onClose }: { url: string; onClose: () => void }) {
     } catch (error) { setState("error"); setMessage(errorText(error)); }
   };
 
-  const options = choices.map(({ piko, tofu, linked }) => ({ value: `${piko.id}\n${tofu.id}`, label: `${piko.name}: ${tofu.name}`, group: linked ? "Linked to this game on Nexus Mods" : "Other games" }));
-  return <ModalShell label="Nexus Mods download" className="modal nxm-modal" onClose={onClose}>
-    <div className="modal-header"><div><p className="eyebrow">Nexus Mods · Mod Manager Download</p><h2>{title || (link ? `Mod ${link.modId}` : "Download link")}</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button></div>
+  const options = choices.map(({ piko, tofu, linked }) => ({ value: `${piko.id}\n${tofu.id}`, label: `${piko.name}: ${tofu.name}`, group: linked ? "Linked to this game on Nexus Mods" : t("Other games") }));
+  return <ModalShell label={t("Nexus Mods download")} className="modal nxm-modal" onClose={onClose}>
+    <div className="modal-header"><div><p className="eyebrow">Nexus Mods · Mod Manager Download</p><h2>{title || (link ? `Mod ${link.modId}` : "Download link")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
     {!link ? <p className="metadata-note" role="alert">{parsed.ok ? "" : parsed.reason}</p>
       : !ready ? <div className="nxm-body"><p className="metadata-note" role="status">{!client ? "Mochi cloud features are not available in this build, so Nexus Mods downloads cannot start." : !account.user ? "Sign in to Mochi and save your Nexus Mods API key to download from this link." : "Save your Nexus Mods API key in Settings to download from this link."}</p>
-        {client && <button type="button" className="secondary-button" onClick={() => { setActiveNav("Settings"); onClose(); }}>Open Settings</button>}</div>
+        {client && <button type="button" className="secondary-button" onClick={() => { setActiveNav("Settings"); onClose(); }}>{t("Settings")}</button>}</div>
       : <div className="nxm-body">
         <p className="muted">File {link.fileId} of mod {link.modId} for <strong>{link.gameDomain}</strong>. Pick the Tofu it goes into.</p>
         {options.length ? <label className="mochi-field"><span className="mochi-field-label">Tofu</span><Select value={choice} onChange={setChoice} options={options} label="Tofu" searchable={options.length > 8} /></label>
@@ -96,7 +98,7 @@ function NxmDialog({ url, onClose }: { url: string; onClose: () => void }) {
         {message && <p className={`metadata-note ${state === "error" ? "is-error" : ""}`} role={state === "error" ? "alert" : "status"}>{message}</p>}
         <div className="nxm-actions">
           <button type="button" className="secondary-button" onClick={onClose}>{state === "done" ? "Close" : "Cancel"}</button>
-          {state !== "done" && <button type="button" className="play-button" disabled={!options.length || state === "working"} onClick={() => void download()}><Download size={14} /> {state === "working" ? "Starting…" : "Download"}</button>}
+          {state !== "done" && <button type="button" className="play-button" disabled={!options.length || state === "working"} onClick={() => void download()}><Download size={14} /> {state === "working" ? "Starting…"  : t("Download")}</button>}
         </div>
       </div>}
   </ModalShell>;
