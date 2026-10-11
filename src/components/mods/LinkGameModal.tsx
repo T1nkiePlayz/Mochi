@@ -32,7 +32,7 @@ export function LinkGameModal({ piko, curseforgeEnabled, nexusEnabled, onSave, o
     if (site !== "curseforge" || cfGames) return;
     setLoading(true); setError("");
     void cfAllGames().then(setCfGames).catch((reason) => { const detail = reason instanceof Error ? reason.message : ""; const translated = detail ? t(detail) : ""; setError(translated && translated !== detail ? translated : detail ? `${t("Unable to load CurseForge games.")} ${detail}` : t("Unable to load CurseForge games.")); }).finally(() => setLoading(false));
-  }, [site, cfGames]);
+  }, [site, cfGames, t]);
 
   useEffect(() => {
     if (site !== "nexus" || !supabase) return;
@@ -44,7 +44,7 @@ export function LinkGameModal({ piko, curseforgeEnabled, nexusEnabled, onSave, o
         .finally(() => { if (!cancelled) setLoading(false); });
     }, 250);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [site, search]);
+  }, [site, search, t]);
 
   const cfVisible = useMemo(() => {
     const wanted = normalizeGameName(search);
