@@ -12,14 +12,14 @@ import { projectTypeLabel } from "./utils";
 import { useTranslation } from "../../lib/useTranslation";
 
 export const minecraftTabs: Array<{ id: ModrinthProjectType; label: string; title: string; description: string }> = [
-  { id: "mod", label: "Mods", title: t("Mods"), description: t("Browse Minecraft mods from Modrinth.") },
-  { id: "modpack", label: "Modpacks", title: t("Modpacks"), description: t("Curated packs ready to add to a Tofu.") },
-  { id: "resourcepack", label: "Resource Packs", title: t("Resource Packs"), description: t("Texture and sound packs for Minecraft.") },
-  { id: "shader", label: "Shaders", title: t("Shaders"), description: t("Shader packs for lighting and atmosphere.") },
+  { id: "mod", label: "Mods", title: "Mods", description: "Browse Minecraft mods from Modrinth." },
+  { id: "modpack", label: "Modpacks", title: "Modpacks", description: "Curated packs ready to add to a Tofu." },
+  { id: "resourcepack", label: "Resource Packs", title: "Resource Packs", description: "Texture and sound packs for Minecraft." },
+  { id: "shader", label: "Shaders", title: "Shaders", description: "Shader packs for lighting and atmosphere." },
 ];
 
 const loaderOptions: SelectOption[] = [
-  { value: "", label: t("Any loader"), icon: <Layers size={14} /> },
+  { value: "", label: "Any loader", icon: <Layers size={14} /> },
   { value: "fabric", label: "Fabric", icon: <Shirt size={14} /> },
   { value: "forge", label: "Forge", icon: <Hammer size={14} /> },
   { value: "neoforge", label: "NeoForge", icon: <Flame size={14} /> },
@@ -77,27 +77,27 @@ export function MinecraftBrowser({ category, onCategory, tofuVersion, busy, onVi
 
   return <>
     <div className="discover-tabs" role="tablist" aria-label={t("Minecraft content categories")}>
-      {minecraftTabs.map((item) => <button key={item.id} className={category === item.id ? "active" : ""} type="button" role="tab" aria-selected={category === item.id} onClick={() => onCategory(item.id)}>{item.label}</button>)}
+      {minecraftTabs.map((item) => <button key={item.id} className={category === item.id ? "active" : ""} type="button" role="tab" aria-selected={category === item.id} onClick={() => onCategory(item.id)}>{t(item.label)}</button>)}
     </div>
     <div className={`discover-controls minecraft-controls${category === "mod" ? "" : " no-loader"}`}>
-      <label className="search-box"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${tab.label.toLowerCase()}...`} aria-label={`Search ${tab.label}`} /></label>
+      <label className="search-box"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("Search {category}...").replace("{category}", t(tab.label).toLowerCase())} aria-label={t("Search {category}").replace("{category}", t(tab.label))} /></label>
       <div className="discover-select-wrap"><span>{t("Minecraft")}</span><VersionPicker value={gameVersion} onChange={pickVersion} versions={versions} loading={versionsLoading} /></div>
-      {category === "mod" && <div className="discover-select-wrap"><span>Loader</span><Select value={loader} onChange={setLoader} options={loaderOptions} label="Loader" searchable={false} /></div>}
+      {category === "mod" && <div className="discover-select-wrap"><span>{t("Loader")}</span><Select value={loader} onChange={setLoader} options={loaderOptions} label={t("Loader")} searchable={false} /></div>}
       <div className="discover-select-wrap"><span>{t("Sort")}</span><Select value={effectiveSort} onChange={setSort} options={sortOptions} label={t("Sort")} searchable={false} align="end" /></div>
     </div>
     {feed.offline && <p className="metadata-note discover-offline" role="status"><WifiOff size={13} /> Showing cached results (offline). They will refresh when Modrinth is reachable.</p>}
     <div className="discover-sections"><section className="discover-section">
-      <div className="discover-section-heading"><div><h3>{tab.title}</h3><p>{tab.description}</p></div><span aria-live="polite">{feed.loading ? "Loading..." : `${feed.items.length.toLocaleString()} of ${feed.total.toLocaleString()} projects`}</span></div>
+      <div className="discover-section-heading"><div><h3>{tab.title}</h3><p>{tab.description}</p></div><span aria-live="polite">{feed.loading ? t("Loading...") : t("{shown} of {total} projects").replace("{shown}", feed.items.length.toLocaleString()).replace("{total}", feed.total.toLocaleString())}</span></div>
       {feed.loading && <div className="discover-grid" aria-busy="true"><ProjectSkeletons count={9} /></div>}
-      {!feed.loading && feed.items.length > 0 && <div className="discover-grid">{feed.items.map((project) => <ProjectCard key={project.project_id} project={project} badge={projectTypeLabel(project.project_type)} chooseLabel="Choose Tofu instance" busy={busy} onView={view} onChoose={choose} />)}</div>}
+      {!feed.loading && feed.items.length > 0 && <div className="discover-grid">{feed.items.map((project) => <ProjectCard key={project.project_id} project={project} badge={projectTypeLabel(project.project_type)} chooseLabel={t("Choose Tofu instance")} busy={busy} onView={view} onChoose={choose} />)}</div>}
       {feed.error && <div className="discover-error" role="alert"><p>{feed.items.length ? t("Could not load more projects.") : t("Could not load projects from Modrinth.")}</p><small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> Retry</button></div>}
       {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty">
-        <p>No {projectTypeLabel(category).toLowerCase()} projects match{filtered ? " these filters" : ""}.</p>
+        <p>{t("No {type} projects match{filters}.").replace("{type}", t(projectTypeLabel(category)).toLowerCase()).replace("{filters}", filtered ? t(" these filters") : "")}</p>
         {filtered && <button type="button" className="secondary-button" onClick={() => { setSearch(""); setDebounced(""); setGameVersion(""); setLoader(""); }}>{t("Clear filters")}</button>}
       </div>}
       {feed.loadingMore && !feed.loading && <div className="discover-grid" aria-busy="true"><ProjectSkeletons count={3} /></div>}
       <div ref={sentinel} className="discover-sentinel" aria-hidden="true" />
-      {!feed.hasMore && !feed.loading && feed.items.length > 0 && <p className="discover-end">You have reached the end. {feed.items.length.toLocaleString()} projects.</p>}
+      {!feed.hasMore && !feed.loading && feed.items.length > 0 && <p className="discover-end">{t("You have reached the end.")} {feed.items.length.toLocaleString()} {t("projects")}</p>}
     </section></div>
   </>;
 }

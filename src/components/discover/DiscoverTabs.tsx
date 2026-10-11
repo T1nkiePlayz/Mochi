@@ -13,7 +13,6 @@ type Props = { tabs: DiscoverTabItem[]; active: string; onSelect: (id: string) =
  */
 export function DiscoverTabs({ tabs, active, onSelect, onAdd, onRemove, label = "Game discovery" }: Props) {
   const t = useTranslation();
-  const t = useTranslation();
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => { root.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" }); }, [active]);
 
@@ -28,13 +27,13 @@ export function DiscoverTabs({ tabs, active, onSelect, onAdd, onRemove, label = 
   };
 
   return <div className="discover-game-strip">
-    <div ref={root} className="discover-game-tabs" role="tablist" aria-label={label} onKeyDown={onKeyDown}>
+    <div ref={root} className="discover-game-tabs" role="tablist" aria-label={t(label)} onKeyDown={onKeyDown}>
       {tabs.map((tab) => {
         const selected = tab.id === active;
         return <div key={tab.id} className="discover-game-tab-wrap">
-          <button type="button" role="tab" id={`discover-tab-${tab.id}`} aria-selected={selected} tabIndex={selected ? 0 : -1} title={tab.hint ?? tab.label} className={`discover-game-tab${selected ? " active" : ""}${tab.removable ? " has-remove" : ""}`} onClick={() => onSelect(tab.id)}>
-          {tab.icon ? <span className="game-avatar game-avatar-glyph" aria-hidden="true">{tab.icon}</span> : <GameAvatar src={tab.iconUrl} fallbackSrcs={tab.iconFallbackUrls} name={tab.label} />}
-          <span className="discover-game-name">{tab.label}</span>
+          <button type="button" role="tab" id={`discover-tab-${tab.id}`} aria-selected={selected} tabIndex={selected ? 0 : -1} title={t(tab.hint ?? tab.label)} className={`discover-game-tab${selected ? " active" : ""}${tab.removable ? " has-remove" : ""}`} onClick={() => onSelect(tab.id)}>
+          {tab.icon ? <span className="game-avatar game-avatar-glyph" aria-hidden="true">{tab.icon}</span> : <GameAvatar src={tab.iconUrl} fallbackSrcs={tab.iconFallbackUrls} name={t(tab.label)} />}
+          <span className="discover-game-name">{t(tab.label)}</span>
           </button>
           {tab.removable && onRemove && <button type="button" className="discover-game-remove" aria-label={t("Remove {name} from Discover").replace("{name}", tab.label)} title={t("Remove {name}").replace("{name}", tab.label)} onClick={(event) => { event.stopPropagation(); onRemove(tab.id); }}><X size={13} aria-hidden="true" /></button>}
         </div>;
