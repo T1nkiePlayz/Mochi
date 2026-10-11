@@ -81,7 +81,7 @@ function ImportSheet({ file, onClose, onDone }: { file: SettingsFile; onClose: (
         setLibrarySort: app.lib.setLibrarySort, selectTheme: app.themeEngine.setTheme, currentTheme: app.themeEngine.theme, knownThemeIds: available,
       });
       onDone(t("{themes}Imported {count} settings sections. Everything is applied now.").replace("{themes}", themeNote).replace("{count}", String(plan.changed.length)));
-    } catch (failure) { setError(message(failure, t); setBusy(false); }
+    } catch (failure) { setError(message(failure, t)); setBusy(false); }
   };
 
   const created = file.manifest.createdAt ? new Date(file.manifest.createdAt).toLocaleString(getTranslationLocale()) : t("unknown date");
