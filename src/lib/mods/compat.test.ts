@@ -69,3 +69,13 @@ describe("helpers", () => {
     expect(groups[1].tofus.map((item) => item.id)).toEqual(["c", "b"]);
   });
 });
+
+
+describe("translateCompatibilityReason", () => {
+  const t = (message: string) => `[${message}]`;
+  it("translates reason templates while preserving version and loader details", () => {
+    expect(translateCompatibilityReason("Built for 1.20.1, not 1.21.0.", t)).toBe("[Built for {versions}, not {gameVersion}.]".replace("{versions}", "1.20.1").replace("{gameVersion}", "1.21.0"));
+    expect(translateCompatibilityReason("Needs Fabric; this Tofu has no loader set.", t)).toBe("[Needs {loaders}; this Tofu has no loader set.]".replace("{loaders}", "Fabric"));
+    expect(translateCompatibilityReason("This Tofu has no game version set.", t)).toBe("[This Tofu has no game version set.]");
+  });
+});

@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight, Download, ExternalLink, PackageOpen, Refresh
 import { getModrinthVersions, type ModrinthProjectDetails, type ModrinthVersion } from "../../lib/modrinth";
 import { formatBytes } from "../../lib/format";
 import { openExternalUrl } from "../../lib/platform";
-import { loaderLabels, parseLoader, tofuTarget } from "../../lib/mods/compat";
+import { loaderLabels, parseLoader, tofuTarget, translateCompatibilityReason } from "../../lib/mods/compat";
 import { modrinthFile } from "../../lib/mods/modrinthSource";
 import { collapseList, filterVersions, listGameVersions, listLoaders, versionFit } from "../../lib/mods/versionList";
 import type { ModFile } from "../../lib/mods/types";
@@ -47,7 +47,7 @@ function VersionRow({ version, fit, onDownload }: { version: ModrinthVersion; fi
       <span className="version-date">{formatDate(version.date_published) === "Unknown date" ? t("Unknown date") : formatDate(version.date_published)}</span>
       <span className="version-size">{primary ? formatBytes(primary.size) : ""}</span>
       <div className="version-action">
-        {fit && fit.status !== "compatible" && <span className={`compat-badge compat-${fit.status}`} title={fit.reason}>{fit.status === "maybe" ? t("May work") : t("Not for your Tofu")}</span>}
+        {fit && fit.status !== "compatible" && <span className={`compat-badge compat-${fit.status}`} title={fit.reason ? translateCompatibilityReason(fit.reason, t) : undefined}>{fit.status === "maybe" ? t("May work") : t("Not for your Tofu")}</span>}
         {fit?.status === "compatible" && <span className="compat-badge compat-compatible">{t("Fits your Tofu")}</span>}
         <button type="button" className="secondary-button" onClick={onDownload} disabled={!primary} aria-label={`${t("Download")} ${version.name || version.version_number}`}><Download size={13} /> Download</button>
       </div>
