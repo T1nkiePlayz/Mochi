@@ -15,6 +15,7 @@ import { Markdown } from "./Markdown";
 import { formatDate, getPrimaryCreator, projectTypeLabel } from "./utils";
 import { Checkbox } from "../ui/Checkbox";
 import { useTranslation } from "../../lib/useTranslation";
+import { getTranslationLocale } from "../../lib/translationLocale";
 
 type Props = {
   project: ModrinthProjectDetails;
@@ -56,7 +57,7 @@ function VersionRow({ version, fit, onDownload }: { version: ModrinthVersion; fi
       {version.game_versions.length > 3 && <p><strong>{t("Game versions")}</strong> {version.game_versions.join(", ")}</p>}
       {version.changelog ? <div className="version-changelog"><Markdown source={version.changelog} /></div> : <p className="muted">{t("No changelog was provided.")}</p>}
       <div className="project-file-list">{version.files.map((file) => <div key={file.filename}><span>{file.filename}</span><small>{formatBytes(file.size)}{file.primary ? ` · ${t("Primary")}` : ""}</small></div>)}</div>
-      {version.dependencies.length > 0 && <p className="muted">{t(version.dependencies.length === 1 ? "1 dependency listed on Modrinth. Mochi offers to install the required ones before the mod." : "{count} dependencies listed on Modrinth. Mochi offers to install the required ones before the mod.").replace("{count}", String(version.dependencies.length))}</p>}
+      {version.dependencies.length > 0 && <p className="muted">{t(version.dependencies.length === 1 ? "1 dependency listed on Modrinth. Mochi offers to install the required ones before the mod." : "{count} dependencies listed on Modrinth. Mochi offers to install the required ones before the mod.").replace("{count}", version.dependencies.length.toLocaleString(getTranslationLocale()))}</p>}
     </div>}
   </div>;
 }
@@ -90,7 +91,7 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
   const creator = getPrimaryCreator(project);
 
   return <div className="discover-modal-backdrop" onMouseDown={onClose}><div className="project-details-window" role="dialog" aria-modal="true" aria-label={t("{name} details").replace("{name}", project.title)} onMouseDown={(event) => event.stopPropagation()}>
-    <div className="project-details-header"><div>{project.icon_url ? <DiscoveryImage src={project.icon_url} alt="" className="discover-card-icon" label={project.title} /> : <div className="discover-card-icon fallback"><PackageOpen size={26} /></div>}<div><p className="eyebrow">{t(projectTypeLabel(project.project_type))}</p><h2>{project.title}</h2><p>{project.description}</p><small>{t("Created by")} <strong>{creator.name || t("Unknown creator")}</strong> · {t("{count} downloads").replace("{count}", (project.downloads ?? 0).toLocaleString())}</small></div></div><div className="project-details-header-actions"><button type="button" className="secondary-button" onClick={() => { void openExternalUrl(`https://modrinth.com/${encodeURIComponent(project.project_type)}/${encodeURIComponent(project.slug || project.project_id)}`).catch(() => undefined); }}><ExternalLink size={13} /> {t("View on Modrinth")}</button><button type="button" className="icon-button" onClick={onClose} aria-label={t("Close project details")}><X size={17} /></button></div></div>
+    <div className="project-details-header"><div>{project.icon_url ? <DiscoveryImage src={project.icon_url} alt="" className="discover-card-icon" label={project.title} /> : <div className="discover-card-icon fallback"><PackageOpen size={26} /></div>}<div><p className="eyebrow">{t(projectTypeLabel(project.project_type))}</p><h2>{project.title}</h2><p>{project.description}</p><small>{t("Created by")} <strong>{creator.name || t("Unknown creator")}</strong> · {t("{count} downloads").replace("{count}", (project.downloads ?? 0).toLocaleString(getTranslationLocale()))}</small></div></div><div className="project-details-header-actions"><button type="button" className="secondary-button" onClick={() => { void openExternalUrl(`https://modrinth.com/${encodeURIComponent(project.project_type)}/${encodeURIComponent(project.slug || project.project_id)}`).catch(() => undefined); }}><ExternalLink size={13} /> {t("View on Modrinth")}</button><button type="button" className="icon-button" onClick={onClose} aria-label={t("Close project details")}><X size={17} /></button></div></div>
     <div className="project-tabs" role="tablist" aria-label={t("Project sections")}><button type="button" role="tab" aria-selected={tab === "overview"} className={tab === "overview" ? "active" : ""} onClick={() => setTab("overview")}>{t("Overview")}</button><button type="button" role="tab" aria-selected={tab === "versions"} className={tab === "versions" ? "active" : ""} onClick={() => setTab("versions")}>{t("Versions")}{versions ? ` (${versions.length})` : ""}</button></div>
     {tab === "overview" ? <div className="project-overview">
       <section className="project-creator-primary">
@@ -99,7 +100,7 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
       </section>
       <div className="project-info-grid">
         <span><strong>{t("Downloads")}</strong>{(project.downloads ?? 0).toLocaleString()}</span>
-        <span><strong>{t("Followers")}</strong>{(project.followers || 0).toLocaleString()}</span>
+        <span><strong>{t("Followers")}</strong>{(project.followers || 0).toLocaleString(getTranslationLocale())}</span>
         <span><strong>{t("Project type")}</strong>{t(projectTypeLabel(project.project_type))}</span>
         <span><strong>{t("Categories")}</strong>{project.categories?.join(", ") || t("Not provided")}</span>
         <span><strong>{t("License")}</strong>{project.license?.name || t("Not provided")}</span>
@@ -108,7 +109,7 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
       <h3 className="project-overview-heading">{t("Overview")}</h3>
       <Markdown source={project.body || project.description} />
       {project.members?.length ? <section className="project-creators">
-        <div className="project-creators-heading"><div><h3>{t("Creators & contributors")}</h3><p>{t(project.members.length === 1 ? "1 team member credited on Modrinth." : "{count} team members credited on Modrinth.").replace("{count}", String(project.members.length))}</p></div></div>
+        <div className="project-creators-heading"><div><h3>{t("Creators & contributors")}</h3><p>{t(project.members.length === 1 ? "1 team member credited on Modrinth." : "{count} team members credited on Modrinth.").replace("{count}", project.members.length.toLocaleString(getTranslationLocale()))}</p></div></div>
         <div className="project-creator-grid">{project.members.map((member) => <div className="project-creator" key={member.user.id}>
           <Avatar src={member.user.avatar_url} name={member.user.name || member.user.username} />
           <div><strong>{member.user.name || member.user.username}</strong><small>@{member.user.username} · {member.role}</small></div>
@@ -124,7 +125,7 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
       </div>
       {versions === null ? <p className="muted"><RefreshCw size={13} className="spin" /> {t("Loading versions...")}</p> : <>
         {error && <p className="metadata-note" role="alert">{t(error)}</p>}
-        <p className="version-count" aria-live="polite">{t(rows.length === 1 && versions.length === 1 ? "1 of 1 version" : "{shown} of {total} versions").replace("{shown}", String(rows.length)).replace("{total}", String(versions.length))}</p>
+        <p className="version-count" aria-live="polite">{t(rows.length === 1 && versions.length === 1 ? "1 of 1 version" : "{shown} of {total} versions").replace("{shown}", rows.length.toLocaleString(getTranslationLocale())).replace("{total}", versions.length.toLocaleString(getTranslationLocale()))}</p>
         {rows.length ? <div className="version-table" role="list">
           <div className="version-row version-head" aria-hidden="true"><div className="version-row-main"><span /><span>{t("Version")}</span><span>{t("Type")}</span><span>{t("Loaders")}</span><span>{t("Game versions")}</span><span>{t("Published")}</span><span>{t("Size")}</span><span /></div></div>
           {rows.slice(0, shown).map((version) => { const fit = target ? versionFit(version, target, mod) : undefined; return <div role="listitem" key={version.id}>
