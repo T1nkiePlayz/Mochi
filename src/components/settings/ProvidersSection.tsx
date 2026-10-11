@@ -69,13 +69,13 @@ export function ProvidersSection() {
   const { account, credentials: c, behavior, setBehavior } = useApp();
   const online = useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
   const { user } = account;
-  const signIn = <button className="secondary-button" onClick={account.openSignIn}><MochiIcon name="account" fallback={UserRound} size={14} /> Sign in to save</button>;
+  const signIn = <button className="secondary-button" onClick={account.openSignIn}><MochiIcon name="account" fallback={UserRound} size={14} /> {t("Sign in to save")}</button>;
   const state = (saved: boolean) => <span className={saved ? "credential-status saved" : "credential-status"}>{user ? (saved ? "Saved" : "Not saved") : "Sign in required"}</span>;
   const removeButton = (provider: "igdb" | "nexus" | "steamgriddb", saved: boolean) => saved && <button className="secondary-button danger-outline" onClick={() => void c.remove(provider)} disabled={c.busy !== null}>{t("Remove")}</button>;
   return <SettingsGroup title={t("Mod & metadata providers")} subtitle={t("Credentials are encrypted with Supabase Vault")} id="settings-providers">
     <div className="setting-row">
       <span><strong>{t("Metadata source")}</strong><small>{t("Choose where Mochi gets descriptions and artwork. Automatic combines every provider you have set up.")}</small></span>
-      <Select label="Metadata source" value={behavior.metadataProvider} options={sourceOptions} onChange={(metadataProvider) => setBehavior((current) => ({ ...current, metadataProvider }))} />
+      <Select label={t("Metadata source")} value={behavior.metadataProvider} options={sourceOptions.map((option) => ({ ...option, label: t(option.label), description: t(option.description) }))} onChange={(metadataProvider) => setBehavior((current) => ({ ...current, metadataProvider }))} />
     </div>
     <small className="metadata-note settings-note" role="status">
       Ready: {[user && c.status.igdb ? "IGDB" : null, user && c.status.steamgriddb ? "SteamGridDB" : null, "Steam Store (Steam games, no key needed)"].filter(Boolean).join(", ")}.
@@ -86,23 +86,23 @@ export function ProvidersSection() {
       <div className="provider-credential-card">
         <div className="provider-credential-heading"><div><strong>{t("IGDB")}</strong><small>{t("Descriptions, genres, release dates, screenshots and trailers. Needs a free Twitch Client ID and Secret.")}</small></div>{state(c.status.igdb)}</div>
         {user ? <>
-          <div className="provider-fields"><input value={c.igdbClientId} onChange={(event) => c.setIgdbClientId(event.target.value)} placeholder="Twitch Client ID" aria-label={t("Twitch Client ID")} autoComplete="off" /><input type="password" value={c.igdbClientSecret} onChange={(event) => c.setIgdbClientSecret(event.target.value)} placeholder="Twitch Client Secret" aria-label={t("Twitch Client Secret")} autoComplete="off" /></div>
-          <button className="secondary-button" onClick={() => void c.save("igdb")} disabled={c.busy !== null}>{c.busy === "igdb" ? "Saving..." : "Save IGDB securely"}</button>{removeButton("igdb", c.status.igdb)}
+          <div className="provider-fields"><input value={c.igdbClientId} onChange={(event) => c.setIgdbClientId(event.target.value)} placeholder={t("Twitch Client ID")} aria-label={t("Twitch Client ID")} autoComplete="off" /><input type="password" value={c.igdbClientSecret} onChange={(event) => c.setIgdbClientSecret(event.target.value)} placeholder={t("Twitch Client Secret")} aria-label={t("Twitch Client Secret")} autoComplete="off" /></div>
+          <button className="secondary-button" onClick={() => void c.save("igdb")} disabled={c.busy !== null}>{c.busy === "igdb" ? t("Saving...") : t("Save IGDB securely")}</button>{removeButton("igdb", c.status.igdb)}
         </> : signIn}
       </div>
       <div className="provider-credential-card">
-        <div className="provider-credential-heading"><div><strong>SteamGridDB</strong><small>Community cover art, heroes, logos and icons. Needs a free API key from your SteamGridDB preferences page.</small></div>{state(c.status.steamgriddb)}</div>
+        <div className="provider-credential-heading"><div><strong>{t("SteamGridDB")}</strong><small>{t("Community cover art, heroes, logos and icons. Needs a free API key from your SteamGridDB preferences page.")}</small></div>{state(c.status.steamgriddb)}</div>
         {user ? <>
-          <input type="password" value={c.steamGridDbKey} maxLength={256} onChange={(event) => c.setSteamGridDbKey(event.target.value)} placeholder={c.status.steamgriddb ? "Enter a new key to replace the saved key" : "Paste your SteamGridDB API key"} aria-label={t("SteamGridDB API key")} autoComplete="off" spellCheck={false} />
-          <button className="secondary-button" onClick={() => void c.save("steamgriddb")} disabled={c.busy !== null || Boolean(validateSteamGridDbKey(c.steamGridDbKey))}>{c.busy === "steamgriddb" ? "Saving..." : "Save SteamGridDB securely"}</button>{removeButton("steamgriddb", c.status.steamgriddb)}
+          <input type="password" value={c.steamGridDbKey} maxLength={256} onChange={(event) => c.setSteamGridDbKey(event.target.value)} placeholder={c.status.steamgriddb ? t("Enter a new key to replace the saved key") : t("Paste your SteamGridDB API key")} aria-label={t("SteamGridDB API key")} autoComplete="off" spellCheck={false} />
+          <button className="secondary-button" onClick={() => void c.save("steamgriddb")} disabled={c.busy !== null || Boolean(validateSteamGridDbKey(c.steamGridDbKey))}>{c.busy === "steamgriddb" ? t("Saving...") : t("Save SteamGridDB securely")}</button>{removeButton("steamgriddb", c.status.steamgriddb)}
         </> : signIn}
       </div>
       <div className="provider-credential-card">
-        <div className="provider-credential-heading"><div><strong>Nexus Mods</strong><small>Your Nexus API key is stored server-side and is never returned to the launcher.</small></div>{state(c.status.nexus)}</div>
+        <div className="provider-credential-heading"><div><strong>{t("Nexus Mods")}</strong><small>{t("Your Nexus API key is stored server-side and is never returned to the launcher.")}</small></div>{state(c.status.nexus)}</div>
         {user ? <>
-          <input type="password" value={c.nexusApiKey} maxLength={4096} onChange={(event) => c.setNexusApiKey(event.target.value)} placeholder={c.status.nexus ? "Enter a new key to replace the saved key" : "Paste your Nexus Mods Personal API Key"} aria-label={t("Nexus Mods API key")} autoComplete="off" spellCheck={false} />
+          <input type="password" value={c.nexusApiKey} maxLength={4096} onChange={(event) => c.setNexusApiKey(event.target.value)} placeholder={c.status.nexus ? t("Enter a new key to replace the saved key") : t("Paste your Nexus Mods Personal API Key")} aria-label={t("Nexus Mods API key")} autoComplete="off" spellCheck={false} />
           <small className="metadata-note">Use the full Personal API Key (at least 32 characters). Mochi verifies it with Nexus Mods before saving.</small>
-          <button className="secondary-button" onClick={() => void c.save("nexus")} disabled={c.busy !== null || Boolean(validateNexusApiKey(c.nexusApiKey))}>{c.busy === "nexus" ? "Validating..." : "Save Nexus securely"}</button>{removeButton("nexus", c.status.nexus)}
+          <button className="secondary-button" onClick={() => void c.save("nexus")} disabled={c.busy !== null || Boolean(validateNexusApiKey(c.nexusApiKey))}>{c.busy === "nexus" ? t("Validating...") : t("Save Nexus securely")}</button>{removeButton("nexus", c.status.nexus)}
         </> : signIn}
         {user && c.status.nexus && <NexusMembership />}
       </div>
