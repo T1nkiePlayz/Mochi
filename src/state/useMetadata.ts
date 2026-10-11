@@ -45,7 +45,7 @@ export async function cacheArtwork(piko: Piko): Promise<void> {
   await cacheArtworkUrl(piko.artworkUrl, piko.artworkCacheKey);
 }
 
-type Options = { force?: boolean; /** Also ask the keyless Steam Store for Steam games, even when the "Metadata source" setting excludes it. */ includeSteam?: boolean; /** Ask only this provider (per-provider refresh); default is the "Metadata source" setting. */ only?: ProviderId };
+type Options = { force?: boolean; allProviders?: boolean; /** Also ask the keyless Steam Store for Steam games, even when the "Metadata source" setting excludes it. */ includeSteam?: boolean; /** Ask only this provider (per-provider refresh); default is the "Metadata source" setting. */ only?: ProviderId };
 type Outcome = { piko: Piko; changed: boolean };
 
 /**
@@ -153,11 +153,11 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
       if (options.only && options.only !== special.provider) return { text: [], art: [] };
       return planProviders(special.provider, ready, null);
     }
-    const plan = planProviders(options.only ?? provider, ready, steamAppIdOf(game));
+    const plan = planProviders(options.allProviders ? "auto" : options.only ?? provider, ready, steamAppIdOf(game));
     return options.includeSteam ? withSteam(plan, steamAppIdOf(game)) : plan;
   };
   const specialLauncher = (piko: Piko) => piko.kind === "launcher" && Boolean(piko.launcherId && GAME_LAUNCHER_METADATA[piko.launcherId as keyof typeof GAME_LAUNCHER_METADATA]);
-  const anyProvider = (game: Piko, only?: ProviderId, includeSteam?: boolean) => { const plan = planFor(game, { only, includeSteam }); return plan.text.length + plan.art.length > 0; };
+  const anyProvider = (game: Piko, only?: ProviderId, includeSteam?: boolean, allProviders = false) => { const plan = planFor(game, { only, includeSteam, allProviders }); return plan.text.length + plan.art.length > 0; };
 
   const commit = (updated: Map<string, Piko>) =>
     setLibrary((current) => current.map((piko) => updated.get(piko.id) ? mergeInto(piko, updated.get(piko.id)!) : piko));
@@ -180,20 +180,20 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
   };
 
   /** Clears the lookup caches and re-fetches every game from the requested scope. */
-  const refreshScope = async (library: Piko[], only?: ProviderId) => {
+  const refreshScope = async (library: Piko[], only?: ProviderId, allProviders = false) => {
     if (busyRef.current) return;
     busyRef.current = true;
     setRefreshBusy(true);
     setRefreshingProvider(only ?? null);
     setRefreshingAll(!only);
-    const label = only ? providers[only].label : "metadata";
+    const label = only ? providers[only].label : allProviders ? "all providers" : "metadata";
     try {
       clearProviderCaches(user?.id, only);
       if (!only || only === "igdb") removeKey(igdbCacheKey(user?.id));
       // Launchers (Steam, Lutris...) are shortcuts, not games: looking them up would overwrite their name and art.
-      const candidates = library.filter((piko) => (piko.kind !== "launcher" || specialLauncher(piko)) && anyProvider(piko, only));
+      const candidates = library.filter((piko) => (piko.kind !== "launcher" || specialLauncher(piko)) && anyProvider(piko, only, allProviders, allProviders));
       notify(`${only ? label : "Metadata"} refresh started`, `Refreshing ${label === "metadata" ? "metadata" : `${label} data`} for ${candidates.length} library games.`);
-      await enrich(candidates, { force: true, only });
+      await enrich(candidates, { force: true, only, allProviders, includeSteam: allProviders });
       if ((!only || only === "igdb") && ready.igdb) await refreshLauncherLogos(library);
       notify(`${only ? label : "Metadata"} refresh finished`, `Updated ${label === "metadata" ? "metadata" : `${label} data`} for ${candidates.length} library games.`);
     } catch (error) {
@@ -204,7 +204,7 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
   /** Refresh just this provider. Keeping the source required prevents a provider row from falling back to Auto/all. */
   const refreshProvider = (library: Piko[], source: ProviderId) => refreshScope(library, source);
   /** Refresh using the user's configured metadata source. */
-  const refreshAll = (library: Piko[]) => refreshScope(library);
+  const refreshAll = (library: Piko[]) => refreshScope(library, undefined, true);
 
   /** How many library games each provider could refresh right now (0 means its button stays disabled). */
   const refreshableCount = (library: Piko[], only: ProviderId) => library.filter((piko) => (piko.kind !== "launcher" || specialLauncher(piko)) && anyProvider(piko, only)).length;
