@@ -82,10 +82,10 @@ function NxmDialog({ url, onClose }: { url: string; onClose: () => void }) {
         record: { source: "nexus", projectId: String(link.modId), fileId: String(link.fileId), version: file?.version, title: name, fileDate: nexusFileDate(file?.uploadedAt) },
       });
       setState("done"); setMessage(`Downloading ${name} into ${target.name}. Progress is in Downloads.`);
-    } catch (error) { setState("error"); setMessage(errorText(error)); }
+    } catch (error) { setState("error"); setMessage(t(errorText(error))); }
   };
 
-  const options = choices.map(({ piko, tofu, linked }) => ({ value: `${piko.id}\n${tofu.id}`, label: `${piko.name}: ${tofu.name}`, group: linked ? "Linked to this game on Nexus Mods" : t("Other games") }));
+  const options = choices.map(({ piko, tofu, linked }) => ({ value: `${piko.id}\n${tofu.id}`, label: `${piko.name}: ${tofu.name}`, group: linked ? t("Linked to this game on Nexus Mods") : t("Other games") }));
   return <ModalShell label={t("Nexus Mods download")} className="modal nxm-modal" onClose={onClose}>
     <div className="modal-header"><div><p className="eyebrow">{t("Nexus Mods · Mod Manager Download")}</p><h2>{title || (link ? `Mod ${link.modId}`  : t("Download link"))}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
     {!link ? <p className="metadata-note" role="alert">{parsed.ok ? "" : parsed.reason}</p>

@@ -74,14 +74,14 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
     return tofu;
   };
   const duplicate = () => {
-    const copy: Tofu = { ...selected, id: newId(selected.name), name: `${selected.name} copy`, activeProfileId: undefined, profiles: (selected.profiles ?? []).map((profile) => ({ ...profile })), launch: { ...launch, wrappers: [...launch.wrappers] } };
+    const copy: Tofu = { ...selected, id: newId(selected.name), name: t("{name} copy").replace("{name}", selected.name), activeProfileId: undefined, profiles: (selected.profiles ?? []).map((profile) => ({ ...profile })), launch: { ...launch, wrappers: [...launch.wrappers] } };
     // Same mods as the original (its records), so the copy starts as an identical mod set.
     void copyInstanceRecords(selected.id, copy.id).catch(() => undefined);
     onChange([...tofus, copy]);
     onSelect(copy.id);
   };
   const remove = async () => {
-    if (tofus.length < 2 || !await confirmAction({ title: `Delete the Tofu “${selected.name}”?`, danger: true, confirmLabel: "Delete Tofu", message: "Its settings and mod profiles are removed from Mochi. Files in its folder are not touched.", items: [selected.name] })) return;
+    if (tofus.length < 2 || !await confirmAction({ title: t("Delete the Tofu “{name}”?").replace("{name}", selected.name), danger: true, confirmLabel: t("Delete Tofu"), message: t("Its settings and mod profiles are removed from Mochi. Files in its folder are not touched."), items: [selected.name] })) return;
     const remaining = tofus.filter((tofu) => tofu.id !== selected.id);
     onChange(remaining);
     onSelect(remaining[0].id);
@@ -102,7 +102,7 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
     <div className="modal-header"><div><p className="eyebrow">{piko.name}</p><h2 id="tofu-manager-title">{t("Manage Tofus")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17}/></button></div>
     <div className="tofu-manager-body">
       <div className="tofu-manager-list" role="listbox" aria-label={t("Tofus")}>
-        {tofus.map((tofu) => <button type="button" role="option" aria-selected={tofu.id === selected.id} key={tofu.id} className={"tofu-manager-item " + (tofu.id === selected.id ? "active" : "")} onClick={() => onSelect(tofu.id)}><strong>{tofu.name}</strong><small>{tofu.version} · {tofu.runtime}{tofu.mods ? ` · ${tofu.mods} mods` : ""}</small></button>)}
+        {tofus.map((tofu) => <button type="button" role="option" aria-selected={tofu.id === selected.id} key={tofu.id} className={"tofu-manager-item " + (tofu.id === selected.id ? "active" : "")} onClick={() => onSelect(tofu.id)}><strong>{tofu.name}</strong><small>{tofu.version} · {tofu.runtime}{tofu.mods ? ` · ${t("{count} mods").replace("{count}", String(tofu.mods))}` : ""}</small></button>)}
         <button type="button" className="tofu-manager-item add" onClick={create}><Plus size={14}/> {t("New Tofu")}</button>
       </div>
       <div className="tofu-manager-form tofu-settings">
@@ -120,7 +120,7 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
 
         <Section title={t("Mod folders")} description={t("Where this Tofu’s mods live and where the game loads them from.")}>
           <ModFolderEditor key={selected.id} piko={piko} tofu={selected} onUpdate={patch} showVersion={false} />
-          <Checkbox checked={selected.extractArchives === true} onChange={(checked) => patch({ extractArchives: checked })} label="Extract .zip downloads into the folder"
+          <Checkbox checked={selected.extractArchives === true} onChange={(checked) => patch({ extractArchives: checked })} label={t("Extract .zip downloads into the folder")}
             description={t("For games whose mods are archives. A downloaded .zip is unpacked into the content folder and the archive is removed.")} />
         </Section>
 
@@ -132,7 +132,7 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
           <div className="conflict-check-row"><button type="button" className="secondary-button" disabled={checking} onClick={() => void runCheck()}><ShieldCheck size={14}/> {checking ? t("Checking…") : t("Check mods")}</button>
             {checked?.tofuId === selected.id && <span className="conflict-message" role="status" aria-live="polite">{t(summarizeIssues(checked.issues))}</span>}</div>
           {checked?.tofuId === selected.id && checked.issues.length > 0 && <ConflictIssues issues={checked.issues} tofu={selected} onFixed={runCheck} />}
-          <Checkbox checked={selected.skipModCheck !== true} onChange={(on) => patch({ skipModCheck: on ? undefined : true })} label="Check mods before launching" description={t("Shows a warning with fixes first. You can always launch anyway.")} />
+          <Checkbox checked={selected.skipModCheck !== true} onChange={(on) => patch({ skipModCheck: on ? undefined : true })} label={t("Check mods before launching")} description={t("Shows a warning with fixes first. You can always launch anyway.")} />
         </Section>}
 
         <Section title={t("Share")} description={t("Export this Tofu's mod list as a small .mochipack file or code (ids and hashes only), or import one.")}>
