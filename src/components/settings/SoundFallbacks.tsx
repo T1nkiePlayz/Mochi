@@ -7,6 +7,7 @@ import type { SoundPackInfo } from "../../lib/sound/packs";
 
 /** Settings > Sound: the user's ordered fallback packs, used when the theme names none or its packs are missing or fail. */
 export function SoundFallbacks({ fallbacks, packs, loaded, onChange }: { fallbacks: string[]; packs: SoundPackInfo[]; loaded: boolean; onChange: (next: string[]) => void }) {
+  const t = useTranslation();
   const headingId = useId();
   const nameOf = (id: string) => BUILTIN_PACKS.find((pack) => pack.id === id)?.name ?? packs.find((pack) => pack.id === id)?.name ?? id;
   const isKnown = (id: string) => BUILTIN_PACKS.some((pack) => pack.id === id) || packs.some((pack) => pack.id === id);
@@ -37,7 +38,7 @@ export function SoundFallbacks({ fallbacks, packs, loaded, onChange }: { fallbac
           </li>;
         })}
       </ol>}
-      {fallbacks.length < MAX_SOUND_FALLBACKS && addable.length > 0 && <Select<string> label="Add a fallback pack" placeholder="Add a fallback pack" value="" options={addable} onChange={(id) => id && onChange([...fallbacks, id])} align="end" />}
+      {fallbacks.length < MAX_SOUND_FALLBACKS && addable.length > 0 && <Select<string> label={t("Add a fallback pack")} placeholder={t("Add a fallback pack")} value="" options={addable} onChange={(id) => id && onChange([...fallbacks, id])} align="end" />}
       {fallbacks.length === 0 && <small className="sound-fallbacks-empty">No fallbacks yet.</small>}
     </div>
   </div>;

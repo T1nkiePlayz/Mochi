@@ -31,10 +31,10 @@ export function A11yPreview() {
   const { settings } = useAccessibility();
   return <div className="a11y-preview" aria-label={t("Live preview of your accessibility settings")} role="group">
     <h4>Preview</h4>
-    <p>Mochi keeps your games in one calm place. <a href="https://github.com/T1nkiePlayz/Mochi" onClick={(event) => event.preventDefault()}>This is a link</a>, and this is body text at your chosen size and spacing.</p>
+    <p>{t("Mochi keeps your games in one calm place.")} <a href="https://github.com/T1nkiePlayz/Mochi" onClick={(event) => event.preventDefault()}>{t("This is a link")}</a>, and this is body text at your chosen size and spacing.</p>
     <div className="a11y-preview-row">
-      <button type="button" className="play-button">Play</button>
-      <button type="button" className="secondary-button">Details</button>
+      <button type="button" className="play-button">{t("Play")}</button>
+      <button type="button" className="secondary-button">{t("Details")}</button>
       <input aria-label={t("Sample text field")} placeholder={t("Sample field")} className="a11y-sample-input" style={{ minWidth: 0 }} />
       <span className="a11y-chip ok"><Check size={13} aria-hidden="true" /> {t("Ready")}</span>
       <span className="a11y-chip warn"><TriangleAlert size={13} aria-hidden="true" /> {t("Needs update")}</span>

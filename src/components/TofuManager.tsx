@@ -121,21 +121,21 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
         <Section title="Mod folders" description="Where this Tofu's mods live and where the game loads them from.">
           <ModFolderEditor key={selected.id} piko={piko} tofu={selected} onUpdate={patch} showVersion={false} />
           <Checkbox checked={selected.extractArchives === true} onChange={(checked) => patch({ extractArchives: checked })} label="Extract .zip downloads into the folder"
-            description="For games whose mods are archives. A downloaded .zip is unpacked into the content folder and the archive is removed." />
+            description={t("For games whose mods are archives. A downloaded .zip is unpacked into the content folder and the archive is removed.")} />
         </Section>
 
         {selected.path && <Section title={t("Snapshots")} description={t("Mochi saves the mod files and records before updates. Restore puts the Tofu back to a saved state; the current one is saved first.")}>
           <TofuSnapshotsSection tofu={selected} />
         </Section>}
 
-        {selected.path && <Section title="Mod check" description="Looks for duplicates, mods for another game version or loader, and missing required mods. Works offline from what Mochi saved when the mods were installed.">
+        {selected.path && <Section title={t("Mod check")} description={t("Looks for duplicates, mods for another game version or loader, and missing required mods. Works offline from what Mochi saved when the mods were installed.")}>
           <div className="conflict-check-row"><button type="button" className="secondary-button" disabled={checking} onClick={() => void runCheck()}><ShieldCheck size={14}/> {checking ? "Checking…" : "Check mods"}</button>
             {checked?.tofuId === selected.id && <span className="conflict-message" role="status" aria-live="polite">{summarizeIssues(checked.issues)}</span>}</div>
           {checked?.tofuId === selected.id && checked.issues.length > 0 && <ConflictIssues issues={checked.issues} tofu={selected} onFixed={runCheck} />}
-          <Checkbox checked={selected.skipModCheck !== true} onChange={(on) => patch({ skipModCheck: on ? undefined : true })} label="Check mods before launching" description="Shows a warning with fixes first. You can always launch anyway." />
+          <Checkbox checked={selected.skipModCheck !== true} onChange={(on) => patch({ skipModCheck: on ? undefined : true })} label="Check mods before launching" description={t("Shows a warning with fixes first. You can always launch anyway.")} />
         </Section>}
 
-        <Section title="Share" description="Export this Tofu's mod list as a small .mochipack file or code (ids and hashes only), or import one.">
+        <Section title={t("Share")} description="Export this Tofu's mod list as a small .mochipack file or code (ids and hashes only), or import one.">
           <TofuShareSection piko={piko} tofu={selected} onCreateTofu={createImported} />
         </Section>
 
