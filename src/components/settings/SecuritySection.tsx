@@ -23,7 +23,7 @@ export function SecuritySection() {
         return <div className="security-provider" key={provider}>
           <span className="security-provider-copy"><strong>{label}</strong><small>{connected ? t("Connected") : t("Not connected")}</small></span>
           {connected
-            ? <button type="button" className="secondary-button danger-outline security-provider-action" onClick={() => void a.unlinkAuthIdentity(provider)} disabled={a.securityBusy || !canUnlink} title={canUnlink ? "Unlink " + label : t("Add another sign-in method before unlinking this account.")}><Unlink size={13} /> {canUnlink ? t("Unlink") : t("Required")}</button>
+            ? <button type="button" className="secondary-button danger-outline security-provider-action" onClick={() => void a.unlinkAuthIdentity(provider)} disabled={a.securityBusy || !canUnlink} title={canUnlink ? t("Unlink {name}").replace("{name}", label) : t("Add another sign-in method before unlinking this account.")}><Unlink size={13} /> {canUnlink ? t("Unlink") : t("Required")}</button>
             : <button type="button" className="secondary-button security-provider-action" onClick={() => a.connectIdentity(provider)} disabled={a.securityBusy}>{t("Connect")}</button>}
         </div>;
       })}</div>
