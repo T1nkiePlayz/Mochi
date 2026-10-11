@@ -24,10 +24,6 @@ const listeners = new Set<Listener>();
 const emit = () => listeners.forEach((listener) => listener(queue));
 
 export function confirmAction(request: ConfirmRequest): Promise<boolean> {
-  // Without a mounted host (tests, early start-up) fall back to the native prompt rather than silently proceeding.
-  if (!listeners.size) {
-    try { return Promise.resolve(typeof window !== "undefined" && window.confirm(`${request.title}\n\n${request.message}`)); } catch { return Promise.resolve(false); }
-  }
   // Dialogs can be requested from state hooks and plain utility modules, so translate centrally
   // rather than relying on every caller to remember the active launcher language.
   const localized: ConfirmRequest = {
@@ -36,11 +32,14 @@ export function confirmAction(request: ConfirmRequest): Promise<boolean> {
     message: translateUiMessage(request.message),
     confirmLabel: translateUiMessage(request.confirmLabel),
   };
+  // Without a mounted host (tests, early start-up) fall back to the native prompt rather than silently proceeding.
+  if (!listeners.size) {
+    try { return Promise.resolve(typeof window !== "undefined" && window.confirm(`${localized.title}\\n\\n${localized.message}`)); } catch { return Promise.resolve(false); }
+  }
   return new Promise((resolve) => {
     queue = [...queue, { ...localized, id: ++seq, resolve }];
     emit();
   });
-}
 
 /** Answers the oldest open request. */
 export function answerConfirm(id: number, ok: boolean) {
