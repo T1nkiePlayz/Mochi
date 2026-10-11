@@ -24,7 +24,7 @@ export function SelfInstallPrompt() {
   const started = useRef(false);
 
   const apply = useCallback(async () => {
-    setPhase((current) => current.kind === "busy" ? current : { kind: "busy", text: "Installing…" });
+    setPhase((current) => current.kind === "busy" ? current : { kind: "busy", text: t("Installing…") });
     try { await selfInstallApply(); } catch (error) { setPhase({ kind: "error", message: String(error) }); }
   }, []);
 
@@ -36,11 +36,11 @@ export function SelfInstallPrompt() {
       try { found = await selfInstallStatus(); } catch { return; }
       if (!found) return;
       setStatus(found);
-      setPhase({ kind: "busy", text: "Checking this download against the signed release on GitHub…" });
+      setPhase({ kind: "busy", text: t("Checking this download against the signed release on GitHub…") });
       let result: VerifyResult;
       try { result = await selfInstallVerify(); } catch { result = { status: "unavailable", detail: "" }; }
       if (result.status === "verified") {
-        setPhase({ kind: "busy", text: `Verified. Mochi will restart from ${found.targetPath}.` });
+        setPhase({ kind: "busy", text: t("Verified. Mochi will restart from {path}.").replace("{path}", found.targetPath) });
         await apply();
         return;
       }
@@ -65,9 +65,9 @@ export function SelfInstallPrompt() {
     <div ref={dialog} tabIndex={-1} className="modal confirm-dialog self-install-dialog" role="dialog" aria-modal="true" aria-labelledby="self-install-title">
       <h2 id="self-install-title">Installing Mochi {status.version}</h2>
       {phase.kind === "busy"
-        ? <p className="modal-description self-install-status" role="status" aria-live="polite"><Loader2 className="self-install-spinner" size={16} aria-hidden="true" /><span>{phase.text}</span></p>
+        ? <p className="modal-description self-install-status" role="status" aria-live="polite"><Loader2 className="self-install-spinner" size={16} aria-hidden="true" /><span>{t(phase.text)}</span></p>
         : <>
-          <p className="modal-description" role="alert">{phase.message}</p>
+          <p className="modal-description" role="alert">{t(phase.message)}</p>
           <div className="confirm-actions">
             <button type="button" className="secondary-button" onClick={close}>{t("Close")}</button>
             <button type="button" className="play-button" onClick={apply}>{t("Try again")}</button>

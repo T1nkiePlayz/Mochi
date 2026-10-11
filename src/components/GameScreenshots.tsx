@@ -46,8 +46,8 @@ export function GameScreenshots({ game }: { game: Piko }) {
     <div className="discover-section-heading"><div><h3>{t("Your screenshots")}{fresh.size > 0 && <span className="backlog-badge">{fresh.size} new</span>}</h3><p>{t("From Steam and your folders. Files are only read, never changed.")}</p></div>
       <button type="button" className="secondary-button" onClick={() => void addFolder()}><FolderPlus size={14} /> {t("Add folder")}</button></div>
     {(game.screenshotFolders ?? []).length > 0 && <ul className="screenshot-folders">{(game.screenshotFolders ?? []).map((folder) => <li key={folder}><span title={folder}>{folder}</span><button type="button" className="icon-button" aria-label={t("Stop using {name}").replace("{name}", folder)} onClick={() => removeFolder(folder)}><X size={14} /></button></li>)}</ul>}
-    {files.length === 0 ? <p className="metadata-note">No screenshots found yet. Steam's are picked up automatically; add a folder for other launchers.</p>
-      : <div className="screenshot-grid">{visible.map((file) => <button type="button" key={file.path} className="screenshot-item" title={new Date(file.modified * 1000).toLocaleString()} onClick={() => void openPath(file.path).catch(() => {})}>
+    {files.length === 0 ? <p className="metadata-note">{t("No screenshots found yet. Steam's are picked up automatically; add a folder for other launchers.")}</p>
+      : <div className="screenshot-grid">{visible.map((file) => <button type="button" key={file.path} className="screenshot-item" title={new Date(file.modified * 1000).toLocaleString(getTranslationLocale())} onClick={() => void openPath(file.path).catch(() => {})}>
         {thumbs.get(file.path) ? <img src={thumbs.get(file.path)} alt="" loading="lazy" decoding="async" /> : <span className="screenshot-pending" />}{fresh.has(file.path) && <span className="screenshot-new">{t("New")}</span>}</button>)}</div>}
     {files.length > SHOWN && !more && <button type="button" className="secondary-button" onClick={() => setMore(true)}>{t("Show all {count}").replace("{count}", String(files.length))}</button>}
   </section>;

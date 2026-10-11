@@ -13,7 +13,7 @@ import type { Piko } from "../models";
 import { useApp } from "../state/AppContext";
 import { ModalShell } from "./mods/ModalShell";
 
-const when = (ms: number) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+const when = (ms: number) => new Date(ms).toLocaleString(getTranslationLocale(), { dateStyle: "medium", timeStyle: "short" });
 const errorText = (error: unknown) => (error instanceof Error ? error.message : typeof error === "string" ? error : "That did not work.");
 const GB = 1 << 30;
 
@@ -46,7 +46,7 @@ function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }
   const load = useCallback(async () => {
     const mine = ++seq.current;
     try { const next = await listSaveLocations(game.id, JSON.parse(hintsKey)); if (mine === seq.current) setLocations(next); }
-    catch (error) { if (mine === seq.current) { setLocations([]); setMessage(errorText(error)); } }
+    catch (error) { if (mine === seq.current) { setLocations([]); setMessage(t(errorText(error))); } }
   }, [game.id, hintsKey]);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { void getBackupSettings().then((next) => { setSettings(next); setKeep(String(next.keep)); setCap(String(Math.round(next.maxTotalBytes / GB * 10) / 10)); }).catch(() => {}); }, []);
@@ -70,14 +70,14 @@ function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }
 
   const backUp = async (location: SaveLocation) => {
     setBusy(location.key); setMessage("");
-    try { setMessage(describeResult(await createSaveBackup(game.id, location))); await refresh(location.key); }
+    try { setMessage(t(describeResult(await createSaveBackup(game.id, location)))); await refresh(location.key); }
     catch (error) { setMessage(errorText(error)); } finally { setBusy(""); }
   };
   const restore = async (location: SaveLocation, backup: BackupInfo) => {
     if (!await confirmAction({ title: `Restore "${location.label}"?`, confirmLabel: "Restore", danger: true,
       message: `The saves in this folder are replaced by the backup from ${when(backup.createdAt)}. Mochi first backs up the current saves (kept as "Before restore"), so you can undo this.`, items: [location.path] })) return;
     setBusy(location.key); setMessage("");
-    try { const result = await restoreSaveBackup(backup.id); setMessage(`Restored ${result.files} file${result.files === 1 ? "" : "s"}.${result.safety ? " Your previous saves were kept as a backup." : ""}`); await refresh(location.key); }
+    try { const result = await restoreSaveBackup(backup.id); setMessage(t("Restored {count} files.{safety}").replace("{count}", String(result.files)).replace("{safety}", result.safety ? ` ${t("Your previous saves were kept as a backup.")}` : "")); await refresh(location.key); }
     catch (error) { setMessage(errorText(error)); } finally { setBusy(""); }
   };
   const remove = async (location: SaveLocation, backup: BackupInfo) => {
@@ -86,8 +86,8 @@ function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }
   };
   const applyLimits = async () => {
     const next = { keep: Math.round(Number(keep)), maxTotalBytes: Math.round(Number(cap) * GB) };
-    if (!Number.isFinite(next.keep) || !Number.isFinite(next.maxTotalBytes) || next.keep < 1) { setMessage("Enter how many backups to keep (1 or more) and a size limit in GB."); return; }
-    try { const saved = await setBackupSettings(next); setSettings(saved); setKeep(String(saved.keep)); setCap(String(Math.round(saved.maxTotalBytes / GB * 10) / 10)); setMessage("Limits saved. Older backups beyond them were removed."); void load(); }
+    if (!Number.isFinite(next.keep) || !Number.isFinite(next.maxTotalBytes) || next.keep < 1) { setMessage(t("Enter how many backups to keep (1 or more) and a size limit in GB.")); return; }
+    try { const saved = await setBackupSettings(next); setSettings(saved); setKeep(String(saved.keep)); setCap(String(Math.round(saved.maxTotalBytes / GB * 10) / 10)); setMessage(t("Limits saved. Older backups beyond them were removed.")); void load(); }
     catch (error) { setMessage(errorText(error)); }
   };
 
@@ -112,7 +112,7 @@ function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }
                   <small className="muted">{location.backups ? `${location.backups} backup${location.backups === 1 ? "" : "s"} · ${formatBytes(location.backupBytes)} · last ${when(location.lastBackup ?? 0)}` : "No backups yet"}</small></div>
                 <div className="save-backups-actions">
                   <button type="button" className="secondary-button" onClick={() => void backUp(location)} disabled={Boolean(location.problem) || busy === location.key}><History size={13} /> {t("Back up now")}</button>
-                  <button type="button" className="icon-button" aria-label={`Open folder of ${location.label}`} title={t("Open folder")} onClick={() => void openPath(location.path).catch((error) => setMessage(errorText(error)))} disabled={Boolean(location.problem)}><FolderOpen size={15} /></button>
+                  <button type="button" className="icon-button" aria-label={t("Open folder of {name}").replace("{name}", location.label)} title={t("Open folder")} onClick={() => void openPath(location.path).catch((error) => setMessage(errorText(error)))} disabled={Boolean(location.problem)}><FolderOpen size={15} /></button>
                   {location.kind === "custom" && <button type="button" className="icon-button" aria-label={`Stop backing up ${location.label}`} title={t("Remove from this list (backups are kept)")} onClick={() => patchGame((current) => ({ ...current, folders: removeFolder(current.folders, location.source ?? location.path) }))}><X size={15} /></button>}
                 </div>
               </div>
@@ -122,7 +122,7 @@ function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }
                   <span>{when(backup.createdAt)}</span><span className="chip">{BACKUP_KIND_LABEL[backup.kind]}</span><small className="muted">{formatBytes(backup.size)} · {backup.files} file{backup.files === 1 ? "" : "s"}</small>
                   <span className="save-backups-actions">
                     <button type="button" className="secondary-button" onClick={() => void restore(location, backup)} disabled={running || busy === location.key} title={running ? t("Close the game before restoring") : undefined}><RotateCcw size={13} /> {t("Restore")}</button>
-                    <button type="button" className="icon-button" aria-label={`Delete backup from ${when(backup.createdAt)}`} title={t("Delete backup")} onClick={() => void remove(location, backup)}><Trash2 size={15} /></button>
+                    <button type="button" className="icon-button" aria-label={t("Delete backup from {date}").replace("{date}", when(backup.createdAt))} title={t("Delete backup")} onClick={() => void remove(location, backup)}><Trash2 size={15} /></button>
                   </span>
                 </li>)}
               </ul>}

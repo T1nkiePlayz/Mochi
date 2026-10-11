@@ -13,7 +13,7 @@ import {
 } from "../lib/gameSearch";
 
 const money = (value: number) => `$${value.toFixed(2)}`;
-const fullDate = (seconds: number) => new Date(seconds * 1000).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+const fullDate = (seconds: number) => new Date(seconds * 1000).toLocaleDateString(getTranslationLocale(), { year: "numeric", month: "long", day: "numeric" });
 
 function Link({ href, children }: { href: string; children: React.ReactNode }) {
   return <a href={href} target="_blank" rel="noreferrer noopener" onClick={(event) => { event.preventDefault(); void openExternalUrl(href).catch(() => undefined); }}>{children}</a>;
@@ -75,7 +75,7 @@ function Details({ game, onSearch }: { game: GameDetails; onSearch: (name: strin
     </header>
     <div className="game-search-actions">
       <button type="button" className="secondary-button" onClick={addWish} disabled={Boolean(stored)}><Gift size={14} aria-hidden="true" /> {stored ? t("On wishlist") : t("Add to wishlist")}</button>
-      <label className="game-search-target">{t("Alert me at")} <input className="compact-input" inputMode="decimal" placeholder={lowestNow ? (lowestNow * 0.8).toFixed(2) : "9.99"} value={target} onChange={(event) => setTarget(event.target.value)} aria-label={t("Target price in USD")} /> USD</label>
+      <label className="game-search-target">{t("Alert me at")} <input className="compact-input" inputMode="decimal" placeholder={lowestNow ? (lowestNow * 0.8).toFixed(2) : "9.99"} value={target} onChange={(event) => setTarget(event.target.value)} aria-label={t("Target price in USD")} /> {t("USD")}</label>
       <button type="button" className="secondary-button" onClick={watch}><Bell size={14} aria-hidden="true" /> {t("Watch price")}</button>
       {stored?.priceWatch?.targetPrice !== undefined && <button type="button" className="secondary-button" onClick={() => { unwatchPrice(stored.id); setNote(t("Price watch removed.")); }}><BellOff size={14} aria-hidden="true" /> {t("Stop watching ({price})").replace("{price}", money(stored.priceWatch.targetPrice))}</button>}
     </div>
@@ -88,7 +88,7 @@ function Details({ game, onSearch }: { game: GameDetails; onSearch: (name: strin
     </dl>
     <section aria-label={t("Prices")}><h4>{t("Prices")}</h4>
       <ul className="game-search-prices">
-        {game.prices.steam && <li><span>Steam (US)</span><span>{game.prices.steam.formatted || money(game.prices.steam.final / 100)}{game.prices.steam.discountPercent > 0 && ` (-${game.prices.steam.discountPercent}%)`}</span></li>}
+        {game.prices.steam && <li><span>{t("Steam (US)")}</span><span>{game.prices.steam.formatted || money(game.prices.steam.final / 100)}{game.prices.steam.discountPercent > 0 && ` (-${game.prices.steam.discountPercent}%)`}</span></li>}
         {game.prices.shark && game.prices.shark.cheapestNow !== null && <li><span>{t("Cheapest now (CheapShark)")}</span><span>{money(game.prices.shark.cheapestNow)}</span></li>}
         {ever !== null && <li><span>{t("Cheapest ever (CheapShark)")}</span><span>{money(ever)}</span></li>}
       </ul>
