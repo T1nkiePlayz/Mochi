@@ -312,16 +312,16 @@ You need Node 20+, a stable Rust toolchain ([rustup](https://rustup.rs)) and the
 **Debian / Ubuntu (24.04+)**
 
     sudo apt install build-essential pkg-config libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
-      libudev-dev patchelf gstreamer1.0-plugins-base gstreamer1.0-plugins-good nodejs npm
+      libudev-dev patchelf gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav nodejs npm
 
 **Fedora**
 
     sudo dnf install webkit2gtk4.1-devel libappindicator-gtk3-devel librsvg2-devel systemd-devel patchelf \
-      gstreamer1-plugins-base gstreamer1-plugins-good nodejs npm gcc pkgconf-pkg-config
+      gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-libav nodejs npm gcc pkgconf-pkg-config
 
 **macOS**: `xcode-select --install`, then install Node and Rust. **Windows** is not supported.
 
-`libudev` is for gamepad support. `patchelf` and the GStreamer plugins are only needed to bundle an AppImage (the bundle ships GStreamer for interface sounds); without them linuxdeploy fails with "patchelf not found" or a missing-plugin error. `deb` and `rpm` bundles do not need them. The [Tauri 2 prerequisites](https://tauri.app/start/prerequisites/) list other distributions.
+`libudev` is for gamepad support. `patchelf` and the GStreamer plugins are needed to bundle an AppImage. Mochi also needs the GStreamer bad-plugin and libav codec sets for embedded video playback in WebKitGTK; the AppImage bundler can only include plugins installed on the build system. `deb` and `rpm` packages declare the runtime codec dependencies themselves. The [Tauri 2 prerequisites](https://tauri.app/start/prerequisites/) list other distributions.
 
 ### Run and build
 
