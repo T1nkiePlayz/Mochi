@@ -19,7 +19,7 @@ export type DownloadRow = {
 export function describeDownload(entry: DownloadEntry, t: (message: string) => string = (message) => message): DownloadRow {
   const percent = entry.total ? Math.min(100, Math.round((entry.downloaded / entry.total) * 100)) : null;
   switch (entry.status) {
-    case "failed": return { percent, state: "failed", detail: entry.error || t("Failed"), canCancel: false };
+    case "failed": return { percent, state: "failed", detail: entry.error ? `${t("Failed")}: ${entry.error}` : t("Failed"), canCancel: false };
     case "cancelled": return { percent, state: "cancelled", detail: t("Cancelled"), canCancel: false };
     case "completed": return { percent: 100, state: "done", detail: `${entry.total ? `${t("Completed")} · ${formatBytes(entry.total)}` : t("Completed")} · ${t("added to")} ${entry.tofuName}`, canCancel: false };
     default: return {
