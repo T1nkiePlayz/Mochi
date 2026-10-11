@@ -179,7 +179,7 @@ export default function BigPicture() {
 
   const leave = (nav?: "Library" | "Downloads" | "Settings") => { if (nav) setActiveNav(nav); exitBigPicture(); };
   const legend = searching ? [] : menu !== "closed" ? MENU_LEGEND : gameId ? GAME_LEGEND : HOME_LEGEND;
-  const reportError = (error: unknown) => { playSound("error"); actions.setLaunchError(error instanceof Error ? error.message : String(error)); };
+  const reportError = (error: unknown) => { playSound("error"); actions.setLaunchError(t(error instanceof Error ? error.message : String(error))); };
 
   return <div className="bp-root" data-bp-root data-bp-screen={gameId ? "game" : "home"}
     data-bp-layout={display.layout} data-bp-tile={display.shape} data-bp-size={display.size} data-bp-titles={display.titles}>
@@ -196,7 +196,7 @@ export default function BigPicture() {
         : <Home hero={hero} entryFor={(id) => entries.get(id)} shelves={shelves} query={query} isRunning={sessions.isRunning} grid={display.layout === "grid" || Boolean(query)}
             onOpen={openGame} onPlay={play} onFocusCard={focusCard} onExit={() => leave()} />}
     </main>
-    {launchError && <div className="bp-toast" role="alert">{launchError}</div>}
+    {launchError && <div className="bp-toast" role="alert">{t(launchError)}</div>}
     <Legend items={legend} />
     {menu !== "closed" && <SideMenu view={menu} themes={themeEngine.themes} theme={themeEngine.theme} sound={sound} soundPacks={soundPacks} display={display}
       power={power} macos={platformCapabilities?.platform === "macos"} windowControls={!isGamescopeSession()} activeDownloads={activeDownloads}
