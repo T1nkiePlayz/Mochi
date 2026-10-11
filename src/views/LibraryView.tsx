@@ -184,7 +184,7 @@ export function LibraryView() {
           <div className="tofu-grid">
             {selectedPiko.tofus.map((tofu) => (
               <button className={`tofu-card ${selectedTofu.id === tofu.id ? "active" : ""}`} key={tofu.id} onClick={() => lib.setSelectedTofuId(tofu.id)}>
-                <div className="tofu-card-top"><span className="tofu-symbol">🧊</span><span className={`ready-status ${tofu.status === "Ready" ? "" : "attention"}`}><span />{tofu.status}</span></div>
+                <div className="tofu-card-top"><span className="tofu-symbol">🧊</span><span className={`ready-status ${tofu.status === "Ready" ? "" : "attention"}`}><span />{t(tofu.status)}</span></div>
                 <strong>{tofu.name}</strong>
                 <span className="tofu-details">{tofu.version} <i /> {tofu.runtime}</span>
                 <span className="tofu-mods">{tofu.mods ? t("{count} mods installed").replace("{count}", String(tofu.mods)) : t("No mods installed")}</span>
@@ -196,7 +196,7 @@ export function LibraryView() {
         <section className="details-strip">
           <div><span className="detail-label">Selected Tofu</span><strong>🧊 {selectedTofu.name}</strong></div>
           <div><span className="detail-label">Runtime</span><strong>{selectedTofu.runtime} <span className="muted">· {selectedTofu.version}</span></strong></div>
-          <div><span className="detail-label">Install location</span><strong className="path-text">{selectedTofu.path || "No folder chosen yet"}</strong></div>
+          <div><span className="detail-label">Install location</span><strong className="path-text">{selectedTofu.path || t("No folder chosen yet")}</strong></div>
           <button className="icon-button" aria-label="Tofu settings" onClick={() => app.setShowTofuManager(true)}><MochiIcon name="settings" fallback={Settings} size={16} /></button>
         </section>
       </>}
@@ -288,7 +288,7 @@ export function LibraryView() {
       onPlay={(piko) => { lib.selectPiko(piko); void actions.launchGame(piko); }} onClose={() => setShowPicker(false)} />}
     {showDuplicates && <DuplicatesDialog groups={duplicates.groups} onMerge={duplicates.merge} onDismiss={duplicates.dismiss} onClose={() => setShowDuplicates(false)} />}
     {showCollections && <CollectionManager state={collections} counts={collectionCounts} onClose={() => setShowCollections(false)} />}
-    {removal && <ConfirmDialog title={removal.length === 1 ? t("Remove {name}?").replace("{name}", removal[0].name) : t("Remove {count} games?").replace("{count}", String(removal.length))} message="They are removed from your Mochi library only, with their Tofus, tags and collection memberships. Nothing is uninstalled and no game files are deleted." items={removal.map((game) => game.name)} confirmLabel={removal.length === 1 ? "Remove" : `Remove ${removal.length} games`} danger
+    {removal && <ConfirmDialog title={removal.length === 1 ? t("Remove {name}?").replace("{name}", removal[0].name) : t("Remove {count} games?").replace("{count}", String(removal.length))} message={t("They are removed from your Mochi library only, with their Tofus, tags and collection memberships. Nothing is uninstalled and no game files are deleted.")} items={removal.map((game) => game.name)} confirmLabel={removal.length === 1 ? "Remove" : `Remove ${removal.length} games`} danger
       onCancel={() => setRemoval(null)}
       onConfirm={() => { removal.forEach((game) => void removeGameShortcut(game.id).catch(() => {})); lib.removeGames(removal.map((game) => game.id)); setChecked(new Set()); setRemoval(null); }} />}
     <LibraryModSearch query={search} nexusEnabled={credentials.status.nexus} supabase={supabase} />

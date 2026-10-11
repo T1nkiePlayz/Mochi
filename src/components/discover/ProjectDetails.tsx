@@ -95,12 +95,12 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
     {tab === "overview" ? <div className="project-overview">
       <section className="project-creator-primary">
         <Avatar src={creator.avatar} name={creator.name} className="project-creator-primary-avatar" />
-        <div><span>Created by</span><strong>{creator.name || "Unknown creator"}</strong></div>
+        <div><span>Created by</span><strong>{creator.name || t("Unknown creator")}</strong></div>
       </section>
       <div className="project-info-grid">
         <span><strong>Downloads</strong>{(project.downloads ?? 0).toLocaleString()}</span>
         <span><strong>Followers</strong>{(project.followers || 0).toLocaleString()}</span>
-        <span><strong>Project type</strong>{projectTypeLabel(project.project_type)}</span>
+        <span><strong>Project type</strong>{t(projectTypeLabel(project.project_type))}</span>
         <span><strong>Categories</strong>{project.categories?.join(", ") || t("Not provided")}</span>
         <span><strong>License</strong>{project.license?.name || t("Not provided")}</span>
         <span><strong>Members</strong>{project.members?.length ?? 0}</span>

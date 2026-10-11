@@ -25,7 +25,7 @@ export function DownloadsView() {
   const report = (reason: unknown) => setError(reason instanceof Error ? reason.message : typeof reason === "string" ? reason : "That did not work.");
   const clearFinished = async () => {
     const count = downloads.filter((entry) => entry.status !== "downloading").length;
-    if (!count || !await confirmAction({ title: t("Clear finished downloads?"), message: `Removes ${count} finished download${count === 1 ? "" : "s"} from the list. Downloaded files stay on disk.`, confirmLabel: "Clear" })) return;
+    if (!count || !await confirmAction({ title: t("Clear finished downloads?"), message: t(count === 1 ? "Removes {count} finished download from the list. Downloaded files stay on disk." : "Removes {count} finished downloads from the list. Downloaded files stay on disk.").replace("{count}", String(count)), confirmLabel: t("Clear") })) return;
     await clearFinishedDownloads().catch(report);
   };
   return <section className="downloads-page">
