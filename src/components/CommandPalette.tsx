@@ -91,7 +91,7 @@ function PaletteDialog({ getApp, platform, onClose }: { getApp: ReturnType<typeo
         <button type="button" className="icon-button" aria-label="Close command palette" onClick={onClose}><X size={15} aria-hidden="true" /></button>
       </div>
       <div className="palette-list" id="palette-list" role="listbox" aria-label="Results" ref={list}>
-        {items.map((item) => <button type="button" role="option" aria-selected="false" className="palette-item" data-kind={item.kind} key={item.key} onClick={() => run(item)}><span className="palette-title">{item.title}</span><small>{item.subtitle}</small></button>)}
+        {items.map((item) => <button type="button" role="option" aria-selected="false" className="palette-item" data-kind={item.kind} key={item.key} onClick={() => run(item)}><span className="palette-title">{item.kind === "command" ? t(item.title) : item.title}</span><small>{item.kind === "command" ? t(item.subtitle) : item.subtitle}</small></button>)}
         {!items.length && <div className="palette-empty" role="status">{raw.trim() ? "Nothing matches. Try a different word." : "No actions available."}</div>}
       </div>
       <div className="palette-hint" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Enter</kbd> run</span><span><kbd>Esc</kbd> close</span><span><kbd>&gt;</kbd> actions only</span></div>
