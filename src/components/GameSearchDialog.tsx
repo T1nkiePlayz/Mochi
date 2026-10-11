@@ -107,6 +107,7 @@ function Details({ game, onSearch }: { game: GameDetails; onSearch: (name: strin
 }
 
 export function GameSearchDialog({ onClose }: { onClose: () => void }) {
+  const t = useTranslation();
   const { credentials } = useApp();
   const ready = { igdb: credentials.status.igdb, steamgriddb: credentials.status.steamgriddb };
   const backend: GameSearchBackend | null = useMemo(() => gameSearchBackendOverride() ?? (supabase && gameSearchAvailable(ready) ? createProviderBackend(supabase, ready) : null),
@@ -123,14 +124,14 @@ export function GameSearchDialog({ onClose }: { onClose: () => void }) {
   useEffect(() => { input.current?.focus(); return () => detailAbort.current?.abort(); }, []);
 
   const search = useMemo(() => createDebouncedSearch(
-    (text, signal) => (backend ? backend.search(text, signal) : Promise.reject(new Error("No provider is set up."))),
+    (text, signal) => (backend ? backend.search(text, signal) : Promise.reject(new Error(t("No provider is set up.")))),
     {
       onStart: () => setStatus("searching"),
       onResult: (_text, result) => { setHits(result); setStatus("done"); setMessage(""); },
-      onError: (_text, error) => { setStatus("error"); setHits([]); setMessage(error instanceof Error ? error.message : "Search failed."); },
+      onError: (_text, error) => { setStatus("error"); setHits([]); setMessage(t("Search failed.")); },
       onClear: () => { setHits([]); setStatus("idle"); setMessage(""); },
     },
-  ), [backend]);
+  ), [backend, t]);
   useEffect(() => () => search.cancel(), [search]);
 
   const type = (text: string) => { setQuery(text); search.call(text); };
@@ -141,7 +142,7 @@ export function GameSearchDialog({ onClose }: { onClose: () => void }) {
     detailAbort.current = controller;
     setLoading(hit.name); setMessage("");
     backend.details(hit, controller.signal).then((details) => { if (!controller.signal.aborted) { setGame(details); setLoading(null); } })
-      .catch((error) => { if (!controller.signal.aborted) { setLoading(null); setMessage(error instanceof Error ? error.message : "Could not load the game."); } });
+      .catch((error) => { if (!controller.signal.aborted) { setLoading(null); setMessage(t("Could not load the game.")); } });
   };
 
   return <div className="modal-backdrop" onClick={onClose}>

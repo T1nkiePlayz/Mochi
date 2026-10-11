@@ -28,7 +28,7 @@ type Props = {
 
 const PAGE = 25;
 const channelLabel = { release: "Release", beta: "Beta", alpha: "Alpha" } as const;
-const channelOptions = [{ value: "", label: "Any release type" }, { value: "release", label: "Release" }, { value: "beta", label: "Beta" }, { value: "alpha", label: "Alpha" }];
+
 
 function VersionRow({ version, fit, onDownload }: { version: ModrinthVersion; fit?: { status: "compatible" | "maybe" | "incompatible"; reason?: string }; onDownload: () => void }) {
   const t = useTranslation();
@@ -41,21 +41,21 @@ function VersionRow({ version, fit, onDownload }: { version: ModrinthVersion; fi
     <div className="version-row-main">
       <button type="button" className="version-expand" aria-expanded={open} aria-label={`${open ? t("Hide changelog and files for") : t("Show changelog and files for")} ${version.name || version.version_number}`} onClick={() => setOpen((value) => !value)}>{open ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</button>
       <div className="version-name"><strong title={version.name}>{version.name || version.version_number}</strong><small>{version.version_number}</small></div>
-      <span className={`release-badge release-${channel}`}>{channelLabel[channel]}</span>
+      <span className={`release-badge release-${channel}`}>{t(channelLabel[channel])}</span>
       <div className="version-chips" aria-label="Loaders">{loaders.map((loader) => <span key={loader} className="chip chip-loader">{loaderLabels[parseLoader(loader)!]}</span>)}</div>
       <div className="version-chips" aria-label="Game versions">{games.shown.map((game) => <span key={game} className="chip">{game}</span>)}{games.more > 0 && <span className="chip chip-more" title={version.game_versions.slice(3).join(", ")}>+{games.more}</span>}</div>
       <span className="version-date">{formatDate(version.date_published)}</span>
       <span className="version-size">{primary ? formatBytes(primary.size) : ""}</span>
       <div className="version-action">
-        {fit && fit.status !== "compatible" && <span className={`compat-badge compat-${fit.status}`} title={fit.reason}>{fit.status === "maybe" ? "May work" : "Not for your Tofu"}</span>}
-        {fit?.status === "compatible" && <span className="compat-badge compat-compatible">Fits your Tofu</span>}
+        {fit && fit.status !== "compatible" && <span className={`compat-badge compat-${fit.status}`} title={fit.reason}>{fit.status === "maybe" ? t("May work") : t("Not for your Tofu")}</span>}
+        {fit?.status === "compatible" && <span className="compat-badge compat-compatible">{t("Fits your Tofu")}</span>}
         <button type="button" className="secondary-button" onClick={onDownload} disabled={!primary} aria-label={`${t("Download")} ${version.name || version.version_number}`}><Download size={13} /> Download</button>
       </div>
     </div>
     {open && <div className="version-row-detail">
       {version.game_versions.length > 3 && <p><strong>Game versions</strong> {version.game_versions.join(", ")}</p>}
       {version.changelog ? <div className="version-changelog"><Markdown source={version.changelog} /></div> : <p className="muted">No changelog was provided.</p>}
-      <div className="project-file-list">{version.files.map((file) => <div key={file.filename}><span>{file.filename}</span><small>{formatBytes(file.size)}{file.primary ? " · Primary" : ""}</small></div>)}</div>
+      <div className="project-file-list">{version.files.map((file) => <div key={file.filename}><span>{file.filename}</span><small>{formatBytes(file.size)}{file.primary ? ` · ${t("Primary")}` : ""}</small></div>)}</div>
       {version.dependencies.length > 0 && <p className="muted">{t(version.dependencies.length === 1 ? "1 dependency listed on Modrinth. Mochi offers to install the required ones before the mod." : "{count} dependencies listed on Modrinth. Mochi offers to install the required ones before the mod.").replace("{count}", String(version.dependencies.length))}</p>}
     </div>}
   </div>;
@@ -63,6 +63,7 @@ function VersionRow({ version, fit, onDownload }: { version: ModrinthVersion; fi
 
 export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload }: Props) {
   const t = useTranslation();
+  const channelOptions = [{ value: "", label: t("Any release type") }, { value: "release", label: t("Release") }, { value: "beta", label: t("Beta") }, { value: "alpha", label: t("Alpha") }];
   const [tab, setTab] = useState<"overview" | "versions">("overview");
   const [versions, setVersions] = useState<ModrinthVersion[] | null>(null);
   const [error, setError] = useState("");
@@ -77,9 +78,9 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
     let live = true;
     setVersions(null); setError("");
     // Everything is fetched once; the filters below narrow it without more requests.
-    void getModrinthVersions(project.project_id).then((next) => { if (live) setVersions(next); }).catch((reason) => { if (live) { setVersions([]); setError(reason instanceof Error ? reason.message : "Unable to load versions."); } });
+    void getModrinthVersions(project.project_id).then((next) => { if (live) setVersions(next); }).catch((reason) => { if (live) { setVersions([]); setError(t("Unable to load versions.")); } });
     return () => { live = false; };
-  }, [project.project_id]);
+  }, [project.project_id, t]);
   useEffect(() => setShown(PAGE), [loader, game, channel, fitOnly]);
 
   const target = tofu ? tofuTarget(tofu) : null;
@@ -115,11 +116,11 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
       </section> : null}
     </div> : <div className="project-versions">
       <div className="version-filters">
-        {mod && loaderChoices.length > 0 && <Select value={loader} onChange={setLoader} label="Loader" searchable={false} options={[{ value: "", label: "Any loader" }, ...loaderChoices.map((value) => ({ value, label: loaderLabels[parseLoader(value)!] ?? value }))]} />}
-        <Select value={game} onChange={setGame} label="Game version" searchable={gameChoices.length > 10} options={[{ value: "", label: "Any game version" }, ...gameChoices.map((value) => ({ value, label: value }))]} />
-        <Select value={channel} onChange={setChannel} label="Release type" searchable={false} options={channelOptions} />
+        {mod && loaderChoices.length > 0 && <Select value={loader} onChange={setLoader} label={t("Loader")} searchable={false} options={[{ value: "", label: t("Any loader") }, ...loaderChoices.map((value) => ({ value, label: loaderLabels[parseLoader(value)!] ?? value }))]} />}
+        <Select value={game} onChange={setGame} label={t("Game version")} searchable={gameChoices.length > 10} options={[{ value: "", label: t("Any game version") }, ...gameChoices.map((value) => ({ value, label: value }))]} />
+        <Select value={channel} onChange={setChannel} label={t("Release type")} searchable={false} options={channelOptions} />
         {tofu && <Checkbox className="version-fit-toggle" checked={fitOnly} onChange={setFitOnly} label={t("Only what fits {name}").replace("{name}", tofu.name)} />}
-        {(loader || game || channel || fitOnly) && <button type="button" className="text-button" onClick={() => { setLoader(""); setGame(""); setChannel(""); setFitOnly(false); }}>Clear filters</button>}
+        {(loader || game || channel || fitOnly) && <button type="button" className="text-button" onClick={() => { setLoader(""); setGame(""); setChannel(""); setFitOnly(false); }}>{t("Clear filters")}</button>}
       </div>
       {versions === null ? <p className="muted"><RefreshCw size={13} className="spin" /> Loading versions...</p> : <>
         {error && <p className="metadata-note" role="alert">{error}</p>}
@@ -130,7 +131,7 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
             <VersionRow version={version} fit={fit ? { status: fit.status, reason: fit.reasons[0] } : undefined} onDownload={() => { const file = modrinthFile(version); if (file) onDownload(project, file); }} />
           </div>; })}
           {rows.length > shown && <button type="button" className="secondary-button version-more" onClick={() => setShown((value) => value + PAGE)}>{t("Show {count} more").replace("{count}", String(Math.min(PAGE, rows.length - shown)))}</button>}
-        </div> : <div className="discover-empty">No versions match these filters.</div>}
+        </div> : <div className="discover-empty">{t("No versions match these filters.")}</div>}
       </>}
     </div>}
   </div></div>;
