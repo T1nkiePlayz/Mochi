@@ -12,10 +12,27 @@ import { useTranslation } from "../lib/useTranslation";
  * D-pad (spatial navigation) and A/B all work: arrows move focus, Enter/A runs, Escape/B closes (via the dialog enhancer).
  */
 function translateCommandTitle(title: string, t: (message: string) => string) {
+  // Translate the UI-owned part of generated titles, preserving game, theme,
+  // profile, and other runtime names exactly as supplied by the user.
   if (title.startsWith("Settings: ")) return `${t("Settings:")} ${t(title.slice("Settings: ".length))}`;
   if (title.startsWith("Theme: ")) return `${t("Theme:")} ${title.slice("Theme: ".length)}`;
-  if (title.startsWith("Launch profile: ")) return `${t("Launch profile:")} ${title.slice("Launch profile: ".length).replace(" / Default options", ` / ${t("Default options")}`)}`;
+  if (title.startsWith("Launch profile: ")) {
+    const detail = title.slice("Launch profile: ".length);
+    return `${t("Launch profile:")} ${detail.replace(" / Default options", ` / ${t("Default options")}`)}`;
+  }
+  const installMatch = /^Install mod "(.+)"$/.exec(title);
+  if (installMatch) return `${t("Install mod")} "${installMatch[1]}"`;
   return t(title);
+}
+
+function translateCommandGroup(group: string, t: (message: string) => string) {
+  // "Recent" is a UI prefix, not part of the group label.
+  if (group.startsWith("Recent · ")) return `${t("Recent")} · ${t(group.slice("Recent · ".length))}`;
+  return t(group);
+}
+
+function translatePaletteSubtitle(subtitle: string, t: (message: string) => string) {
+  return translateCommandGroup(subtitle, t);
 }
 
 export function CommandPalette() {
@@ -71,7 +88,7 @@ function PaletteDialog({ getApp, platform, onClose }: { getApp: ReturnType<typeo
     app.lib.selectPiko(item.piko, item.kind === "tofu" ? item.tofuId : undefined);
     app.setActiveNav("Library");
     if (item.kind === "tofu") app.setShowTofuManager(true); else app.lib.setGameDetailsId(item.piko.id);
-  }, [context, getApp, onClose]);
+  }, [context, getApp, onClose, t]);
 
   const rows = () => Array.from(list.current?.querySelectorAll<HTMLElement>(".palette-item") ?? []);
   const onKeyDown = (event: ReactKeyboardEvent) => {
@@ -98,7 +115,7 @@ function PaletteDialog({ getApp, platform, onClose }: { getApp: ReturnType<typeo
         <button type="button" className="icon-button" aria-label={t("Close command palette")} onClick={onClose}><X size={15} aria-hidden="true" /></button>
       </div>
       <div className="palette-list" id="palette-list" role="listbox" aria-label={t("Results")} ref={list}>
-        {items.map((item) => <button type="button" role="option" aria-selected="false" className="palette-item" data-kind={item.kind} key={item.key} onClick={() => run(item)}><span className="palette-title">{item.kind === "command" ? translateCommandTitle(item.title, t) : item.title}</span><small>{item.kind === "command" ? t(item.subtitle) : item.subtitle}</small></button>)}
+        {items.map((item) => <button type="button" role="option" aria-selected="false" className="palette-item" data-kind={item.kind} key={item.key} onClick={() => run(item)}><span className="palette-title">{item.kind === "command" ? translateCommandTitle(item.title, t) : item.title}</span><small>{item.kind === "command" ? translatePaletteSubtitle(item.subtitle, t) : t(item.subtitle)}</small></button>)}
         {!items.length && <div className="palette-empty" role="status">{raw.trim() ? t("Nothing matches. Try a different word.") : t("No actions available.")}</div>}
       </div>
       <div className="palette-hint" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd> {t("move")}</span><span><kbd>Enter</kbd> {t("run")}</span><span><kbd>Esc</kbd> {t("close")}</span><span><kbd>&gt;</kbd> {t("actions only")}</span></div>
