@@ -65,16 +65,16 @@ export function DataSection() {
   };
   return <SettingsGroup title={t("Data & privacy")} subtitle={t("Local-first storage")} id="settings-data">
     <div className="setting-row"><span><strong>{t("Refresh all metadata")}</strong><small>{t("Refresh every available provider for games in your library. Manually locked fields and artwork you chose yourself are preserved.")}</small></span><button type="button" className="secondary-button" disabled={metadata.refreshBusy || lib.library.length === 0} onClick={() => void metadata.refreshAll(lib.library)}>{metadata.refreshingAll ? t("Refreshing all…") : t("Refresh all metadata")}</button></div>
-    <div className="data-source-list" role="list" aria-label="Metadata sources">
+    <div className="data-source-list" role="list" aria-label={t("Metadata sources")}>
       {dataSources.map((source) => {
         const provider = source.id === "igdb" || source.id === "steamgriddb" || source.id === "steam" ? source.id : null;
         const need = provider ? needs(provider) : null;
         const count = provider ? metadata.refreshableCount(lib.library, provider) : 0;
         const covers = gamesWithArtworkFrom(lib.library, source.id).length;
         return <div className="data-source-row" role="listitem" key={source.id}>
-          <span><strong>{source.label}</strong><small>{t(source.detail)}</small></span>
+          <span><strong>{t(source.label)}</strong><small>{t(source.detail)}</small></span>
           <span className="data-source-actions">
-            {provider && <button type="button" className="secondary-button" disabled={!need?.ready || count === 0 || metadata.refreshBusy} title={!need?.ready ? need?.text : count === 0 ? t("No game in your library can use this source.") : undefined} onClick={() => void metadata.refreshProvider(lib.library, provider)}>{metadata.refreshingProvider === provider ? t("Refreshing…") : t("Refresh") + (count ? ` (${count})` : "")}</button>}
+            {provider && <button type="button" className="secondary-button" disabled={!need?.ready || count === 0 || metadata.refreshBusy} title={!need?.ready ? t(need?.text ?? "") : count === 0 ? t("No game in your library can use this source.") : undefined} onClick={() => void metadata.refreshProvider(lib.library, provider)}>{metadata.refreshingProvider === provider ? t("Refreshing…") : t("Refresh") + (count ? ` (${count})` : "")}</button>}
             <button type="button" className="secondary-button danger-outline" disabled={busy !== null || (source.id === "custom-artwork" && covers === 0)} onClick={() => void run(source.id)}>{busy === source.id ? t("Clearing…") : t("Clear {source} data").replace("{source}", t(source.label))}</button>
           </span>
           {need && <p className={`data-source-state${need.ready ? " ready" : ""}`}>{need.ready && count === 0 ? "No game in your library can use this source yet." : need.text}</p>}
@@ -83,7 +83,7 @@ export function DataSection() {
     </div>
     <div className="setting-row"><span><strong>{t("Find missing covers")}</strong><small>{(() => { const missing = metadata.missingCovers(lib.library).length; return missing ? t("{count} games show a generated cover. Mochi looks each one up once (Steam games need no keys).").replace("{count}", String(missing)) : t("Every game that can have a cover already has one."); })()}</small></span><button type="button" className="secondary-button" disabled={metadata.refreshBusy || metadata.missingCovers(lib.library).length === 0} onClick={() => void metadata.findMissingCovers(lib.library)}>{metadata.refreshBusy ? t("Working…") : t("Find covers")}</button></div>
     <div className="data-source-footer">
-      <small className="metadata-note">Clearing removes saved lookups and downloaded covers from this device only. Games stay in your library and Mochi shows generated covers until you refresh.</small>
+      <small className="metadata-note">{t("Clearing removes saved lookups and downloaded covers from this device only. Games stay in your library and Mochi shows generated covers until you refresh.")}</small>
       <button type="button" className="secondary-button danger-outline" disabled={busy !== null} onClick={() => void run("all")}>{busy === "all" ? t("Clearing…") : t("Clear all cached data")}</button>
     </div>
     {note && <p className="metadata-note settings-note" role="status">{note}</p>}

@@ -37,7 +37,7 @@ export function ControllerSection() {
       <span><strong>{t("Stick dead zone")}</strong><small>{t("How far a stick must move before it counts. Raise it if the cursor drifts. Now {percent}%.").replace("{percent}", String(Math.round(settings.deadZone * 100)))}</small></span>
       <input type="range" min={10} max={80} step={5} value={Math.round(settings.deadZone * 100)} aria-label={t("Stick dead zone")} onChange={(event) => update({ deadZone: Number(event.target.value) / 100 })} />
     </label>
-    <div className="setting-row"><span><strong>Repeat speed</strong><small>{t("How quickly movement repeats while you hold a direction.")}</small></span>
+    <div className="setting-row"><span><strong>{t("Repeat speed")}</strong><small>{t("How quickly movement repeats while you hold a direction.")}</small></span>
       <Select<RepeatSpeed> label={t("Repeat speed")} value={settings.repeatSpeed} options={SPEEDS.map((option) => ({ ...option, label: t(option.label) }))} onChange={(repeatSpeed) => update({ repeatSpeed })} align="end" /></div>
     <div className="setting-row"><span><strong>{t("Button prompts")}</strong><small>{t("Which button icons Mochi shows.")}</small></span>
       <Select<PromptStyle> label={t("Button prompts")} value={settings.promptStyle} options={PROMPT_STYLES.map((option) => ({ ...option, label: t(option.label), description: option.description ? t(option.description) : undefined }))} onChange={(promptStyle) => update({ promptStyle })} align="end" /></div>
@@ -46,7 +46,7 @@ export function ControllerSection() {
       <small>{pads.length ? t("Press any button to test; the last action appears on the right.") : t("No controller detected. Connect one by cable or Bluetooth.")}</small>
       {pads.length > 0 && <ul className="controller-list">{pads.map((pad) => <li key={pad.key}><span>{pad.name}</span><small>{pad.family === "generic" ? t("Generic") : t(FAMILY_NAMES[pad.family])}</small></li>)}</ul>}
     </span>
-      <span className="metadata-note controller-readout" aria-live="polite">{last ? <><Prompt action={last as never} /> {last}</> : t("Waiting for input")}</span></div>
+      <span className="metadata-note controller-readout" aria-live="polite">{last ? <><Prompt action={last as never} /> {t(last)}</> : t("Waiting for input")}</span></div>
   </SettingsGroup>;
 }
 

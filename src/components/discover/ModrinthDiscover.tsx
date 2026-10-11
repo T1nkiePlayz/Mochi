@@ -125,8 +125,8 @@ export function ModrinthDiscover({ tofu, pikos, supabase, nexusConfigured, igdbC
 
       {nothingOn ? <p className="metadata-note" role="status">{t("All mod sources are turned off.")} <button type="button" className="text-button" onClick={openSettings}>{t("Open Settings")}</button> {t("and enable one under Mod sources.")}</p> : <>
       <DiscoverTabs tabs={tabs} active={tabId(tab)} onSelect={selectTab} onRemove={discover.remove} onAdd={settings.curseforge || settings.nexus ? () => setShowPicker(true) : undefined} />
-      {discover.cfError && <div className="discover-error" role="alert"><p><WifiOff size={14} /> {t("CurseForge games are unavailable")}</p><small>{discover.cfError}</small><button type="button" className="secondary-button" onClick={discover.retry}><RefreshCw size={13} /> {t("Retry")}</button></div>}
-      {loadError && <p className="metadata-note" role="status">{loadError}</p>}
+      {discover.cfError && <div className="discover-error" role="alert"><p><WifiOff size={14} /> {t("CurseForge games are unavailable")}</p><small>{t(discover.cfError)}</small><button type="button" className="secondary-button" onClick={discover.retry}><RefreshCw size={13} /> {t("Retry")}</button></div>}
+      {loadError && <p className="metadata-note" role="status">{t(loadError)}</p>}
       {install.prompt && <DependencySheet prompt={install.prompt} />}
       {tab.kind === "minecraft" && effective === "modrinth" && <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />}
 
@@ -135,7 +135,7 @@ export function ModrinthDiscover({ tofu, pikos, supabase, nexusConfigured, igdbC
         {settings.curseforge && <CurseforgeCredit />}
       </>}
 
-      {tab.kind === "minecraft" && (minecraftSources.length === 0 ? <p className="metadata-note" role="status">{t("Modrinth and CurseForge are both turned off.")} <button type="button" className="text-button" onClick={openSettings}>Open Settings</button> {t("to enable one.")}</p> : <>
+      {tab.kind === "minecraft" && (minecraftSources.length === 0 ? <p className="metadata-note" role="status">{t("Modrinth and CurseForge are both turned off.")} <button type="button" className="text-button" onClick={openSettings}>{t("Open Settings")}</button> {t("to enable one.")}</p> : <>
         {minecraftSources.length > 1 && <div className="mod-source-switch" role="group" aria-label={t("Mod source for this game")}><span>{t("Source")}</span>{minecraftSources.map((id) => <button key={id} type="button" className={effective === id ? "active" : ""} aria-pressed={effective === id} onClick={() => setProvider(id as "modrinth" | "curseforge")}>{t(id === "modrinth" ? "Modrinth" : "CurseForge")}</button>)}</div>}
         {effective === "modrinth"
           ? <MinecraftBrowser key={refreshKey} category={tab.category} onCategory={(category) => setTab({ kind: "minecraft", category })} tofuVersion={tofu.version} busy={install.busyId !== ""} onView={(project, version) => void openDetails(project, version)} onChoose={(project) => setPicker({ project })} />

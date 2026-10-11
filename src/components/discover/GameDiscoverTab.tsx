@@ -67,7 +67,7 @@ export function GameDiscoverTab({ game, pikos, supabase, settings, below, refres
     {sources.choices.length > 1 && <div className="mod-source-switch" role="group" aria-label={t("Mod source for this game")}><span>{t("Source")}</span>
       {sources.choices.map((id) => <button key={id} type="button" className={choice === id ? "active" : ""} aria-pressed={choice === id} title={t(choiceHint[id])} onClick={() => setChoice(id)}>{t(choiceLabel[id])}</button>)}</div>}
 
-    {info?.extended && <p className="metadata-note discover-extend-note" role="status">{info.note}{info.failed.length ? ` ${info.failed.join(", ")} did not answer.` : ""}</p>}
+    {info?.extended && <p className="metadata-note discover-extend-note" role="status">{t(info.note)}{info.failed.length ? ` ${t("{sites} did not answer.").replace("{sites}", info.failed.join(", "))}` : ""}</p>}
     {fewOnCurseforge && game.cf && <p className="metadata-note discover-limit-note" role="note">
       CurseForge shares only {info!.primaryTotal.toLocaleString()} {info!.primaryTotal === 1 ? "project" : "projects"} of this game with apps; browse the rest on curseforge.com.{" "}
       <button type="button" className="text-button" onClick={() => link(`${CF_SITE}/${game.cf!.slug}`)}><ExternalLink size={12} /> {t("Open {name} on CurseForge").replace("{name}", game.name)}</button>

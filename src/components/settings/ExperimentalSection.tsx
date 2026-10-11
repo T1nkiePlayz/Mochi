@@ -16,9 +16,9 @@ export function ExperimentalSection() {
   return <SettingsGroup title={t("Experimental")} subtitle={t("Unfinished features. They may change, break, or disappear.")} id="settings-experimental">
     {features.map((feature) => <label className="setting-row" key={feature.id}>
       <span>
-        <strong>{feature.name}{newOnOpen.current?.includes(feature.id) && <span className="experimental-new-badge">{t("New")}</span>}</strong>
+        <strong>{t(feature.name)}{newOnOpen.current?.includes(feature.id) && <span className="experimental-new-badge">{t("New")}</span>}</strong>
         <small>{t(feature.description)}</small>
-        <small className="experimental-since">Added in Mochi {feature.since}</small>
+        <small className="experimental-since">{t("Added in Mochi {version}").replace("{version}", feature.since)}</small>
       </span>
       <input className="toggle" type="checkbox" role="switch" aria-checked={enabled.includes(feature.id)} checked={enabled.includes(feature.id)} onChange={(event) => setEnabled(feature.id, event.target.checked)} aria-label={feature.name} />
     </label>)}

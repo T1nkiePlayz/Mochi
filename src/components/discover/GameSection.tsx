@@ -26,11 +26,11 @@ export function GameSection({ plan, source, cacheKey, pikos, ecosystem, onSeeAll
     <div className="all-game-head">
       {plan.minecraft && !plan.iconUrl ? <span className="game-avatar game-avatar-glyph" aria-hidden="true"><MinecraftIcon /></span> : <GameAvatar src={plan.iconUrl} fallbackSrcs={plan.iconFallbackUrls} name={plan.name} />}
       <h3 id={headingId}>{plan.name}</h3>
-      <span className="source-badge">{sourceLabels[plan.site]}</span>
+      <span className="source-badge">{t(sourceLabels[plan.site])}</span>
       <button type="button" className="text-button all-see-all" aria-label={t("See all {name} mods").replace("{name}", plan.name)} onClick={onSeeAll}>{t("See all")} <ChevronRight size={14} aria-hidden="true" /></button>
     </div>
     {near
-      ? <ModsBrowser preview source={preview} noun={`${plan.name} mods`} target={{ kind: "choose", pikos, ecosystem, gameName: plan.name, tofuFilter: plan.minecraft ? (tofu) => minecraftFilterFor(tofu, true) : undefined }} />
+      ? <ModsBrowser preview source={preview} noun={t("{name} mods").replace("{name}", plan.name)} target={{ kind: "choose", pikos, ecosystem, gameName: plan.name, tofuFilter: plan.minecraft ? (tofu) => minecraftFilterFor(tofu, true) : undefined }} />
       : <div className="discover-grid mods-grid mods-preview-grid" aria-hidden="true"><ProjectSkeletons count={4} /></div>}
   </section>;
 }
