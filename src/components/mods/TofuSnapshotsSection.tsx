@@ -38,7 +38,7 @@ export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
     if (!ok) return;
     await run(async () => {
       const report = await restoreTofuSnapshot(tofu.id, snapshot.id);
-      notify(t("Tofu restored"), `${tofu.name}: ${report.restored} restored, ${report.removed} removed, ${report.unchanged} already matched.`);
+      notify(t("Tofu restored"), t("{name}: {restored} restored, {removed} removed, {unchanged} already matched.").replace("{name}", tofu.name).replace("{restored}", String(report.restored)).replace("{removed}", String(report.removed)).replace("{unchanged}", String(report.unchanged)));
     }, "Restore failed");
   };
   const remove = async (snapshot: SnapshotInfo) => {
@@ -47,16 +47,16 @@ export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
   };
   const take = () => run(async () => {
     const made = await createTofuSnapshot(tofu.id, snapshotFolders(tofu), "Manual snapshot");
-    notify(made.reused ? t("Nothing changed") : t("Snapshot saved"), made.reused ? "The latest snapshot already matches the current mods." : `${made.files} files · ${formatBytes(made.size)}.`);
+    notify(made.reused ? t("Nothing changed") : t("Snapshot saved"), made.reused ? t("The latest snapshot already matches the current mods.") : t("{count} files · {size}.").replace("{count}", String(made.files)).replace("{size}", formatBytes(made.size)));
   }, t("Could not save a snapshot"));
 
   const last = snapshots ? lastWorkingSnapshot(snapshots) : undefined;
   return <div className="tofu-snapshots">
     <div className="tofu-snapshots-actions">
-      <button type="button" className="play-button" disabled={busy || !last} onClick={() => last && void restore(last)} title={last ? `Back to ${when(last.createdAt)}` : t("No snapshot yet")}><History size={14}/> {t("Restore last working state")}</button>
+      <button type="button" className="play-button" disabled={busy || !last} onClick={() => last && void restore(last)} title={last ? t("Back to {date}").replace("{date}", when(last.createdAt)) : t("No snapshot yet")}><History size={14}/> {t("Restore last working state")}</button>
       <button type="button" className="secondary-button" disabled={busy || !tofu.path} onClick={() => void take()}><Camera size={14}/> {t("Take snapshot now")}</button>
     </div>
-    {error && <p className="metadata-note" role="alert">{error}</p>}
+    {error && <p className="metadata-note" role="alert">{t(error)}</p>}
     {snapshots === null ? <p className="muted" role="status">{t("Loading snapshots…")}</p>
       : !snapshots.length ? <p className="muted">{t("No snapshots yet. One is saved automatically before mods are updated.")}</p>
       : <ul className="tofu-snapshot-list" aria-label={t("Snapshots")}>{snapshots.map((snapshot) => <li key={snapshot.id} className="tofu-snapshot">

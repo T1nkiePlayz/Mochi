@@ -32,7 +32,7 @@ export function TofuShareSection({ piko, tofu, onCreateTofu }: { piko: Piko; tof
     setStatus(t("Reading the mod list…"));
     return exportTofuPack(piko, tofu);
   };
-  const describe = (mods: number, unknown: number, omitted: number) => `${mods} mod${mods === 1 ? "" : "s"}${unknown ? `, ${unknown} unidentified file${unknown === 1 ? "" : "s"} (hash only)` : ""}${omitted ? `, ${omitted} could not be listed` : ""}.`;
+  const describe = (mods: number, unknown: number, omitted: number) => t("{mods} mods{unknown}{omitted}.").replace("{mods}", String(mods)).replace("{unknown}", unknown ? t(", {count} unidentified files (hash only)").replace("{count}", String(unknown)) : "").replace("{omitted}", omitted ? t(", {count} could not be listed").replace("{count}", String(omitted)) : "");
 
   const run = async (kind: "file" | "code") => {
     if (busy) return;
@@ -42,7 +42,7 @@ export function TofuShareSection({ piko, tofu, onCreateTofu }: { piko: Piko; tof
       if (!pack.mods.length && !pack.unknown.length) { setStatus(""); notify(t("Nothing to share"), t("This Tofu has no mods yet.")); return; }
       if (kind === "file") {
         const path = await savePackFile(serializeMochipack(pack), tofu.name);
-        setStatus(path ? `Saved. ${describe(pack.mods.length, pack.unknown.length, omitted)}` : "");
+        setStatus(path ? `${t("Saved.")} ${describe(pack.mods.length, pack.unknown.length, omitted)}` : "");
         if (path) notify(t("Modpack exported"), path);
       } else {
         const code = await encodeShortCode(pack);
@@ -60,7 +60,7 @@ export function TofuShareSection({ piko, tofu, onCreateTofu }: { piko: Piko; tof
     <Checkbox checked={identify} onChange={setIdentify} label={t("Identify unknown files first")} description={t("Looks unmatched files up on Modrinth, CurseForge and Nexus Mods by hash so more of the pack can be re-downloaded.")} />
     <div className="tofu-share-actions">
       <button type="button" className="play-button" disabled={disabled} onClick={() => void run("file")}><Download size={14}/> {t("Export file")}</button>
-      <button type="button" className="secondary-button" disabled={disabled || !codeOk} title={codeOk ? "Copy a short code you can paste into a chat" : t("This web view cannot make short codes")} onClick={() => void run("code")}><Copy size={14}/> {t("Copy code")}</button>
+      <button type="button" className="secondary-button" disabled={disabled || !codeOk} title={codeOk ? t("Copy a short code you can paste into a chat") : t("This web view cannot make short codes")} onClick={() => void run("code")}><Copy size={14}/> {t("Copy code")}</button>
       <button type="button" className="secondary-button" onClick={() => setImporting(true)}><FileUp size={14}/> {t("Import modpack…")}</button>
     </div>
     <p className="metadata-note tofu-share-note" role="status" aria-live="polite">{busy ? status || t("Working…") : status || <><Share2 size={12}/> {t("The pack holds ids and hashes only, never mod files.")}</>}</p>

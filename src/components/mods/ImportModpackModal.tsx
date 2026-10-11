@@ -69,7 +69,7 @@ export function ImportModpackModal({ piko, tofu, onCreateTofu, onClose }: Props)
       if (!target) throw new Error("Could not create a Tofu. Choose a mod folder for this game first.");
       const done = await runImport(plan, target, pack, includeDisabled);
       setReport(done);
-      notify("Modpack import started", `${done.queued} download${done.queued === 1 ? "" : "s"} queued for ${target.name}. Progress is in Downloads.`);
+      notify(t("Modpack import started"), t("{count} downloads queued for {name}. Progress is in Downloads.").replace("{count}", String(done.queued)).replace("{name}", target.name));
     } catch (reason) { setError(errorText(reason, t)); }
     finally { setBusy(false); }
   };
@@ -98,17 +98,17 @@ export function ImportModpackModal({ piko, tofu, onCreateTofu, onClose }: Props)
           <label className="mochi-field"><span className="mochi-field-label">{t("Or paste a code")}</span><textarea rows={3} value={text} placeholder={t("mochipack:…")} spellCheck={false} onChange={(event) => setText(event.target.value)} /></label>
           <button type="button" className="play-button" disabled={!text.trim()} onClick={() => void load(text)}>{t("Preview")}</button>
         </div>}
-        {error && <p className="metadata-note import-pack-error" role="alert">{error}</p>}
+        {error && <p className="metadata-note import-pack-error" role="alert">{t(error)}</p>}
         {pack && <>
           <div className="import-pack-head"><strong>{pack.name || pack.game.name}</strong><small>{pack.game.name}{pack.loader ? ` · ${pack.loader}` : ""}{pack.gameVersion ? ` · ${pack.gameVersion}` : ""} · {pack.mods.length} mod{pack.mods.length === 1 ? "" : "s"}</small></div>
-          {notes.map((note) => <p key={note} className="metadata-note">{note}</p>)}
+          {notes.map((note) => <p key={note} className="metadata-note">{t(note)}</p>)}
           {progress && <p className="muted" role="status">{t("Checking availability…")} {progress[0]} / {progress[1]}</p>}
           {plan && summary && <>
-            <p className="import-pack-summary" role="status">{summary.ready} ready · {summary.manual} manual · {summary.unavailable} unavailable{summary.changed ? ` · ${summary.changed} changed` : ""}{plan.alreadyInstalled.length ? ` · ${plan.alreadyInstalled.length} already installed` : ""}{pack.unknown.length ? ` · ${pack.unknown.length} unidentified in pack` : ""}</p>
+            <p className="import-pack-summary" role="status">{t("{ready} ready · {manual} manual · {unavailable} unavailable{changed}").replace("{ready}", String(summary.ready)).replace("{manual}", String(summary.manual)).replace("{unavailable}", String(summary.unavailable)).replace("{changed}", summary.changed ? ` · ${summary.changed} changed` : "")}{plan.alreadyInstalled.length ? ` · ${t("{count} already installed").replace("{count}", String(plan.alreadyInstalled.length))}` : ""}{pack.unknown.length ? ` · ${t("{count} unidentified in pack").replace("{count}", String(pack.unknown.length))}` : ""}</p>
             {pack.mods.some((mod) => !mod.enabled) && <Checkbox checked={includeDisabled} onChange={setIncludeDisabled} label={t("Also install mods that were switched off in the pack")} description={t("They are installed switched on.")} />}
             <ul className="import-pack-list" aria-label={t("Mods in the pack")}>{rows.map((item) => <li key={`${item.mod.provider}:${item.mod.projectId}:${item.mod.fileId}`} className={`import-pack-row is-${item.availability.status}`}>
               <div className="import-pack-row-text"><strong>{titleFromFile(item.mod.fileName)}</strong><small>{item.mod.fileName} · {PROVIDER[item.mod.provider]}{item.mod.folder !== "mods" ? ` · ${item.mod.folder}` : ""}{!item.mod.enabled ? " · off in pack" : ""}</small>
-                {item.availability.status !== "ready" && <small className="import-pack-reason">{item.availability.reason}</small>}</div>
+                {item.availability.status !== "ready" && <small className="import-pack-reason">{t(item.availability.reason)}</small>}</div>
               <span className={`chip import-pack-status is-${item.availability.status}`}>{t(LABEL[item.availability.status])}</span>{link(item)}
             </li>)}</ul>
             {plan.items.length > SHOWN && !showAll && <button type="button" className="secondary-button" onClick={() => setShowAll(true)}>{t("Show all {count}").replace("{count}", String(plan.items.length))}</button>}
@@ -126,5 +126,5 @@ export function ImportModpackModal({ piko, tofu, onCreateTofu, onClose }: Props)
 }
 
 function ReportList({ title, rows }: { title: string; rows: string[] }) {
-  return <div className="import-pack-report-group"><h3>{title} ({rows.length})</h3><ul>{rows.slice(0, 50).map((row, index) => <li key={index}>{row}</li>)}{rows.length > 50 && <li>and {rows.length - 50} more</li>}</ul></div>;
+  return <div className="import-pack-report-group"><h3>{title} ({rows.length})</h3><ul>{rows.slice(0, 50).map((row, index) => <li key={index}>{row}</li>)}{rows.length > 50 && <li>{t("and {count} more").replace("{count}", String(rows.length - 50))}</li>}</ul></div>;
 }

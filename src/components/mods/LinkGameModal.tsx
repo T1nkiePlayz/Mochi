@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, RefreshCw, Search, Unlink, X } from "lucide-react";
+import { useTranslation } from "../../lib/useTranslation";
 import { cfAllGames, type CfGame } from "../../lib/curseforge";
 import { getNexusGames, type NexusGame } from "../../lib/nexus";
 import { normalizeGameName } from "../../lib/mods/gameSupport";
@@ -18,6 +19,7 @@ type Props = {
 
 /** Manual override of the automatic match: pick the CurseForge or Nexus Mods game this game belongs to, or unlink. */
 export function LinkGameModal({ piko, curseforgeEnabled, nexusEnabled, onSave, onClose }: Props) {
+  const t = useTranslation();
   const [site, setSite] = useState<"curseforge" | "nexus">(curseforgeEnabled ? "curseforge" : "nexus");
   const [search, setSearch] = useState(piko.name);
   const [cfGames, setCfGames] = useState<CfGame[] | null>(null);
@@ -58,21 +60,21 @@ export function LinkGameModal({ piko, curseforgeEnabled, nexusEnabled, onSave, o
   const linked = site === "curseforge" ? current?.curseforge : current?.nexus;
 
   return <ModalShell label={`Link ${piko.name} to a mod site`} className="tofu-picker-window nexus-game-picker-window" onClose={onClose}>
-    <div className="modal-header"><div><p className="eyebrow">{piko.name}</p><h2>Link this game to a mod site</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button></div>
-    <p className="modal-description">Mochi matches games by name. If it picked wrongly or found nothing, choose the right game here. Your choice is remembered.</p>
-    <div className="discover-tabs" role="tablist" aria-label="Mod site">
-      {curseforgeEnabled && <button type="button" role="tab" aria-selected={site === "curseforge"} className={site === "curseforge" ? "active" : ""} onClick={() => setSite("curseforge")}>CurseForge</button>}
-      {nexusEnabled && supabase && <button type="button" role="tab" aria-selected={site === "nexus"} className={site === "nexus" ? "active" : ""} onClick={() => setSite("nexus")}>Nexus Mods</button>}
+    <div className="modal-header"><div><p className="eyebrow">{piko.name}</p><h2>{t("Link this game to a mod site")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
+    <p className="modal-description">{t("Mochi matches games by name. If it picked wrongly or found nothing, choose the right game here. Your choice is remembered.")}</p>
+    <div className="discover-tabs" role="tablist" aria-label={t("Mod site")}>
+      {curseforgeEnabled && <button type="button" role="tab" aria-selected={site === "curseforge"} className={site === "curseforge" ? "active" : ""} onClick={() => setSite("curseforge")}>{t("CurseForge")}</button>}
+      {nexusEnabled && supabase && <button type="button" role="tab" aria-selected={site === "nexus"} className={site === "nexus" ? "active" : ""} onClick={() => setSite("nexus")}>{t("Nexus Mods")}</button>}
     </div>
-    {linked && <p className="metadata-note" role="status">Linked to <strong>{linked.name}</strong>. <button type="button" className="text-button" onClick={unlink}><Unlink size={13} /> Unlink</button></p>}
-    <label className="search-box nexus-game-search"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${site === "curseforge" ? "CurseForge" : "Nexus Mods"} games...`} aria-label="Search games" data-autofocus /></label>
+    {linked && <p className="metadata-note" role="status">{t("Linked to")} <strong>{linked.name}</strong>. <button type="button" className="text-button" onClick={unlink}><Unlink size={13} /> Unlink</button></p>}
+    <label className="search-box nexus-game-search"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("Search {site} games...").replace("{site}", site === "curseforge" ? "CurseForge" : "Nexus Mods")} aria-label={t("Search games")} data-autofocus /></label>
     {error && <p className="metadata-note" role="alert">{error}</p>}
-    {loading ? <div className="discover-loading"><RefreshCw size={18} className="spin" /><span>Loading games...</span></div> : <div className="nexus-game-picker-list">
-      {site === "curseforge" ? cfVisible.map((game) => <button key={game.id} type="button" className="nexus-game-picker-row" onClick={() => save({ curseforge: { gameId: game.id, slug: game.slug, name: game.name } })}>
+    {loading ? <div className="discover-loading"><RefreshCw size={18} className="spin" /><span>{t("Loading games...")}</span></div> : <div className="nexus-game-picker-list">
+      {site === "curseforge" ? cfVisible.map((game) => <button key={game.id} type="button" className="nexus-game-picker-row" aria-label={t("Link {name} on CurseForge").replace("{name}", game.name)} onClick={() => save({ curseforge: { gameId: game.id, slug: game.slug, name: game.name } })}>
         {game.assets?.iconUrl ? <img src={game.assets.iconUrl} alt="" loading="lazy" decoding="async" /> : <span>{game.name.slice(0, 1)}</span>}<div><strong>{game.name}</strong><small>{game.slug}</small></div><Plus size={15} /></button>)
-        : nexusGames.slice(0, 40).map((game) => <button key={game.domainName} type="button" className="nexus-game-picker-row" onClick={() => save({ nexus: { domain: game.domainName, name: game.name } })}>
+        : nexusGames.slice(0, 40).map((game) => <button key={game.domainName} type="button" className="nexus-game-picker-row" aria-label={t("Link {name} on Nexus Mods").replace("{name}", game.name)} onClick={() => save({ nexus: { domain: game.domainName, name: game.name } })}>
           {game.iconUrl ? <img src={game.iconUrl} alt="" loading="lazy" decoding="async" /> : <span>{game.name.slice(0, 1)}</span>}<div><strong>{game.name}</strong><small>{game.domainName}</small></div><Plus size={15} /></button>)}
-      {!error && ((site === "curseforge" ? cfVisible.length : nexusGames.length) === 0) && <div className="discover-empty">No games match your search.</div>}
+      {!error && ((site === "curseforge" ? cfVisible.length : nexusGames.length) === 0) && <div className="discover-empty">{t("No games match your search.")}</div>}
     </div>}
     {site === "curseforge" && <CurseforgeCredit />}
   </ModalShell>;
