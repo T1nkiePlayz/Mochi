@@ -32,8 +32,8 @@ export function LibraryModSearch({ query, nexusEnabled, supabase }: { query: str
       if (!cancelled) {
         setModrinth(results[0].status === "fulfilled" ? results[0].value : []);
         setNexus(results[1].status === "fulfilled" ? results[1].value : []);
-        if (results.every(result => result.status === "rejected")) setMessage(t("Mod search is temporarily unavailable."));
-        else if (results.some(result => result.status === "rejected")) setMessage(t("Some provider results could not be loaded."));
+        if (results.every(result => result.status === "rejected")) setMessage(t("Search failed."));
+        else if (results.some(result => result.status === "rejected")) setMessage(t("Search failed."));
         setLoading(false);
       }
     }, 280);
@@ -48,12 +48,12 @@ export function LibraryModSearch({ query, nexusEnabled, supabase }: { query: str
       {modrinth.map(project => <article className="library-mod-result" key={`modrinth-${project.project_id}`}>
         <RemoteImage src={project.icon_url} alt="" loading="lazy" fallback={<span className="library-mod-fallback"><Package size={17}/></span>}/>
         <span><strong>{project.title}</strong><small>Modrinth · {(project.downloads ?? 0).toLocaleString(getTranslationLocale())} downloads</small><small>{project.description}</small></span>
-        <button className="icon-button" aria-label={t("Open {name} on Modrinth").replace("{name}", project.title)} onClick={() => void openExternalUrl(`https://modrinth.com/mod/${encodeURIComponent(project.slug)}`).catch(() => undefined)}><ExternalLink size={14}/></button>
+        <button className="icon-button" aria-label={`${t("Open")} ${project.title} on Modrinth`} onClick={() => void openExternalUrl(`https://modrinth.com/mod/${encodeURIComponent(project.slug)}`).catch(() => undefined)}><ExternalLink size={14}/></button>
       </article>)}
       {nexus.map(({ game, mod }) => <article className="library-mod-result" key={`nexus-${game.domainName}-${mod.id}`}>
         <RemoteImage src={mod.pictureUrl} alt="" loading="lazy" fallback={<span className="library-mod-fallback"><Package size={17}/></span>}/>
-        <span><strong>{mod.name}</strong><small>Nexus Mods · {game.name}{mod.author ? ` · ${mod.author}` : ""}</small><small>{mod.summary || t("Popular mod from the Nexus Mods feed.")}</small></span>
-        <button className="icon-button" aria-label={t("Open {name} on Nexus Mods").replace("{name}", mod.name)} onClick={() => void openExternalUrl(mod.modPageUrl).catch(() => undefined)}><ExternalLink size={14}/></button>
+        <span><strong>{mod.name}</strong><small>Nexus Mods · {game.name}{mod.author ? ` · ${mod.author}` : ""}</small><small>{mod.summary || t("No description.")}</small></span>
+        <button className="icon-button" aria-label={`${t("Open")} ${mod.name} on Nexus Mods`} onClick={() => void openExternalUrl(mod.modPageUrl).catch(() => undefined)}><ExternalLink size={14}/></button>
       </article>)}
     </div>
     {nexusEnabled && nexus.length > 0 && <small className="metadata-note">Nexus search shows its top five trending mods for each matching game.</small>}
