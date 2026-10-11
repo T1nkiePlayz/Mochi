@@ -91,12 +91,12 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
     };
     const detected = game ? await ensureTofuFolder(game, chosen, save) : null;
     if (detected) return detected;
-    const folder = await open({ directory: true, multiple: false, title: `Choose a folder for ${chosen.name}` });
+    const folder = await open({ directory: true, multiple: false, title: t("Choose a folder for {name}").replace("{name}", chosen.name) });
     if (typeof folder !== "string") return null;
     if (target.kind === "tofu") target.onUpdateTofu({ path: folder });
     else if (owner) lib.updateGame(owner.id, { tofus: owner.tofus.map((entry) => entry.id === chosen.id ? { ...entry, path: folder } : entry) });
     return { ...chosen, path: folder };
-  }, [target, lib]);
+  }, [target, lib, t]);
 
   const run = useCallback(async (item: ModItem, file: ModFile | undefined, chosen: Tofu, owner?: Piko, force = false) => {
     const ready = await withFolder(chosen, owner);
@@ -123,11 +123,11 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
   const categoryOptions = [{ value: "", label: "All categories" }, ...categories.map((category) => ({ value: category.id, label: category.name }))];
   const filtered = Boolean(effectiveQuery || categoryId);
   const busy = install.busyId !== "";
-  const actionLabel = target.kind === "tofu" ? "Download" : "Choose Tofu instance";
+  const actionLabel = target.kind === "tofu" ? t("Download") : t("Choose Tofu instance");
 
   const modals = <>
     {install.prompt && <DependencySheet prompt={install.prompt} />}
-    {viewing && <ModDetailsModal source={source} item={viewing} filter={filter} installLabel={tofu ? `Download to ${tofu.name}` : "Choose Tofu instance"} busy={busy} notice={install.notice} onDismissNotice={() => install.setNotice(null)} onInstall={(file) => act(viewing, file)} onClose={() => setViewing(null)} />}
+    {viewing && <ModDetailsModal source={source} item={viewing} filter={filter} installLabel={tofu ? t("Download to {name}").replace("{name}", tofu.name) : t("Choose Tofu instance")} busy={busy} notice={install.notice} onDismissNotice={() => install.setNotice(null)} onInstall={(file) => act(viewing, file)} onClose={() => setViewing(null)} />}
     {picking && target.kind === "choose" && <TofuPicker title={picking.item.name} pikos={target.pikos} ecosystem={picking.item.ecosystem ?? target.ecosystem} gameName={picking.item.game ?? target.gameName}
       metas={picking.file ? [metaFromModFile(picking.file)] : metasOfItem(picking.item)} onClose={() => setPicking(null)}
       onInstall={(chosen, owner, force) => { const pending = picking; setPicking(null); void run(pending.item, pending.file, chosen, owner, force); }} />}
@@ -137,7 +137,7 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
     <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />
     {feed.loading && <div className="discover-grid mods-grid mods-preview-grid" aria-busy="true"><ProjectSkeletons count={4} /></div>}
     {!feed.loading && feed.items.length > 0 && <div className="discover-grid mods-grid mods-preview-grid">{feed.items.map((item) => <ModCard key={`${item.source}:${item.id}`} showSource={false} item={item} actionLabel={actionLabel} busy={busy} onView={setViewing} onAction={act} />)}</div>}
-    {feed.error && <div className="discover-error mods-preview-error" role="alert"><p>{feed.offline ? "You appear to be offline." : `Could not load ${noun}.`}</p><small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> {t("Retry")}</button></div>}
+    {feed.error && <div className="discover-error mods-preview-error" role="alert"><p>{feed.offline ? t("You appear to be offline.") : t("Could not load {items}.").replace("{items}", t(noun))}</p><small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> {t("Retry")}</button></div>}
     {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty"><p>No {noun} to show yet.</p></div>}
     {modals}
   </div>;
@@ -157,7 +157,7 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
       render={(item) => <ModCard showSource={source.mixed === true || Boolean(item.game)} item={item} actionLabel={actionLabel} busy={busy} onView={setViewing} onAction={act} state={tofu ? stateOf(item) : undefined} onUpdate={tofu ? update : undefined} />} />}
     {!expanded && !feed.loading && !feed.error && (feed.items.length > shown.length || feed.hasMore) && <div className="mods-show-more"><button type="button" className="secondary-button" onClick={() => { setExpanded(true); if (feed.items.length <= shown.length) feed.loadMore(); }}>{t("Show more {items}").replace("{items}", t(noun))}</button></div>}
     {feed.error && <div className="discover-error" role="alert">
-      {feed.offline ? <p><WifiOff size={14} /> You appear to be offline</p> : <p>{feed.items.length ? "Could not load more." : `Could not load ${noun} from ${source.label}.`}</p>}
+      {feed.offline ? <p><WifiOff size={14} /> {t("You appear to be offline.")}</p> : <p>{feed.items.length ? "Could not load more." : `Could not load ${noun} from ${source.label}.`}</p>}
       <small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> Retry</button>
     </div>}
     {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty"><p>No {noun} match{filtered ? " these filters" : ""}.</p>{filtered && <button type="button" className="secondary-button" onClick={() => { setSearch(""); setDebounced(""); setCategoryId(""); }}>{t("Clear filters")}</button>}</div>}

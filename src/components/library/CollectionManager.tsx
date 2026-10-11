@@ -31,27 +31,28 @@ export function CollectionManager({ state, counts, onClose }: Props) {
       </form>
       <ul className="collection-list">
         {collections.map((collection, index) => <li key={collection.id} className="collection-row">
-          <EmojiField value={collection.icon ?? ""} onChange={(value) => renameCollection(collection.id, collection.name, value)} label={`Emoji for ${collection.name}`} />
-          <input defaultValue={collection.name} aria-label={`Rename ${collection.name}`} maxLength={40} onBlur={(event) => { if (event.target.value.trim() && event.target.value !== collection.name) renameCollection(collection.id, event.target.value, collection.icon); else event.target.value = collection.name; }} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} />
+          <EmojiField value={collection.icon ?? ""} onChange={(value) => renameCollection(collection.id, collection.name, value)} label={t("Emoji for {name}").replace("{name}", collection.name)} />
+          <input defaultValue={collection.name} aria-label={t("Rename {name}").replace("{name}", collection.name)} maxLength={40} onBlur={(event) => { if (event.target.value.trim() && event.target.value !== collection.name) renameCollection(collection.id, event.target.value, collection.icon); else event.target.value = collection.name; }} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} />
           <small>{t((counts.get(collection.id) ?? 0) === 1 ? "{count} game" : "{count} games").replace("{count}", String(counts.get(collection.id) ?? 0))}</small>
-          <button type="button" className="icon-button" aria-label={`Move ${collection.name} up`} disabled={index === 0} onClick={() => moveCollection(collection.id, -1)}><ArrowUp size={14} /></button>
-          <button type="button" className="icon-button" aria-label={`Move ${collection.name} down`} disabled={index === collections.length - 1} onClick={() => moveCollection(collection.id, 1)}><ArrowDown size={14} /></button>
-          <button type="button" className="icon-button" aria-label={`Delete ${collection.name}`} onClick={() => setDeleting(collection)}><Trash2 size={14} /></button>
+          <button type="button" className="icon-button" aria-label={t("Move {name} up").replace("{name}", collection.name)} disabled={index === 0} onClick={() => moveCollection(collection.id, -1)}><ArrowUp size={14} /></button>
+          <button type="button" className="icon-button" aria-label={t("Move {name} down").replace("{name}", collection.name)} disabled={index === collections.length - 1} onClick={() => moveCollection(collection.id, 1)}><ArrowDown size={14} /></button>
+          <button type="button" className="icon-button" aria-label={t("Delete {name}").replace("{name}", collection.name)} onClick={() => setDeleting(collection)}><Trash2 size={14} /></button>
         </li>)}
         {!collections.length && <li className="metadata-note">No collections yet. Collections group games however you like, such as "Co-op" or "Finish this year".</li>}
       </ul>
     </div>
-    {deleting && <ConfirmDialog title={`Delete “${deleting.name}”?`} message="Only the collection is removed. The games in it stay in your library." items={[deleting.name]} confirmLabel="Delete collection" danger
+    {deleting && <ConfirmDialog title={t("Delete “{name}”?").replace("{name}", deleting.name)} message="Only the collection is removed. The games in it stay in your library." items={[deleting.name]} confirmLabel="Delete collection" danger
       onCancel={() => setDeleting(null)} onConfirm={() => { deleteCollection(deleting.id); setDeleting(null); }} />}
   </div>;
 }
 
 function EmojiField({ value, onChange, label }: { value: string; onChange: (value: string) => void; label: string }) {
+  const t = useTranslation();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   useDismiss(root, open, () => setOpen(false));
   return <div className="emoji-field" ref={root}>
-    <button type="button" className="emoji-trigger" aria-label={`${label}: ${value || "none"}`} aria-expanded={open} onClick={() => setOpen(!open)}>{value || "☆"}</button>
+    <button type="button" className="emoji-trigger" aria-label={`${label}: ${value || t("none")}`} aria-expanded={open} onClick={() => setOpen(!open)}>{value || "☆"}</button>
     {open && <div className="emoji-popover" role="group" aria-label="Choose an emoji">
       {EMOJI.map((emoji) => <button type="button" key={emoji} aria-label={emoji} onClick={() => { onChange(emoji); setOpen(false); }}>{emoji}</button>)}
       <input aria-label="Type any emoji" placeholder="Any" maxLength={4} onChange={(event) => { onChange(event.target.value); }} />
