@@ -217,7 +217,9 @@
           "libudev1",
           "xdg-utils",
           "gstreamer1.0-plugins-base",
-          "gstreamer1.0-plugins-good"
+          "gstreamer1.0-plugins-good",
+          "gstreamer1.0-plugins-bad",
+          "gstreamer1.0-libav"
         ],
         "recommends": [
           "libnotify-bin"
@@ -228,7 +230,9 @@
         "depends": [
           "libudev.so.1()(64bit)",
           "gstreamer1-plugins-base",
-          "gstreamer1-plugins-good"
+          "gstreamer1-plugins-good",
+          "gstreamer1-plugins-bad-free",
+          "gstreamer1-libav"
         ]
       },
       "appimage": {
