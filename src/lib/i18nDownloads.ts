@@ -17,3 +17,40 @@ export const downloadMessages: Record<string, Record<string, string>> = {
   "Pause all": { ar: "إيقاف الكل مؤقتًا", bg: "Пауза на всички", "zh-Hans": "全部暂停", "zh-Hant": "全部暫停", cs: "Pozastavit vše", da: "Sæt alle på pause", nl: "Alles pauzeren", fi: "Keskeytä kaikki", fr: "Tout mettre en pause", de: "Alle pausieren", el: "Παύση όλων", hu: "Összes szüneteltetése", id: "Jeda semua", it: "Metti tutto in pausa", ja: "すべて一時停止", ko: "모두 일시 중지", no: "Sett alle på pause", pl: "Wstrzymaj wszystkie", pt: "Pausar tudo", "pt-BR": "Pausar tudo", ro: "Pauză pentru toate", ru: "Приостановить всё", es: "Pausar todo", sv: "Pausa alla", th: "หยุดทั้งหมดชั่วคราว", tr: "Tümünü duraklat", uk: "Призупинити все", vi: "Tạm dừng tất cả" },
   "Resume all": { ar: "استئناف الكل", bg: "Продължаване на всички", "zh-Hans": "全部恢复", "zh-Hant": "全部繼續", cs: "Pokračovat ve všech", da: "Genoptag alle", nl: "Alles hervatten", fi: "Jatka kaikkia", fr: "Tout reprendre", de: "Alle fortsetzen", el: "Συνέχιση όλων", hu: "Összes folytatása", id: "Lanjutkan semua", it: "Riprendi tutto", ja: "すべて再開", ko: "모두 재개", no: "Fortsett alle", pl: "Wznów wszystkie", pt: "Retomar tudo", "pt-BR": "Retomar tudo", ro: "Reia toate", ru: "Возобновить всё", es: "Reanudar todo", sv: "Återuppta alla", th: "ดำเนินการทั้งหมดต่อ", tr: "Tümünü sürdür", uk: "Відновити все", vi: "Tiếp tục tất cả" }
 };
+
+/** Notification copy assembled from download state rather than literal JSX. */
+const downloadNotificationKeys = ["Download finished", "Download failed", "{name} was added to {tofu}.", "Unknown error"] as const;
+const downloadNotificationLocales: Record<string, string[]> = {
+  "ar": ["اكتمل التنزيل", "فشل التنزيل", "تمت إضافة {name} إلى {tofu}.", "خطأ غير معروف"],
+  "bg": ["Изтеглянето завърши", "Изтеглянето не бе успешно", "{name} беше добавен към {tofu}.", "Неизвестна грешка"],
+  "zh-Hans": ["下载完成", "下载失败", "已将 {name} 添加到 {tofu}。", "未知错误"],
+  "zh-Hant": ["下載完成", "下載失敗", "已將 {name} 新增至 {tofu}。", "未知錯誤"],
+  "cs": ["Stahování dokončeno", "Stahování se nezdařilo", "{name} byl přidán do {tofu}.", "Neznámá chyba"],
+  "da": ["Download fuldført", "Download mislykkedes", "{name} blev føjet til {tofu}.", "Ukendt fejl"],
+  "nl": ["Download voltooid", "Download mislukt", "{name} is toegevoegd aan {tofu}.", "Onbekende fout"],
+  "fi": ["Lataus valmis", "Lataus epäonnistui", "{name} lisättiin kohteeseen {tofu}.", "Tuntematon virhe"],
+  "fr": ["Téléchargement terminé", "Échec du téléchargement", "{name} a été ajouté à {tofu}.", "Erreur inconnue"],
+  "de": ["Download abgeschlossen", "Download fehlgeschlagen", "{name} wurde zu {tofu} hinzugefügt.", "Unbekannter Fehler"],
+  "el": ["Η λήψη ολοκληρώθηκε", "Η λήψη απέτυχε", "Το {name} προστέθηκε στο {tofu}.", "Άγνωστο σφάλμα"],
+  "hu": ["Letöltés befejezve", "Sikertelen letöltés", "A(z) {name} hozzáadva ehhez: {tofu}.", "Ismeretlen hiba"],
+  "id": ["Unduhan selesai", "Unduhan gagal", "{name} ditambahkan ke {tofu}.", "Kesalahan tidak diketahui"],
+  "it": ["Download completato", "Download non riuscito", "{name} è stato aggiunto a {tofu}.", "Errore sconosciuto"],
+  "ja": ["ダウンロード完了", "ダウンロード失敗", "{name} を {tofu} に追加しました。", "不明なエラー"],
+  "ko": ["다운로드 완료", "다운로드 실패", "{name}을(를) {tofu}에 추가했습니다.", "알 수 없는 오류"],
+  "no": ["Nedlasting fullført", "Nedlasting mislyktes", "{name} ble lagt til i {tofu}.", "Ukjent feil"],
+  "pl": ["Pobieranie zakończone", "Pobieranie nie powiodło się", "Dodano {name} do {tofu}.", "Nieznany błąd"],
+  "pt": ["Transferência concluída", "Falha na transferência", "{name} foi adicionado a {tofu}.", "Erro desconhecido"],
+  "pt-BR": ["Download concluído", "Falha no download", "{name} foi adicionado a {tofu}.", "Erro desconhecido"],
+  "ro": ["Descărcare finalizată", "Descărcarea a eșuat", "{name} a fost adăugat la {tofu}.", "Eroare necunoscută"],
+  "ru": ["Загрузка завершена", "Ошибка загрузки", "{name} добавлен в {tofu}.", "Неизвестная ошибка"],
+  "es": ["Descarga completada", "Error de descarga", "{name} se añadió a {tofu}.", "Error desconocido"],
+  "sv": ["Nedladdningen är klar", "Nedladdningen misslyckades", "{name} lades till i {tofu}.", "Okänt fel"],
+  "th": ["ดาวน์โหลดเสร็จแล้ว", "ดาวน์โหลดไม่สำเร็จ", "เพิ่ม {name} ไปยัง {tofu} แล้ว", "ข้อผิดพลาดที่ไม่ทราบสาเหตุ"],
+  "tr": ["İndirme tamamlandı", "İndirme başarısız", "{name}, {tofu} konumuna eklendi.", "Bilinmeyen hata"],
+  "uk": ["Завантаження завершено", "Помилка завантаження", "{name} додано до {tofu}.", "Невідома помилка"],
+  "vi": ["Tải xuống hoàn tất", "Tải xuống thất bại", "Đã thêm {name} vào {tofu}.", "Lỗi không xác định"],
+};
+Object.assign(downloadMessages, Object.fromEntries(downloadNotificationKeys.map((message, index) => [
+  message,
+  Object.fromEntries(Object.entries(downloadNotificationLocales).map(([locale, values]) => [locale, values[index]])),
+])));
