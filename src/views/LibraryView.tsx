@@ -60,7 +60,7 @@ function MinecraftInstancesGroup({ piko, instances, onOpen, onPlay, onShowAll }:
     <span className="tofu-entry-title">{piko.name} · {t("{count} instances").replace("{count}", String(instances.length))}</span>
     <div className="tofu-entry-list" ref={listRef}>{instances.map((tofu) => <TofuEntryCard key={tofu.id} piko={piko} tofu={tofu} onOpen={onOpen} onPlay={onPlay} />)}</div>
     {hasOverflow && <button type="button" className="tofu-entry-more" onClick={() => onShowAll(piko)} aria-label={t("Show all {count} {name} instances").replace("{count}", String(instances.length)).replace("{name}", piko.name)}>
-      Show all {instances.length} <ChevronRight size={14} />
+      {t("Show all {count}").replace("{count}", String(instances.length))} <ChevronRight size={14} />
     </button>}
   </div>;
 }
@@ -234,7 +234,7 @@ export function LibraryView() {
       wishlist={{ active: showWishlist, count: wishlist.items.length, onToggle: () => setShowWishlist((on) => !on) }} />
     {showWishlist ? <WishlistPanel /> : <>
     <section className="library-toolbar">
-      <span className="library-count">{lib.visiblePikos.length} game{lib.visiblePikos.length === 1 ? "" : "s"}{search.trim() ? ` matching “${search.trim()}”` : ""}{(() => { if (lib.filter.kind !== "smart" || (lib.filter.id !== "backlog" && lib.filter.id !== "next-up")) return ""; const left = remainingHours(lib.visiblePikos.map((piko) => piko.id), lib.hours); return left.known ? ` · about ${left.total} h to beat (${left.known} with data)` : ""; })()}</span>
+      <span className="library-count">{t(lib.visiblePikos.length === 1 ? "{count} game" : "{count} games").replace("{count}", String(lib.visiblePikos.length))}{search.trim() ? ` · ${t("matching “{query}”").replace("{query}", search.trim())}` : ""}{(() => { if (lib.filter.kind !== "smart" || (lib.filter.id !== "backlog" && lib.filter.id !== "next-up")) return ""; const left = remainingHours(lib.visiblePikos.map((piko) => piko.id), lib.hours); return left.known ? ` · ${t("about {hours} h to beat ({count} with data)").replace("{hours}", String(left.total)).replace("{count}", String(left.known))}` : ""; })()}</span>
       <div className="library-toolbar-actions">
         <button type="button" className="secondary-button view-switcher" title={t("View: {view}. Click for the next view, Shift+click for the previous.").replace("{view}", t(viewModeLabel(view)))}
           aria-label={t("Library view: {view}. Activate to switch to {nextView}.").replace("{view}", t(viewModeLabel(view))).replace("{nextView}", t(viewModeLabel(cycleViewMode(view))))}
@@ -288,7 +288,7 @@ export function LibraryView() {
       onPlay={(piko) => { lib.selectPiko(piko); void actions.launchGame(piko); }} onClose={() => setShowPicker(false)} />}
     {showDuplicates && <DuplicatesDialog groups={duplicates.groups} onMerge={duplicates.merge} onDismiss={duplicates.dismiss} onClose={() => setShowDuplicates(false)} />}
     {showCollections && <CollectionManager state={collections} counts={collectionCounts} onClose={() => setShowCollections(false)} />}
-    {removal && <ConfirmDialog title={removal.length === 1 ? t("Remove {name}?").replace("{name}", removal[0].name) : t("Remove {count} games?").replace("{count}", String(removal.length))} message={t("They are removed from your Mochi library only, with their Tofus, tags and collection memberships. Nothing is uninstalled and no game files are deleted.")} items={removal.map((game) => game.name)} confirmLabel={removal.length === 1 ? "Remove" : `Remove ${removal.length} games`} danger
+    {removal && <ConfirmDialog title={removal.length === 1 ? t("Remove {name}?").replace("{name}", removal[0].name) : t("Remove {count} games?").replace("{count}", String(removal.length))} message={t("They are removed from your Mochi library only, with their Tofus, tags and collection memberships. Nothing is uninstalled and no game files are deleted.")} items={removal.map((game) => game.name)} confirmLabel={removal.length === 1 ? t("Remove") : t("Remove {count} games").replace("{count}", String(removal.length))} danger
       onCancel={() => setRemoval(null)}
       onConfirm={() => { removal.forEach((game) => void removeGameShortcut(game.id).catch(() => {})); lib.removeGames(removal.map((game) => game.id)); setChecked(new Set()); setRemoval(null); }} />}
     <LibraryModSearch query={search} nexusEnabled={credentials.status.nexus} supabase={supabase} />

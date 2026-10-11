@@ -56,7 +56,7 @@ export function DownloadsView() {
     {error && <p className="auth-error" role="alert">{error}</p>}
     {updating.length > 0 && <section className="download-group download-updates" aria-label="Mod updates">
       <div className="download-group-heading"><strong>Mod updates</strong><button type="button" className="text-button" onClick={() => setActiveNav("Installed")}>Open Mods &amp; Content</button></div>
-      <ul className="download-update-list">{updating.map(({ piko, tofu, state }) => <li key={tofu.id}><span>{piko.name}: {tofu.name}</span><small>{state.updating.length ? `Updating ${state.updating.length}…` : `${updateCount(state)} update${updateCount(state) === 1 ? "" : "s"} available`}</small></li>)}</ul>
+      <ul className="download-update-list">{updating.map(({ piko, tofu, state }) => <li key={tofu.id}><span>{piko.name}: {tofu.name}</span><small>{state.updating.length ? t("Updating {count}…").replace("{count}", String(state.updating.length)) : t(updateCount(state) === 1 ? "{count} update available" : "{count} updates available").replace("{count}", String(updateCount(state)))}</small></li>)}</ul>
     </section>}
     {hasFinished(downloads) && <div className="download-toolbar"><button type="button" className="secondary-button" onClick={() => void clearFinished()}><Trash2 size={13} /> {t("Clear finished")}</button></div>}
     {!downloads.length ? <div className="download-empty"><div className="empty-icon"><MochiIcon name="downloads" fallback={Download} size={22} /></div><h3>{t("No active downloads")}</h3><p>{t("Nothing is downloading right now.")}</p></div> : (
