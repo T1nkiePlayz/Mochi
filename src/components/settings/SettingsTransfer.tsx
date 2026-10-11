@@ -8,8 +8,8 @@ import { SECTION_IDS, planImport, sanitizeSections, sectionInfo, type ImportMode
 import { commitImport, exportSettings, installThemesFromFile, pickSettingsFile, readSnapshot, type SettingsFile } from "../../lib/settingsTransfer";
 
 const MODES: Array<{ value: ImportMode; label: string; description: string }> = [
-  { value: "merge", label: t("Merge"), description: t("Keep what you have and add what is missing.") },
-  { value: "replace", label: t("Replace"), description: t("Overwrite with the file's version.") },
+  { value: "merge", label: "Merge", description: "Keep what you have and add what is missing." },
+  { value: "replace", label: "Replace", description: "Overwrite with the file's version." },
 ];
 const message = (error: unknown) => (error instanceof Error ? error.message : typeof error === "string" ? error : "Something went wrong.");
 

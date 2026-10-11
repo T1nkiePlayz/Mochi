@@ -83,10 +83,10 @@ export function ImportModpackModal({ piko, tofu, onCreateTofu, onClose }: Props)
     <div className="import-pack-body">
       {report ? <div className="import-pack-report" role="status">
         <p>{t("{count} downloads queued. Each file is checked against its checksum; failures show in Downloads.").replace("{count}", String(report.queued))}</p>
-        {report.failed.length > 0 && <ReportList title={t("Could not start")} rows={report.failed.map((entry) => `${titleFromFile(entry.item.mod.fileName)}: ${entry.error}`)} />}
-        {report.changed.length > 0 && <ReportList title={t("Changed since the pack was made (skipped)")} rows={report.changed.map((item) => item.mod.fileName)} />}
-        {report.manual.length > 0 && <ReportList title={t("Download these by hand")} rows={report.manual.map((item) => item.mod.fileName)} />}
-        {report.unavailable.length > 0 && <ReportList title={t("Not available")} rows={report.unavailable.map((item) => `${item.mod.fileName}: ${item.availability.status === "unavailable" ? item.availability.reason : ""}`)} />}
+        {report.failed.length > 0 && <ReportList t={t} title={t("Could not start")} rows={report.failed.map((entry) => `${titleFromFile(entry.item.mod.fileName)}: ${entry.error}`)} />}
+        {report.changed.length > 0 && <ReportList t={t} title={t("Changed since the pack was made (skipped)")} rows={report.changed.map((item) => item.mod.fileName)} />}
+        {report.manual.length > 0 && <ReportList t={t} title={t("Download these by hand")} rows={report.manual.map((item) => item.mod.fileName)} />}
+        {report.unavailable.length > 0 && <ReportList t={t} title={t("Not available")} rows={report.unavailable.map((item) => `${item.mod.fileName}: ${item.availability.status === "unavailable" ? item.availability.reason : ""}`)} />}
         {report.unknownFiles > 0 && <p className="muted">{t("{count} files were not matched to any site when the pack was made. They are not installed.").replace("{count}", String(report.unknownFiles))}</p>}
       </div> : <>
         <fieldset className="import-pack-target"><legend>{t("Install into")}</legend>
@@ -125,6 +125,6 @@ export function ImportModpackModal({ piko, tofu, onCreateTofu, onClose }: Props)
   </ModalShell>;
 }
 
-function ReportList({ title, rows }: { title: string; rows: string[] }) {
+function ReportList({ title, rows, t }: { title: string; rows: string[]; t: (message: string) => string }) {
   return <div className="import-pack-report-group"><h3>{title} ({rows.length})</h3><ul>{rows.slice(0, 50).map((row, index) => <li key={index}>{row}</li>)}{rows.length > 50 && <li>{t("and {count} more").replace("{count}", String(rows.length - 50))}</li>}</ul></div>;
 }

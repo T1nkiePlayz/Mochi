@@ -4,6 +4,7 @@ import type { Collection, Piko } from "../../models";
 import { backlogStatuses, withBacklogStatus, type Backlog } from "../../lib/backlog";
 import { CollectionPicker } from "./CollectionPicker";
 import { useDismiss } from "./useDismiss";
+import { useTranslation } from "../../lib/useTranslation";
 
 type Props = {
   game: Piko;

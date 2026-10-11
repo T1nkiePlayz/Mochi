@@ -13,7 +13,7 @@ import { useTranslation } from "../../lib/useTranslation";
 
 type Props = { piko: Piko; tofu: Tofu; onUpdate: (patch: Partial<Tofu>) => void; /** The Tofu settings form already has its own game version field. */ showVersion?: boolean };
 
-const errorText = (error: unknown) => (error instanceof Error ? error.message : typeof error === "string" ? error : t("That did not work."));
+const errorText = (error: unknown, t: (message: string) => string) => (error instanceof Error ? error.message : typeof error === "string" ? error : t("That did not work."));
 
 /**
  * Where a Tofu's mods live and where the game loads them from: detected locations (Minecraft launchers, per-game table),
@@ -42,7 +42,7 @@ export function ModFolderEditor({ piko, tofu, onUpdate, showVersion = true }: Pr
   const choose = async (location: ModLocation) => {
     setMessage("");
     try { onUpdate(applyLocation(tofu, location, separate ? { keepSeparate: true, storeDir: await storeFor() } : {})); }
-    catch (error) { setMessage(errorText(error)); }
+    catch (error) { setMessage(errorText(error, t)); }
   };
   const pick = async () => {
     const dir = await open({ directory: true, multiple: false, title: minecraft ? t("Choose the folder Minecraft loads mods from") : t("Choose the folder the game loads mods from") });
@@ -58,7 +58,7 @@ export function ModFolderEditor({ piko, tofu, onUpdate, showVersion = true }: Pr
         const copied = await importModsFromFolder(tofu.gameDir, patch.path as string);
         setMessage(copied ? `Copied ${copied} mod${copied === 1 ? "" : "s"} from the game folder into this Tofu. The originals were left where they are.` : t("This Tofu now keeps its own mods."));
       }
-    } catch (error) { setMessage(errorText(error)); } finally { setBusy(false); }
+    } catch (error) { setMessage(errorText(error, t)); } finally { setBusy(false); }
   };
 
   return <div className="mod-folder-editor">

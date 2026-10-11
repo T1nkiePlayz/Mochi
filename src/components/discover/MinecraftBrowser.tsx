@@ -19,7 +19,7 @@ export const minecraftTabs: Array<{ id: ModrinthProjectType; label: string; titl
 ];
 
 const loaderOptions: SelectOption[] = [
-  { value: "", label: t("Any loader"), icon: <Layers size={14} /> },
+  { value: "", label: "Any loader", icon: <Layers size={14} /> },
   { value: "fabric", label: "Fabric", icon: <Shirt size={14} /> },
   { value: "forge", label: "Forge", icon: <Hammer size={14} /> },
   { value: "neoforge", label: "NeoForge", icon: <Flame size={14} /> },
