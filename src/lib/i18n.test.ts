@@ -221,6 +221,37 @@ describe("shared UI translations", () => {
     }
   });
 
+  it("covers dynamic settings, backup/restore, and project-provider states in every locale", () => {
+    const messages = [
+      "Refresh all metadata",
+      "Refreshing all…",
+      "Metadata provider",
+      "Could not restore: {error}",
+      "{name}: {restored} restored, {removed} removed, {unchanged} already matched.",
+      "The backup{made} has {games} games, {collections} collections, {wishlist} wishlist items and {savedFilters} saved filters.",
+      "{count} downloads queued. Each file is checked against its checksum; failures show in Downloads.",
+      "No backups yet.",
+      "Loading trailer…",
+      "Loading versions...",
+      "CurseForge games are unavailable",
+      "Modrinth and CurseForge are both turned off.",
+      "No price data yet.",
+      "Search failed.",
+      "No provider is set up.",
+      "No games found.",
+    ];
+    for (const { code } of launcherLanguages) {
+      if (code === "en") continue;
+      for (const message of messages) {
+        expect(hasTranslation(message, code), `${code}: ${message}`).toBe(true);
+        expect(translate(message, code), `${code}: ${message}`).not.toBe(message);
+        for (const token of message.match(/\\{[^}]+\\}/g) ?? []) {
+          expect(translate(message, code), `${code}: ${message}`).toContain(token);
+        }
+      }
+    }
+  });
+
   it("preserves unknown dynamic command labels and group names while translating known UI prefixes", async () => {
     const { translateCommandTitle, translateCommandGroup, translatePaletteSubtitle } = await import("./paletteTranslations");
     const t = (message: string) => translate(message, "fr");
