@@ -283,6 +283,8 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [x] Per-game notes and links, a one-click "Clear all" in the storage manager and a redesigned Edit game window
 - [x] ProtonDB badges, tray quick launch, launch hooks, screenshot manager, live folder watching, play limits, account PINs and an optional Deals tab
 - [x] Game themes that use each game's cover colour as the accent on its page
+- [x] Game news, game search with price information/history, and on-device stats share-card export (experimental toggles)
+- [x] Launcher language selector in setup and Settings, with game-news interface text following the selected language
 - [x] Accounts, optional metadata-only cloud sync, TOTP MFA, provider credential management and offline library use
 - [x] Linux packages, universal macOS DMG, update verification and release checksums/signatures/attestations
 
@@ -292,11 +294,24 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] Stable release
 - [ ] Theme marketplace / in-app theme gallery for browsing and installing community themes
 - [ ] Theme creator with live editing of colours, fonts and hooks, plus theme export
-- [x] Add launcher language selector in setup and Settings, with game news following the selected language
 
 ## Documentation index
 
-[security audit follow-up](docs/audit/2026-10-atomic-export-writes.md), [accessibility](docs/accessibility.md), [controller](docs/controller.md), [Steam Deck and Big Picture](docs/steam-deck.md), [macOS](docs/macos.md), [metadata](docs/metadata.md), [mods](docs/mods.md), [CurseForge backend](docs/curseforge.md), [offline and fonts](docs/offline.md), [updates](docs/updates.md), [release](docs/release.md), [CSP](docs/security-csp.md), [platform architecture](docs/platform-architecture.md), [themes](docs/theme-architecture.md), [experimental features](docs/experimental-features.md), [plugins](docs/plugins.md), [sound packs](docs/sound-packs.md), [achievements](docs/improvements/achievements.md).
+### Everyday use
+
+[Accessibility](docs/accessibility.md) · [Backlog and wishlist](docs/backlog.md) · [Command palette](docs/command-palette.md) · [CLI and deep links](docs/cli.md) · [Controller](docs/controller.md) · [Duplicates](docs/duplicates.md) · [Launch options](docs/launch-options.md) · [Save backups](docs/save-backups.md) · [Settings export/import](docs/settings-export.md) · [Shortcuts](docs/shortcuts.md) · [Storage manager](docs/storage.md)
+
+### Discover, metadata and extras
+
+[Metadata and artwork](docs/metadata.md) · [Mods](docs/mods.md) · [CurseForge integration](docs/curseforge.md) · [Modpack sharing](docs/mochipack.md) · [Snapshots and rollback](docs/snapshots.md) · [Deals and price watches](docs/deals.md) · [Game news](docs/news.md) · [Game search and price history](docs/game-search.md) · [Share cards](docs/share-card.md) · [Achievements](docs/improvements/achievements.md)
+
+### Themes, platform and security
+
+[Theme architecture](docs/theme-architecture.md) · [Theme hooks](docs/theme-hooks.md) · [Sound packs](docs/sound-packs.md) · [Experimental features](docs/experimental-features.md) · [Plugins](docs/plugins.md) · [Offline behaviour and fonts](docs/offline.md) · [Steam Deck and Big Picture](docs/steam-deck.md) · [macOS](docs/macos.md) · [Platform architecture](docs/platform-architecture.md) · [Content Security Policy](docs/security-csp.md)
+
+### Updates, releases and contributor notes
+
+[Updates](docs/updates.md) · [Release process](docs/release.md) · [Verify downloads](docs/verify-downloads.md) · [Frontend audit](docs/audit/frontend.md) · [Rust audit](docs/audit/rust.md) · [Linux/macOS audit](docs/audit/macos-linux.md) · [Atomic export writes audit](docs/audit/2026-10-atomic-export-writes.md) · [Improvement notes](docs/improvements/)
 
 ## Development
 
