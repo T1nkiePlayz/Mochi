@@ -64,7 +64,7 @@ function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }
 
   const add = async () => {
     try {
-      const picked = await openDialog({ directory: true, multiple: false, title: `Choose a save folder for ${game.name}` });
+      const picked = await openDialog({ directory: true, multiple: false, title: t("Choose a save folder for {name}").replace("{name}", game.name) });
       if (typeof picked === "string") patchGame((current) => ({ ...current, folders: addFolder(current.folders, picked) }));
     } catch (error) { setMessage(t(errorText(error))); }
   };
@@ -108,7 +108,7 @@ function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }
           <ul className="save-backups-list">
             {items.map((location) => <li key={location.key} className="save-backups-item">
               <div className="save-backups-row">
-                <button type="button" className="icon-button" aria-expanded={expanded === location.key} aria-label={`${expanded === location.key ? "Hide" : "Show"} backups of ${location.label}`} onClick={() => toggle(location.key)} disabled={Boolean(location.problem)}>{expanded === location.key ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</button>
+                <button type="button" className="icon-button" aria-expanded={expanded === location.key} aria-label={t(expanded === location.key ? "Hide backups of {name}" : "Show backups of {name}").replace("{name}", location.label)} onClick={() => toggle(location.key)} disabled={Boolean(location.problem)}>{expanded === location.key ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</button>
                 <div className="save-backups-name"><strong>{location.label}</strong><small className="muted" title={location.path}>{location.problem ?? location.path}</small>
                   <small className="muted">{location.backups ? `${location.backups} backup${location.backups === 1 ? "" : "s"} · ${formatBytes(location.backupBytes)} · last ${when(location.lastBackup ?? 0)}` : "No backups yet"}</small></div>
                 <div className="save-backups-actions">
