@@ -13,7 +13,7 @@ export function WishlistPanel() {
   const full = items.length >= WISHLIST_LIMIT;
   const submit = (event: FormEvent) => { event.preventDefault(); if (add({ name, note: note.trim() || undefined, source: "manual" })) { setName(""); setNote(""); } };
   return <section className="wishlist-panel" aria-label={t("Wishlist")}>
-    <div className="section-heading"><div><p className="eyebrow">{t("Not owned yet")}</p><h3>{t("Wishlist")}</h3></div><span className="category-count">{items.length} game{items.length === 1 ? "" : "s"}</span></div>
+    <div className="section-heading"><div><p className="eyebrow">{t("Not owned yet")}</p><h3>{t("Wishlist")}</h3></div><span className="category-count">{items.length === 1 ? t("1 game") : t("{count} games").replace("{count}", String(items.length))}</span></div>
     <form className="wishlist-add" onSubmit={submit}>
       <input value={name} onChange={(event) => setName(event.target.value)} placeholder={t("Game name")} aria-label={t("Game name")} maxLength={120} disabled={full} />
       <input value={note} onChange={(event) => setNote(event.target.value)} placeholder={t("Note (optional)")} aria-label={t("Note")} maxLength={280} disabled={full} />

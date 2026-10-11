@@ -39,7 +39,7 @@ export function BulkActionBar({ games, collections, onToggleCollection, onCreate
         <button type="button" className="secondary-button" disabled={empty} aria-expanded={panel === "tag"} onClick={() => setPanel(panel === "tag" ? "" : "tag")}><Tag size={14} /> {t("Tag")}</button>
         {panel === "tag" && <form className="library-popover collection-picker-new" onSubmit={submitTag}><input autoFocus value={tag} onChange={(event) => setTag(event.target.value)} placeholder={t("Tag name")} aria-label={t("Tag to add")} maxLength={32} /><button type="submit" className="secondary-button" disabled={!tag.trim()}>{t("Add")}</button></form>}
       </div>
-      <button type="button" className="secondary-button" disabled={empty} onClick={() => onFavorite(!games.every((game) => game.favorite))}><Heart size={14} /> {games.length && games.every((game) => game.favorite) ? "Unfavourite" : t("Favourite")}</button>
+      <button type="button" className="secondary-button" disabled={empty} onClick={() => onFavorite(!games.every((game) => game.favorite))}><Heart size={14} /> {games.length && games.every((game) => game.favorite) ? t("Unfavourite") : t("Favourite")}</button>
       <button type="button" className="secondary-button danger-outline" disabled={empty} onClick={onRemove}><Trash2 size={14} /> {t("Remove")}</button>
     </div>
     <button type="button" className="icon-button" aria-label={t("Exit selection mode")} onClick={onDone}><X size={16} /></button>

@@ -41,7 +41,7 @@ export function CollectionManager({ state, counts, onClose }: Props) {
         {!collections.length && <li className="metadata-note">{t("No collections yet. Collections group games however you like, such as \"Co-op\" or \"Finish this year\".")}</li>}
       </ul>
     </div>
-    {deleting && <ConfirmDialog title={t("Delete “{name}”?").replace("{name}", deleting.name)} message="Only the collection is removed. The games in it stay in your library." items={[deleting.name]} confirmLabel="Delete collection" danger
+    {deleting && <ConfirmDialog title={t("Delete “{name}”?").replace("{name}", deleting.name)} message={t("Only the collection is removed. The games in it stay in your library.")} items={[deleting.name]} confirmLabel={t("Delete collection")} danger
       onCancel={() => setDeleting(null)} onConfirm={() => { deleteCollection(deleting.id); setDeleting(null); }} />}
   </div>;
 }
@@ -52,11 +52,11 @@ function EmojiField({ value, onChange, label }: { value: string; onChange: (valu
   const root = useRef<HTMLDivElement>(null);
   useDismiss(root, open, () => setOpen(false));
   return <div className="emoji-field" ref={root}>
-    <button type="button" className="emoji-trigger" aria-label={`${label}: ${value || t("none")}`} aria-expanded={open} onClick={() => setOpen(!open)}>{value || "☆"}</button>
+    <button type="button" className="emoji-trigger" aria-label={t("{label}: {value}").replace("{label}", label).replace("{value}", value || t("none"))} aria-expanded={open} onClick={() => setOpen(!open)}>{value || "☆"}</button>
     {open && <div className="emoji-popover" role="group" aria-label={t("Choose an emoji")}>
       {EMOJI.map((emoji) => <button type="button" key={emoji} aria-label={emoji} onClick={() => { onChange(emoji); setOpen(false); }}>{emoji}</button>)}
       <input aria-label={t("Type any emoji")} placeholder={t("Any")} maxLength={4} onChange={(event) => { onChange(event.target.value); }} />
-      <button type="button" className="text-button" onClick={() => { onChange(""); setOpen(false); }}>None</button>
+      <button type="button" className="text-button" onClick={() => { onChange(""); setOpen(false); }}>{t("None")}</button>
     </div>}
   </div>;
 }

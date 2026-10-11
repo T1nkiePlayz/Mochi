@@ -37,10 +37,10 @@ export function SavedFilterDialog({ initial, existing, hoursAvailable, onSave, o
   const toggleStatus = (id: BacklogStatus) => setStatus((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
 
   return <div className="modal-backdrop" onClick={onClose}>
-    <form className="modal saved-filter-dialog" role="dialog" aria-modal="true" aria-label={existing ? "Edit saved filter" : "Save filter"} onClick={(event) => event.stopPropagation()} onSubmit={submit}
+    <form className="modal saved-filter-dialog" role="dialog" aria-modal="true" aria-label={existing ? t("Edit saved filter") : t("Save filter")} onClick={(event) => event.stopPropagation()} onSubmit={submit}
       onKeyDown={(event) => { if (event.key === "Escape") onClose(); }}>
-      <div className="modal-header"><div><p className="eyebrow">{t("Library")}</p><h2>{existing ? t("Edit saved filter") : t("Save filter")}</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button></div>
-      <label className="field">Name<input value={name} maxLength={40} placeholder={t("e.g. Short and unplayed")} autoFocus onChange={(event) => setName(event.target.value)} /></label>
+      <div className="modal-header"><div><p className="eyebrow">{t("Library")}</p><h2>{existing ? t("Edit saved filter") : t("Save filter")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
+      <label className="field">{t("Name")}<input value={name} maxLength={40} placeholder={t("e.g. Short and unplayed")} autoFocus onChange={(event) => setName(event.target.value)} /></label>
       <fieldset className="field"><legend>{t("Backlog status (any of)")}</legend>
         <div className="filter-row">{backlogStatuses.map(({ id, label }) => <button type="button" key={id} className={`filter-chip ${status.includes(id) ? "active" : ""}`} aria-pressed={status.includes(id)} onClick={() => toggleStatus(id)}>{label}</button>)}</div>
       </fieldset>
@@ -56,11 +56,11 @@ export function SavedFilterDialog({ initial, existing, hoursAvailable, onSave, o
         <label>{t("Hours to beat, from")} <input type="number" min={0} max={2000} value={minHours} onChange={(event) => setMinHours(event.target.value)} style={{ width: "5em" }} /></label>
         <label>{t("to")} <input type="number" min={0} max={2000} value={maxHours} onChange={(event) => setMaxHours(event.target.value)} style={{ width: "5em" }} /></label>
       </div>
-      {ruleUsesHours(rule) && <p className="metadata-note">{hoursAvailable ? "Only games with IGDB time-to-beat data can match an hours range." : "Hours come from IGDB: connect it under Settings > Mod & metadata providers, and open What should I play? once to fetch them."}</p>}
+      {ruleUsesHours(rule) && <p className="metadata-note">{hoursAvailable ? t("Only games with IGDB time-to-beat data can match an hours range.") : t("Hours come from IGDB: connect it under Settings > Mod & metadata providers, and open What should I play? once to fetch them.")}</p>}
       <div className="modal-actions">
         {existing && onDelete && <button type="button" className="secondary-button danger-outline" onClick={onDelete}>{t("Delete")}</button>}
         <button type="button" className="secondary-button" onClick={onClose}>{t("Cancel")}</button>
-        <button type="submit" className="play-button" disabled={!valid}>{existing ? "Save" : "Save filter"}</button>
+        <button type="submit" className="play-button" disabled={!valid}>{existing ? t("Save") : t("Save filter")}</button>
       </div>
     </form>
   </div>;

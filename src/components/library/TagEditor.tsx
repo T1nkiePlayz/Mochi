@@ -38,7 +38,7 @@ export function TagEditor({ tags, suggestions, onChange, label = "Tags" }: Props
   return <div className="tag-editor">
     <div className="tag-editor-box" onClick={() => input.current?.focus()}>
       {tags.map((tag) => <span className="tag-chip" key={tag}>{tag}<button type="button" aria-label={t("Remove tag {tag}").replace("{tag}", tag)} onClick={() => onChange(tags.filter((item) => item !== tag))}><X size={11} /></button></span>)}
-      <input ref={input} value={text} aria-label={label} placeholder={tags.length ? "" : "Add a tag…"} role="combobox" aria-expanded={focused && matches.length > 0} aria-controls={listId} aria-autocomplete="list"
+      <input ref={input} value={text} aria-label={label} placeholder={tags.length ? "" : t("Add a tag…")} role="combobox" aria-expanded={focused && matches.length > 0} aria-controls={listId} aria-autocomplete="list"
         onChange={(event) => { setText(event.target.value); setActive(-1); }} onKeyDown={onKeyDown} onFocus={() => setFocused(true)} onBlur={() => { setFocused(false); if (text.trim()) add(text); }} />
     </div>
     {focused && matches.length > 0 && <ul className="tag-suggestions" id={listId} role="listbox" aria-label={t("Tag suggestions")}>

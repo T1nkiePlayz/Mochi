@@ -28,12 +28,12 @@ export function LibraryBackup() {
       const picked = await pickBackupFile();
       if (!picked) return;
       const { file, summary } = picked;
-      const made = summary.createdAt ? ` made on ${new Date(summary.createdAt).toLocaleDateString()}` : "";
-      const ok = await confirmAction({ title: t("Restore this backup?"), message: `The backup${made} has ${summary.games} game${summary.games === 1 ? "" : "s"}, ${summary.collections} collection${summary.collections === 1 ? "" : "s"}, ${summary.wishlist} wishlist item${summary.wishlist === 1 ? "" : "s"} and ${summary.savedFilters} saved filter${summary.savedFilters === 1 ? "" : "s"}. It replaces your current library, collections, wishlist and saved filters, and Mochi restarts its window. Playtime history and settings are not changed. Save a backup of the current library first if you may want it back.`, confirmLabel: t("Restore") });
+      const made = summary.createdAt ? t(" made on {date}").replace("{date}", new Date(summary.createdAt).toLocaleDateString()) : "";
+      const ok = await confirmAction({ title: t("Restore this backup?"), message: `${t("The backup{made} has {games} games, {collections} collections, {wishlist} wishlist items and {savedFilters} saved filters.").replace("{made}", made).replace("{games}", String(summary.games)).replace("{collections}", String(summary.collections)).replace("{wishlist}", String(summary.wishlist)).replace("{savedFilters}", String(summary.savedFilters))} ${t("It replaces your current library, collections, wishlist and saved filters, and Mochi restarts its window.")} ${t("Playtime history and settings are not changed.")} ${t("Save a backup of the current library first if you may want it back.")}`, confirmLabel: t("Restore") });
       if (!ok) return;
       writeBackupData(file);
       window.location.reload();
-    } catch (error) { setNote(`Could not restore: ${message(error)}`); }
+    } catch (error) { setNote(t("Could not restore: {error}").replace("{error}", message(error))); }
     finally { setBusy(false); }
   };
   const chooseFolder = async () => {
@@ -55,6 +55,6 @@ export function LibraryBackup() {
         <code>{schedule.folder || "No folder chosen"}</code>
         <button type="button" className="secondary-button" onClick={() => void chooseFolder()}><FolderOpen size={14} aria-hidden="true" /> {t("Folder…")}</button>
       </span></div>
-    {note && <p className="metadata-note settings-note" role="status">{note}</p>}
+    {note && <p className="metadata-note settings-note" role="status">{t(note)}</p>}
   </>;
 }
