@@ -44,16 +44,16 @@ export function LibraryBackup() {
   return <>
     <div className="setting-row"><span><strong>{t("Library backup")}</strong><small>{t("Save your whole library (games, collections, wishlist, saved filters) to one file, or restore it on this or another device. No passwords, keys or sign-in data. Playtime history is not included.")}</small></span>
       <span className="data-source-actions">
-        <button type="button" className="secondary-button" disabled={busy} onClick={() => void runExport()}><Download size={14} aria-hidden="true" /> Back up…</button>
-        <button type="button" className="secondary-button" disabled={busy} onClick={() => void runRestore()}><Upload size={14} aria-hidden="true" /> Restore…</button>
+        <button type="button" className="secondary-button" disabled={busy} onClick={() => void runExport()}><Download size={14} aria-hidden="true" /> {t("Back up…")}</button>
+        <button type="button" className="secondary-button" disabled={busy} onClick={() => void runRestore()}><Upload size={14} aria-hidden="true" /> {t("Restore…")}</button>
       </span></div>
     <div className="setting-row setting-location-row"><span><strong>{t("Automatic backup")}</strong><small>{t("While Mochi is open, saves a copy to a folder when one is due and keeps the newest few.")}</small></span>
       <span className="setting-location-value">
-        <label><input type="checkbox" checked={schedule.enabled} disabled={!schedule.folder} onChange={(event) => setSchedule({ enabled: event.target.checked })} /> On</label>
+        <label><input type="checkbox" checked={schedule.enabled} disabled={!schedule.folder} onChange={(event) => setSchedule({ enabled: event.target.checked })} /> {t("On")}</label>
         <select aria-label={t("How often")} value={schedule.everyDays} onChange={(event) => setSchedule({ everyDays: Number(event.target.value) as BackupSchedule["everyDays"] })}><option value={1}>{t("Daily")}</option><option value={7}>{t("Weekly")}</option><option value={30}>{t("Monthly")}</option></select>
         <select aria-label={t("Copies to keep")} value={schedule.keep} onChange={(event) => setSchedule({ keep: Number(event.target.value) })}>{[3, 5, 10, 20].map((count) => <option key={count} value={count}>{t("Keep {count}").replace("{count}", String(count))}</option>)}</select>
         <code>{schedule.folder || "No folder chosen"}</code>
-        <button type="button" className="secondary-button" onClick={() => void chooseFolder()}><FolderOpen size={14} aria-hidden="true" /> Folder…</button>
+        <button type="button" className="secondary-button" onClick={() => void chooseFolder()}><FolderOpen size={14} aria-hidden="true" /> {t("Folder…")}</button>
       </span></div>
     {note && <p className="metadata-note settings-note" role="status">{note}</p>}
   </>;

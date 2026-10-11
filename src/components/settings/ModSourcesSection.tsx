@@ -8,8 +8,8 @@ import { SettingsGroup, ToggleRow } from "./Section";
 function AutoExtendRow({ value, onChange }: { value: number; onChange: (value: number) => void }) {
   const [draft, setDraft] = useState(String(value));
   useEffect(() => setDraft(String(value)), [value]);
-  return <label className="setting-row"><span><strong>Add other mod sites for games with few mods</strong><small>Discover adds mods from the game's other enabled sites (for example Nexus Mods) when its first site lists fewer than this many. 0 never adds sites; the most is {MAX_AUTO_EXTEND_BELOW}.</small></span>
-    <input className="compact-input" type="number" inputMode="numeric" min={0} max={MAX_AUTO_EXTEND_BELOW} step={1} value={draft} aria-label="Add other mod sites when a game has fewer than this many mods"
+  return <label className="setting-row"><span><strong>{t("Add other mod sites for games with few mods")}</strong><small>Discover adds mods from the game's other enabled sites (for example Nexus Mods) when its first site lists fewer than this many. 0 never adds sites; the most is {MAX_AUTO_EXTEND_BELOW}.</small></span>
+    <input className="compact-input" type="number" inputMode="numeric" min={0} max={MAX_AUTO_EXTEND_BELOW} step={1} value={draft} aria-label={t("Add other mod sites when a game has fewer than this many mods")}
       onChange={(event) => { setDraft(event.target.value); if (event.target.value.trim() !== "") onChange(clampAutoExtendBelow(event.target.value)); }}
       onBlur={() => setDraft(String(value))} style={{ width: 84 }} /></label>;
 }

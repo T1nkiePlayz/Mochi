@@ -111,9 +111,9 @@ export function StorageSection() {
         </table>
       </div>
       {hidden > 0 && <div className="storage-more"><button type="button" className="secondary-button" onClick={() => setLimit((current) => current + PAGE)}>{t("Show {count} more ({hidden} hidden)").replace("{count}", String(Math.min(PAGE, hidden))).replace("{hidden}", hidden.toLocaleString())}</button></div>}
-      <small className="metadata-note storage-note">Game installs and mod folders can only be opened here, never deleted. Sizes of nested folders can overlap, and very large folders are measured up to a limit.</small>
+      <small className="metadata-note storage-note">{t("Game installs and mod folders can only be opened here, never deleted. Sizes of nested folders can overlap, and very large folders are measured up to a limit.")}</small>
     </>}
-    <div className="setting-row storage-clear-head"><span><strong>{t("Free up space")}</strong><small>Only Mochi's own caches and leftovers can be removed here.</small></span><Select value={String(age)} onChange={(value) => setAge(Number(value))} options={ageOption} label={t("Age for old items")} className="storage-age" /></div>
+    <div className="setting-row storage-clear-head"><span><strong>{t("Free up space")}</strong><small>{t("Only Mochi's own caches and leftovers can be removed here.")}</small></span><Select value={String(age)} onChange={(value) => setAge(Number(value))} options={ageOption} label={t("Age for old items")} className="storage-age" /></div>
     <div className="setting-row"><span><strong>{t("Clear all unused data")}</strong><small>{t("Runs every action below at once, using the age chosen above.")}</small></span>
       <button type="button" className="secondary-button danger-outline" disabled={busy !== null || scanning} onClick={() => void clearAll()}>{busy === "all" ? t("Clearing…") : t("Clear all")}</button></div>
     {clearActions.map((action) => <div className="setting-row" key={action.kind}>

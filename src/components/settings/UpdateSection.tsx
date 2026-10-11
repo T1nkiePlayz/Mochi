@@ -21,10 +21,10 @@ export function UpdateSection() {
     updater.status === "restarting" ? "Update installed. Restarting…" :
     info ? `Mochi ${info.version} is available.` : "";
   return <SettingsGroup title={t("Updates")} subtitle={t("Keep Mochi current")} id="settings-updates" className="update-section">
-    <div className="setting-row"><span><strong>Version</strong><small>Mochi v{__APP_VERSION__} · last checked {formatWhen(updater.lastChecked)}</small></span></div>
+    <div className="setting-row"><span><strong>{t("Version")}</strong><small>Mochi v{__APP_VERSION__} · last checked {formatWhen(updater.lastChecked)}</small></span></div>
     <ToggleRow title={t("Auto-update")} description={t("Check GitHub for new releases in the background (about every 6 hours). Turn off to only check manually.")} checked={behavior.autoUpdate} onChange={(autoUpdate) => setBehavior((current) => ({ ...current, autoUpdate }))} />
-    <div className="setting-row"><span><strong>Check for updates</strong><small role="status" aria-live="polite">{status || "Look for a newer release now."}</small></span>
-      <button type="button" className="secondary-button" disabled={busy} onClick={() => void updater.checkNow()}>{updater.status === "checking" ? "Checking…" : "Check now"}</button>
+    <div className="setting-row"><span><strong>{t("Check for updates")}</strong><small role="status" aria-live="polite">{status || t("Look for a newer release now.")}</small></span>
+      <button type="button" className="secondary-button" disabled={busy} onClick={() => void updater.checkNow()}>{updater.status === "checking" ? t("Checking…") : t("Check now")}</button>
     </div>
     {info && updater.status !== "current" && <div className="update-details">
       {info.notes && <pre className="update-notes" tabIndex={0} aria-label={`Release notes for ${info.version}`}>{info.notes}</pre>}
@@ -32,8 +32,8 @@ export function UpdateSection() {
         <progress max={100} value={percent} aria-label={t("Update download progress")} />
         <small>{percent !== undefined ? `${percent}%` : "Downloading…"}{progress ? ` · ${formatBytes(progress.downloaded)}${progress.total ? ` of ${formatBytes(progress.total)}` : ""}` : ""}</small>
       </div>}
-      <button type="button" className="play-button" disabled={busy} onClick={() => void updater.installNow()}>{info.installable ? "Install & restart" : "Open release page"}</button>
-      {!info.installable && <small>This install type updates through its package manager or the release page.</small>}
+      <button type="button" className="play-button" disabled={busy} onClick={() => void updater.installNow()}>{info.installable ? t("Install & restart") : t("Open release page")}</button>
+      {!info.installable && <small>{t("This install type updates through its package manager or the release page.")}</small>}
     </div>}
   </SettingsGroup>;
 }

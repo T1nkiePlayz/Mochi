@@ -102,15 +102,15 @@ export function SoundSection() {
       </div>
     </SettingsGroup>
     <SettingsGroup title={t("Sound packs")} subtitle={t("A .zip or folder with a manifest.json that maps events to .wav, .ogg or .mp3 files")} id="settings-sound-packs">
-      <div className="setting-row"><span><strong>{t("Install a pack")}</strong><small>Up to 2 MiB per sound and 16 MiB per pack. WAV and MP3 work everywhere; Ogg may not play on older macOS, where Mochi's own sound is used instead.</small></span>
+      <div className="setting-row"><span><strong>{t("Install a pack")}</strong><small>{t("Up to 2 MiB per sound and 16 MiB per pack. WAV and MP3 work everywhere; Ogg may not play on older macOS, where Mochi's own sound is used instead.")}</small></span>
         <span className="sound-pack-actions">
-          <button type="button" className="secondary-button" disabled={busy} onClick={() => void doImport("zip")}><Upload size={15} aria-hidden="true" /> Import .zip</button>
-          <button type="button" className="secondary-button" disabled={busy} onClick={() => void doImport("folder")}><FolderOpen size={15} aria-hidden="true" /> Import folder</button>
+          <button type="button" className="secondary-button" disabled={busy} onClick={() => void doImport("zip")}><Upload size={15} aria-hidden="true" /> {t("Import .zip")}</button>
+          <button type="button" className="secondary-button" disabled={busy} onClick={() => void doImport("folder")}><FolderOpen size={15} aria-hidden="true" /> {t("Import folder")}</button>
         </span>
       </div>
       {status && <p className={`sound-pack-status ${status.tone === "error" ? "is-error" : ""}`} role={status.tone === "error" ? "alert" : "status"}>{status.text}</p>}
       {loaded && packs.length === 0 && <p className="metadata-note sound-pack-empty">{t("No packs installed. Built-in sound packs are always available.")}</p>}
-      {packs.length > 0 && <ul className="sound-pack-list" aria-label="Installed sound packs">
+      {packs.length > 0 && <ul className="sound-pack-list" aria-label={t("Installed sound packs")}>
         {packs.map((pack) => <PackRow key={pack.id} t={t} pack={pack}
           onExport={() => void run(async () => ((await exportSoundPack(pack)) ? `Exported “${pack.name}”.` : null))}
           onRemove={() => void run(async () => {
