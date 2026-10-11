@@ -42,7 +42,7 @@ export function ImportPicker({ onClose, onImport, mode = "games" }: ImportPicker
 
   const sidebarExtra = (
     <button type="button" className="import-source-missing" onClick={() => setManual("form")}>
-      <span><strong>Platform not showing up?</strong><small>Pick a platform and point Mochi at its library folder.</small></span>
+      <span><strong>{t("Platform not showing up?")}</strong><small>{t("Pick a platform and point Mochi at its library folder.")}</small></span>
       <ChevronRight size={16} />
     </button>
   );
@@ -51,14 +51,14 @@ export function ImportPicker({ onClose, onImport, mode = "games" }: ImportPicker
     <div className="modal-backdrop" onClick={onClose}>
       <div ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="import-title" className="modal import-picker-modal" onClick={(event) => event.stopPropagation()}>
         <div className="modal-header">
-          <div><p className="eyebrow">Game sources</p><h2 id="import-title">{launchers ? t("Import game launchers") : t("Import games")}</h2></div>
+          <div><p className="eyebrow">{t("Game sources")}</p><h2 id="import-title">{launchers ? t("Import game launchers") : t("Import games")}</h2></div>
           <button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button>
         </div>
 
         {manual === "form" ? (
           <div className="import-manual">
-            <p className="modal-description">Choose the platform and point Mochi at its library folder. A Steam path can be the Steam folder, a library, or its steamapps folder.</p>
-            <div className="import-manual-platforms" role="radiogroup" aria-label="Platform">
+            <p className="modal-description">{t("Choose the platform and point Mochi at its library folder. A Steam path can be the Steam folder, a library, or its steamapps folder.")}</p>
+            <div className="import-manual-platforms" role="radiogroup" aria-label={t("Platform")}>
               {manualSources.map((source) => (
                 <button type="button" role="radio" aria-checked={platform === source.id} key={source.id} className={"import-manual-platform" + (platform === source.id ? " selected" : "")} onClick={() => setPlatform(source.id)}>
                   <img src={launcherIcon(source.id)} alt="" width={28} height={28} /><strong>{source.name}</strong>
@@ -68,19 +68,19 @@ export function ImportPicker({ onClose, onImport, mode = "games" }: ImportPicker
             <div className="form-fields">
               <label>Game library path
                 <div className="flatpak-input-row">
-                  <input value={libraryPath} onChange={(event) => setLibraryPath(event.target.value)} placeholder="/home/you/Games" />
-                  <button type="button" className="secondary-button" aria-label="Browse for folder" onClick={async () => { const chosen = await chooseGameLibraryPath(); if (chosen) setLibraryPath(chosen); }}><FolderOpen size={15} /></button>
+                  <input value={libraryPath} onChange={(event) => setLibraryPath(event.target.value)} placeholder={t("/home/you/Games")} />
+                  <button type="button" className="secondary-button" aria-label={t("Browse for folder")} onClick={async () => { const chosen = await chooseGameLibraryPath(); if (chosen) setLibraryPath(chosen); }}><FolderOpen size={15} /></button>
                 </div>
               </label>
             </div>
             <div className="import-manual-actions">
-              <button type="button" className="secondary-button" onClick={() => setManual("closed")}><ArrowLeft size={15} /> Back</button>
-              <button type="button" className="play-button" disabled={!platform || !libraryPath.trim()} onClick={() => setManual("results")}>Scan library <ChevronRight size={15} /></button>
+              <button type="button" className="secondary-button" onClick={() => setManual("closed")}><ArrowLeft size={15} /> {t("Back")}</button>
+              <button type="button" className="play-button" disabled={!platform || !libraryPath.trim()} onClick={() => setManual("results")}>{t("Scan library")} <ChevronRight size={15} /></button>
             </div>
           </div>
         ) : manual === "results" && manualSource ? (
           <>
-            <button type="button" className="text-button import-back" onClick={() => setManual("form")}><ArrowLeft size={14} /> Change platform or folder</button>
+            <button type="button" className="text-button import-back" onClick={() => setManual("form")}><ArrowLeft size={14} /> {t("Change platform or folder")}</button>
             <SourceGamePicker
               key={`${platform}:${libraryPath}`}
               sources={manualSource}

@@ -24,7 +24,7 @@ function PriceChart({ observations, ever, everDate }: { observations: PriceObser
   const points = useMemo(() => dailyLowest(observations), [observations]);
   const chart = useMemo(() => buildChart(points, ever), [points, ever]);
   const caption = historyCaption(observations, everDate, t);
-  if (!points.length && ever === null) return <p className="game-search-muted">No price data yet. {caption}</p>;
+  if (!points.length && ever === null) return <p className="game-search-muted">{t("No price data yet.")} {caption}</p>;
   return <figure className="game-search-chart">
     <svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label={t("Price history. {caption} Lowest {min}, highest {max}.").replace("{caption}", caption).replace("{min}", money(chart.min)).replace("{max}", money(chart.max))} preserveAspectRatio="none">
       {chart.everY !== null && <line className="game-search-ever" x1="0" x2={chart.width} y1={chart.everY} y2={chart.everY} />}
@@ -82,27 +82,27 @@ function Details({ game, onSearch }: { game: GameDetails; onSearch: (name: strin
     <p className="game-search-muted" role="status" aria-live="polite">{note}</p>
     {game.description && <p className="game-search-description">{game.description}</p>}
     <dl className="game-search-facts">
-      {game.genres.length > 0 && <><dt>Genres</dt><dd>{game.genres.join(", ")}</dd></>}
-      {game.platforms.length > 0 && <><dt>Platforms</dt><dd>{game.platforms.join(", ")}</dd></>}
-      {game.publishers.length > 0 && <><dt>Publishers</dt><dd>{game.publishers.join(", ")}</dd></>}
+      {game.genres.length > 0 && <><dt>{t("Genres")}</dt><dd>{game.genres.join(", ")}</dd></>}
+      {game.platforms.length > 0 && <><dt>{t("Platforms")}</dt><dd>{game.platforms.join(", ")}</dd></>}
+      {game.publishers.length > 0 && <><dt>{t("Publishers")}</dt><dd>{game.publishers.join(", ")}</dd></>}
     </dl>
-    <section aria-label="Prices"><h4>Prices</h4>
+    <section aria-label={t("Prices")}><h4>{t("Prices")}</h4>
       <ul className="game-search-prices">
         {game.prices.steam && <li><span>Steam (US)</span><span>{game.prices.steam.formatted || money(game.prices.steam.final / 100)}{game.prices.steam.discountPercent > 0 && ` (-${game.prices.steam.discountPercent}%)`}</span></li>}
-        {game.prices.shark && game.prices.shark.cheapestNow !== null && <li><span>Cheapest now (CheapShark)</span><span>{money(game.prices.shark.cheapestNow)}</span></li>}
-        {ever !== null && <li><span>Cheapest ever (CheapShark)</span><span>{money(ever)}</span></li>}
+        {game.prices.shark && game.prices.shark.cheapestNow !== null && <li><span>{t("Cheapest now (CheapShark)")}</span><span>{money(game.prices.shark.cheapestNow)}</span></li>}
+        {ever !== null && <li><span>{t("Cheapest ever (CheapShark)")}</span><span>{money(ever)}</span></li>}
       </ul>
-      {!game.prices.steam && !game.prices.shark && <p className="game-search-muted">No price found (the game may be free, unreleased or not sold on tracked stores).</p>}
+      {!game.prices.steam && !game.prices.shark && <p className="game-search-muted">{t("No price found (the game may be free, unreleased or not sold on tracked stores).")}</p>}
       <PriceChart observations={observations} ever={ever} everDate={game.prices.shark?.cheapestEverDate ?? null} />
     </section>
-    <Gallery title="Screenshots" urls={game.screenshots.map((url) => ({ thumb: url, url }))} wide />
-    <Gallery title="Covers" urls={game.art.covers.map((a) => ({ thumb: a.thumb, url: a.url }))} />
-    <Gallery title="Heroes" urls={game.art.heroes.map((a) => ({ thumb: a.thumb, url: a.url }))} wide />
-    <Gallery title="Logos" urls={game.art.logos.map((a) => ({ thumb: a.thumb, url: a.url }))} />
+    <Gallery title={t("Screenshots")} urls={game.screenshots.map((url) => ({ thumb: url, url }))} wide />
+    <Gallery title={t("Covers")} urls={game.art.covers.map((a) => ({ thumb: a.thumb, url: a.url }))} />
+    <Gallery title={t("Heroes")} urls={game.art.heroes.map((a) => ({ thumb: a.thumb, url: a.url }))} wide />
+    <Gallery title={t("Logos")} urls={game.art.logos.map((a) => ({ thumb: a.thumb, url: a.url }))} />
     {game.similar.length > 0 && <section aria-label={t("Similar games")}><h4>{t("Similar games")}</h4><div className="game-search-similar">
       {game.similar.map((item) => <button key={item.name} type="button" className="secondary-button" onClick={() => onSearch(item.name)}>{item.name}</button>)}
     </div></section>}
-    {game.links.length > 0 && <section aria-label="Links"><h4>Links</h4><p className="game-search-links">{game.links.map((link) => <Link key={link.url} href={link.url}>{link.label}</Link>)}</p></section>}
+    {game.links.length > 0 && <section aria-label={t("Links")}><h4>{t("Links")}</h4><p className="game-search-links">{game.links.map((link) => <Link key={link.url} href={link.url}>{link.label}</Link>)}</p></section>}
     <p className="game-search-muted">Data from {game.sources.join(", ") || t("no provider")}. Artwork belongs to its authors.</p>
   </article>;
 }
@@ -148,12 +148,12 @@ export function GameSearchDialog({ onClose }: { onClose: () => void }) {
 
   return <div className="modal-backdrop" onClick={onClose}>
     <div className="modal game-search-dialog" role="dialog" aria-modal="true" aria-labelledby="game-search-title" onClick={(event) => event.stopPropagation()}>
-      <div className="modal-header"><div><p className="eyebrow">Experimental</p><h2 id="game-search-title">{t("Search all games")}</h2></div><button type="button" className="icon-button" aria-label={t("Close game search")} onClick={onClose}><X size={16} aria-hidden="true" /></button></div>
+      <div className="modal-header"><div><p className="eyebrow">{t("Experimental")}</p><h2 id="game-search-title">{t("Search all games")}</h2></div><button type="button" className="icon-button" aria-label={t("Close game search")} onClick={onClose}><X size={16} aria-hidden="true" /></button></div>
       <div className="game-search-body">
         <div className="game-search-side">
-          <label className="search-box game-search-input"><Search size={15} aria-hidden="true" /><input ref={input} value={query} onChange={(event) => type(event.target.value)} placeholder="Search any game" aria-label="Search any game" autoComplete="off" spellCheck={false} /></label>
+          <label className="search-box game-search-input"><Search size={15} aria-hidden="true" /><input ref={input} value={query} onChange={(event) => type(event.target.value)} placeholder={t("Search any game")} aria-label={t("Search any game")} autoComplete="off" spellCheck={false} /></label>
           <div className="game-search-status" role="status" aria-live="polite">{status === "searching" ? t("Searching…") : status === "done" && !hits.length ? t("No games found.") : message}</div>
-          <ul className="game-search-hits" aria-label="Search results">
+          <ul className="game-search-hits" aria-label={t("Search results")}>
             {hits.map((hit) => <li key={hit.key}><button type="button" className={`game-search-hit${game?.key === hit.key ? " active" : ""}`} onClick={() => pick(hit)} aria-current={game?.key === hit.key ? "true" : undefined}>
               {hit.coverUrl ? <RemoteImage src={hit.coverUrl} alt="" referrerPolicy="no-referrer" fallback={<span className="game-search-nocover" />} /> : <span className="game-search-nocover" />}
               <span><strong>{hit.name}</strong><small>{hit.year ?? t("Unknown year")}</small></span></button></li>)}
@@ -161,7 +161,7 @@ export function GameSearchDialog({ onClose }: { onClose: () => void }) {
         </div>
         <div className="game-search-main" aria-busy={Boolean(loading)}>
           {loading ? <p className="game-search-muted" role="status">{t("Loading {name}…").replace("{name}", loading)}</p> : game ? <Details key={game.key} game={game} onSearch={(name) => { type(name); input.current?.focus(); }} />
-            : <p className="game-search-muted">Type a game name, then pick a result for its details, artwork and prices.</p>}
+            : <p className="game-search-muted">{t("Type a game name, then pick a result for its details, artwork and prices.")}</p>}
         </div>
       </div>
     </div>
