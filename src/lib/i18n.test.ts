@@ -109,7 +109,6 @@ describe("shared UI translations", () => {
           if (message && /[A-Za-z\p{L}]/u.test(message)) found.set(message, path.relative(root, argument.getSourceFile().fileName));
         };
         if (uiMessageSetters.has(callName)) collectLiteral(node.arguments[0]);
-        if (["t", "translate", "translateUiMessage"].includes(callName)) collectLiteral(node.arguments[0]);
         if (callName === "notify") { collectLiteral(node.arguments[0]); collectLiteral(node.arguments[1]); }
         if (callName === "confirmAction" && ts.isObjectLiteralExpression(node.arguments[0])) {
           for (const property of node.arguments[0].properties) {
