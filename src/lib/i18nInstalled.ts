@@ -280,3 +280,46 @@ Object.assign(installedMessages, Object.fromEntries(issueDetailKeys.map((message
   message,
   Object.fromEntries(Object.entries(issueDetailValues).map(([locale, values]) => [locale, values[index]])),
 ])));
+
+const modErrorKeys = [
+  "Update failed.",
+  "Unable to roll back.",
+  "Unable to delete the file.",
+  "Unable to change the files.",
+  "Install missing dependency",
+  "The latest snapshot already matches the current mods.",
+] as const;
+const modErrorValues: Record<string, string[]> = {
+  "ar": ["فشل التحديث.", "تعذّر الرجوع إلى إصدار سابق.", "تعذّر حذف الملف.", "تعذّر تغيير الملفات.", "تثبيت التبعية المفقودة", "تطابق اللقطة الأخيرة بالفعل التعديلات الحالية."],
+  "bg": ["Актуализацията не бе успешна.", "Връщането назад не бе възможно.", "Файлът не можа да бъде изтрит.", "Файловете не можаха да бъдат променени.", "Инсталиране на липсваща зависимост", "Последната снимка вече съвпада с текущите модове."],
+  "zh-Hans": ["更新失败。", "无法回退。", "无法删除文件。", "无法更改文件。", "安装缺失的依赖项", "最新快照已与当前模组一致。"],
+  "zh-Hant": ["更新失敗。", "無法回復舊版。", "無法刪除檔案。", "無法變更檔案。", "安裝缺少的相依項目", "最新快照已與目前模組相符。"],
+  "cs": ["Aktualizace se nezdařila.", "Nelze vrátit předchozí verzi.", "Soubor se nepodařilo odstranit.", "Soubory se nepodařilo změnit.", "Nainstalovat chybějící závislost", "Poslední snímek již odpovídá aktuálním modům."],
+  "da": ["Opdatering mislykkedes.", "Kunne ikke rulle tilbage.", "Filen kunne ikke slettes.", "Filerne kunne ikke ændres.", "Installér manglende afhængighed", "Det seneste snapshot svarer allerede til de aktuelle mods."],
+  "nl": ["Update mislukt.", "Terugdraaien is mislukt.", "Het bestand kon niet worden verwijderd.", "De bestanden konden niet worden gewijzigd.", "Ontbrekende afhankelijkheid installeren", "De nieuwste snapshot komt al overeen met de huidige mods."],
+  "fi": ["Päivitys epäonnistui.", "Palautus epäonnistui.", "Tiedoston poistaminen epäonnistui.", "Tiedostojen muuttaminen epäonnistui.", "Asenna puuttuva riippuvuus", "Viimeisin tilannekuva vastaa jo nykyisiä modeja."],
+  "fr": ["Échec de la mise à jour.", "Impossible de revenir à la version précédente.", "Impossible de supprimer le fichier.", "Impossible de modifier les fichiers.", "Installer la dépendance manquante", "Le dernier instantané correspond déjà aux mods actuels."],
+  "de": ["Update fehlgeschlagen.", "Zurücksetzen fehlgeschlagen.", "Datei konnte nicht gelöscht werden.", "Dateien konnten nicht geändert werden.", "Fehlende Abhängigkeit installieren", "Der neueste Snapshot entspricht bereits den aktuellen Mods."],
+  "el": ["Η ενημέρωση απέτυχε.", "Δεν ήταν δυνατή η επαναφορά.", "Δεν ήταν δυνατή η διαγραφή του αρχείου.", "Δεν ήταν δυνατή η αλλαγή των αρχείων.", "Εγκατάσταση εξάρτησης που λείπει", "Το πιο πρόσφατο στιγμιότυπο ταιριάζει ήδη με τα τρέχοντα mod."],
+  "hu": ["A frissítés nem sikerült.", "Nem sikerült visszaállítani a korábbi verziót.", "A fájl törlése nem sikerült.", "A fájlok módosítása nem sikerült.", "Hiányzó függőség telepítése", "A legutóbbi pillanatkép már megegyezik a jelenlegi modokkal."],
+  "id": ["Pembaruan gagal.", "Tidak dapat mengembalikan versi.", "File tidak dapat dihapus.", "File tidak dapat diubah.", "Pasang dependensi yang hilang", "Snapshot terbaru sudah cocok dengan mod saat ini."],
+  "it": ["Aggiornamento non riuscito.", "Impossibile ripristinare la versione precedente.", "Impossibile eliminare il file.", "Impossibile modificare i file.", "Installa la dipendenza mancante", "L'ultima istantanea corrisponde già alle mod attuali."],
+  "ja": ["アップデートに失敗しました。", "ロールバックできませんでした。", "ファイルを削除できませんでした。", "ファイルを変更できませんでした。", "不足している依存関係をインストール", "最新のスナップショットは現在の Mod とすでに一致しています。"],
+  "ko": ["업데이트에 실패했습니다.", "롤백할 수 없습니다.", "파일을 삭제할 수 없습니다.", "파일을 변경할 수 없습니다.", "누락된 종속성 설치", "최신 스냅샷이 현재 모드와 이미 일치합니다."],
+  "no": ["Oppdateringen mislyktes.", "Kunne ikke rulle tilbake.", "Kunne ikke slette filen.", "Kunne ikke endre filene.", "Installer manglende avhengighet", "Det nyeste øyeblikksbildet samsvarer allerede med de gjeldende moddene."],
+  "pl": ["Aktualizacja nie powiodła się.", "Nie udało się przywrócić poprzedniej wersji.", "Nie udało się usunąć pliku.", "Nie udało się zmienić plików.", "Zainstaluj brakującą zależność", "Najnowsza migawka już odpowiada obecnym modom."],
+  "pt": ["A atualização falhou.", "Não foi possível reverter.", "Não foi possível eliminar o ficheiro.", "Não foi possível alterar os ficheiros.", "Instalar dependência em falta", "O instantâneo mais recente já corresponde aos mods atuais."],
+  "pt-BR": ["Falha na atualização.", "Não foi possível reverter.", "Não foi possível excluir o arquivo.", "Não foi possível alterar os arquivos.", "Instalar dependência ausente", "O snapshot mais recente já corresponde aos mods atuais."],
+  "ro": ["Actualizarea a eșuat.", "Nu s-a putut reveni la versiunea anterioară.", "Fișierul nu a putut fi șters.", "Fișierele nu au putut fi modificate.", "Instalează dependența lipsă", "Ultimul instantaneu corespunde deja modurilor actuale."],
+  "ru": ["Не удалось обновить.", "Не удалось откатить версию.", "Не удалось удалить файл.", "Не удалось изменить файлы.", "Установить недостающую зависимость", "Последний снимок уже соответствует текущим модам."],
+  "es": ["La actualización ha fallado.", "No se pudo revertir.", "No se pudo eliminar el archivo.", "No se pudieron cambiar los archivos.", "Instalar dependencia que falta", "La instantánea más reciente ya coincide con los mods actuales."],
+  "sv": ["Uppdateringen misslyckades.", "Det gick inte att återställa föregående version.", "Det gick inte att ta bort filen.", "Det gick inte att ändra filerna.", "Installera saknat beroende", "Den senaste ögonblicksbilden matchar redan de aktuella moddarna."],
+  "th": ["อัปเดตไม่สำเร็จ", "ย้อนกลับเวอร์ชันไม่ได้", "ลบไฟล์ไม่ได้", "เปลี่ยนไฟล์ไม่ได้", "ติดตั้งส่วนที่ขาด", "สแนปช็อตล่าสุดตรงกับม็อดปัจจุบันอยู่แล้ว"],
+  "tr": ["Güncelleme başarısız.", "Geri alma başarısız.", "Dosya silinemedi.", "Dosyalar değiştirilemedi.", "Eksik bağımlılığı yükle", "En son anlık görüntü mevcut modlarla zaten eşleşiyor."],
+  "uk": ["Не вдалося оновити.", "Не вдалося відкотити версію.", "Не вдалося видалити файл.", "Не вдалося змінити файли.", "Установити відсутню залежність", "Останній знімок уже відповідає поточним модам."],
+  "vi": ["Cập nhật thất bại.", "Không thể hoàn tác về phiên bản trước.", "Không thể xóa tệp.", "Không thể thay đổi các tệp.", "Cài đặt phần phụ thuộc còn thiếu", "Bản chụp mới nhất đã khớp với các mod hiện tại."],
+};
+Object.assign(installedMessages, Object.fromEntries(modErrorKeys.map((message, index) => [
+  message,
+  Object.fromEntries(Object.entries(modErrorValues).map(([locale, values]) => [locale, values[index]])),
+])));
