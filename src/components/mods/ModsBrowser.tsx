@@ -23,6 +23,7 @@ import { applyUpdates } from "../../state/modUpdates";
 import { useInstallState } from "./useInstallState";
 import { WindowedGrid } from "./WindowedGrid";
 import { useTranslation } from "../../lib/useTranslation";
+import { getTranslationLocale } from "../../lib/translationLocale";
 
 type Filter = { gameVersion?: string; loader?: string };
 
@@ -149,16 +150,16 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
       <div className="discover-select-wrap"><span>{t("Sort")}</span><Select value={sort} onChange={setSort} options={source.sorts.map((option) => ({ ...option, label: t(option.label) }))} label={t("Sort")} searchable={false} align="end" /></div>
     </div>
     <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />
-    {active > 0 && <p className="metadata-note" role="status">{t(active === 1 ? "{count} download in progress. See Downloads." : "{count} downloads in progress. See Downloads.").replace("{count}", active.toLocaleString())}</p>}
+    {active > 0 && <p className="metadata-note" role="status">{t(active === 1 ? "{count} download in progress. See Downloads." : "{count} downloads in progress. See Downloads.").replace("{count}", active.toLocaleString(getTranslationLocale()))}</p>}
     {!source.searchesServerSide && effectiveQuery && <p className="metadata-note">{t("Nexus Mods cannot search by text, so this filters the mods Mochi has loaded so far. Scroll to load more.")}</p>}
-    <div className="mods-heading"><span aria-live="polite">{feed.loading ? t("Loading...") : `${feed.items.length.toLocaleString()} ${t("of")} ${feed.total.toLocaleString()} ${t(noun)}`}</span>{(source.id === "curseforge" || feed.items.some((item) => item.source === "curseforge")) && <CurseforgeCredit />}</div>
+    <div className="mods-heading"><span aria-live="polite">{feed.loading ? t("Loading...") : `${feed.items.length.toLocaleString(getTranslationLocale())} ${t("of")} ${feed.total.toLocaleString(getTranslationLocale())} ${t(noun)}`}</span>{(source.id === "curseforge" || feed.items.some((item) => item.source === "curseforge")) && <CurseforgeCredit />}</div>
     {feed.loading && <div className="discover-grid mods-grid" aria-busy="true"><ProjectSkeletons count={6} /></div>}
     {!feed.loading && feed.items.length > 0 && <WindowedGrid className="discover-grid mods-grid" items={shown} keyOf={(item) => `${item.source}:${item.id}`}
       render={(item) => <ModCard showSource={source.mixed === true || Boolean(item.game)} item={item} actionLabel={actionLabel} busy={busy} onView={setViewing} onAction={act} state={tofu ? stateOf(item) : undefined} onUpdate={tofu ? update : undefined} />} />}
     {!expanded && !feed.loading && !feed.error && (feed.items.length > shown.length || feed.hasMore) && <div className="mods-show-more"><button type="button" className="secondary-button" onClick={() => { setExpanded(true); if (feed.items.length <= shown.length) feed.loadMore(); }}>{t("Show more {items}").replace("{items}", t(noun))}</button></div>}
     {feed.error && <div className="discover-error" role="alert">
       {feed.offline ? <p><WifiOff size={14} /> {t("You appear to be offline.")}</p> : <p>{feed.items.length ? t("Could not load more.") : t("Could not load {items} from {source}.").replace("{items}", t(noun)).replace("{source}", source.label)}</p>}
-      <small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> {t("Retry")}</button>
+      {/* Provider-originated details stay intact for debugging; app-owned status copy is translated above. */}<small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> {t("Retry")}</button>
     </div>}
     {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty"><p>{t(filtered ? "No {items} match these filters." : "No {items} match.").replace("{items}", t(noun))}</p>{filtered && <button type="button" className="secondary-button" onClick={() => { setSearch(""); setDebounced(""); setCategoryId(""); }}>{t("Clear filters")}</button>}</div>}
     {expanded && feed.loadingMore && <div className="discover-grid mods-grid" aria-busy="true"><ProjectSkeletons count={3} /></div>}
