@@ -68,9 +68,9 @@ export function AchievementsPanel({ progress, unlocked }: { progress: Achievemen
 
   return (
     <section aria-labelledby="ach-heading" className="stats-card ach-panel">
-      <div className="stats-card-head"><h2 id="ach-heading">{t("Achievements")}</h2><span className="stats-muted">{done} of {progress.length} {t("unlocked")}</span></div>
+      <div className="stats-card-head"><h2 id="ach-heading">{t("Achievements")}</h2><span className="stats-muted">{done} {t("of")} {progress.length} {t("unlocked")}</span></div>
       <div className="stat-meter wide" role="progressbar" aria-label={t("Achievements unlocked")} aria-valuemin={0} aria-valuemax={progress.length} aria-valuenow={done}><i style={{ width: `${(done / Math.max(1, progress.length)) * 100}%` }} /></div>
-      <p className="stats-muted">Mochi's own achievements, tracked on this device from your play history and library. Tiered ones show the next tier to go for. Steam achievements for each game are in its Overview.</p>
+      <p className="stats-muted">{t("Mochi's own achievements, tracked on this device from your play history and library. Tiered ones show the next tier to go for. Steam achievements for each game are in its Overview.")}</p>
       <div className="ach-filters">
         <div className="ach-chips" role="group" aria-label={t("Achievement categories")}>
           <button type="button" className="ach-chip" aria-pressed={category === "all"} onClick={() => setCategory("all")}>{t("All")} <small>{done}/{progress.length}</small></button>

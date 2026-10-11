@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import type { Piko } from "../../models";
 import { GameArtwork } from "../GameArtwork";
 import { addDays, dayKey, formatDuration, formatHours, startOfDay, weekdayIndex, type Analysis, type DayBucket } from "../../lib/stats";
@@ -12,6 +13,7 @@ type Series = { id: string; name: string; color: string };
 
 /** Stacked hours-per-bucket bars; the five biggest games get their own colour, the rest share "Other". */
 export function StackedBars({ buckets, games, weekly }: { buckets: DayBucket[]; games: Analysis["games"]; weekly: boolean }) {
+  const t = useTranslation();
   const { wrap, tip, bind, hide } = useChartTip();
   const roving = useRoving(buckets.length);
   const series: Series[] = games.slice(0, 5).map((game, i) => ({ id: game.gameId, name: game.name, color: seriesVar(i) }));
@@ -25,7 +27,7 @@ export function StackedBars({ buckets, games, weekly }: { buckets: DayBucket[]; 
   const hasOther = games.length > 5;
   return (
     <div className="stat-chart" ref={wrap} onKeyDown={(event) => { if (event.key === "Escape") hide(); }}>
-      <svg ref={roving.root} viewBox={`0 0 ${W} ${H}`} role="group" aria-label={`${weekly ? "Hours played per week" : "Hours played per day"}, stacked by game`} onKeyDown={roving.onKeyDown}>
+      <svg ref={roving.root} viewBox={`0 0 ${W} ${H}`} role="group" aria-label={`${weekly ? t("Hours played per week") : t("Hours played per day")}, ${t("stacked by game")}`} onKeyDown={roving.onKeyDown}>
         {[0, 0.5, 1].map((fraction) => (
           <g key={fraction}>
             <line className="stat-grid" x1={left} x2={W - right} y1={y(max * fraction)} y2={y(max * fraction)} />
@@ -37,15 +39,15 @@ export function StackedBars({ buckets, games, weekly }: { buckets: DayBucket[]; 
           let acc = 0;
           const parts = series.map((s) => ({ s, hours: (bucket.byGame.get(s.id) ?? 0) / 3600 }));
           const otherSeconds = bucket.seconds - series.reduce((sum, s) => sum + (bucket.byGame.get(s.id) ?? 0), 0);
-          if (otherSeconds > 0) parts.push({ s: { id: "other", name: "Other", color: OTHER_SERIES }, hours: otherSeconds / 3600 });
+          if (otherSeconds > 0) parts.push({ s: { id: "other", name: t("Other"), color: OTHER_SERIES }, hours: otherSeconds / 3600 });
           const label = weekly ? `Week of ${longDate(bucket.date)}` : longDate(bucket.date);
           const tipContent = (
-            <><strong>{label}</strong><span>{bucket.seconds ? formatDuration(bucket.seconds) : "No play"}</span>
+            <><strong>{label}</strong><span>{bucket.seconds ? formatDuration(bucket.seconds)  : t("No play")}</span>
               {parts.filter((p) => p.hours > 0).map((p) => <span key={p.s.id} className="stat-tip-row"><i style={{ background: p.s.color }} />{p.s.name} {formatDuration(p.hours * 3600)}</span>)}</>
           );
           const showLabel = labelEvery ? i % labelEvery === 0 : i === 0 || bucket.date.getMonth() !== buckets[i - 1].date.getMonth();
           return (
-            <g key={bucket.key} {...roving.item(i)} aria-label={`${label}: ${bucket.seconds ? formatDuration(bucket.seconds) : "no play"}`} {...bind(tipContent)}>
+            <g key={bucket.key} {...roving.item(i)} aria-label={`${label}: ${bucket.seconds ? formatDuration(bucket.seconds)  : t("no play")}`} {...bind(tipContent)}>
               <rect className="stat-hit" x={left + i * slot} y={top} width={slot} height={plotH} />
               {parts.map(({ s, hours }) => {
                 const h = (hours / max) * plotH;
@@ -59,11 +61,11 @@ export function StackedBars({ buckets, games, weekly }: { buckets: DayBucket[]; 
         })}
       </svg>
       <ChartTip tip={tip} />
-      <ul className="stat-legend" aria-label="Legend">
+      <ul className="stat-legend" aria-label={t("Legend")}>
         {series.map((s) => <li key={s.id}><i style={{ background: s.color }} />{s.name}</li>)}
-        {hasOther && <li><i style={{ background: OTHER_SERIES }} />Other</li>}
+        {hasOther && <li><i style={{ background: OTHER_SERIES }} />{t("Other")}</li>}
       </ul>
-      <DataTable caption={weekly ? "Hours played per week" : "Hours played per day"} headers={["Date", "Total", ...series.map((s) => s.name)]}
+      <DataTable caption={weekly ? t("Hours played per week") : t("Hours played per day")} headers={[t("Date"), t("Total"), ...series.map((s) => t(s.name))]}
         rows={buckets.map((b) => [b.key, formatDuration(b.seconds), ...series.map((s) => formatDuration(b.byGame.get(s.id) ?? 0))])} />
     </div>
   );
@@ -71,6 +73,7 @@ export function StackedBars({ buckets, games, weekly }: { buckets: DayBucket[]; 
 
 /** Ranked games with artwork thumbnails. Plain markup: the text is the accessible content. */
 export function TopGames({ games, library, limit = 8 }: { games: Analysis["games"]; library: Piko[]; limit?: number }) {
+  const t = useTranslation();
   const top = games.slice(0, limit);
   const max = top[0]?.seconds || 1;
   return (
@@ -84,7 +87,7 @@ export function TopGames({ games, library, limit = 8 }: { games: Analysis["games
             <div className="stat-top-body">
               <div className="stat-top-line"><strong>{piko?.name ?? game.name}</strong><span>{formatDuration(game.seconds)}</span></div>
               <div className="stat-meter" aria-hidden="true"><i style={{ width: `${Math.max(3, (game.seconds / max) * 100)}%`, background: seriesVar(i) }} /></div>
-              <small>{game.sessions} session{game.sessions === 1 ? "" : "s"}</small>
+              <small>{game.sessions} {t(game.sessions === 1 ? "session" : "sessions")}</small>
             </div>
           </li>
         );
@@ -138,6 +141,7 @@ export function WeekdayPattern({ weekdays }: { weekdays: number[] }) {
 
 /** GitHub-style calendar of the last 53 weeks. */
 export function Heatmap({ totals, now = Date.now() }: { totals: Map<string, number>; now?: number }) {
+  const t = useTranslation();
   const { wrap, tip, bind, hide } = useChartTip();
   const today = startOfDay(now);
   const first = addDays(today, -(52 * 7 + weekdayIndex(today)));
@@ -157,7 +161,7 @@ export function Heatmap({ totals, now = Date.now() }: { totals: Map<string, numb
   return (
     <div className="stat-chart stat-heatmap" ref={wrap} onKeyDown={(event) => { if (event.key === "Escape") hide(); }}>
       <div className="stat-heatmap-scroll">
-        <svg ref={roving.root} viewBox={`0 0 ${W} ${H}`} style={{ minWidth: 640 }} role="group" aria-label="Play activity calendar for the last year" onKeyDown={roving.onKeyDown}>
+        <svg ref={roving.root} viewBox={`0 0 ${W} ${H}`} style={{ minWidth: 640 }} role="group" aria-label={t("Play activity calendar for the last year")} onKeyDown={roving.onKeyDown}>
           {[0, 2, 4].map((row) => <text key={row} className="stat-axis" x={left - 6} y={top + row * (size + gap) + size - 1} textAnchor="end">{WEEKDAYS[row]}</text>)}
           {cells.map((cell, i) => {
             const monthStart = cell.row === 0 && (i === 0 || cell.date.getMonth() !== addDays(cell.date, -7).getMonth());
@@ -172,7 +176,7 @@ export function Heatmap({ totals, now = Date.now() }: { totals: Map<string, numb
         </svg>
       </div>
       <ChartTip tip={tip} />
-      <div className="stat-heat-key" aria-hidden="true">Less{[0, 1, 2, 3, 4].map((l) => <i key={l} className={`stat-cell l${l}`} />)}More</div>
+      <div className="stat-heat-key" aria-hidden="true">{t("Less")}{[0, 1, 2, 3, 4].map((l) => <i key={l} className={`stat-cell l${l}`} />)}{t("More")}</div>
       <DataTable caption="Play time per day, last year" headers={["Date", "Time played"]} rows={cells.filter((c) => c.seconds > 0).map((c) => [c.key, formatDuration(c.seconds)])} />
     </div>
   );
