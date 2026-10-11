@@ -47,7 +47,7 @@ export function TofuPicker({ title, description, pikos, ecosystem, gameName, met
   const t = useTranslation();
   const choices = useMemo(() => buildTofuChoices({ pikos, ecosystem, gameName, metas }), [pikos, ecosystem, gameName, metas]);
   const text = description ?? (choices.kind === "minecraft" ? "Only Minecraft instances are listed, by loader and newest version. Incompatible ones can still be installed on purpose." : "Choose the Tofu instance that should receive this download.");
-  return <ModalShell label={`Choose Tofu instance for ${title}`} className="tofu-picker-window" onClose={onClose}>
+  return <ModalShell label={t("Choose Tofu instance for {name}").replace("{name}", title)} className="tofu-picker-window" onClose={onClose}>
     <div className="modal-header"><div><p className="eyebrow">{t("Download")} {title}</p><h2>{t("Choose Tofu instance")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
     <p className="modal-description">{text}</p>
     {choices.groups.length ? choices.groups.map((group) => <section className="tofu-picker-group" key={group.label}>
