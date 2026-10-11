@@ -40,7 +40,7 @@ export function A11yPreview() {
       <span className="a11y-chip warn"><TriangleAlert size={13} aria-hidden="true" /> Needs update</span>
       <span className="a11y-chip bad"><X size={13} aria-hidden="true" /> Failed</span>
     </div>
-    <small style={{ color: "var(--mochi-text-muted)" }}>Status chips always carry an icon and a word, not only a colour.{settings.colorBlind !== "none" ? ` ${t("Palette: {mode}.").replace("{mode}", settings.colorBlind === "none" ? t("Off") : t(settings.colorBlind === "deuteranopia" ? "Deuteranopia" : settings.colorBlind === "protanopia" ? "Protanopia" : "Tritanopia"))}` : ""}</small>
+    <small style={{ color: "var(--mochi-text-muted)" }}>Status chips always carry an icon and a word, not only a colour.{settings.colorBlind !== "none" ? ` ${t("Palette: {mode}.").replace("{mode}", t(settings.colorBlind === "deuteranopia" ? "Deuteranopia" : settings.colorBlind === "protanopia" ? "Protanopia" : "Tritanopia"))}` : ""}</small>
   </div>;
 }
 

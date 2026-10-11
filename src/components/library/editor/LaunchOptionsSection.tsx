@@ -68,13 +68,13 @@ export function LaunchOptionsSection({ ctx }: { ctx: EditorContext }) {
           {(draft.launchProfiles ?? []).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select>
         {profile && <input aria-label="Rename profile" defaultValue={profile.name} key={profile.id} maxLength={40} onBlur={(event) => { if (event.target.value.trim()) patch({ launchProfiles: renameLaunchProfile(draft, profile.id, event.target.value) }); else event.target.value = profile.name; }} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} />}
-        {profile && <button type="button" className="icon-button" aria-label={`Delete profile ${profile.name}`} onClick={() => patch(removeLaunchProfile(draft, profile.id))}><Trash2 size={14} /></button>}
+        {profile && <button type="button" className="icon-button" aria-label={t("Delete profile {name}").replace("{name}", profile.name)} onClick={() => patch(removeLaunchProfile(draft, profile.id))}><Trash2 size={14} /></button>}
       </div>
       <div className="launch-profile-row">
-        <input aria-label="New profile name" value={newName} maxLength={40} placeholder="New profile, copied from the current options" disabled={(draft.launchProfiles?.length ?? 0) >= MAX_LAUNCH_PROFILES} onChange={(event) => setNewName(event.target.value)} />
+        <input aria-label={t("New profile name")} value={newName} maxLength={40} placeholder={t("New profile, copied from the current options")} disabled={(draft.launchProfiles?.length ?? 0) >= MAX_LAUNCH_PROFILES} onChange={(event) => setNewName(event.target.value)} />
         <button type="button" className="secondary-button" disabled={!newName.trim() || (draft.launchProfiles?.length ?? 0) >= MAX_LAUNCH_PROFILES} onClick={() => { patch(addLaunchProfile(draft, newName)); setNewName(""); }}><Plus size={13} /> Add profile</button>
       </div>
-      <small className="metadata-note">{profile ? `Editing “${profile.name}”: its options replace the default ones when the game starts.` : "Profiles hold alternative runtime, variables and arguments, switchable from the game page."}</small>
+      <small className="metadata-note">{profile ? t("Editing “{name}”: its options replace the default ones when the game starts.").replace("{name}", profile.name) : t("Profiles hold alternative runtime, variables and arguments, switchable from the game page.")}</small>
     </div>
     {preview?.note && <p className="launch-hint launch-options-note" role="status">{preview.note}</p>}
 
@@ -83,9 +83,9 @@ export function LaunchOptionsSection({ ctx }: { ctx: EditorContext }) {
         {options.env.map(([key, value], index) => {
           const problem = envNameError(key) ?? (duplicates.has(key.trim()) ? t("Set more than once. The last one wins.") : null);
           return <div className="launch-env-row" key={index}>
-            <input value={key} aria-label={`Variable ${index + 1} name`} placeholder="NAME" spellCheck={false} autoComplete="off" aria-invalid={!!envNameError(key)} disabled={!mayEdit} onChange={(event) => set({ env: setEnvRow(options.env, index, [event.target.value, value]) })} />
-            <input value={value} aria-label={`Variable ${index + 1} value`} placeholder="value" spellCheck={false} autoComplete="off" disabled={!mayEdit} onChange={(event) => set({ env: setEnvRow(options.env, index, [key, event.target.value]) })} />
-            <button type="button" className="icon-button" aria-label={`Remove variable ${index + 1}`} disabled={!mayEdit} onClick={() => set({ env: removeEnvRow(options.env, index) })}><Trash2 size={14} /></button>
+            <input value={key} aria-label={t("Variable {index} name").replace("{index}", String(index + 1))} placeholder="NAME" spellCheck={false} autoComplete="off" aria-invalid={!!envNameError(key)} disabled={!mayEdit} onChange={(event) => set({ env: setEnvRow(options.env, index, [event.target.value, value]) })} />
+            <input value={value} aria-label={t("Variable {index} value").replace("{index}", String(index + 1))} placeholder="value" spellCheck={false} autoComplete="off" disabled={!mayEdit} onChange={(event) => set({ env: setEnvRow(options.env, index, [key, event.target.value]) })} />
+            <button type="button" className="icon-button" aria-label={t("Remove variable {index}").replace("{index}", String(index + 1))} disabled={!mayEdit} onClick={() => set({ env: removeEnvRow(options.env, index) })}><Trash2 size={14} /></button>
             {problem && <small className="launch-field-error" role="alert">{t(problem)}</small>}
           </div>;
         })}
