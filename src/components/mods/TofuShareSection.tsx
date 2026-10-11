@@ -60,7 +60,7 @@ export function TofuShareSection({ piko, tofu, onCreateTofu }: { piko: Piko; tof
     <Checkbox checked={identify} onChange={setIdentify} label="Identify unknown files first" description="Looks unmatched files up on Modrinth, CurseForge and Nexus Mods by hash so more of the pack can be re-downloaded." />
     <div className="tofu-share-actions">
       <button type="button" className="play-button" disabled={disabled} onClick={() => void run("file")}><Download size={14}/> Export file</button>
-      <button type="button" className="secondary-button" disabled={disabled || !codeOk} title={codeOk ? "Copy a short code you can paste into a chat" : "This web view cannot make short codes"} onClick={() => void run("code")}><Copy size={14}/> Copy code</button>
+      <button type="button" className="secondary-button" disabled={disabled || !codeOk} title={codeOk ? "Copy a short code you can paste into a chat" : t("This web view cannot make short codes")} onClick={() => void run("code")}><Copy size={14}/> Copy code</button>
       <button type="button" className="secondary-button" onClick={() => setImporting(true)}><FileUp size={14}/> Import modpack…</button>
     </div>
     <p className="metadata-note tofu-share-note" role="status" aria-live="polite">{busy ? status || "Working…" : status || <><Share2 size={12}/> The pack holds ids and hashes only, never mod files.</>}</p>
