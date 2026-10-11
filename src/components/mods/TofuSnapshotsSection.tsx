@@ -38,7 +38,7 @@ export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
     if (!ok) return;
     await run(async () => {
       const report = await restoreTofuSnapshot(tofu.id, snapshot.id);
-      notify("Tofu restored", `${tofu.name}: ${report.restored} restored, ${report.removed} removed, ${report.unchanged} already matched.`);
+      notify(t("Tofu restored"), `${tofu.name}: ${report.restored} restored, ${report.removed} removed, ${report.unchanged} already matched.`);
     }, "Restore failed");
   };
   const remove = async (snapshot: SnapshotInfo) => {
