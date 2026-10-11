@@ -262,4 +262,58 @@ describe("shared UI translations", () => {
     expect(translateCommandTitle("Settings: General", t)).toBe("Paramètres : Général");
     expect(translateCommandGroup("Recent · Settings", t)).toBe("Recent · Paramètres");
   });
+  it("covers setup, authentication, cloud, settings, and download feedback across split locale catalogues", () => {
+    const groups = {
+      setup: [
+        "Your account is ready.",
+        "Connect your Mochi account.",
+        "Signing in lets you store provider keys securely and sync your library. Your installed games and files stay on this device.",
+        "Your account is connected. Provider keys can be saved securely, and cloud features are ready when you need them.",
+      ],
+      authentication: [
+        "Two-factor authentication",
+        "Password",
+        "Sign in",
+        "Sign out",
+        "Connected",
+        "Close",
+      ],
+      cloud: [
+        "Cloud sync in progress…",
+        "Cloud sync retrying…",
+        "Cloud sync active",
+        "Cloud sync disabled",
+        "Cloud sync unavailable",
+      ],
+      settings: [
+        "Settings exported. The file holds no passwords, keys or sign-in data.",
+        "Could not export: {error}",
+        "Could not read that file: {error}",
+      ],
+      downloads: [
+        "Cancel this download?",
+        "The download will stop. You can start it again from the mod page.",
+        "Cancel download",
+        "Paused",
+        "Scheduled wait",
+        "Downloads enabled",
+        "That did not work.",
+      ],
+    } as const;
+
+    for (const [area, messages] of Object.entries(groups)) {
+      for (const { code } of launcherLanguages) {
+        if (code === "en") continue;
+        for (const message of messages) {
+          const translated = translate(message, code);
+          expect(hasTranslation(message, code), `${area} / ${code}: ${message}`).toBe(true);
+          expect(translated, `${area} / ${code}: ${message}`).not.toBe(message);
+          for (const token of message.match(/\\{[^}]+\\}/g) ?? []) {
+            expect(translated, `${area} / ${code}: ${message}`).toContain(token);
+          }
+        }
+      }
+    }
+  });
+
 });
