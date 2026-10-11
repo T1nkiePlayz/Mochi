@@ -30,7 +30,7 @@ function PriceChart({ observations, ever, everDate }: { observations: PriceObser
     <svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label={t("Price history. {caption} Lowest {min}, highest {max}.").replace("{caption}", caption).replace("{min}", money(chart.min)).replace("{max}", money(chart.max))} preserveAspectRatio="none">
       {chart.everY !== null && <line className="game-search-ever" x1="0" x2={chart.width} y1={chart.everY} y2={chart.everY} />}
       {chart.dots.length > 1 && <path className="game-search-line" d={chart.line} fill="none" />}
-      {chart.dots.map((dot) => <circle key={dot.t} className="game-search-dot" cx={dot.x} cy={dot.y} r="3"><title>{`${new Date(dot.t).toLocaleDateString()}: ${money(dot.price)}`}</title></circle>)}
+      {chart.dots.map((dot) => <circle key={dot.t} className="game-search-dot" cx={dot.x} cy={dot.y} r="3"><title>{`${new Date(dot.t).toLocaleDateString(getTranslationLocale())}: ${money(dot.price)}`}</title></circle>)}
     </svg>
     <figcaption>{caption}{ever !== null && <> {t("Dashed line: lowest ever, {price}.").replace("{price}", money(ever))}</>}</figcaption>
   </figure>;
