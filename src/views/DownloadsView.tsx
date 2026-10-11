@@ -22,7 +22,7 @@ export function DownloadsView() {
     .filter((entry) => entry.state.updating.length || updateCount(entry.state));
   const [error, setError] = useState("");
   const groups = groupDownloads(downloads);
-  const report = (reason: unknown) => setError(reason instanceof Error ? reason.message : typeof reason === "string" ? reason : "That did not work.");
+  const report = (reason: unknown) => setError(reason instanceof Error ? reason.message : typeof reason === "string" ? reason : t("That did not work."));
   const clearFinished = async () => {
     const count = downloads.filter((entry) => entry.status !== "downloading").length;
     if (!count || !await confirmAction({ title: t("Clear finished downloads?"), message: t(count === 1 ? "Removes {count} finished download from the list. Downloaded files stay on disk." : "Removes {count} finished downloads from the list. Downloaded files stay on disk.").replace("{count}", String(count)), confirmLabel: t("Clear") })) return;
@@ -45,8 +45,8 @@ export function DownloadsView() {
           <div className="download-schedule-card">
             <label className="download-schedule-toggle"><span><strong>{t("Download schedule")}</strong><small>Only download during a time window</small></span><input type="checkbox" checked={prefs.window.enabled} onChange={(event) => setPrefs((current) => ({ ...current, window: { ...current.window, enabled: event.target.checked } }))} /></label>
             <div className="download-schedule-times">
-              <label className="download-pacing-field"><span>{t("Start time")}</span><input type="time" aria-label="Allowed from" value={prefs.window.start} disabled={!prefs.window.enabled} onChange={(event) => event.target.value && setPrefs((current) => ({ ...current, window: { ...current.window, start: event.target.value } }))} /></label>
-              <label className="download-pacing-field"><span>{t("End time")}</span><input type="time" aria-label="Allowed until" value={prefs.window.end} disabled={!prefs.window.enabled} onChange={(event) => event.target.value && setPrefs((current) => ({ ...current, window: { ...current.window, end: event.target.value } }))} /></label>
+              <label className="download-pacing-field"><span>{t("Start time")}</span><input type="time" aria-label={t("Allowed from")} value={prefs.window.start} disabled={!prefs.window.enabled} onChange={(event) => event.target.value && setPrefs((current) => ({ ...current, window: { ...current.window, start: event.target.value } }))} /></label>
+              <label className="download-pacing-field"><span>{t("End time")}</span><input type="time" aria-label={t("Allowed until")} value={prefs.window.end} disabled={!prefs.window.enabled} onChange={(event) => event.target.value && setPrefs((current) => ({ ...current, window: { ...current.window, end: event.target.value } }))} /></label>
             </div>
           </div>
         </div>
