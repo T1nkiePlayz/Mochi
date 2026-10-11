@@ -123,6 +123,6 @@ function GameLogsModal({ game, onClose }: { game: Piko; onClose: () => void }) {
     {empty ? <p className="muted game-logs-empty">{running ? t("The game is running but no log was captured for it.") : t("Nothing has been captured yet. Start the game from Mochi and its output appears here.")}</p>
       : !current.direct ? <p className="muted game-logs-empty" role="status">{t(handoffHelp(platform))}</p>
       : <pre className="game-logs-view" ref={view} tabIndex={0} aria-label={t("Log output")}>{text || (running ? t("Waiting for output...") : t("This session wrote no output."))}</pre>}
-    <small className="metadata-note">{t("{t("Logs stay on this computer, the newest 8 sessions per game are kept and very long logs are shortened.")}")}</small>
+    <small className="metadata-note">{t("Logs stay on this computer, the newest 8 sessions per game are kept and very long logs are shortened.")}</small>
   </ModalShell>;
 }
