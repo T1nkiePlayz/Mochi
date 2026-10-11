@@ -11,7 +11,7 @@ const MODES: Array<{ value: ImportMode; label: string; description: string }> = 
   { value: "merge", label: "Merge", description: "Keep what you have and add what is missing." },
   { value: "replace", label: "Replace", description: "Overwrite with the file's version." },
 ];
-const message = (error: unknown) => (error instanceof Error ? error.message : typeof error === "string" ? error : "Something went wrong.");
+const message = (error: unknown, t: (message: string) => string) => (error instanceof Error ? error.message : typeof error === "string" ? error : t("Something went wrong."));
 
 /** Export and import of portable settings (Settings > Data). Import shows a preview first and changes nothing until confirmed. */
 export function SettingsTransfer() {
@@ -25,8 +25,8 @@ export function SettingsTransfer() {
 
   const runExport = async () => {
     setBusy(true); setNote("");
-    try { setNote((await exportSettings(snapshot(), true)) ? "Settings exported. The file holds no passwords, keys or sign-in data." : ""); }
-    catch (error) { setNote(t("Could not export: {error}").replace("{error}", message(error))); }
+    try { setNote((await exportSettings(snapshot(), true)) ? t("Settings exported. The file holds no passwords, keys or sign-in data.") : ""); }
+    catch (error) { setNote(t("Could not export: {error}").replace("{error}", message(error, t))); }
     finally { setBusy(false); }
   };
   const runPick = async () => {
@@ -83,14 +83,14 @@ function ImportSheet({ file, onClose, onDone }: { file: SettingsFile; onClose: (
     } catch (failure) { setError(message(failure)); setBusy(false); }
   };
 
-  const created = file.manifest.createdAt ? new Date(file.manifest.createdAt).toLocaleString() : "unknown date";
+  const created = file.manifest.createdAt ? new Date(file.manifest.createdAt).toLocaleString() : t("unknown date");
   return <div className="modal-backdrop" onClick={onClose}>
     <div role="dialog" aria-modal="true" aria-labelledby="settings-import-title" className="modal settings-import-modal" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === "Escape") onClose(); }}>
       <div className="modal-header">
         <div><p className="eyebrow">{t("Settings backup")}</p><h2 id="settings-import-title">{t("Import settings")}</h2></div>
         <button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button>
       </div>
-      <p className="modal-description">Exported {created}{file.manifest.appVersion ? ` by Mochi ${file.manifest.appVersion}` : ""}. {t("Nothing changes until you press Import.")}</p>
+      <p className="modal-description">{t("Exported {date}{version}.").replace("{date}", created).replace("{version}", file.manifest.appVersion ? ` by Mochi ${file.manifest.appVersion}` : "")} {t("Nothing changes until you press Import.")}</p>
       <div className="settings-import-list" role="list">
         {present.map((id) => {
           const entry = selection[id] ?? { enabled: false, mode: "merge" as ImportMode };
