@@ -464,3 +464,9 @@ const linkGameErrorValues: Record<string, string[]> = {
 "vi":["Không thể tải trò chơi CurseForge.","Không thể tìm trò chơi trên Nexus Mods."],
 };
 Object.assign(installedMessages, Object.fromEntries(linkGameErrorKeys.map((message, index) => [message, Object.fromEntries(Object.entries(linkGameErrorValues).map(([locale, values]) => [locale, values[index]]))])));
+
+const modGenericKeys = ["Update","Something went wrong."] as const;
+const modGenericValues: Record<string, string[]> = {
+"ar":["تحديث","حدث خطأ ما."],"bg":["Актуализиране","Нещо се обърка."],"zh-Hans":["更新","出了点问题。"],"zh-Hant":["更新","發生錯誤。"],"cs":["Aktualizovat","Něco se pokazilo."],"da":["Opdater","Der opstod en fejl."],"nl":["Bijwerken","Er is iets misgegaan."],"fi":["Päivitä","Jotain meni pieleen."],"fr":["Mettre à jour","Une erreur s’est produite."],"de":["Aktualisieren","Etwas ist schiefgelaufen."],"el":["Ενημέρωση","Κάτι πήγε στραβά."],"hu":["Frissítés","Valami hiba történt."],"id":["Perbarui","Terjadi kesalahan."],"it":["Aggiorna","Qualcosa è andato storto."],"ja":["更新","問題が発生しました。"],"ko":["업데이트","문제가 발생했습니다."],"no":["Oppdater","Noe gikk galt."],"pl":["Aktualizuj","Coś poszło nie tak."],"pt":["Atualizar","Ocorreu um problema."],"pt-BR":["Atualizar","Algo deu errado."],"ro":["Actualizează","Ceva nu a funcționat."],"ru":["Обновить","Что-то пошло не так."],"es":["Actualizar","Algo salió mal."],"sv":["Uppdatera","Något gick fel."],"th":["อัปเดต","เกิดข้อผิดพลาดบางอย่าง"],"tr":["Güncelle","Bir şeyler ters gitti."],"uk":["Оновити","Щось пішло не так."],"vi":["Cập nhật","Đã xảy ra lỗi."]
+};
+Object.assign(installedMessages, Object.fromEntries(modGenericKeys.map((message, index) => [message, Object.fromEntries(Object.entries(modGenericValues).map(([locale, values]) => [locale, values[index]]))])));
