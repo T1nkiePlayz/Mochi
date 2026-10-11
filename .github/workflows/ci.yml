@@ -58,8 +58,8 @@ jobs:
         run: npm run build
       - name: Lint frontend
         run: npm run lint
-      - name: Type-check frontend tests
-        run: npm run typecheck:tests
+      - name: Type-check deal regression tests
+        run: npm run typecheck:deals-tests
       - name: Test frontend
         run: npm test
 
