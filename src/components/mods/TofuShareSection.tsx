@@ -51,7 +51,13 @@ export function TofuShareSection({ piko, tofu, onCreateTofu }: { piko: Piko; tof
         setStatus(`${t("Code copied")} (${code.length.toLocaleString()} ${t("characters")}). ${describe(pack.mods.length, pack.unknown.length, omitted)}`);
         notify(t("Code copied"), t("Paste it into Import modpack on another device."));
       }
-    } catch (error) { setStatus(""); notify(kind === "file" ? t("Export failed") : t("Could not copy the code"), errorText(error, t("Something went wrong."))); }
+    } catch (error) {
+      setStatus("");
+      const detail = errorText(error, "");
+      const translated = detail ? t(detail) : "";
+      const message = translated && translated !== detail ? translated : detail ? `${t("Something went wrong.")} ${detail}` : t("Something went wrong.");
+      notify(kind === "file" ? t("Export failed") : t("Could not copy the code"), message);
+    }
     finally { setBusy(""); }
   };
 
