@@ -78,7 +78,7 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
     let live = true;
     setVersions(null); setError("");
     // Everything is fetched once; the filters below narrow it without more requests.
-    void getModrinthVersions(project.project_id).then((next) => { if (live) setVersions(next); }).catch((reason) => { if (live) { setVersions([]); setError(t("Unable to load versions.")); } });
+    void getModrinthVersions(project.project_id).then((next) => { if (live) setVersions(next); }).catch(() => { if (live) { setVersions([]); setError(t("Unable to load versions.")); } });
     return () => { live = false; };
   }, [project.project_id, t]);
   useEffect(() => setShown(PAGE), [loader, game, channel, fitOnly]);

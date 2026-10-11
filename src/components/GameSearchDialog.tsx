@@ -20,17 +20,18 @@ function Link({ href, children }: { href: string; children: React.ReactNode }) {
 }
 
 function PriceChart({ observations, ever, everDate }: { observations: PriceObservation[]; ever: number | null; everDate: number | null }) {
+  const t = useTranslation();
   const points = useMemo(() => dailyLowest(observations), [observations]);
   const chart = useMemo(() => buildChart(points, ever), [points, ever]);
-  const caption = historyCaption(observations, everDate);
+  const caption = historyCaption(observations, everDate, t);
   if (!points.length && ever === null) return <p className="game-search-muted">No price data yet. {caption}</p>;
   return <figure className="game-search-chart">
-    <svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label={`Price history. ${caption} Lowest ${money(chart.min)}, highest ${money(chart.max)}.`} preserveAspectRatio="none">
+    <svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label={t("Price history. {caption} Lowest {min}, highest {max}.").replace("{caption}", caption).replace("{min}", money(chart.min)).replace("{max}", money(chart.max))} preserveAspectRatio="none">
       {chart.everY !== null && <line className="game-search-ever" x1="0" x2={chart.width} y1={chart.everY} y2={chart.everY} />}
       {chart.dots.length > 1 && <path className="game-search-line" d={chart.line} fill="none" />}
       {chart.dots.map((dot) => <circle key={dot.t} className="game-search-dot" cx={dot.x} cy={dot.y} r="3"><title>{`${new Date(dot.t).toLocaleDateString()}: ${money(dot.price)}`}</title></circle>)}
     </svg>
-    <figcaption>{caption}{ever !== null && <> Dashed line: lowest ever, {money(ever)}.</>}</figcaption>
+    <figcaption>{caption}{ever !== null && <> {t("Dashed line: lowest ever, {price}.").replace("{price}", money(ever))}</>}</figcaption>
   </figure>;
 }
 
@@ -69,7 +70,7 @@ function Details({ game, onSearch }: { game: GameDetails; onSearch: (name: strin
       {game.coverUrl && <RemoteImage className="game-search-cover" src={game.coverUrl} alt="" referrerPolicy="no-referrer" />}
       <div><h3>{game.name}</h3>
         <p className="game-search-muted">{[game.releaseDate ? fullDate(game.releaseDate) : "", game.developers.join(", ")].filter(Boolean).join(" · ") || t("No release or developer info")}</p>
-        {game.rating && <p><strong>{game.rating.score}</strong>/100 on IGDB{game.rating.count ? ` (${game.rating.count} ratings)` : ""}</p>}
+        {game.rating && <p><strong>{game.rating.score}</strong>/100 on IGDB{game.rating.count ? ` (${t(game.rating.count === 1 ? "{count} rating" : "{count} ratings").replace("{count}", String(game.rating.count))})` : ""}</p>}
       </div>
     </header>
     <div className="game-search-actions">
@@ -155,11 +156,11 @@ export function GameSearchDialog({ onClose }: { onClose: () => void }) {
           <ul className="game-search-hits" aria-label="Search results">
             {hits.map((hit) => <li key={hit.key}><button type="button" className={`game-search-hit${game?.key === hit.key ? " active" : ""}`} onClick={() => pick(hit)} aria-current={game?.key === hit.key ? "true" : undefined}>
               {hit.coverUrl ? <RemoteImage src={hit.coverUrl} alt="" referrerPolicy="no-referrer" fallback={<span className="game-search-nocover" />} /> : <span className="game-search-nocover" />}
-              <span><strong>{hit.name}</strong><small>{hit.year ?? "Unknown year"}</small></span></button></li>)}
+              <span><strong>{hit.name}</strong><small>{hit.year ?? t("Unknown year")}</small></span></button></li>)}
           </ul>
         </div>
         <div className="game-search-main" aria-busy={Boolean(loading)}>
-          {loading ? <p className="game-search-muted" role="status">Loading {loading}…</p> : game ? <Details key={game.key} game={game} onSearch={(name) => { type(name); input.current?.focus(); }} />
+          {loading ? <p className="game-search-muted" role="status">{t("Loading {name}…").replace("{name}", loading)}</p> : game ? <Details key={game.key} game={game} onSearch={(name) => { type(name); input.current?.focus(); }} />
             : <p className="game-search-muted">Type a game name, then pick a result for its details, artwork and prices.</p>}
         </div>
       </div>
