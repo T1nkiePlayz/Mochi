@@ -27,6 +27,7 @@ export function A11ySlider({ title, description, value, min, max, step, format, 
 }
 
 export function A11yPreview() {
+  const t = useTranslation();
   const { settings } = useAccessibility();
   return <div className="a11y-preview" aria-label="Live preview of your accessibility settings" role="group">
     <h4>Preview</h4>
@@ -39,7 +40,7 @@ export function A11yPreview() {
       <span className="a11y-chip warn"><TriangleAlert size={13} aria-hidden="true" /> Needs update</span>
       <span className="a11y-chip bad"><X size={13} aria-hidden="true" /> Failed</span>
     </div>
-    <small style={{ color: "var(--mochi-text-muted)" }}>Status chips always carry an icon and a word, not only a colour.{settings.colorBlind !== "none" ? ` Palette: ${settings.colorBlind}.` : ""}</small>
+    <small style={{ color: "var(--mochi-text-muted)" }}>Status chips always carry an icon and a word, not only a colour.{settings.colorBlind !== "none" ? ` ${t("Palette: {mode}.").replace("{mode}", settings.colorBlind === "none" ? t("Off") : t(settings.colorBlind === "deuteranopia" ? "Deuteranopia" : settings.colorBlind === "protanopia" ? "Protanopia" : "Tritanopia"))}` : ""}</small>
   </div>;
 }
 
@@ -47,6 +48,7 @@ const scaleLabel = (v: number) => `${v}%`;
 const triOptions: Array<Option<Accessibility["reduceMotion"]>> = [{ value: "system", label: "Follow system" }, { value: "on", label: "On" }, { value: "off", label: "Off" }];
 
 export function AccessibilitySection() {
+  const t = useTranslation();
   const { settings: s, update, reset, effective } = useAccessibility();
   const toggle = (key: keyof Accessibility, title: string, description: string): ReactNode =>
     <ToggleRow title={title} description={description} checked={Boolean(s[key])} onChange={(checked) => update({ [key]: checked } as Partial<Accessibility>)} />;
@@ -54,14 +56,14 @@ export function AccessibilitySection() {
     <SettingsGroup title="Accessibility" subtitle="Changes apply instantly and are stored on this device" id="settings-accessibility">
       <A11yPreview />
       <div className="a11y-actions">
-        <button type="button" className="secondary-button" onClick={() => { reset(); announce("Accessibility settings reset to defaults."); }}><RotateCcw size={14} aria-hidden="true" /> Reset to defaults</button>
+        <button type="button" className="secondary-button" onClick={() => { reset(); announce(t("Accessibility settings reset to defaults.")); }}><RotateCcw size={14} aria-hidden="true" /> Reset to defaults</button>
         <button type="button" className="secondary-button" onClick={openShortcuts}>Keyboard shortcuts</button>
       </div>
     </SettingsGroup>
 
     <SettingsGroup title="Vision" subtitle="Size, contrast and colour" id="settings-accessibility-vision">
       <A11ySlider title="Text and interface size" description="Scales the whole launcher, from 85% to 150%." value={s.textScale} min={85} max={150} step={5} format={scaleLabel} onChange={(textScale) => update({ textScale })} />
-      <A11yChoice title="High contrast" description={`Strong borders and black-and-white colours over any theme.${effective.highContrast && s.highContrast === "system" ? " Your system asks for more contrast, so this is on." : ""}`} value={s.highContrast} options={triOptions} onChange={(highContrast) => update({ highContrast })} />
+      <A11yChoice title="High contrast" description={`${t("Strong borders and black-and-white colours over any theme.")}${effective.highContrast && s.highContrast === "system" ? ` ${t("Your system asks for more contrast, so this is on.")}` : ""}`} value={s.highContrast} options={triOptions} onChange={(highContrast) => update({ highContrast })} />
       <A11yChoice title="Colour-blind friendly colours" description="Swaps success, warning and error colours for a palette that stays distinct. Icons accompany status text in every mode." value={s.colorBlind} options={[{ value: "none", label: "Off" }, { value: "deuteranopia", label: "Deuteranopia" }, { value: "protanopia", label: "Protanopia" }, { value: "tritanopia", label: "Tritanopia" }]} onChange={(colorBlind) => update({ colorBlind })} />
       {toggle("reduceTransparency", "Reduce transparency and blur", "Uses solid panels instead of frosted glass.")}
       {toggle("simpleBackground", "Simple backgrounds", "Turns off decorative gradients and animated backgrounds.")}
@@ -69,7 +71,7 @@ export function AccessibilitySection() {
     </SettingsGroup>
 
     <SettingsGroup title="Motion" subtitle="Animations and movement" id="settings-accessibility-motion">
-      <A11yChoice title="Reduce motion" description={`Stops animations, parallax and sliding transitions.${effective.reduceMotion && s.reduceMotion === "system" ? " Your system asks for reduced motion, so this is on." : ""}`} value={s.reduceMotion} options={triOptions} onChange={(reduceMotion) => update({ reduceMotion })} />
+      <A11yChoice title="Reduce motion" description={`${t("Stops animations, parallax and sliding transitions.")}${effective.reduceMotion && s.reduceMotion === "system" ? ` ${t("Your system asks for reduced motion, so this is on.")}` : ""}`} value={s.reduceMotion} options={triOptions} onChange={(reduceMotion) => update({ reduceMotion })} />
     </SettingsGroup>
 
     <SettingsGroup title="Keyboard and focus" subtitle="Make it clear where you are" id="settings-accessibility-focus">
