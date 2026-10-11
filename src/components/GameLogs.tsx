@@ -62,7 +62,7 @@ function GameLogsModal({ game, onClose }: { game: Piko; onClose: () => void }) {
       setList(next);
       setSessionId((previous) => (next.sessions.some((item) => item.id === previous) ? previous : next.sessions.find((item) => item.direct)?.id ?? next.sessions[0]?.id ?? ""));
     } catch (error) { setMessage(t(errorText(error))); setList({ dir: "", sessions: [] }); }
-  }, [game.id]);
+  }, [game.id, t]);
   useEffect(() => { void loadList(); }, [loadList]);
 
   const read = useCallback(async () => {
@@ -72,7 +72,7 @@ function GameLogsModal({ game, onClose }: { game: Piko; onClose: () => void }) {
       offset.current = chunk.offset;
       if (chunk.text || chunk.reset || chunk.cutStart) setText((previous) => appendLog(previous, chunk));
     } catch (error) { setMessage(t(errorText(error))); }
-  }, [game.id, sessionId]);
+  }, [game.id, sessionId, t]);
 
   // A newly chosen session starts from its newest part; following then continues from where the last read ended.
   useEffect(() => { offset.current = undefined; setText(""); void read(); }, [sessionId, read]);
