@@ -130,8 +130,21 @@ describe("shared UI translations", () => {
     expect(translate("Library", "fr")).toBe("Bibliothèque");
     expect(translate("Downloads", "ja")).toBe("ダウンロード");
   });
+  it("translates achievement categories, rarity labels, and game-search feedback in every supported locale", () => {
+    const messages = [
+      "Playtime", "Streaks", "Habits", "Variety", "Library", "Explore", "Mods",
+      "Common", "Uncommon", "Rare", "Epic", "Legendary",
+      "No price data yet.", "Search failed.", "No provider is set up.", "No games found.",
+    ];
+    for (const { code } of launcherLanguages) {
+      if (code === "en") continue;
+      for (const message of messages) {
+        expect(hasTranslation(message, code), `${code}: ${message}`).toBe(true);
+        expect(translate(message, code), `${code}: ${message}`).not.toBe(message);
+      }
+    }
+  });
 
-  
   it("preserves unknown dynamic command labels and group names while translating known UI prefixes", async () => {
     const { translateCommandTitle, translateCommandGroup, translatePaletteSubtitle } = await import("./paletteTranslations");
     const t = (message: string) => translate(message, "fr");
