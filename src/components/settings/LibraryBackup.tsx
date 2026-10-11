@@ -12,19 +12,19 @@ const message = (error: unknown) => (error instanceof Error ? error.message : ty
 /** One-file backup and restore of the library (games, collections, wishlist, saved filters), plus an optional scheduled copy to a folder. */
 export function LibraryBackup() {
   const t = useTranslation();
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"export" | "restore" | null>(null);
   const [note, setNote] = useState("");
   const [schedule, setScheduleState] = useState<BackupSchedule>(readSchedule);
   const setSchedule = (change: Partial<BackupSchedule>) => setScheduleState((current) => { const next = { ...current, ...change }; writeSchedule(next); return next; });
 
   const runExport = async () => {
-    setBusy(true); setNote("");
+    setBusy("export"); setNote("");
     try { const path = await exportBackupToFile(await getVersion().catch(() => "")); setNote(path ? t("Backup saved. It holds your library, collections, wishlist and saved filters, and no passwords, keys or sign-in data.") : ""); }
     catch (error) { setNote(t("Could not save the backup: {error}").replace("{error}", message(error))); }
-    finally { setBusy(false); }
+    finally { setBusy(null); }
   };
   const runRestore = async () => {
-    setBusy(true); setNote("");
+    setBusy("restore"); setNote("");
     try {
       const picked = await pickBackupFile();
       if (!picked) return;
@@ -45,8 +45,8 @@ export function LibraryBackup() {
   return <>
     <div className="setting-row"><span><strong>{t("Library backup")}</strong><small>{t("Save your whole library (games, collections, wishlist, saved filters) to one file, or restore it on this or another device. No passwords, keys or sign-in data. Playtime history is not included.")}</small></span>
       <span className="data-source-actions">
-        <button type="button" className="secondary-button" disabled={busy} onClick={() => void runExport()}><Download size={14} aria-hidden="true" /> {t("Back up…")}</button>
-        <button type="button" className="secondary-button" disabled={busy} onClick={() => void runRestore()}><Upload size={14} aria-hidden="true" /> {t("Restore…")}</button>
+        <button type="button" className="secondary-button" disabled={busy !== null} onClick={() => void runExport()}><Download size={14} aria-hidden="true" /> {busy === "export" ? t("Saving backup…") : t("Back up…")}</button>
+        <button type="button" className="secondary-button" disabled={busy !== null} onClick={() => void runRestore()}><Upload size={14} aria-hidden="true" /> {busy === "restore" ? t("Restoring backup…") : t("Restore…")}</button>
       </span></div>
     <div className="setting-row setting-location-row"><span><strong>{t("Automatic backup")}</strong><small>{t("While Mochi is open, saves a copy to a folder when one is due and keeps the newest few.")}</small></span>
       <span className="setting-location-value">
