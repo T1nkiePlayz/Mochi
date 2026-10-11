@@ -218,4 +218,19 @@
   .modal-backdrop > .modal, .modal-backdrop > [role="dialog"], .modal-backdrop > section {
     max-width: 100% !important; max-height: 100% !important; min-width: 0 !important; overflow-y: auto !important; overflow-x: hidden !important; box-sizing: border-box;
   }
+
+  /* Keep top navigation above every page/theme stacking context. The earlier positioning rule alone
+     is insufficient when the scrolling pane or a theme creates its own stacking context. */
+  [data-mochi-shell="top"] .app-shell {
+    isolation: isolate !important;
+  }
+  [data-mochi-shell="top"] .app-shell .sidebar {
+    position: absolute !important;
+    inset: 0 0 auto 0 !important;
+    z-index: 10000 !important;
+  }
+  [data-mochi-shell="top"] .app-shell .main-content {
+    position: relative !important;
+    z-index: 0 !important;
+  }
 }
