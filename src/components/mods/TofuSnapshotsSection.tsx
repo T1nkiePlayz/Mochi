@@ -34,7 +34,7 @@ export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
     finally { setBusy(false); await load(tofu.id); }
   };
   const restore = async (snapshot: SnapshotInfo) => {
-    const ok = await confirmAction({ title: `${t("Restore the Tofu")} “${tofu.name}”?`, confirmLabel: "Restore", message: "Mod files and records in its content folders are put back as they were then. Anything added since is removed, but the current state is saved first so you can undo this.", items: [`${when(snapshot.createdAt)} · ${snapshot.reason}`, `${snapshot.files} files · ${formatBytes(snapshot.size)}`] });
+    const ok = await confirmAction({ title: `${t("Restore the Tofu")} “${tofu.name}”?`, confirmLabel: "Restore", message: t("Mod files and records in its content folders are put back as they were then. Anything added since is removed, but the current state is saved first so you can undo this."), items: [`${when(snapshot.createdAt)} · ${snapshot.reason}`, `${snapshot.files} files · ${formatBytes(snapshot.size)}`] });
     if (!ok) return;
     await run(async () => {
       const report = await restoreTofuSnapshot(tofu.id, snapshot.id);
