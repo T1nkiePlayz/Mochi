@@ -52,7 +52,9 @@
   }
   /* WebKit can repaint the entire window while scrolling a long, image-heavy Library beneath a transparent top bar.
      Keep that scroll surface on its own compositor layer; scope this workaround to Library so other pages are untouched. */
-  [data-mochi-shell="top"] .main-content-library {
+  [data-mochi-shell="top"] .main-content-library > .content {
+    /* Promote the painted Library content, not the scroll container itself. Transforming the scroll
+       container creates a stacking context around the top bar and can interfere with overlay layering. */
     -webkit-transform: translate3d(0, 0, 0) !important;
     transform: translate3d(0, 0, 0) !important;
     -webkit-backface-visibility: hidden !important;
