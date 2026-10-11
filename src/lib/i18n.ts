@@ -167,3 +167,48 @@ export function getTranslationMessages(): string[] {
   const catalogs = [settingsRecentMessages, recentUiMessages, messages, setupMessages, setupCopyMessages, setupCopyExtraMessages, cloudSetupMessages, accountSetupMessages, serviceSetupMessages, chromeMessages, settingsMessages, downloadMessages, dealMessages, dealExtraMessages, libraryMessages, systemMessages, libraryExtraMessages, commonMessages, settingsTitleMessages, settingsTitleExtraMessages, accessibilitySettingsCopy, settingsSubtitleMessages, settingsSubtitleExtraMessages, accessibilityMessages, bigPictureMessages, commonExtraMessages, uiExtraMessages, extendedUiMessages, modWorkflowMessages, modSaveMessages, saveBackupMessages, accountHardwareMessages, savesProtonMessages, sharedTermMessages, longHelpMessages, keyboardAndSafetyMessages, tofuManagementMessages, launchOptionsMessages, exportShareMessages, updateArtworkMessages, artworkAndSourcesMessages, discoveryMessages, discoverStatusMessages, discoverMoreMessages, projectDetailMessages, projectDependencyMessages, projectDetailExtraMessages, footerMessages, controlsMessages, discoverExtraMessages, importMessages, libraryDialogsMessages, libraryFilterMessages, uiSmallMessages, duplicateMessages, libraryStatusMessages, completePhraseMessages, navigationActionMessages, launchProfileMessages, savedFilterMessages, editFilterMessages, launchHelpMessages, longUiHelpMessages, pickerGuidanceMessages, smartFilterMessages, installedMessages, statsMessages, metadataMessages];
   return [...new Set(catalogs.flatMap((catalog) => Object.keys(catalog)))];
 }
+
+
+/**
+ * Translates a fully rendered UI message, including strings whose placeholders were already interpolated by the caller.
+ * Exact catalogue matches stay fast; dynamic messages are matched against the existing placeholder templates.
+ */
+let uiMessageTemplates: Array<{ source: string; pattern: RegExp; placeholders: number }> | null = null;
+const uiMessageCache = new Map<string, string>();
+
+function escapeUiPattern(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getUiMessageTemplates() {
+  if (uiMessageTemplates) return uiMessageTemplates;
+  const placeholder = /\{[^}]+\}/g;
+  uiMessageTemplates = getTranslationMessages()
+    .filter((source) => placeholder.test(source) && source.replace(placeholder, "").trim().length > 0)
+    .map((source) => {
+      placeholder.lastIndex = 0;
+      const count = (source.match(placeholder) ?? []).length;
+      const parts = source.split(placeholder);
+      return { source, pattern: new RegExp("^" + parts.map(escapeUiPattern).join("([\\s\\S]+?)") + "$"), placeholders: count, staticLength: parts.join("").length };
+    })
+    .sort((a, b) => b.staticLength - a.staticLength || a.placeholders - b.placeholders);
+  return uiMessageTemplates;
+}
+
+export function translateUiMessage(message: string, language: unknown = getTranslationLocale()): string {
+  if (hasTranslation(message, language)) return translate(message, language);
+  const normalized = normalizeLanguage(language);
+  const cacheKey = `${normalized}\\u0000${message}`;
+  const cached = uiMessageCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+  for (const template of getUiMessageTemplates()) {
+    const match = template.pattern.exec(message);
+    if (!match || !hasTranslation(template.source, normalized)) continue;
+    let index = 1;
+    const localized = translate(template.source, normalized).replace(/\{[^}]+\}/g, () => match[index++] ?? "");
+    uiMessageCache.set(cacheKey, localized);
+    return localized;
+  }
+  uiMessageCache.set(cacheKey, message);
+  return message;
+}
