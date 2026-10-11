@@ -22,6 +22,9 @@ describe("shared UI translations", () => {
       "Debug info copied. It contains no passwords, keys or email addresses, and your home folder name is hidden.",
       "Could not copy debug info.",
       "Keep playing to find out what this is.",
+      "Hidden",
+      "Unlocked {date}",
+      "{name} progress",
       "Tier {tier} of {count}",
       "Cancel this download?",
       "The download will stop. You can start it again from the mod page.",
@@ -48,6 +51,8 @@ describe("shared UI translations", () => {
       for (const message of [
         "Could not load {noun}.",
         "Tier {tier} of {count}",
+        "Unlocked {date}",
+        "{name} progress",
         "Could not save the backup: {error}",
         "No {noun} to show yet.",
         "{count} download in progress. See Downloads.",
