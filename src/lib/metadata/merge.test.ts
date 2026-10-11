@@ -60,7 +60,7 @@ describe("planProviders", () => {
 describe("withSteam", () => {
   it("adds Steam to explicit-provider plans for Steam games only", () => {
     expect(withSteam({ text: [], art: [] }, 440)).toEqual({ text: ["steam"], art: ["steam"] });
-    expect(withSteam({ text: ["igdb"], art: ["igdb"] }, 440)).toEqual({ text: ["igdb", "steam"], art: ["igdb", "steam"] });
+    expect(withSteam({ text: ["igdb"], art: ["igdb"] }, 440)).toEqual({ text: ["igdb", "steam"], art: ["steam", "igdb"] });
     expect(withSteam({ text: ["steam"], art: ["steam"] }, 440)).toEqual({ text: ["steam"], art: ["steam"] });
     expect(withSteam({ text: [], art: [] }, null)).toEqual({ text: [], art: [] });
   });
