@@ -14,7 +14,9 @@ export type Plan = { text: ProviderId[]; art: ProviderId[] };
 
 /**
  * Which providers to ask, in priority order. "auto" uses IGDB for text, then the best artwork
- * available; an explicit choice restricts the lookup to that provider.
+ * available. Steam artwork is preferred for Steam games because its keyless store assets can
+ * already be cached locally; SteamGridDB and IGDB are ordered fallbacks, not competing settings.
+ * An explicit choice still restricts lookups to that provider.
  */
 export function planProviders(choice: MetadataChoice | "steam", ready: Readiness, steamAppId: number | null): Plan {
   const steam = steamAppId !== null;
@@ -23,7 +25,9 @@ export function planProviders(choice: MetadataChoice | "steam", ready: Readiness
   if (choice === "steamgriddb") return { text: [], art: ready.steamgriddb ? ["steamgriddb"] : [] };
   return {
     text: [...(ready.igdb ? ["igdb" as const] : []), ...(steam ? ["steam" as const] : [])],
-    art: [...(ready.steamgriddb ? ["steamgriddb" as const] : []), ...(ready.igdb ? ["igdb" as const] : []), ...(steam ? ["steam" as const] : [])],
+    // Prefer Steam Store art for Steam-linked games, then community artwork, then IGDB.
+    // Non-Steam games simply skip the Steam tier.
+    art: [...(steam ? ["steam" as const] : []), ...(ready.steamgriddb ? ["steamgriddb" as const] : []), ...(ready.igdb ? ["igdb" as const] : [])],
   };
 }
 
