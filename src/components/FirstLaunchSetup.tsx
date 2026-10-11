@@ -68,7 +68,7 @@ export function FirstLaunchSetup(props: SetupProps) {
   };
 
   const finish = () => props.onFinish(selection.games, selection.sources, selection.minecraftMode);
-  const nextLabel = step === "welcome" ? t("Get started") : last ? (selection.games.length ? `Import ${selection.games.length} and finish` : t("Finish")) : t("Next");
+  const nextLabel = step === "welcome" ? t("Get started") : last ? (selection.games.length ? t("Import {count} and finish").replace("{count}", String(selection.games.length)) : t("Finish")) : t("Next");
 
   return (
     <div className="setup-shell">

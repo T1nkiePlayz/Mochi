@@ -26,9 +26,9 @@ export function CloudImportStep({ busy, ready, accessAllowed, settingsReady, mes
       </div>
       <button type="button" className="play-button setup-cloud-import" onClick={() => void onImport()} disabled={busy || !ready || !settingsReady || !accessAllowed}>
         {busy ? <LoaderCircle size={16} className="spin" /> : <RefreshCw size={16} />}
-        {busy ? "Importing cloud library…" : !ready ? "Preparing your account…" : !settingsReady ? "Checking your cloud account…" : !accessAllowed ? "Enable cloud access in Settings" : t("Check and import cloud data")}
+        {busy ? t("Importing cloud library…") : !ready ? t("Preparing your account…") : !settingsReady ? t("Checking your cloud account…") : !accessAllowed ? t("Enable cloud access in Settings") : t("Check and import cloud data")}
       </button>
-      <p className="setup-cloud-safety">This does not delete your local games or move any installed files.</p>
+      <p className="setup-cloud-safety">{t("This does not delete your local games or move any installed files.")}</p>
       {message && <p className="setup-cloud-message" role="status">{message}</p>}
     </div>
   </section>;
