@@ -131,6 +131,9 @@ const messages: Record<string, Record<string, string>> = {
   },
 };
 
+Object.assign(messages, {
+  "Recently": { ar: "مؤخرًا", bg: "Наскоро", "zh-Hans": "最近", "zh-Hant": "最近", cs: "Nedávno", da: "For nylig", nl: "Onlangs", fi: "Äskettäin", fr: "Récemment", de: "Kürzlich", el: "Πρόσφατα", hu: "Nemrég", id: "Baru-baru ini", it: "Di recente", ja: "最近", ko: "최근", no: "Nylig", pl: "Ostatnio", pt: "Recentemente", "pt-BR": "Recentemente", ro: "Recent", ru: "Недавно", es: "Recientemente", sv: "Nyligen", th: "เมื่อไม่นานนี้", tr: "Yakın zamanda", uk: "Нещодавно", vi: "Gần đây" },
+});
 
 Object.assign(messages, {
   "Welcome": { ar: "مرحبًا", bg: "Добре дошли", "zh-Hans": "欢迎", "zh-Hant": "歡迎", cs: "Vítejte", da: "Velkommen", nl: "Welkom", fi: "Tervetuloa", fr: "Bienvenue", de: "Willkommen", el: "Καλώς ορίσατε", hu: "Üdvözöljük", id: "Selamat datang", it: "Benvenuto", ja: "ようこそ", ko: "환영합니다", no: "Velkommen", pl: "Witamy", pt: "Bem-vindo", "pt-BR": "Boas-vindas", ro: "Bun venit", ru: "Добро пожаловать", es: "Bienvenido", sv: "Välkommen", th: "ยินดีต้อนรับ", tr: "Hoş geldiniz", uk: "Вітаємо", vi: "Chào mừng" },
