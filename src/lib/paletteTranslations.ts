@@ -14,7 +14,7 @@ export function translateCommandTitle(title: string, t: (message: string) => str
 
 export function translateCommandGroup(group: string, t: (message: string) => string) {
   // "Recent" is a UI prefix, not part of the group label.
-  if (group.startsWith("Recent · ")) return `${t("Recent")} · ${t(group.slice("Recent · ".length))}`;
+  if (group.startsWith("Recent · ")) return `Recent · ${t(group.slice("Recent · ".length))}`;
   return t(group);
 }
 
