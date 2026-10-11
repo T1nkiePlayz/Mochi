@@ -44,7 +44,7 @@ export function useDownloads(active: boolean, notify: (title: string, message: s
     // The native side announces every start, finish and cancel, so the list reacts at once instead of on the next tick.
     const unsubscribe = subscribeNative("mod-download-changed", () => void poll());
     return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener("visibilitychange", tick); unsubscribe(); };
-  }, [active, hasActive]);
+  }, [active, hasActive, language]);
 
   return downloads;
 }
