@@ -1,4 +1,4 @@
-import { translate } from "./i18n";
+import { translateUiMessage } from "./i18n";
 /**
  * App-wide "Are you sure?" prompts. `confirmAction` resolves true/false once the user answers the themed
  * dialog rendered by `<ConfirmHost />` (mounted once in AppProvider). Usable from hooks and plain functions,
@@ -32,9 +32,9 @@ export function confirmAction(request: ConfirmRequest): Promise<boolean> {
   // rather than relying on every caller to remember the active launcher language.
   const localized: ConfirmRequest = {
     ...request,
-    title: translate(request.title),
-    message: translate(request.message),
-    confirmLabel: translate(request.confirmLabel),
+    title: translateUiMessage(request.title),
+    message: translateUiMessage(request.message),
+    confirmLabel: translateUiMessage(request.confirmLabel),
   };
   return new Promise((resolve) => {
     queue = [...queue, { ...localized, id: ++seq, resolve }];
