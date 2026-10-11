@@ -31,7 +31,7 @@ export function LinkGameModal({ piko, curseforgeEnabled, nexusEnabled, onSave, o
   useEffect(() => {
     if (site !== "curseforge" || cfGames) return;
     setLoading(true); setError("");
-    void cfAllGames().then(setCfGames).catch((reason) => setError(reason instanceof Error ? reason.message : "Unable to load CurseForge games.")).finally(() => setLoading(false));
+    void cfAllGames().then(setCfGames).catch((reason) => { const detail = reason instanceof Error ? reason.message : ""; const translated = detail ? t(detail) : ""; setError(translated && translated !== detail ? translated : detail ? `${t("Unable to load CurseForge games.")} ${detail}` : t("Unable to load CurseForge games.")); }).finally(() => setLoading(false));
   }, [site, cfGames]);
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export function LinkGameModal({ piko, curseforgeEnabled, nexusEnabled, onSave, o
     const timer = window.setTimeout(() => {
       setLoading(true); setError("");
       void getNexusGames(supabase!, search).then((games) => { if (!cancelled) setNexusGames(games); })
-        .catch((reason) => { if (!cancelled) setError(reason instanceof Error ? reason.message : "Unable to search Nexus Mods games."); })
+        .catch((reason) => { if (!cancelled) { const detail = reason instanceof Error ? reason.message : ""; const translated = detail ? t(detail) : ""; setError(translated && translated !== detail ? translated : detail ? `${t("Unable to search Nexus Mods games.")} ${detail}` : t("Unable to search Nexus Mods games.")); } })
         .finally(() => { if (!cancelled) setLoading(false); });
     }, 250);
     return () => { cancelled = true; window.clearTimeout(timer); };
@@ -59,14 +59,14 @@ export function LinkGameModal({ piko, curseforgeEnabled, nexusEnabled, onSave, o
   };
   const linked = site === "curseforge" ? current?.curseforge : current?.nexus;
 
-  return <ModalShell label={`Link ${piko.name} to a mod site`} className="tofu-picker-window nexus-game-picker-window" onClose={onClose}>
+  return <ModalShell label={t("Link this game to a mod site")} className="tofu-picker-window nexus-game-picker-window" onClose={onClose}>
     <div className="modal-header"><div><p className="eyebrow">{piko.name}</p><h2>{t("Link this game to a mod site")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
     <p className="modal-description">{t("Mochi matches games by name. If it picked wrongly or found nothing, choose the right game here. Your choice is remembered.")}</p>
     <div className="discover-tabs" role="tablist" aria-label={t("Mod site")}>
       {curseforgeEnabled && <button type="button" role="tab" aria-selected={site === "curseforge"} className={site === "curseforge" ? "active" : ""} onClick={() => setSite("curseforge")}>{t("CurseForge")}</button>}
       {nexusEnabled && supabase && <button type="button" role="tab" aria-selected={site === "nexus"} className={site === "nexus" ? "active" : ""} onClick={() => setSite("nexus")}>{t("Nexus Mods")}</button>}
     </div>
-    {linked && <p className="metadata-note" role="status">{t("Linked to")} <strong>{linked.name}</strong>. <button type="button" className="text-button" onClick={unlink}><Unlink size={13} /> Unlink</button></p>}
+    {linked && <p className="metadata-note" role="status">{t("Linked to")} <strong>{linked.name}</strong>. <button type="button" className="text-button" onClick={unlink}><Unlink size={13} /> {t("Unlink")}</button></p>}
     <label className="search-box nexus-game-search"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("Search {site} games...").replace("{site}", site === "curseforge" ? "CurseForge" : "Nexus Mods")} aria-label={t("Search games")} data-autofocus /></label>
     {error && <p className="metadata-note" role="alert">{error}</p>}
     {loading ? <div className="discover-loading"><RefreshCw size={18} className="spin" /><span>{t("Loading games...")}</span></div> : <div className="nexus-game-picker-list">
