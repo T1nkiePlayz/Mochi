@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { Link2, PackageOpen, RefreshCw, Search, X } from "lucide-react";
 import { CF_MINECRAFT_ID } from "../../lib/curseforge";
 import { createCurseforgeSource } from "../../lib/mods/curseforgeSource";
