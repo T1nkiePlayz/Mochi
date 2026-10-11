@@ -10,7 +10,7 @@ describe("cssUrl", () => {
   });
   it("is used for applied artwork", () => {
     const next = applyMetadata({ id: "a", name: "A", description: "", accent: "", artwork: "", tofus: [] }, { art: { source: "igdb", url: "https://x/y.jpg')" } });
-    expect(next.artwork).not.toContain("')\\");
+    expect(next.artwork).not.toContain("')\"");
     expect(next.artworkUrl).toBe("https://x/y.jpg')");
   });
 });
