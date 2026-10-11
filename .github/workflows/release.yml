@@ -361,7 +361,7 @@ jobs:
             || { echo "::error::install-hashes.json contains a malformed SHA-256."; exit 1; }
           cat install-hashes.json
           # Fail the release if the signed replacement manifest doesn't cover every uploaded AppImage exactly.
-          jq -e --argjson expected "$(printf '%s\\n' ../assets/*.AppImage | xargs -n1 basename | jq -R . | jq -s .)" '
+          jq -e --argjson expected "$(printf '%s\n' ../assets/*.AppImage | xargs -n1 basename | jq -R . | jq -s .)" '
             (.linux | map(.name) | sort) == ($expected | sort)
           ' install-hashes.json >/dev/null || {
             echo "::error::install-hashes.json Linux entries do not match the AppImage release assets."
@@ -372,7 +372,7 @@ jobs:
             expected="$(jq -r --arg name "$name" '.linux[] | select(.name == $name) | .sha256' install-hashes.json)"
             actual="$(sha256sum "$appimage" | cut -d' ' -f1)"
             [[ "$expected" == "$actual" ]] || { echo "::error::Replacement hash mismatch for $name"; exit 1; }
-          done < <(printf '%s\\n' ../assets/*.AppImage)
+          done < <(printf '%s\n' ../assets/*.AppImage)
           # Same key and format as the updater .sig files; the CLI reads the key from the TAURI_SIGNING_* variables.
           npx --yes @tauri-apps/cli@2.12 signer sign install-hashes.json
           test -s install-hashes.json.sig
