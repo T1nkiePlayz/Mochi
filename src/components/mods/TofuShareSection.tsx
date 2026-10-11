@@ -43,7 +43,7 @@ export function TofuShareSection({ piko, tofu, onCreateTofu }: { piko: Piko; tof
       if (kind === "file") {
         const path = await savePackFile(serializeMochipack(pack), tofu.name);
         setStatus(path ? `Saved. ${describe(pack.mods.length, pack.unknown.length, omitted)}` : "");
-        if (path) notify("Modpack exported", path);
+        if (path) notify(t("Modpack exported"), path);
       } else {
         const code = await encodeShortCode(pack);
         if (!code) { setStatus(""); notify(t("Too big for a short code"), t("Use Export file instead.")); return; }
