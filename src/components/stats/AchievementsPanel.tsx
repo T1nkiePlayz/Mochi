@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useApp } from "../../state/AppContext";
 import { useTranslation } from "../../lib/useTranslation";
+import { translate } from "../../lib/i18n";
 import { getTranslationLocale } from "../../lib/translationLocale";
 import { useSteamSync } from "../../state/useSteamSync";
 import { achievementCategories, progressText, rarityLabels, visibleAchievements, type AchievementCategory, type AchievementFilter, type AchievementProgress } from "../../lib/achievements";
@@ -18,8 +19,8 @@ const dateText = (ms: number) => new Date(ms).toLocaleDateString(getTranslationL
 const roman = ["", "I", "II", "III", "IV", "V", "VI", "VII"];
 
 /** Memoised: filter and tab changes re-render the grid, but most badges keep the same props. */
-export const AchievementBadge = memo(function AchievementBadge({ item, unlockedAt }: { item: AchievementProgress; unlockedAt?: number }) {
-  const t = useTranslation();
+export const AchievementBadge = memo(function AchievementBadge({ item, unlockedAt, translateText }: { item: AchievementProgress; unlockedAt?: number; translateText?: (message: string) => string }) {
+  const t = translateText ?? ((message: string) => translate(message, getTranslationLocale()));
   const { def } = item;
   const unlocked = unlockedAt !== undefined;
   const mystery = def.hidden && !unlocked;
@@ -89,7 +90,7 @@ export function AchievementsPanel({ progress, unlocked }: { progress: Achievemen
           {sync.message && !sync.running && <small>{sync.message}</small>}
         </div>
       )}
-      {shown.length ? <ul className="ach-grid">{shown.map((item) => <AchievementBadge key={item.def.id} item={item} unlockedAt={at(item)} />)}</ul> : <p className="stats-muted">Nothing matches these filters.</p>}
+      {shown.length ? <ul className="ach-grid">{shown.map((item) => <AchievementBadge key={item.def.id} item={item} unlockedAt={at(item)} translateText={t} />)}</ul> : <p className="stats-muted">Nothing matches these filters.</p>}
     </section>
   );
 }
