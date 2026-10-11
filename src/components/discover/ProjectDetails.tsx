@@ -42,7 +42,7 @@ function VersionRow({ version, fit, onDownload }: { version: ModrinthVersion; fi
       <button type="button" className="version-expand" aria-expanded={open} aria-label={`${open ? t("Hide changelog and files for") : t("Show changelog and files for")} ${version.name || version.version_number}`} onClick={() => setOpen((value) => !value)}>{open ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</button>
       <div className="version-name"><strong title={version.name}>{version.name || version.version_number}</strong><small>{version.version_number}</small></div>
       <span className={`release-badge release-${channel}`}>{t(channelLabel[channel])}</span>
-      <div className="version-chips" aria-label={t("Loaders")}>{loaders.map((loader) => <span key={loader} className="chip chip-loader">{loaderLabels[parseLoader(loader)!]}</span>)}</div>
+      <div className="version-chips" aria-label={t("Loaders")}>{loaders.map((loader) => <span key={loader} className="chip chip-loader">{t(loaderLabels[parseLoader(loader)!])}</span>)}</div>
       <div className="version-chips" aria-label={t("Game versions")}>{games.shown.map((game) => <span key={game} className="chip">{game}</span>)}{games.more > 0 && <span className="chip chip-more" title={version.game_versions.slice(3).join(", ")}>+{games.more}</span>}</div>
       <span className="version-date">{formatDate(version.date_published) === "Unknown date" ? t("Unknown date") : formatDate(version.date_published)}</span>
       <span className="version-size">{primary ? formatBytes(primary.size) : ""}</span>
@@ -116,7 +116,7 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
       </section> : null}
     </div> : <div className="project-versions">
       <div className="version-filters">
-        {mod && loaderChoices.length > 0 && <Select value={loader} onChange={setLoader} label={t("Loader")} searchable={false} options={[{ value: "", label: t("Any loader") }, ...loaderChoices.map((value) => ({ value, label: loaderLabels[parseLoader(value)!] ?? value }))]} />}
+        {mod && loaderChoices.length > 0 && <Select value={loader} onChange={setLoader} label={t("Loader")} searchable={false} options={[{ value: "", label: t("Any loader") }, ...loaderChoices.map((value) => ({ value, label: t(loaderLabels[parseLoader(value)!] ?? value) }))]} />}
         <Select value={game} onChange={setGame} label={t("Game version")} searchable={gameChoices.length > 10} options={[{ value: "", label: t("Any game version") }, ...gameChoices.map((value) => ({ value, label: value }))]} />
         <Select value={channel} onChange={setChannel} label={t("Release type")} searchable={false} options={channelOptions} />
         {tofu && <Checkbox className="version-fit-toggle" checked={fitOnly} onChange={setFitOnly} label={t("Only what fits {name}").replace("{name}", tofu.name)} />}
