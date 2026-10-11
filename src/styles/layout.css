@@ -42,7 +42,7 @@
   /* A top navigation bar floats above the scroll viewport. The viewport spans the whole window, so
      transparent gaps reveal the page underneath and scrolling does not stop at the bar's rectangular edge. */
   [data-mochi-shell="top"] .app-shell { position: relative; }
-  [data-mochi-shell="top"] .sidebar {
+  [data-mochi-shell="top"] .app-shell .sidebar {
     position: absolute !important; inset: 0 0 auto 0 !important; z-index: 5;
   }
   [data-mochi-shell="top"] .main-content {
