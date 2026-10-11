@@ -21,6 +21,8 @@ describe("shared UI translations", () => {
       "This game does not have a launch target. Edit the game to set one.",
       "Debug info copied. It contains no passwords, keys or email addresses, and your home folder name is hidden.",
       "Could not copy debug info.",
+      "Keep playing to find out what this is.",
+      "Tier {tier} of {count}",
       "Cancel this download?",
       "The download will stop. You can start it again from the mod page.",
       "This game was started through another app (Steam, a launcher or an .app opened by macOS), so Mochi cannot see its output. Look in the Console app, in ~/Library/Logs, or in the launcher's own logs.",
@@ -45,6 +47,7 @@ describe("shared UI translations", () => {
     for (const language of launcherLanguages) {
       for (const message of [
         "Could not load {noun}.",
+        "Tier {tier} of {count}",
         "Could not save the backup: {error}",
         "No {noun} to show yet.",
         "{count} download in progress. See Downloads.",
