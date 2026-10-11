@@ -4,6 +4,7 @@ import { useApp } from "../../state/AppContext";
 import { Select, type SelectOption } from "../ui/Select";
 import { formatClock, parseClock, type PlayLimits } from "../../lib/playLimits";
 import { SettingsGroup, ToggleRow } from "./Section";
+import { useTranslation } from "../../lib/useTranslation";
 
 function NumberRow({ title, description, value, min, max, unit, disabled, onChange }: { title: string; description: string; value: number; min: number; max: number; unit: string; disabled: boolean; onChange: (value: number) => void }) {
   return <label className="setting-row"><span><strong>{title}</strong><small>{description}</small></span>
@@ -13,6 +14,7 @@ function NumberRow({ title, description, value, min, max, unit, disabled, onChan
 
 /** Optional daily limits, break reminders, bedtime and per-game limits. Everything starts off. */
 export function PlayLimitsSection() {
+  const t = useTranslation();
   const { behavior, setBehavior, lib } = useApp();
   const limits = behavior.playLimits;
   const set = (changes: Partial<PlayLimits>) => setBehavior((current) => ({ ...current, playLimits: { ...current.playLimits, ...changes } }));
@@ -40,6 +42,6 @@ export function PlayLimitsSection() {
       <span className="settings-number-wrap"><Select value={gameId} disabled={off} searchable placeholder="Choose a game" label="Game" onChange={setGameId} options={games} />
         <input className="settings-number" type="number" min={5} max={1440} value={minutes} disabled={off} aria-label="Minutes per day for this game" onChange={(event) => { const next = Number(event.target.value); if (Number.isFinite(next)) setMinutes(Math.min(1440, Math.max(5, Math.round(next)))); }} /> min
         <button type="button" className="secondary-button" disabled={off || !gameId} onClick={addGame}>Add</button></span></div>
-    {Object.keys(limits.perGame).length > 0 && <ul className="screenshot-folders" aria-label="Per-game limits">{Object.entries(limits.perGame).map(([id, value]) => <li key={id}><span>{nameOf(id)}: {value} min per day</span><button type="button" className="icon-button" aria-label={`Remove limit for ${nameOf(id)}`} onClick={() => removeGame(id)}><X size={14} /></button></li>)}</ul>}
+    {Object.keys(limits.perGame).length > 0 && <ul className="screenshot-folders" aria-label="Per-game limits">{Object.entries(limits.perGame).map(([id, value]) => <li key={id}><span>{nameOf(id)}: {t("{count} min per day").replace("{count}", String(value))}</span><button type="button" className="icon-button" aria-label={t("Remove limit for {name}").replace("{name}", nameOf(id))} onClick={() => removeGame(id)}><X size={14} /></button></li>)}</ul>}
   </SettingsGroup>;
 }

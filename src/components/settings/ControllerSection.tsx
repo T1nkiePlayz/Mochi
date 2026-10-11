@@ -51,12 +51,13 @@ export function ControllerSection() {
 }
 
 export function BigPictureSection() {
+  const t = useTranslation();
   const { behavior, setBehavior } = useApp();
   const deck = isSteamDeckSession();
   return <SettingsGroup title="Big Picture & Steam Deck" subtitle="A full-screen, controller-first view of your library" id="settings-bigpicture">
     <div className="setting-row"><span><strong>Open Big Picture</strong><small>Switch now. You can also press F11, or hold Start and Select on a controller.</small></span>
       <button type="button" className="secondary-button" onClick={enterBigPicture}>Open</button></div>
-    <ToggleRow title="Start in Big Picture" description={`Open full screen in Big Picture when Mochi starts, including when it starts at login.${deck ? " On by default in Steam Gaming Mode." : ""}`}
+    <ToggleRow title="Start in Big Picture" description={`${t("Open full screen in Big Picture when Mochi starts, including when it starts at login.")}${deck ? ` ${t("On by default in Steam Gaming Mode.")}` : ""}`}
       checked={effectiveStartup(behavior.bigPictureOnStartup)} onChange={(bigPictureOnStartup) => { markStartupChoice(); setBehavior((current) => ({ ...current, bigPictureOnStartup })); }} />
     {deck && <div className="setting-row"><span><strong>Steam Deck</strong><small>Detected. Touch targets are larger and the on-screen keyboard is on.</small></span><span className="metadata-note">Detected</span></div>}
   </SettingsGroup>;

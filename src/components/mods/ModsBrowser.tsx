@@ -120,7 +120,7 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
     void applyUpdates(tofu, [state.update]);
   }, [stateOf, tofu]);
 
-  const categoryOptions = [{ value: "", label: "All categories" }, ...categories.map((category) => ({ value: category.id, label: category.name }))];
+  const categoryOptions = [{ value: "", label: t("All categories") }, ...categories.map((category) => ({ value: category.id, label: category.name }))];
   const filtered = Boolean(effectiveQuery || categoryId);
   const busy = install.busyId !== "";
   const actionLabel = target.kind === "tofu" ? t("Download") : t("Choose Tofu instance");
@@ -138,7 +138,7 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
     {feed.loading && <div className="discover-grid mods-grid mods-preview-grid" aria-busy="true"><ProjectSkeletons count={4} /></div>}
     {!feed.loading && feed.items.length > 0 && <div className="discover-grid mods-grid mods-preview-grid">{feed.items.map((item) => <ModCard key={`${item.source}:${item.id}`} showSource={false} item={item} actionLabel={actionLabel} busy={busy} onView={setViewing} onAction={act} />)}</div>}
     {feed.error && <div className="discover-error mods-preview-error" role="alert"><p>{feed.offline ? t("You appear to be offline.") : t("Could not load {items}.").replace("{items}", t(noun))}</p><small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> {t("Retry")}</button></div>}
-    {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty"><p>No {noun} to show yet.</p></div>}
+    {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty"><p>{t("No {items} to show yet.").replace("{items}", t(noun))}</p></div>}
     {modals}
   </div>;
 
@@ -149,7 +149,7 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
       <div className="discover-select-wrap"><span>{t("Sort")}</span><Select value={sort} onChange={setSort} options={source.sorts} label={t("Sort")} searchable={false} align="end" /></div>
     </div>
     <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />
-    {active > 0 && <p className="metadata-note" role="status">{active} download{active === 1 ? "" : "s"} in progress. See Downloads.</p>}
+    {active > 0 && <p className="metadata-note" role="status">{t(active === 1 ? "1 download in progress. See Downloads." : "{count} downloads in progress. See Downloads.").replace("{count}", String(active))}</p>}
     {!source.searchesServerSide && effectiveQuery && <p className="metadata-note">Nexus Mods cannot search by text, so this filters the mods Mochi has loaded so far. Scroll to load more.</p>}
     <div className="mods-heading"><span aria-live="polite">{feed.loading ? t("Loading...") : `${feed.items.length.toLocaleString()} ${t("of")} ${feed.total.toLocaleString()} ${t(noun)}`}</span>{(source.id === "curseforge" || feed.items.some((item) => item.source === "curseforge")) && <CurseforgeCredit />}</div>
     {feed.loading && <div className="discover-grid mods-grid" aria-busy="true"><ProjectSkeletons count={6} /></div>}
@@ -157,10 +157,10 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
       render={(item) => <ModCard showSource={source.mixed === true || Boolean(item.game)} item={item} actionLabel={actionLabel} busy={busy} onView={setViewing} onAction={act} state={tofu ? stateOf(item) : undefined} onUpdate={tofu ? update : undefined} />} />}
     {!expanded && !feed.loading && !feed.error && (feed.items.length > shown.length || feed.hasMore) && <div className="mods-show-more"><button type="button" className="secondary-button" onClick={() => { setExpanded(true); if (feed.items.length <= shown.length) feed.loadMore(); }}>{t("Show more {items}").replace("{items}", t(noun))}</button></div>}
     {feed.error && <div className="discover-error" role="alert">
-      {feed.offline ? <p><WifiOff size={14} /> {t("You appear to be offline.")}</p> : <p>{feed.items.length ? "Could not load more." : `Could not load ${noun} from ${source.label}.`}</p>}
+      {feed.offline ? <p><WifiOff size={14} /> {t("You appear to be offline.")}</p> : <p>{feed.items.length ? t("Could not load more.") : t("Could not load {items} from {source}.").replace("{items}", t(noun)).replace("{source}", source.label)}</p>}
       <small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> Retry</button>
     </div>}
-    {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty"><p>No {noun} match{filtered ? " these filters" : ""}.</p>{filtered && <button type="button" className="secondary-button" onClick={() => { setSearch(""); setDebounced(""); setCategoryId(""); }}>{t("Clear filters")}</button>}</div>}
+    {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty"><p>{t(filtered ? "No {items} match these filters." : "No {items} match.").replace("{items}", t(noun))}</p>{filtered && <button type="button" className="secondary-button" onClick={() => { setSearch(""); setDebounced(""); setCategoryId(""); }}>{t("Clear filters")}</button>}</div>}
     {expanded && feed.loadingMore && <div className="discover-grid mods-grid" aria-busy="true"><ProjectSkeletons count={3} /></div>}
     <div ref={sentinel} className="discover-sentinel" aria-hidden="true" />
     {expanded && !feed.hasMore && !feed.loading && !feed.error && feed.items.length > 0 && <p className="discover-end">{t("You have reached the end. {count} {items}.").replace("{count}", feed.items.length.toLocaleString()).replace("{items}", t(noun))}</p>}
