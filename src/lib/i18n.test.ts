@@ -225,6 +225,13 @@ describe("shared UI translations", () => {
   it("covers dynamic settings, backup/restore, and project-provider states in every locale", () => {
     const messages = [
       "Refresh all metadata",
+      "Not measured yet",
+      "Checking for updates…",
+      "Mochi is up to date.",
+      "You appear to be offline. Mochi will check again when you are back online.",
+      "Could not check for updates: {error}",
+      "Update installed. Restarting…",
+      "Mochi {version} is available.",
       "Refreshing all…",
       "Metadata provider",
       "Could not restore: {error}",
