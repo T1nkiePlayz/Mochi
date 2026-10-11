@@ -46,6 +46,7 @@ mod tray;
 mod url_policy;
 mod util;
 mod window_state;
+mod youtube_embed;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -64,6 +65,15 @@ struct LaunchRequest {
 
 fn safe_segment(value: &str) -> String {
     value.chars().map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '-' }).take(80).collect()
+}
+
+#[tauri::command]
+fn youtube_embed_url(app: tauri::AppHandle, video_id: String) -> Result<String, String> {
+    if video_id.len() < 6 || video_id.len() > 20 || !video_id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-') {
+        return Err("Invalid YouTube video ID.".into());
+    }
+    let port = app.state::<youtube_embed::EmbedServerPort>().0;
+    Ok(format!("http://127.0.0.1:{port}/embed/{video_id}"))
 }
 
 #[tauri::command(async)]
@@ -283,6 +293,8 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .setup(move |app| {
             let startup = std::time::Instant::now();
+            let embed_port = youtube_embed::start().map_err(std::io::Error::other)?;
+            app.manage(youtube_embed::EmbedServerPort(embed_port));
             // Desktop integration (registering the mochi:// handler, copying the AppImage, writing desktop
             // entries) spawns helper processes and touches several folders; it must neither delay
             // startup nor stop Mochi from opening. The handler entry is registered first because
@@ -331,7 +343,7 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            write_library_index, send_system_notification, open_external_url, open_path_in_file_manager, set_launch_on_startup,
+            write_library_index, youtube_embed_url, send_system_notification, open_external_url, open_path_in_file_manager, set_launch_on_startup,
             launch_game_tracked, stop_game, get_active_sessions, get_playtime, get_playtime_history, get_dir_size, get_downloads,
             list_flatpaks, list_runtimes, list_launch_runtimes, preview_launch_command, get_platform_capabilities, create_game_shortcut, remove_game_shortcut, shortcuts::get_shortcut_targets, shortcuts::create_piko_shortcut, shortcuts::add_piko_to_steam,
             detect_import_sources, scan_import_games, copy_minecraft_instance, read_minecraft_pack,

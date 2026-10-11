@@ -123,5 +123,27 @@ function Shell() {
 export default function App() {
   useEffect(() => installAccessibilityEnhancer(), []);
   useEffect(() => installTruncationTitles(), []);
+  // Scrolling moves cards beneath a stationary pointer. Suppress transient hover effects while the Library scrolls.
+  useEffect(() => {
+    let timer = 0;
+    let activeContainer: HTMLElement | null = null;
+    const onScroll = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || !target.classList.contains("main-content-library")) return;
+      activeContainer = target;
+      target.classList.add("is-scrolling");
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        target.classList.remove("is-scrolling");
+        if (activeContainer === target) activeContainer = null;
+      }, 120);
+    };
+    document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    return () => {
+      document.removeEventListener("scroll", onScroll, true);
+      window.clearTimeout(timer);
+      activeContainer?.classList.remove("is-scrolling");
+    };
+  }, []);
   return <AccessibilityProvider><AppProvider><ControllerRuntime /><BigPictureGate><Shell /></BigPictureGate><ShortcutsHelp /><GameSearch /><CommandPalette /></AppProvider></AccessibilityProvider>;
 }

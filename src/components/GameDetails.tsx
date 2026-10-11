@@ -1,4 +1,5 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { ArrowLeft, ExternalLink, FolderOpen, FolderPlus, Heart, Pencil, Play, Square, Trash2 } from "lucide-react";
 import { GameScreenshots } from "./GameScreenshots";
 import { GAME_LAUNCHER_METADATA } from "../lib/robloxCover";
@@ -66,6 +67,7 @@ type Props = {
 
 export function GameDetails({ game, capabilities, cloudStatus, running, playtime, launchError, launching, workspace, mods, canStop, onBack, onPlay, onStop, onEdit, onRemove, onOpenFolder, onShortcutLocation, onShortcutSteam, collections, tagSuggestions, onToggleFavorite, onToggleCollection, onCreateCollection, onTagsChange, onBacklogChange, onLaunchProfileChange, onSourceChange, onUnmerge }: Props) {
   const [playTrailer, setPlayTrailer] = useState(false);
+  const [youtubeEmbed, setYoutubeEmbed] = useState<{ id: string; url: string } | null>(null);
   const online = useOnline();
   const [showCollections, setShowCollections] = useState(false);
   const collectionAnchor = useRef<HTMLDivElement>(null);
@@ -74,13 +76,22 @@ export function GameDetails({ game, capabilities, cloudStatus, running, playtime
   const [videoFailed, setVideoFailed] = useState(false);
   const choice = pickTrailer(game, { canPlayHls: canPlayHlsNatively(), skipSteam: videoFailed });
   const trailer = choice.kind === "youtube" ? choice.id : "";
-  const youtubeEmbedUrl = trailer ? (() => {
+  const directYoutubeEmbedUrl = trailer ? (() => {
     const params = new URLSearchParams({ autoplay: "1", controls: "1", playsinline: "1" });
     // YouTube identifies embedded players using their HTTP Referer. Explicit origin also
     // identifies Mochi to the iframe API in web builds with a normal http(s) origin.
     if (window.location.protocol === "http:" || window.location.protocol === "https:") params.set("origin", window.location.origin);
     return `https://www.youtube.com/embed/${encodeURIComponent(trailer)}?${params.toString()}`;
   })() : "";
+  useEffect(() => {
+    if (!playTrailer || !online || !trailer) return;
+    let active = true;
+    void invoke<string>("youtube_embed_url", { videoId: trailer })
+      .then((url) => { if (active) setYoutubeEmbed({ id: trailer, url }); })
+      .catch(() => { if (active) setYoutubeEmbed({ id: trailer, url: directYoutubeEmbedUrl }); });
+    return () => { active = false; };
+  }, [playTrailer, online, trailer, directYoutubeEmbedUrl]);
+  const activeYoutubeEmbedUrl = youtubeEmbed?.id === trailer ? youtubeEmbed.url : "";
   const steamAppId = steamAppIdOf(game);
   const screenshots = game.screenshots ?? [];
   const screenshotCredit = singleCredit(screenshots);
@@ -129,7 +140,7 @@ export function GameDetails({ game, capabilities, cloudStatus, running, playtime
     {(steamAppId !== null || choice.kind !== "none") && <div className="game-details-content">
       {steamAppId !== null && <SteamAchievements key={steamAppId} appid={steamAppId} gameName={game.name} />}
       {choice.kind === "steam" ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Trailer</h3><p>From the Steam store.</p></div></div><div className="game-trailer-frame">{online ? <video controls preload="none" playsInline poster={choice.video.thumbnail} title={`${game.name} trailer`} onError={() => setVideoFailed(true)}>{choice.video.webm && <source src={choice.video.webm} type="video/webm" onError={choice.video.mp4 ? undefined : () => setVideoFailed(true)} />}{choice.video.mp4 && <source src={choice.video.mp4} type="video/mp4" onError={() => setVideoFailed(true)} />}{choice.video.hls && <source src={choice.video.hls} type="application/vnd.apple.mpegurl" onError={() => setVideoFailed(true)} />}</video> : <p className="game-trailer-offline">Trailer needs internet</p>}</div></section> : null}
-      {trailer ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Trailer</h3><p>If the player below shows an error, watch it on YouTube instead.</p></div><button type="button" className="text-button" onClick={() => void openExternalUrl(`https://www.youtube.com/watch?v=${encodeURIComponent(trailer)}`).catch(() => undefined)}><ExternalLink size={13}/> Watch on YouTube</button></div><div className="game-trailer-frame">{playTrailer && online ? <iframe src={youtubeEmbedUrl} title={`${game.name} trailer`} referrerPolicy="origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /> : <button type="button" className="game-trailer-start" disabled={!online} onClick={() => setPlayTrailer(true)}><GameArtwork className="game-trailer-poster" cacheKey={game.artworkCacheKey} fallback={game.artwork} name={game.name} kind={game.kind} sourceId={game.sourceId} /><span><Play size={23} fill="currentColor"/> {online ? "Play trailer" : "Trailer needs internet"}</span></button>}</div></section> : null}
+      {trailer ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>Trailer</h3><p>If the player below shows an error, watch it on YouTube instead.</p></div><button type="button" className="text-button" onClick={() => void openExternalUrl(`https://www.youtube.com/watch?v=${encodeURIComponent(trailer)}`).catch(() => undefined)}><ExternalLink size={13}/> Watch on YouTube</button></div><div className="game-trailer-frame">{playTrailer && online && activeYoutubeEmbedUrl ? <iframe src={activeYoutubeEmbedUrl} title={`${game.name} trailer`} referrerPolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /> : playTrailer && online ? <div className="game-trailer-start" role="status">Loading trailer…</div> : <button type="button" className="game-trailer-start" disabled={!online} onClick={() => setPlayTrailer(true)}><GameArtwork className="game-trailer-poster" cacheKey={game.artworkCacheKey} fallback={game.artwork} name={game.name} kind={game.kind} sourceId={game.sourceId} /><span><Play size={23} fill="currentColor"/> {online ? "Play trailer" : "Trailer needs internet"}</span></button>}</div></section> : null}
     </div>}
     {mods && <div className="game-workspace game-mods-section">{mods}</div>}
   </section>;
