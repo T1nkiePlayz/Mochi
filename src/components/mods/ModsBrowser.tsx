@@ -146,7 +146,7 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
     <div className="mods-controls">
       {externalQuery === undefined && <label className="search-box"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("Search {items}...").replace("{items}", t(noun))} aria-label={t("Search {items}").replace("{items}", t(noun))} /></label>}
       {categories.length > 0 && <div className="discover-select-wrap"><span>{t("Category")}</span><Select value={categoryId} onChange={setCategoryId} options={categoryOptions} label={t("Category")} searchable={categories.length > 8} /></div>}
-      <div className="discover-select-wrap"><span>{t("Sort")}</span><Select value={sort} onChange={setSort} options={source.sorts} label={t("Sort")} searchable={false} align="end" /></div>
+      <div className="discover-select-wrap"><span>{t("Sort")}</span><Select value={sort} onChange={setSort} options={source.sorts.map((option) => ({ ...option, label: t(option.label) }))} label={t("Sort")} searchable={false} align="end" /></div>
     </div>
     <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />
     {active > 0 && <p className="metadata-note" role="status">{t(active === 1 ? "1 download in progress. See Downloads." : "{count} downloads in progress. See Downloads.").replace("{count}", String(active))}</p>}

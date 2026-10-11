@@ -24,7 +24,7 @@ export function AccountStep({ user, onSignIn, onAddUser }: { user: User | null; 
           <div className="setup-account-identity"><strong>{usernameOf(user)}</strong><span>{user.email || t("Mochi account")}</span></div>
           <span className="setup-account-connected" role="status"><Check size={14} /> {t("Connected")}</span>
         </div> : <ul className="setup-account-benefits">
-          {benefits.map(({ icon: Icon, title, detail }) => <li key={title}><span className="setup-account-benefit-icon"><Icon size={17} /></span><div><strong>{title}</strong><span className="setup-account-sub">{detail}</span></div></li>)}
+          {benefits.map(({ icon: Icon, title, detail }) => <li key={title}><span className="setup-account-benefit-icon"><Icon size={17} /></span><div><strong>{t(title)}</strong><span className="setup-account-sub">{t(detail)}</span></div></li>)}
         </ul>}
         {signedIn
           ? <div className="setup-account-connected-details"><Check size={17} /><span><strong>Secure account access is on</strong><small>Your games and files remain on this device. You can change accounts from the account menu.</small></span></div>
