@@ -108,13 +108,13 @@ function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }
           <ul className="save-backups-list">
             {items.map((location) => <li key={location.key} className="save-backups-item">
               <div className="save-backups-row">
-                <button type="button" className="icon-button" aria-expanded={expanded === location.key} aria-label={t(expanded === location.key ? "Hide" : "Show")} onClick={() => toggle(location.key)} disabled={Boolean(location.problem)}>{expanded === location.key ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</button>
+                <button type="button" className="icon-button" aria-expanded={expanded === location.key} aria-label={t("Save backups")} onClick={() => toggle(location.key)} disabled={Boolean(location.problem)}>{expanded === location.key ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</button>
                 <div className="save-backups-name"><strong>{location.label}</strong><small className="muted" title={location.path}>{location.problem ?? location.path}</small>
                   <small className="muted">{location.backups ? `${location.backups} backup${location.backups === 1 ? "" : "s"} · ${formatBytes(location.backupBytes)} · last ${when(location.lastBackup ?? 0)}` : "No backups yet"}</small></div>
                 <div className="save-backups-actions">
                   <button type="button" className="secondary-button" onClick={() => void backUp(location)} disabled={Boolean(location.problem) || busy === location.key}><History size={13} /> {t("Back up now")}</button>
                   <button type="button" className="icon-button" aria-label={t("Open folder")} title={t("Open folder")} onClick={() => void openPath(location.path).catch((error) => setMessage(errorText(error)))} disabled={Boolean(location.problem)}><FolderOpen size={15} /></button>
-                  {location.kind === "custom" && <button type="button" className="icon-button" aria-label={t("Remove folder")} title={t("Remove from this list (backups are kept)")} onClick={() => patchGame((current) => ({ ...current, folders: removeFolder(current.folders, location.source ?? location.path) }))}><X size={15} /></button>}
+                  {location.kind === "custom" && <button type="button" className="icon-button" aria-label={t("Remove from this list (backups are kept)")} title={t("Remove from this list (backups are kept)")} onClick={() => patchGame((current) => ({ ...current, folders: removeFolder(current.folders, location.source ?? location.path) }))}><X size={15} /></button>}
                 </div>
               </div>
               {expanded === location.key && <ul className="save-backups-versions" aria-label={t("Save backups")}>
