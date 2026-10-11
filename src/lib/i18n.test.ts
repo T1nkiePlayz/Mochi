@@ -368,7 +368,7 @@ describe("shared UI translations", () => {
       for (const entry of readdirSync(directory, { withFileTypes: true })) {
         const fullPath = path.join(directory, entry.name);
         if (entry.isDirectory()) walk(fullPath);
-        else if (entry.isFile() && /\\.(tsx|ts)$/.test(entry.name) && !/\\.test\\.(tsx|ts)$/.test(entry.name) && !/\\/i18n[^/]*\\.ts$/.test(fullPath)) {
+        else if (entry.isFile() && /\.(tsx|ts)$/.test(entry.name) && !/\.test\.(tsx|ts)$/.test(entry.name) && !fullPath.includes("/i18n")) {
           const source = readFileSync(fullPath, "utf8");
           const ast = ts.createSourceFile(fullPath, source, ts.ScriptTarget.Latest, true, fullPath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
           const visit = (node: ts.Node) => {
@@ -376,7 +376,7 @@ describe("shared UI translations", () => {
               const arg = node.arguments[0];
               if (ts.isStringLiteralLike(arg)) {
                 const message = arg.text.trim();
-                if (message && /[A-Za-z\\p{L}]/u.test(message)) found.set(message, path.relative(root, fullPath));
+                if (message && /[A-Za-z\p{L}]/u.test(message)) found.set(message, path.relative(root, fullPath));
               }
             }
             ts.forEachChild(node, visit);
@@ -387,9 +387,9 @@ describe("shared UI translations", () => {
     };
     walk(root);
     const missing = [...found].map(([message, file]) => ({ message, file, languages: launcherLanguages.filter((language) => language.code !== "en" && !hasTranslation(message, language.code)).map((language) => language.code) })).filter((entry) => entry.languages.length > 0);
-    expect(missing.map((entry) => `"${entry.message}" (${entry.file}) — missing: ${entry.languages.join(", ")}`), `Missing explicit t() translations (${missing.length} strings):\\n${missing.map((entry) => `"${entry.message}" (${entry.file}) — missing: ${entry.languages.join(", ")}`).join("\\n")}`).toEqual([]);
+    const details = missing.map((entry) => `"${entry.message}" (${entry.file}) — missing: ${entry.languages.join(", ")}`);
+    expect(details, `Missing explicit t() translations (${missing.length} strings):\n${details.join("\n")}`).toEqual([]);
   });
-
 
 
 
