@@ -287,6 +287,85 @@ pub fn open_path(path: &str) -> Result<(), String> {
     os::open_path(path)
 }
 
+/// Configure GStreamer paths before WebKitGTK starts its media processes.
+///
+/// AppImages may bundle GStreamer core and plugins from the build distribution. Keep
+/// plugin discovery inside the AppImage when those plugins are present: loading host
+/// plugins built against another GStreamer version can leave WebKit without usable
+/// decoders. Native installs retain GStreamer's normal system plugin discovery.
+#[cfg(target_os = "linux")]
+fn configure_gstreamer_plugin_environment() {
+    let appdir = std::env::var_os("APPDIR").map(PathBuf::from);
+    if let Some(appdir) = appdir.as_deref() {
+        let plugin_dirs: Vec<PathBuf> = [
+            appdir.join("usr/lib/gstreamer-1.0"),
+            appdir.join("usr/lib/x86_64-linux-gnu/gstreamer-1.0"),
+            appdir.join("usr/lib/aarch64-linux-gnu/gstreamer-1.0"),
+        ]
+        .into_iter()
+        .filter(|path| path.is_dir() && contains_gstreamer_plugin(path))
+        .collect();
+
+        if !plugin_dirs.is_empty() {
+            if let Ok(paths) = std::env::join_paths(&plugin_dirs) {
+                // Do not mix bundled and host plugins: their GStreamer ABI versions may differ.
+                std::env::set_var("GST_PLUGIN_SYSTEM_PATH_1_0", paths);
+            }
+        } else {
+            // AppRun can export a plugin path even when the bundle omitted the directory.
+            // An empty override suppresses GStreamer's normal host plugin search entirely.
+            eprintln!("[mochi media] No bundled GStreamer plugins found; falling back to system discovery.");
+            std::env::remove_var("GST_PLUGIN_SYSTEM_PATH_1_0");
+        }
+
+        // Prefer the scanner bundled with the same GStreamer build as the AppImage.
+        let bundled_scanner = [
+            appdir.join("usr/lib/gstreamer-1.0/gst-plugin-scanner"),
+            appdir.join("usr/lib/x86_64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
+            appdir.join("usr/lib/aarch64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
+            appdir.join("usr/libexec/gstreamer-1.0/gst-plugin-scanner"),
+        ]
+        .into_iter()
+        .find(|path| path.is_file());
+        if let Some(scanner) = bundled_scanner {
+            std::env::set_var("GST_PLUGIN_SCANNER", scanner);
+            return;
+        }
+    }
+
+    // Preserve a valid explicit scanner for native installations.
+    if std::env::var_os("GST_PLUGIN_SCANNER")
+        .as_deref()
+        .is_some_and(|value| Path::new(value).is_file())
+    {
+        return;
+    }
+
+    let candidates = [
+        PathBuf::from("/usr/lib/gstreamer-1.0/gst-plugin-scanner"),
+        PathBuf::from("/usr/lib/x86_64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
+        PathBuf::from("/usr/lib/aarch64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
+        PathBuf::from("/usr/libexec/gstreamer-1.0/gst-plugin-scanner"),
+    ];
+    if let Some(scanner) = candidates.into_iter().find(|path| path.is_file()) {
+        std::env::set_var("GST_PLUGIN_SCANNER", scanner);
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn contains_gstreamer_plugin(directory: &Path) -> bool {
+    std::fs::read_dir(directory)
+        .ok()
+        .into_iter()
+        .flatten()
+        .flatten()
+        .any(|entry| {
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            name.starts_with("libgst") && name.contains(".so")
+        })
+}
+
 /// WebKitGTK renders a blank window with some NVIDIA drivers unless DMA-BUF rendering is off.
 /// Respect an explicit setting from the user.
 #[cfg(target_os = "linux")]
@@ -295,30 +374,28 @@ pub fn prepare_linux_webview_environment() {
         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
     }
 
-    // WebKitGTK's GStreamer integration launches gst-plugin-scanner as a helper process.
-    // AppImages can contain the scanner outside the host distribution's usual path, so
-    // GStreamer may otherwise emit "External plugin loader failed" on startup.
-    if std::env::var_os("GST_PLUGIN_SCANNER").as_deref().is_some_and(|value| Path::new(value).is_file()) {
-        return;
-    }
-    let mut candidates = Vec::new();
-    if let Some(appdir) = std::env::var_os("APPDIR") {
-        let appdir = Path::new(&appdir);
-        candidates.extend([
-            appdir.join("usr/lib/gstreamer-1.0/gst-plugin-scanner"),
-            appdir.join("usr/lib/x86_64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
-            appdir.join("usr/lib/aarch64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
-            appdir.join("usr/libexec/gstreamer-1.0/gst-plugin-scanner"),
-        ]);
-    }
-    candidates.extend([
-        PathBuf::from("/usr/lib/gstreamer-1.0/gst-plugin-scanner"),
-        PathBuf::from("/usr/lib/x86_64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
-        PathBuf::from("/usr/lib/aarch64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
-        PathBuf::from("/usr/libexec/gstreamer-1.0/gst-plugin-scanner"),
-    ]);
-    if let Some(scanner) = candidates.into_iter().find(|path| path.is_file()) {
-        std::env::set_var("GST_PLUGIN_SCANNER", scanner);
+    // Keep GStreamer decoder discovery intact (including AV1 when supported).
+    configure_gstreamer_plugin_environment();
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod gstreamer_plugin_discovery_tests {
+    use super::contains_gstreamer_plugin;
+    use std::fs;
+
+    #[test]
+    fn recognizes_plugin_directories_by_shared_object_name() {
+        let directory = std::env::temp_dir().join(format!("mochi-gstreamer-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&directory);
+        fs::create_dir_all(&directory).unwrap();
+
+        fs::write(directory.join("readme.txt"), "not a plugin").unwrap();
+        assert!(!contains_gstreamer_plugin(&directory));
+
+        fs::write(directory.join("libgstexample.so"), "test plugin marker").unwrap();
+        assert!(contains_gstreamer_plugin(&directory));
+
+        fs::remove_dir_all(directory).unwrap();
     }
 }
 
