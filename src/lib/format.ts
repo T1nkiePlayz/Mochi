@@ -14,7 +14,7 @@ export function formatBytes(bytes: number, language = getTranslationLocale()): s
   const locale = intlLocale(language);
   const number = (value: number, maximumFractionDigits: number, minimumFractionDigits = 0) =>
     language === "en"
-      ? value.toFixed(minimumFractionDigits || maximumFractionDigits).replace(/\\.?0+$/, (match) => match.startsWith(".") ? "" : match)
+      ? value.toFixed(maximumFractionDigits)
       : new Intl.NumberFormat(locale, { maximumFractionDigits, minimumFractionDigits }).format(value);
   if (bytes < 1024 * 1024) return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.max(1, Math.round(bytes / 1024))) + " KiB";
   if (bytes < 1024 * 1024 * 1024) return number(bytes / 1024 / 1024, 1, 1) + " MiB";
