@@ -42,7 +42,7 @@ export const Topbar = memo(function Topbar() {
           <MochiIcon name="notifications" fallback={Bell} size={17} />{notifications.length > 0 && <span className="notification-dot" />}
         </button>
         {showNotifications && <div className="notification-popover" role="dialog" aria-label="Notifications">
-          <div className="notification-heading"><strong>{t("Notifications")}</strong>{notifications.length > 0 && <button type="button" onClick={() => void confirmAction({ title: "Clear all notifications?", message: `Removes ${notifications.length} notification${notifications.length === 1 ? "" : "s"} from the list.`, confirmLabel: "Clear" }).then((ok) => ok && setNotifications([]))}>Clear</button>}</div>
+          <div className="notification-heading"><strong>{t("Notifications")}</strong>{notifications.length > 0 && <button type="button" onClick={() => void confirmAction({ title: t("Clear all notifications?"), message: t(notifications.length === 1 ? "Removes {count} notification from the list." : "Removes {count} notifications from the list.").replace("{count}", String(notifications.length)), confirmLabel: t("Clear") }).then((ok) => ok && setNotifications([]))}>Clear</button>}</div>
           {notifications.length ? notifications.map((item) => <div className="notification-item" key={item.id}><strong>{item.title}</strong><span>{item.message}</span>{item.progress && <progress max={item.progress.total} value={item.progress.value} />}</div>) : <div className="notification-empty">{t("You’re all caught up.")}</div>}
         </div>}
       </div>}

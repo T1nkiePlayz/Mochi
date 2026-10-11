@@ -114,7 +114,7 @@ export function LaunchOptionsSection({ ctx }: { ctx: EditorContext }) {
 
     {linux && full && <>
       {compat.length > 0 && <div className="editor-field"><span className="editor-field-label">Windows runtime</span>
-        <Select label="Windows runtime" value={runtimeValue} onChange={chooseRuntime} searchable={false} options={[{ value: "", label: "Automatic (native, or Wine if available)" }, ...compat.map((runtime) => ({ value: runtime.id, label: runtime.name, description: runtime.id === "wine" ? "System Wine" : "Proton, with a private prefix for this game" }))]} />
+        <Select label="Windows runtime" value={runtimeValue} onChange={chooseRuntime} searchable={false} options={[{ value: "", label: t("Automatic (native, or Wine if available)") }, ...compat.map((runtime) => ({ value: runtime.id, label: runtime.name, description: runtime.id === "wine" ? t("System Wine") : t("Proton, with a private prefix for this game") }))]} />
         <small className="launch-hint">{t("Used for Windows programs (.exe). Native games ignore it.")}</small>
       </div>}
       {compat.length > 0 && /\.(exe|bat|msi|lnk)$/i.test(target) && <PrefixManager gameId={draft.id} tofuId={tofu?.id} gameName={draft.name} runtime={runtimeIdOf(options.runtime)} />}
