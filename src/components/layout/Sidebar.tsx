@@ -73,7 +73,7 @@ export const Sidebar = memo(function Sidebar() {
       <button className={`nav-item ${activeNav === "Settings" ? "active" : ""}`} title={navLabel("Settings", language)} aria-label={navLabel("Settings", language)} aria-current={activeNav === "Settings" ? "page" : undefined} onClick={() => setActiveNav("Settings")}>
         <MochiIcon name="settings" fallback={Settings} size={17} strokeWidth={1.8} />
         <span>{navLabel("Settings", language)}</span>
-        {unseenCount > 0 && <span className="nav-new-dot" role="img" aria-label="New experimental features" />}
+        {unseenCount > 0 && <span className="nav-new-dot" role="img" aria-label={t("New experimental features")} />}
       </button>
     </div>
   </aside>;
