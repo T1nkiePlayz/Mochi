@@ -85,8 +85,8 @@ export function AchievementsPanel({ progress, unlocked }: { progress: Achievemen
       </div>
       {showSteamNote && (
         <div className="ach-steam-note" role="status">
-          <span>Steam achievements count once Steam data has been loaded. {sync.count ? "Load it for every Steam game in your library, or open a game's Overview." : "Import Steam games to use them."}</span>
-          {sync.count > 0 && <button type="button" className="secondary-button" onClick={() => void sync.start()} disabled={sync.running}>{sync.running ? `Syncing ${sync.done} of ${sync.total}…` : "Sync Steam achievements"}</button>}
+          <span>{t("Steam achievements count once Steam data has been loaded.")} {sync.count ? t("Load it for every Steam game in your library, or open a game's Overview.") : t("Import Steam games to use them.")}</span>
+          {sync.count > 0 && <button type="button" className="secondary-button" onClick={() => void sync.start()} disabled={sync.running}>{sync.running ? t("Syncing {done} of {total}…").replace("{done}", String(sync.done)).replace("{total}", String(sync.total)) : t("Sync Steam achievements")}</button>}
           {sync.message && !sync.running && <small>{sync.message}</small>}
         </div>
       )}
