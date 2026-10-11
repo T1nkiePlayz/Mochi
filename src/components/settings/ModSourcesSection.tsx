@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { clampAutoExtendBelow, MAX_AUTO_EXTEND_BELOW } from "../../lib/mods/autoExtend";
 import { useApp } from "../../state/AppContext";
 import { SettingsGroup, ToggleRow } from "./Section";
@@ -21,12 +22,12 @@ export function ModSourcesSection() {
   const set = (key: keyof typeof sources, value: boolean) => setBehavior((current) => ({ ...current, modSources: { ...current.modSources, [key]: value } }));
   const none = !sources.modrinth && !sources.curseforge && !sources.nexus;
   return <SettingsGroup title={t("Mod sources")} subtitle={t("Where Discover, game pages and Tofus find mods")} id="settings-modsources">
-    <ToggleRow title="Modrinth" description={t("Minecraft mods, modpacks, resource packs and shaders.")} checked={sources.modrinth} onChange={(value) => set("modrinth", value)} />
-    <ToggleRow title="CurseForge" description={t("Most games, and Minecraft. No account or key needed. When a game is on CurseForge, Nexus Mods is not used for it.")} checked={sources.curseforge} onChange={(value) => set("curseforge", value)} />
-    <ToggleRow title="Nexus Mods" description={credentials.status.nexus ? "Used for games that are not on CurseForge." : "Used for games that are not on CurseForge. Needs your Nexus API key (Mod & metadata providers)."} checked={sources.nexus} onChange={(value) => set("nexus", value)} />
+    <ToggleRow title={t("Modrinth")} description={t("Minecraft mods, modpacks, resource packs and shaders.")} checked={sources.modrinth} onChange={(value) => set("modrinth", value)} />
+    <ToggleRow title={t("CurseForge")} description={t("Most games, and Minecraft. No account or key needed. When a game is on CurseForge, Nexus Mods is not used for it.")} checked={sources.curseforge} onChange={(value) => set("curseforge", value)} />
+    <ToggleRow title={t("Nexus Mods")} description={credentials.status.nexus ? "Used for games that are not on CurseForge." : "Used for games that are not on CurseForge. Needs your Nexus API key (Mod & metadata providers)."} checked={sources.nexus} onChange={(value) => set("nexus", value)} />
     <AutoExtendRow value={behavior.modAutoExtendBelow} onChange={(value) => setBehavior((current) => ({ ...current, modAutoExtendBelow: value }))} />
     <ToggleRow title={t("Automatically update mods")} description="Off by default. Before a game starts, Mochi installs updates of the mods it installed (SHA-1 verified, with a rollback copy), never while it runs. Also in the Updates tab." checked={behavior.autoUpdateMods} onChange={(value) => setBehavior((current) => ({ ...current, autoUpdateMods: value }))} />
-    {none && <small className="metadata-note settings-note" role="status">All mod sources are off, so Discover and the mod managers have nothing to show.</small>}
-    <small className="metadata-note settings-note">With Modrinth off, every Minecraft content type comes from CurseForge. With CurseForge off, Minecraft uses Modrinth only.</small>
+    {none && <small className="metadata-note settings-note" role="status">{t("All mod sources are off, so Discover and the mod managers have nothing to show.")}</small>}
+    <small className="metadata-note settings-note">{t("With Modrinth off, every Minecraft content type comes from CurseForge. With CurseForge off, Minecraft uses Modrinth only.")}</small>
   </SettingsGroup>;
 }
