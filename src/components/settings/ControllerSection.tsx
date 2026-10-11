@@ -6,6 +6,7 @@ import { useControllerSettings } from "../../controller/settings";
 import type { PromptStyle, RepeatSpeed } from "../../controller/types";
 import { effectiveStartup, enterBigPicture, isSteamDeckSession, markStartupChoice } from "../../bigpicture/mode";
 import { useApp } from "../../state/AppContext";
+import { useTranslation } from "../../lib/useTranslation";
 import { SettingsGroup, ToggleRow } from "./Section";
 
 const FAMILY_NAMES: Record<string, string> = { xbox: "Xbox", playstation: "PlayStation", switch: "Nintendo Switch", steam: "Steam Controller", deck: "Steam Deck", generic: "Generic" };
@@ -22,6 +23,7 @@ const PROMPT_STYLES: Array<{ value: PromptStyle; label: string; description?: st
 const SPEEDS: Array<{ value: RepeatSpeed; label: string }> = [{ value: "slow", label: "Slow" }, { value: "normal", label: "Normal" }, { value: "fast", label: "Fast" }];
 
 export function ControllerSection() {
+  const t = useTranslation();
   const [settings, update] = useControllerSettings();
   const { pads } = useControllerState();
   const [last, setLast] = useState("");
@@ -41,10 +43,10 @@ export function ControllerSection() {
       <Select<PromptStyle> label="Button prompts" value={settings.promptStyle} options={PROMPT_STYLES} onChange={(promptStyle) => update({ promptStyle })} align="end" /></div>
     <ToggleRow title="On-screen keyboard" description="Open a built-in keyboard when you confirm a text field with a controller." checked={settings.onScreenKeyboard} onChange={(onScreenKeyboard) => update({ onScreenKeyboard })} />
     <div className="setting-row controller-list-row"><span><strong>Connected controllers</strong>
-      <small>{pads.length ? "Press any button to test; the last action appears on the right." : "No controller detected. Connect one by cable or Bluetooth."}</small>
+      <small>{pads.length ? t("Press any button to test; the last action appears on the right.") : t("No controller detected. Connect one by cable or Bluetooth.")}</small>
       {pads.length > 0 && <ul className="controller-list">{pads.map((pad) => <li key={pad.key}><span>{pad.name}</span><small>{FAMILY_NAMES[pad.family]}</small></li>)}</ul>}
     </span>
-      <span className="metadata-note controller-readout" aria-live="polite">{last ? <><Prompt action={last as never} /> {last}</> : "Waiting for input"}</span></div>
+      <span className="metadata-note controller-readout" aria-live="polite">{last ? <><Prompt action={last as never} /> {last}</> : t("Waiting for input")}</span></div>
   </SettingsGroup>;
 }
 
