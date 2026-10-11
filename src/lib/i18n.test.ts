@@ -130,4 +130,15 @@ describe("shared UI translations", () => {
     expect(translate("Library", "fr")).toBe("Bibliothèque");
     expect(translate("Downloads", "ja")).toBe("ダウンロード");
   });
+
+  
+  it("preserves unknown dynamic command labels and group names while translating known UI prefixes", async () => {
+    const { translateCommandTitle, translateCommandGroup, translatePaletteSubtitle } = await import("./paletteTranslations");
+    const t = (message: string) => translate(message, "fr");
+    expect(translateCommandTitle("A future command from a plugin", t)).toBe("A future command from a plugin");
+    expect(translateCommandGroup("A future provider group", t)).toBe("A future provider group");
+    expect(translatePaletteSubtitle("A future provider description", t)).toBe("A future provider description");
+    expect(translateCommandTitle("Settings: General", t)).toBe("Paramètres: Général");
+    expect(translateCommandGroup("Recent · Settings", t)).toBe("Récent · Paramètres");
+  });
 });
