@@ -15,6 +15,7 @@ export type ServicesProps = {
 };
 
 function Configured() {
+  const t = useTranslation();
   return <div className="setup-provider-configured"><Check size={16} /><strong>{t("Configured")}</strong><small>{t("Saved securely to your account")}</small></div>;
 }
 
