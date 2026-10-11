@@ -14,6 +14,7 @@ import { ShareCardDialog } from "../components/stats/ShareCardDialog";
 import { usernameOf } from "../state/useAccount";
 import { Share2 } from "lucide-react";
 import { RecentSessions, YearInReview } from "../components/stats/SessionHistory";
+import { useTranslation } from "../lib/useTranslation";
 import { AchievementsPanel, RecentAchievements } from "../components/stats/AchievementsPanel";
 
 const RANGES = [{ value: 7, label: "7 days" }, { value: 30, label: "30 days" }, { value: 90, label: "90 days" }, { value: 365, label: "Year" }] as const;
@@ -28,6 +29,7 @@ function Card({ title, id, children, wide }: { title: string; id: string; childr
 }
 
 export function StatsView() {
+  const t = useTranslation();
   const { lib, playtime, sessions, setActiveNav, account } = useApp();
   const [sharing, setSharing] = useState(false);
   const [tab, setTab] = useState<"overview" | "achievements">("overview");
@@ -68,8 +70,8 @@ export function StatsView() {
     <div className="stats-view">
       <div className="page-heading stats-heading">
         <div><p className="eyebrow">Your activity</p><h1>Stats</h1></div>
-        <Segmented kind="tab" label="Stats sections" value={tab} onChange={setTab} controls={(v) => `stats-panel-${v}`}
-          options={[{ value: "overview", label: "Overview" }, { value: "achievements", label: "Achievements" }]} />
+        <Segmented kind="tab" label={t("Stats sections")} value={tab} onChange={setTab} controls={(v) => `stats-panel-${v}`}
+          options={[{ value: "overview", label: t("Overview") }, { value: "achievements", label: t("Achievements") }]} />
       </div>
       {failed && <p className="stats-note" role="status">Play history is unavailable right now. Showing what is cached.</p>}
 
@@ -87,7 +89,7 @@ export function StatsView() {
           ) : (
             <>
               <div className="stats-toolbar">
-                <Segmented label="Time range" value={range} options={RANGES.map((r) => ({ ...r }))} onChange={changeRange} />
+                <Segmented label="Time range" value={range} options={RANGES.map((r) => ({ ...r, label: t(r.label) }))} onChange={changeRange} />
                 {<button type="button" className="secondary-button" onClick={() => setSharing(true)}><Share2 size={14} /> Share card</button>}
                 {analysis.historicSeconds > 0 && <span className="stats-muted">Plus {formatHours(analysis.historicSeconds)} played before Mochi kept history.</span>}
               </div>

@@ -6,11 +6,13 @@ import { loadArtwork } from "../../lib/artworkCache";
 import { buildCardData, buildCardSvg, copyPng, coverToDataUrl, defaultShareOptions, readPalette, savePng, svgDataUrl, svgToPng, type CardCovers, type ShareOptions, type SharePeriod } from "../../lib/shareCard";
 import type { SessionRecord } from "../../lib/stats";
 import type { Piko } from "../../models";
+import { useTranslation } from "../../lib/useTranslation";
 
 const TOGGLES: Array<[keyof Omit<ShareOptions, "period">, string]> = [["games", "Top games"], ["playtime", "Total playtime"], ["achievements", "Achievements count"], ["account", "Account name"]];
 
 /** Experimental "Share card": builds a PNG of the stats locally; nothing is uploaded. */
 export function ShareCardDialog({ records, library, unlocked, totalAchievements, username, onClose }: { records: SessionRecord[]; library: Piko[]; unlocked: number; totalAchievements: number; username: string; onClose: () => void }) {
+  const t = useTranslation();
   const [options, setOptions] = useState<ShareOptions>(defaultShareOptions);
   const [covers, setCovers] = useState<CardCovers>({});
   const [message, setMessage] = useState("");
@@ -49,9 +51,9 @@ export function ShareCardDialog({ records, library, unlocked, totalAchievements,
         <img className="share-card-preview" src={svgDataUrl(svg)} alt="Preview of the share card" />
         <div className="share-card-controls">
           <fieldset className="share-card-fieldset"><legend>Include</legend>
-            {TOGGLES.map(([key, label]) => <label key={key} className="check-row"><input type="checkbox" checked={options[key]} onChange={(event) => toggle(key, event.target.checked)} /> {label}</label>)}
+            {TOGGLES.map(([key, label]) => <label key={key} className="check-row"><input type="checkbox" checked={options[key]} onChange={(event) => toggle(key, event.target.checked)} /> {t(label)}</label>)}
           </fieldset>
-          <Segmented label="Period" value={options.period} options={[{ value: "all", label: "All time" }, { value: "30", label: "Last 30 days" }]} onChange={(period: SharePeriod) => setOptions((current) => ({ ...current, period }))} />
+          <Segmented label="Period" value={options.period} options={[{ value: "all", label: t("All time") }, { value: "30", label: t("Last 30 days") }]} onChange={(period: SharePeriod) => setOptions((current) => ({ ...current, period }))} />
           <p className="stats-muted">Built on this device. Nothing is uploaded; only what is ticked appears on the image.</p>
           <div className="share-card-actions">
             <button type="button" className="primary-button" disabled={busy} onClick={() => void onSave()}><Download size={14} /> Save PNG</button>
