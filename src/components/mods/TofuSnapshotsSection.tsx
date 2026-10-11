@@ -4,10 +4,11 @@ import { confirmAction } from "../../lib/confirm";
 import { formatBytes } from "../../lib/format";
 import { cleanSnapshotError, createTofuSnapshot, deleteTofuSnapshot, lastWorkingSnapshot, listTofuSnapshots, restoreTofuSnapshot, snapshotFolders, type SnapshotInfo } from "../../lib/mods/snapshots";
 import { useApp } from "../../state/AppContext";
+import { getTranslationLocale } from "../../lib/translationLocale";
 import type { Tofu } from "../../models";
 
 const errorText = (error: unknown, fallback: string) => cleanSnapshotError(error instanceof Error ? error.message : typeof error === "string" ? error : fallback);
-const when = (ms: number) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+const when = (ms: number) => new Date(ms).toLocaleString(getTranslationLocale(), { dateStyle: "medium", timeStyle: "short" });
 
 /** Saved states of one Tofu's mods (taken before updates and installs) with one-click restore. */
 export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
