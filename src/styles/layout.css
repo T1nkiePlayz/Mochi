@@ -50,16 +50,8 @@
     height: 100% !important; flex: 1 1 0 !important; min-height: 0 !important;
     box-sizing: border-box; padding-top: 0 !important; background: transparent !important;
   }
-  /* WebKit can repaint the entire window while scrolling a long, image-heavy Library beneath a transparent top bar.
-     Keep that scroll surface on its own compositor layer; scope this workaround to Library so other pages are untouched. */
-  [data-mochi-shell="top"] .main-content-library > .content {
-    /* Promote the painted Library content, not the scroll container itself. Transforming the scroll
-       container creates a stacking context around the top bar and can interfere with overlay layering. */
-    -webkit-transform: translate3d(0, 0, 0) !important;
-    transform: translate3d(0, 0, 0) !important;
-    -webkit-backface-visibility: hidden !important;
-    backface-visibility: hidden !important;
-  }
+  /* Do not force a compositor layer for the Library content. The translate3d/backface workaround
+     caused persistent scroll flashes in WebKit; leave layer promotion to the browser. */
   .content { min-width: 0 !important; width: 100% !important; margin-inline: auto !important; max-width: max(var(--mochi-content-max-width, 1160px), min(72vw, 2200px)) !important; }
   .content > * { min-width: 0; max-width: 100%; }
   .content img, .content video, .content canvas { max-width: 100%; }
