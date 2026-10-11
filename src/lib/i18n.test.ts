@@ -364,6 +364,7 @@ describe("shared UI translations", () => {
   it("audits explicit t() calls for missing catalogue entries", () => {
     const root = path.resolve(process.cwd(), "src");
     const found = new Map<string, string>();
+    const untranslatedByDesign = new Set(["Mochi", "Mochi v", "Mochi Cloud", "GitHub", "Google", "CheapShark", "Epic Games Store", "Steam", "Heroic", "Prism", "Flatpak", "IGDB", "macOS", "USD", "Steam (US)", "/home/you/Games", "U", "you@example.com", "org.company.game", "--fullscreen -windowed", "https://example.com/cover.png", "obs --startreplaybuffer", "/home/me/scripts/sync-saves.sh", "GameMode", "MangoHud", "gamescope", "-W 1920 -H 1080 -f", "/path/to/game", "DXVK_HUD=fps\nMANGOHUD=1", "-windowed --name \"My Player\"", "CurseForge", "mochipack:…", "Nexus Mods", "Tofu", "Steam Deck", "Modrinth", "SteamGridDB"]);
     const walk = (directory: string) => {
       for (const entry of readdirSync(directory, { withFileTypes: true })) {
         const fullPath = path.join(directory, entry.name);
@@ -386,7 +387,8 @@ describe("shared UI translations", () => {
       }
     };
     walk(root);
-    const missing = [...found].map(([message, file]) => ({ message, file, languages: launcherLanguages.filter((language) => language.code !== "en" && !hasTranslation(message, language.code)).map((language) => language.code) })).filter((entry) => entry.languages.length > 0);
+    const missing = [...found].map(([message, file]) => ({ message, file, languages: launcherLanguages.filter((language) => language.code !== "en" && !hasTranslation(message, language.code)).map((language) => language.code) })).filter((entry) => entry.languages.length > 0 && !untranslatedByDesign.has(entry.message));
+    console.log("MISSING_TRANSLATION_KEYS_JSON=" + JSON.stringify(missing.map(({ message, file }) => ({ message, file }))));
     const details = missing.map((entry) => `"${entry.message}" (${entry.file}) — missing: ${entry.languages.join(", ")}`);
     expect(details, `Missing explicit t() translations (${missing.length} strings):\n${details.join("\n")}`).toEqual([]);
   });
