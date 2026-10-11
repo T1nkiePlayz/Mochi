@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "../../lib/useTranslation";
+import { getTranslationLocale } from "../../lib/translationLocale";
 import { Download, Upload, X } from "lucide-react";
 import { useApp } from "../../state/AppContext";
 import { announce, useAccessibility } from "../../state/accessibility";
@@ -83,7 +84,7 @@ function ImportSheet({ file, onClose, onDone }: { file: SettingsFile; onClose: (
     } catch (failure) { setError(message(failure)); setBusy(false); }
   };
 
-  const created = file.manifest.createdAt ? new Date(file.manifest.createdAt).toLocaleString() : t("unknown date");
+  const created = file.manifest.createdAt ? new Date(file.manifest.createdAt).toLocaleString(getTranslationLocale()) : t("unknown date");
   return <div className="modal-backdrop" onClick={onClose}>
     <div role="dialog" aria-modal="true" aria-labelledby="settings-import-title" className="modal settings-import-modal" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === "Escape") onClose(); }}>
       <div className="modal-header">
