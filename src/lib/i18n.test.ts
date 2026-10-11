@@ -104,8 +104,15 @@ describe("shared UI translations", () => {
         const tag = node.openingElement.tagName.getText();
         const skipChildren = skipText || skippedTags.has(tag);
         for (const attribute of node.openingElement.attributes.properties) {
-          if (ts.isJsxAttribute(attribute) && visibleAttributes.has(attribute.name.getText()) && attribute.initializer && ts.isStringLiteral(attribute.initializer)) {
-            const message = decode(attribute.initializer.text).trim();
+          if (ts.isJsxAttribute(attribute) && visibleAttributes.has(attribute.name.getText()) && attribute.initializer) {
+            const initializer = attribute.initializer;
+            const literal = ts.isStringLiteral(initializer)
+              ? initializer.text
+              : ts.isJsxExpression(initializer) && initializer.expression && ts.isStringLiteralLike(initializer.expression)
+                ? initializer.expression.text
+                : null;
+            if (literal === null) continue;
+            const message = decode(literal).trim();
             if (message && /\p{L}/u.test(message)) found.set(message, path.relative(root, attribute.getSourceFile().fileName));
           }
         }
@@ -114,8 +121,15 @@ describe("shared UI translations", () => {
       }
       if (ts.isJsxSelfClosingElement(node)) {
         for (const attribute of node.attributes.properties) {
-          if (ts.isJsxAttribute(attribute) && visibleAttributes.has(attribute.name.getText()) && attribute.initializer && ts.isStringLiteral(attribute.initializer)) {
-            const message = decode(attribute.initializer.text).trim();
+          if (ts.isJsxAttribute(attribute) && visibleAttributes.has(attribute.name.getText()) && attribute.initializer) {
+            const initializer = attribute.initializer;
+            const literal = ts.isStringLiteral(initializer)
+              ? initializer.text
+              : ts.isJsxExpression(initializer) && initializer.expression && ts.isStringLiteralLike(initializer.expression)
+                ? initializer.expression.text
+                : null;
+            if (literal === null) continue;
+            const message = decode(literal).trim();
             if (message && /\p{L}/u.test(message)) found.set(message, path.relative(root, attribute.getSourceFile().fileName));
           }
         }
