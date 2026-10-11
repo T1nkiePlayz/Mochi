@@ -24,7 +24,7 @@ export const AchievementBadge = memo(function AchievementBadge({ item, unlockedA
   const unlocked = unlockedAt !== undefined;
   const mystery = def.hidden && !unlocked;
   const Icon = mystery ? HelpCircle : icons[def.icon] ?? Trophy;
-  const status = unlocked ? t("Unlocked {date}").replace("{date}", dateText(unlockedAt)) : mystery ? t("Hidden") : t(progressText(item));
+  const status = unlocked ? t("Unlocked {date}").replace("{date}", dateText(unlockedAt)) : mystery ? t("Hidden") : progressText(item, t);
   const tier = def.tierCount && def.tierCount > 1 && def.tier ? t("Tier {tier} of {count}").replace("{tier}", String(roman[def.tier] ?? def.tier)).replace("{count}", String(roman[def.tierCount] ?? def.tierCount)) : "";
   return (
     <li className={`ach-badge rarity-${def.rarity} ${unlocked ? "unlocked" : "locked"}`} data-category={def.category}>
@@ -32,7 +32,7 @@ export const AchievementBadge = memo(function AchievementBadge({ item, unlockedA
       <div className="ach-body">
         <div className="ach-title"><strong>{t(mystery ? "Hidden achievement" : def.title)}</strong><span className="ach-rarity">{t(rarityLabels[def.rarity])}</span></div>
         <p>{t(mystery ? "Keep playing to find out what this is." : def.description)}</p>
-        {!unlocked && !mystery && item.available && <div className="ach-progress"><div className="stat-meter" role="progressbar" aria-label={`${def.title} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(item.fraction * 100)} aria-valuetext={progressText(item)}><i style={{ width: `${Math.max(2, item.fraction * 100)}%` }} /></div></div>}
+        {!unlocked && !mystery && item.available && <div className="ach-progress"><div className="stat-meter" role="progressbar" aria-label={`${def.title} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(item.fraction * 100)} aria-valuetext={progressText(item, t)}><i style={{ width: `${Math.max(2, item.fraction * 100)}%` }} /></div></div>}
         <small>{status}{tier && !mystery ? <span className="ach-tier"> · {tier}</span> : null}</small>
       </div>
     </li>

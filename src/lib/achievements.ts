@@ -140,12 +140,12 @@ export function evaluate(facts: Facts, defs: AchievementDef[] = achievements): A
 export const newlyMet = (progress: AchievementProgress[], unlocked: Record<string, unknown>) =>
   progress.filter((item) => item.met && !(item.def.id in unlocked)).map((item) => item.def);
 
-export function progressText(item: AchievementProgress): string {
+export function progressText(item: AchievementProgress, t: (message: string) => string = (message) => message): string {
   const { def, value } = item;
-  if (!item.available) return "Needs Steam data";
+  if (!item.available) return t("Needs Steam data");
   if (def.unit === "hours") return `${Math.min(value, def.target) / 3600 >= 10 ? Math.floor(Math.min(value, def.target) / 3600) : (Math.min(value, def.target) / 3600).toFixed(1)} / ${def.target / 3600} h`;
-  if (def.target === 1) return item.met ? "Done" : "Not yet";
-  return `${Math.min(Math.floor(value), def.target)} / ${def.target}${def.unit ? ` ${def.unit}` : ""}`;
+  if (def.target === 1) return item.met ? t("Done") : t("Not yet");
+  return `${Math.min(Math.floor(value), def.target)} / ${def.target}${def.unit ? ` ${t(def.unit)}` : ""}`;
 }
 
 export type AchievementFilter = { category: AchievementCategory | "all"; status: "all" | "unlocked" | "locked" };
