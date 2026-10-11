@@ -47,7 +47,7 @@ export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
   };
   const take = () => run(async () => {
     const made = await createTofuSnapshot(tofu.id, snapshotFolders(tofu), "Manual snapshot");
-    notify(made.reused ? "Nothing changed" : "Snapshot saved", made.reused ? "The latest snapshot already matches the current mods." : `${made.files} files · ${formatBytes(made.size)}.`);
+    notify(made.reused ? t("Nothing changed") : "Snapshot saved", made.reused ? "The latest snapshot already matches the current mods." : `${made.files} files · ${formatBytes(made.size)}.`);
   }, t("Could not save a snapshot"));
 
   const last = snapshots ? lastWorkingSnapshot(snapshots) : undefined;
