@@ -216,7 +216,8 @@ describe("shared UI translations", () => {
       if (code === "en") continue;
       for (const message of messages) {
         expect(hasTranslation(message, code), `${code}: ${message}`).toBe(true);
-        expect(translate(message, code), `${code}: ${message}`).not.toBe(message);
+        const unchangedIsValid = message === "Rare" && code === "fr";
+        if (!unchangedIsValid) expect(translate(message, code), `${code}: ${message}`).not.toBe(message);
       }
     }
   });
