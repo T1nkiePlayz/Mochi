@@ -78,7 +78,7 @@ export function SteamAchievements({ appid, gameName }: { appid: number; gameName
       {data && (
         <>
           <ul className="steam-ach-list" id={listId}>{shown.map((item) => <Row key={item.apiName || item.name} item={item} />)}</ul>
-          {sorted.length > PREVIEW && <button type="button" className="text-button steam-ach-toggle" aria-expanded={expanded} aria-controls={listId} onClick={() => setExpanded(!expanded)}>{expanded ? "Show fewer" : `Show all ${sorted.length}`}</button>}
+          {sorted.length > PREVIEW && <button type="button" className="text-button steam-ach-toggle" aria-expanded={expanded} aria-controls={listId} onClick={() => setExpanded(!expanded)}>{expanded ? t("Show fewer") : `${t("Show all")} ${sorted.length}`}</button>}
         </>
       )}
     </section>
