@@ -38,7 +38,7 @@ export function DealsView() {
           <span className="deals-news-mark"><Newspaper size={15} aria-hidden="true" /></span><span className="deals-news-copy"><strong>{item.game}: {item.title}</strong><small>{item.summary || item.feedLabel || "Game announcement"} · {dateLabel(item.date, t)}</small></span><ExternalLinkIcon size={14} aria-hidden="true" />
         </button>)}</div>
       </section>}
-      {!mods.length && !newsItems.length && <div className="deals-empty-inline">{t("No game news yet. News is checked periodically while Mochi is open and visible.")}</div>}
+      {!mods.length && !newsItems.length && <div className="deals-empty-inline">No game news yet. News is checked periodically while Mochi is open and visible.</div>}
     </section>}
   </div>;
 }
