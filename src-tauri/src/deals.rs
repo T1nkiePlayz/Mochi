@@ -104,10 +104,6 @@ fn deal_link(deal_id: &str) -> String { format!("{SHARK_REDIRECT}{deal_id}") }
 /// Deal ids are opaque, already URL-encoded tokens; anything else is dropped rather than put in a link.
 fn valid_deal_id(id: &str) -> bool { !id.is_empty() && id.len() < 200 && id.chars().all(|c| c.is_ascii_alphanumeric() || "%-_.~".contains(c)) }
 
-pub fn parse_epic_free_games(body: &str) -> Result<Vec<EpicFreeGame>, String> {
-    parse_epic_free_games_for_locale(body, "en-US")
-}
-
 fn parse_epic_free_games_for_locale(body: &str, locale: &str) -> Result<Vec<EpicFreeGame>, String> {
     let root: Value = serde_json::from_str(body).map_err(|error| format!("Epic returned unreadable data: {error}"))?;
     let elements = root.pointer("/data/Catalog/searchStore/elements").and_then(Value::as_array).ok_or("Epic response had no games.")?;
@@ -322,7 +318,7 @@ mod tests {
 
     #[test]
     fn epic_keeps_only_free_windows() {
-        let games = parse_epic_free_games(EPIC).unwrap();
+        let games = parse_epic_free_games_for_locale(EPIC, "en-US").unwrap();
         let ids: Vec<_> = games.iter().map(|g| (g.title.as_str(), g.state)).collect();
         assert_eq!(ids, vec![("Free Now Game", "free-now"), ("Next Week Game", "upcoming")]);
         assert_eq!(games[0].url, "https://store.epicgames.com/en-US/p/free-now-game");
@@ -347,8 +343,8 @@ mod tests {
 
     #[test]
     fn epic_rejects_garbage() {
-        assert!(parse_epic_free_games("not json").is_err());
-        assert!(parse_epic_free_games("{}").is_err());
+        assert!(parse_epic_free_games_for_locale("not json", "en-US").is_err());
+        assert!(parse_epic_free_games_for_locale("{}", "en-US").is_err());
     }
 
     #[test]
