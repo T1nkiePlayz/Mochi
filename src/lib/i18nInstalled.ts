@@ -323,3 +323,36 @@ Object.assign(installedMessages, Object.fromEntries(modErrorKeys.map((message, i
   message,
   Object.fromEntries(Object.entries(modErrorValues).map(([locale, values]) => [locale, values[index]])),
 ])));
+
+const tofuStatusKeys = ["Ready","Needs attention","{count} mods","{count} mods installed","No mods installed","{count} files · {size}.","Manual snapshot","Before mod update"] as const;
+const tofuStatusValues: Record<string, string[]> = {
+"ar":["جاهز","يتطلب الانتباه","{count} من التعديلات","تم تثبيت {count} من التعديلات","لا توجد تعديلات مثبتة","{count} ملف · {size}.","لقطة يدوية","قبل تحديث التعديل"],
+"bg":["Готов","Изисква внимание","{count} мода","Инсталирани са {count} мода","Няма инсталирани модове","{count} файла · {size}.","Ръчна снимка","Преди актуализация на мод"],
+"zh-Hans":["就绪","需要注意","{count} 个模组","已安装 {count} 个模组","未安装模组","{count} 个文件 · {size}。","手动快照","模组更新前"],
+"zh-Hant":["就緒","需要注意","{count} 個模組","已安裝 {count} 個模組","尚未安裝模組","{count} 個檔案 · {size}。","手動快照","模組更新前"],
+"cs":["Připraveno","Vyžaduje pozornost","{count} modů","Nainstalováno {count} modů","Nejsou nainstalovány žádné mody","{count} souborů · {size}.","Ruční snímek","Před aktualizací modu"],
+"da":["Klar","Kræver opmærksomhed","{count} mods","{count} mods installeret","Ingen mods installeret","{count} filer · {size}.","Manuelt snapshot","Før modopdatering"],
+"nl":["Gereed","Aandacht vereist","{count} mods","{count} mods geïnstalleerd","Geen mods geïnstalleerd","{count} bestanden · {size}.","Handmatige snapshot","Vóór modupdate"],
+"fi":["Valmis","Vaatii huomiota","{count} modia","{count} modia asennettu","Modeja ei ole asennettu","{count} tiedostoa · {size}.","Manuaalinen tilannekuva","Ennen modin päivitystä"],
+"fr":["Prêt","Attention requise","{count} mods","{count} mods installés","Aucun mod installé","{count} fichiers · {size}.","Instantané manuel","Avant la mise à jour du mod"],
+"de":["Bereit","Aufmerksamkeit erforderlich","{count} Mods","{count} Mods installiert","Keine Mods installiert","{count} Dateien · {size}.","Manueller Snapshot","Vor dem Mod-Update"],
+"el":["Έτοιμο","Χρειάζεται προσοχή","{count} mod","Εγκαταστάθηκαν {count} mod","Δεν έχουν εγκατασταθεί mod","{count} αρχεία · {size}.","Μη αυτόματο στιγμιότυπο","Πριν από την ενημέρωση mod"],
+"hu":["Kész","Figyelmet igényel","{count} mod","{count} mod telepítve","Nincs telepített mod","{count} fájl · {size}.","Manuális pillanatkép","Modfrissítés előtt"],
+"id":["Siap","Perlu perhatian","{count} mod","{count} mod terpasang","Tidak ada mod terpasang","{count} file · {size}.","Snapshot manual","Sebelum pembaruan mod"],
+"it":["Pronto","Richiede attenzione","{count} mod","{count} mod installate","Nessuna mod installata","{count} file · {size}.","Istantanea manuale","Prima dell'aggiornamento della mod"],
+"ja":["準備完了","要確認","{count} 個の Mod","{count} 個の Mod をインストール済み","インストール済みの Mod はありません","{count} 個のファイル · {size}。","手動スナップショット","Mod の更新前"],
+"ko":["준비됨","주의 필요","모드 {count}개","모드 {count}개 설치됨","설치된 모드 없음","파일 {count}개 · {size}.","수동 스냅샷","모드 업데이트 전"],
+"no":["Klar","Krever oppmerksomhet","{count} modder","{count} modder installert","Ingen modder installert","{count} filer · {size}.","Manuelt øyeblikksbilde","Før modoppdatering"],
+"pl":["Gotowe","Wymaga uwagi","{count} modów","Zainstalowano {count} modów","Nie zainstalowano żadnych modów","{count} plików · {size}.","Migawka ręczna","Przed aktualizacją moda"],
+"pt":["Pronto","Requer atenção","{count} mods","{count} mods instalados","Nenhum mod instalado","{count} ficheiros · {size}.","Instantâneo manual","Antes da atualização do mod"],
+"pt-BR":["Pronto","Requer atenção","{count} mods","{count} mods instalados","Nenhum mod instalado","{count} arquivos · {size}.","Snapshot manual","Antes da atualização do mod"],
+"ro":["Pregătit","Necesită atenție","{count} moduri","{count} moduri instalate","Nu există moduri instalate","{count} fișiere · {size}.","Instantaneu manual","Înainte de actualizarea modului"],
+"ru":["Готово","Требует внимания","{count} модов","Установлено модов: {count}","Моды не установлены","{count} файлов · {size}.","Ручной снимок","Перед обновлением мода"],
+"es":["Listo","Requiere atención","{count} mods","{count} mods instalados","No hay mods instalados","{count} archivos · {size}.","Instantánea manual","Antes de actualizar el mod"],
+"sv":["Klar","Kräver uppmärksamhet","{count} moddar","{count} moddar installerade","Inga moddar installerade","{count} filer · {size}.","Manuell ögonblicksbild","Före modduppdatering"],
+"th":["พร้อม","ต้องให้ความสนใจ","ม็อด {count} รายการ","ติดตั้งม็อดแล้ว {count} รายการ","ยังไม่ได้ติดตั้งม็อด","ไฟล์ {count} รายการ · {size}","สแนปช็อตด้วยตนเอง","ก่อนอัปเดตม็อด"],
+"tr":["Hazır","İlgilenilmesi gerekiyor","{count} mod","{count} mod yüklendi","Yüklü mod yok","{count} dosya · {size}.","Manuel anlık görüntü","Mod güncellemesinden önce"],
+"uk":["Готово","Потребує уваги","{count} модів","Установлено модів: {count}","Моди не встановлено","{count} файлів · {size}.","Ручний знімок","Перед оновленням мода"],
+"vi":["Sẵn sàng","Cần chú ý","{count} mod","Đã cài {count} mod","Chưa cài mod nào","{count} tệp · {size}.","Bản chụp thủ công","Trước khi cập nhật mod"],
+};
+Object.assign(installedMessages, Object.fromEntries(tofuStatusKeys.map((message, index) => [message, Object.fromEntries(Object.entries(tofuStatusValues).map(([locale, values]) => [locale, values[index]]))])));
