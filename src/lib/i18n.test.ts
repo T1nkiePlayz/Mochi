@@ -317,4 +317,86 @@ describe("shared UI translations", () => {
     }
   });
 
+
+  it("guards setup, account, provider, cloud-import, and mod-management copy in every locale", () => {
+    const areas = {
+      setup: [
+        "Get started",
+        "Back",
+        "Next",
+        "Finish",
+        "Choose your language.",
+        "Choose your theme.",
+        "Make Mochi comfortable.",
+        "Find your games.",
+        "Preparing your account…",
+        "Importing cloud library…",
+      ],
+      account: [
+        "Your account is ready.",
+        "Connect your Mochi account.",
+        "Your account is connected. Provider keys can be saved securely, and cloud features are ready when you need them.",
+        "Connected",
+        "Sign in",
+        "Sign out",
+        "Verification code",
+        "Two-factor authentication",
+        "Authentication code",
+        "Use another sign-in method",
+      ],
+      providers: [
+        "Checking...",
+        "Reachable",
+        "Not configured on the server",
+        "Offline",
+        "Unavailable",
+        "Turned off",
+        "Could not check your Nexus membership right now.",
+        "Checking your Nexus membership...",
+      ],
+      cloud: [
+        "Cloud sync in progress…",
+        "Cloud sync retrying…",
+        "Cloud sync active",
+        "Cloud sync disabled",
+        "Cloud sync unavailable",
+        "Cloud sync is enabled",
+        "Cloud sync is not enabled",
+        "Mochi is checking your cloud account…",
+        "Your account can sync library metadata.",
+        "Your cloud library is available to import.",
+        "Cloud data access is disabled for this account. Enable it in Settings before importing.",
+        "Check and import cloud data",
+      ],
+      mods: [
+        "Ready",
+        "Manual download",
+        "Unavailable",
+        "Changed",
+        "Will install",
+        "Already installed",
+        "Get it yourself",
+        "Open page",
+        "Cancel this download?",
+        "The download will stop. You can start it again from the mod page.",
+        "Could not restore: {error}",
+        "Could not save the backup: {error}",
+        "No backups yet.",
+      ],
+    } as const;
+
+    for (const [area, messages] of Object.entries(areas)) {
+      for (const { code } of launcherLanguages) {
+        if (code === "en") continue;
+        for (const message of messages) {
+          expect(hasTranslation(message, code), `${area} / ${code}: ${message}`).toBe(true);
+          const translated = translate(message, code);
+          for (const token of message.match(/\\{[^}]+\\}/g) ?? []) {
+            expect(translated, `${area} / ${code}: ${message}`).toContain(token);
+          }
+        }
+      }
+    }
+  });
+
 });
