@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { keepIfEqual } from "../lib/equal";
 import { getDownloads, type DownloadEntry } from "../lib/modrinth";
 import { subscribeNative } from "../lib/nativeEvents";
-import { useTranslation } from "../lib/useTranslation";
+import { translate } from "../lib/i18n";
 
 /** The native side owns download state; poll it while the Downloads page is open or anything is in flight. */
-export function useDownloads(active: boolean, notify: (title: string, message: string, opts?: { group?: string; item?: string }) => void) {
-  const t = useTranslation();
+export function useDownloads(active: boolean, notify: (title: string, message: string, opts?: { group?: string; item?: string }) => void, language: unknown) {
+  const t = (message: string) => translate(message, language);
   const [downloads, setDownloads] = useState<DownloadEntry[]>([]);
   const statuses = useRef(new Map<string, string>());
   const notifyRef = useRef(notify);
