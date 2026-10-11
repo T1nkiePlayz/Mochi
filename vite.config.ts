@@ -32,7 +32,7 @@ layerPlugin.postcss = true;
  * bypass the translation catalogue simply because a component author forgot a wrapper.
  * Source code blocks and editable text are deliberately excluded.
  */
-function jsxLocalizationPlugin() {
+export function jsxLocalizationPlugin() {
   const skippedTextTags = new Set(["CodeBlock", "WritingBlock", "AppBlock", "pre", "code", "textarea", "script", "style", "kbd"]);
   const visibleAttributes = new Set(["aria-label", "aria-description", "aria-valuetext", "title", "placeholder", "alt", "label", "description", "emptyLabel", "confirmLabel", "cancelLabel", "submitLabel", "buttonLabel", "heading", "caption", "tooltip", "helpText"]);
 
