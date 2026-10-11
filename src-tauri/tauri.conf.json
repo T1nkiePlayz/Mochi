@@ -94,7 +94,8 @@
         ],
         "frame-src": [
           "https://www.youtube.com",
-          "https://www.youtube-nocookie.com"
+          "https://www.youtube-nocookie.com",
+          "http://127.0.0.1:*"
         ],
         "object-src": [
           "'none'"
@@ -174,7 +175,8 @@
         ],
         "frame-src": [
           "https://www.youtube.com",
-          "https://www.youtube-nocookie.com"
+          "https://www.youtube-nocookie.com",
+          "http://127.0.0.1:*"
         ],
         "object-src": [
           "'none'"
