@@ -311,6 +311,11 @@ fn configure_gstreamer_plugin_environment() {
                 // Do not mix bundled and host plugins: their GStreamer ABI versions may differ.
                 std::env::set_var("GST_PLUGIN_SYSTEM_PATH_1_0", paths);
             }
+        } else {
+            // AppRun can export a plugin path even when the bundle omitted the directory.
+            // An empty override suppresses GStreamer's normal host plugin search entirely.
+            eprintln!("[mochi media] No bundled GStreamer plugins found; falling back to system discovery.");
+            std::env::remove_var("GST_PLUGIN_SYSTEM_PATH_1_0");
         }
 
         // Prefer the scanner bundled with the same GStreamer build as the AppImage.
@@ -371,6 +376,27 @@ pub fn prepare_linux_webview_environment() {
 
     // Keep GStreamer decoder discovery intact (including AV1 when supported).
     configure_gstreamer_plugin_environment();
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod gstreamer_plugin_discovery_tests {
+    use super::contains_gstreamer_plugin;
+    use std::fs;
+
+    #[test]
+    fn recognizes_plugin_directories_by_shared_object_name() {
+        let directory = std::env::temp_dir().join(format!("mochi-gstreamer-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&directory);
+        fs::create_dir_all(&directory).unwrap();
+
+        fs::write(directory.join("readme.txt"), "not a plugin").unwrap();
+        assert!(!contains_gstreamer_plugin(&directory));
+
+        fs::write(directory.join("libgstexample.so"), "test plugin marker").unwrap();
+        assert!(contains_gstreamer_plugin(&directory));
+
+        fs::remove_dir_all(directory).unwrap();
+    }
 }
 
 /// Whether the OS shows tray / menu-bar icons Mochi can hide its window behind.
