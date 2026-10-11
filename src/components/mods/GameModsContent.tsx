@@ -25,7 +25,6 @@ type Props = { piko: Piko; tofu: Tofu; onUpdate: (patch: Partial<Tofu>) => void 
 
 /** The mod area of a game page: the full Minecraft manager for Minecraft, a mod browser for other games, nothing for launchers. Loaded on demand by GameMods. */
 export function GameModsContent({ piko, tofu, onUpdate }: Props) {
-  const t = useTranslation();
   const support = modSupportOf(piko);
   if (support === "minecraft") return <ModrinthManager piko={piko} tofu={tofu} onUpdate={onUpdate} />;
   if (support === "none") return null;
