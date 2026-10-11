@@ -26,7 +26,7 @@ afterEach(() => { cleanup(); artworkRenders.mockClear(); Object.values(handlers)
 
 describe("GameCard", () => {
   it("re-renders only the cards whose props changed", () => {
-    render(<AppProvider><Grid /></AppProvider>);
+    render(<Grid />);
     expect(artworkRenders).toHaveBeenCalledTimes(3);
     fireEvent.click(screen.getByText("select b"));
     // a loses and b gains the selected state; c is untouched.
