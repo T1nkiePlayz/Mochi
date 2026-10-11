@@ -29,19 +29,19 @@ export function YearInReview({ records }: { records: SessionRecord[] }) {
     .replace("{year}", String(review.year)).replace("{hours}", formatHours(review.totalSeconds)).replace("{games}", String(review.gamesPlayed)).replace("{topGame}", topGame);
   return <div className="year-review">
     <div className="year-review-head">
-      <label>Year <select value={year} onChange={(event) => setChosen(Number(event.target.value))}>{years.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
-      <button type="button" className="secondary-button" onClick={() => void navigator.clipboard?.writeText(summary).catch(() => undefined)}>Copy summary</button>
+      <label>{t("Year")} <select value={year} onChange={(event) => setChosen(Number(event.target.value))}>{years.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+      <button type="button" className="secondary-button" onClick={() => void navigator.clipboard?.writeText(summary).catch(() => undefined)}>{t("Copy summary")}</button>
     </div>
     <p className="year-review-summary">{summary}</p>
     <div className="stats-kpis">
-      <div className="stat-kpi"><span>Time played</span><strong>{formatDuration(review.totalSeconds)}</strong></div>
-      <div className="stat-kpi"><span>Days played</span><strong>{review.daysPlayed}</strong></div>
-      <div className="stat-kpi"><span>Sessions</span><strong>{review.sessions}</strong></div>
-      <div className="stat-kpi"><span>Longest streak</span><strong>{review.longestStreak} {t(review.longestStreak === 1 ? "day" : "days")}</strong></div>
-      {review.busiestMonth && <div className="stat-kpi"><span>Busiest month</span><strong>{t(MONTH_NAMES[review.busiestMonth.month])}</strong><small>{formatHours(review.busiestMonth.seconds)}</small></div>}
-      {review.busiestDay && <div className="stat-kpi"><span>Busiest day</span><strong>{review.busiestDay.day}</strong><small>{formatHours(review.busiestDay.seconds)}</small></div>}
+      <div className="stat-kpi"><span>{t("Time played")}</span><strong>{formatDuration(review.totalSeconds)}</strong></div>
+      <div className="stat-kpi"><span>{t("Days played")}</span><strong>{review.daysPlayed}</strong></div>
+      <div className="stat-kpi"><span>{t("Sessions")}</span><strong>{review.sessions}</strong></div>
+      <div className="stat-kpi"><span>{t("Longest streak")}</span><strong>{review.longestStreak} {t(review.longestStreak === 1 ? "day" : "days")}</strong></div>
+      {review.busiestMonth && <div className="stat-kpi"><span>{t("Busiest month")}</span><strong>{t(MONTH_NAMES[review.busiestMonth.month])}</strong><small>{formatHours(review.busiestMonth.seconds)}</small></div>}
+      {review.busiestDay && <div className="stat-kpi"><span>{t("Busiest day")}</span><strong>{review.busiestDay.day}</strong><small>{formatHours(review.busiestDay.seconds)}</small></div>}
     </div>
     <ol className="year-review-top">{review.topGames.map((game) => <li key={game.gameId}><strong>{game.name}</strong><span>{formatHours(game.seconds)}</span></li>)}</ol>
-    <div className="year-review-months" role="img" aria-label="Hours per month">{review.secondsByMonth.map((seconds, index) => <div key={index} title={`${t(MONTH_NAMES[index])}: ${formatHours(seconds)}`}><span style={{ height: `${Math.round((seconds / peak) * 100)}%` }} /><small>{new Intl.DateTimeFormat(getTranslationLocale(), { month: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2020, index, 1)))}</small></div>)}</div>
+    <div className="year-review-months" role="img" aria-label={t("Hours per month")}>{review.secondsByMonth.map((seconds, index) => <div key={index} title={`${t(MONTH_NAMES[index])}: ${formatHours(seconds)}`}><span style={{ height: `${Math.round((seconds / peak) * 100)}%` }} /><small>{new Intl.DateTimeFormat(getTranslationLocale(), { month: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2020, index, 1)))}</small></div>)}</div>
   </div>;
 }
