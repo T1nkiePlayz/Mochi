@@ -48,7 +48,7 @@ export function TofuShareSection({ piko, tofu, onCreateTofu }: { piko: Piko; tof
         const code = await encodeShortCode(pack);
         if (!code) { setStatus(""); notify(t("Too big for a short code"), t("Use Export file instead.")); return; }
         await navigator.clipboard.writeText(code);
-        setStatus(`Code copied (${code.length} characters). ${describe(pack.mods.length, pack.unknown.length, omitted)}`);
+        setStatus(`${t("Code copied")} (${code.length.toLocaleString()} ${t("characters")}). ${describe(pack.mods.length, pack.unknown.length, omitted)}`);
         notify(t("Code copied"), t("Paste it into Import modpack on another device."));
       }
     } catch (error) { setStatus(""); notify(kind === "file" ? t("Export failed") : t("Could not copy the code"), errorText(error, t("Something went wrong."))); }
