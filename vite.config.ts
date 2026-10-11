@@ -143,6 +143,14 @@ export default defineConfig({
           if (id.includes("/node_modules/@supabase/")) return "supabase";
           if (id.includes("/node_modules/lucide-react/")) return "icons";
           if (id.includes("/node_modules/react-dom/") || id.includes("/node_modules/react/")) return "react";
+          // Keep the translation catalogue modules in separate chunks. They contain all 28
+          // supported locales and otherwise inflate the initial app entry into a multi-MB file.
+          // Each catalogue remains statically available to the synchronous translation lookup,
+          // while Vite can emit/cache them independently instead of bundling them into index.
+          if (id.includes("/src/lib/i18n") && !id.includes(".test.")) {
+            const fileName = path.basename(id, path.extname(id));
+            return "translations-" + fileName;
+          }
           // App code that is large and only needed once a game or mod is involved: keeps the entry chunk under the 500 kB limit.
           if (id.includes("/src/assets/launchers")) return "launcher-art";
           if (id.includes("/src/lib/mods/") || id.includes("/src/lib/nexus") || id.includes("/src/lib/modrinth") || id.includes("/src/lib/curseforge")) return "mods-core";
