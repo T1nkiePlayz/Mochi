@@ -11,6 +11,13 @@ import { useTranslation } from "../lib/useTranslation";
  * Ctrl/Cmd+K command palette: games and actions in one list. ">" shows actions only. Rows are real buttons, so keyboard,
  * D-pad (spatial navigation) and A/B all work: arrows move focus, Enter/A runs, Escape/B closes (via the dialog enhancer).
  */
+function translateCommandTitle(title: string, t: (message: string) => string) {
+  if (title.startsWith("Settings: ")) return `${t("Settings:")} ${t(title.slice("Settings: ".length))}`;
+  if (title.startsWith("Theme: ")) return `${t("Theme:")} ${title.slice("Theme: ".length)}`;
+  if (title.startsWith("Launch profile: ")) return `${t("Launch profile:")} ${title.slice("Launch profile: ".length).replace(" / Default options", ` / ${t("Default options")}`)}`;
+  return t(title);
+}
+
 export function CommandPalette() {
   const { themes, setupOpen, platform } = useAppSelector((app) => ({ themes: app.themeEngine.themes, setupOpen: app.showFirstLaunchSetup, platform: app.platformCapabilities?.platform }), shallowEqual);
   const getApp = useAppGetter();
@@ -91,7 +98,7 @@ function PaletteDialog({ getApp, platform, onClose }: { getApp: ReturnType<typeo
         <button type="button" className="icon-button" aria-label="Close command palette" onClick={onClose}><X size={15} aria-hidden="true" /></button>
       </div>
       <div className="palette-list" id="palette-list" role="listbox" aria-label="Results" ref={list}>
-        {items.map((item) => <button type="button" role="option" aria-selected="false" className="palette-item" data-kind={item.kind} key={item.key} onClick={() => run(item)}><span className="palette-title">{item.kind === "command" ? t(item.title) : item.title}</span><small>{item.kind === "command" ? t(item.subtitle) : item.subtitle}</small></button>)}
+        {items.map((item) => <button type="button" role="option" aria-selected="false" className="palette-item" data-kind={item.kind} key={item.key} onClick={() => run(item)}><span className="palette-title">{item.kind === "command" ? translateCommandTitle(item.title, t) : item.title}</span><small>{item.kind === "command" ? t(item.subtitle) : item.subtitle}</small></button>)}
         {!items.length && <div className="palette-empty" role="status">{raw.trim() ? t("Nothing matches. Try a different word.") : t("No actions available.")}</div>}
       </div>
       <div className="palette-hint" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Enter</kbd> run</span><span><kbd>Esc</kbd> close</span><span><kbd>&gt;</kbd> actions only</span></div>
