@@ -17,7 +17,7 @@
     "build:launcher-art": "node scripts/build-launcher-art.mjs",
     "lint": "eslint src",
     "test": "vitest run && npm run test:metadata && npm run test:mods",
-    "typecheck:deals-tests": "tsc -p tsconfig.test.json --noEmit"
+    "typecheck:deals-tests": "tsc -p tsconfig.deals-test.json --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
