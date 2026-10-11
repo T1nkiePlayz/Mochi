@@ -6,9 +6,9 @@ import type { Piko } from "../../models";
 
 const artworkRenders = vi.fn();
 vi.mock("../GameArtwork", () => ({ GameArtwork: () => { artworkRenders(); return null; } }));
+vi.mock("../../lib/useTranslation", () => ({ useTranslation: () => (message: string) => message }));
 
 import { GameCard } from "./GameCard";
-import { AppProvider } from "../../state/AppContext";
 
 const game = (id: string): Piko => ({ id, name: `Game ${id}`, description: "", accent: "#fff", artwork: "", tofus: [] });
 const games = ["a", "b", "c"].map(game);
