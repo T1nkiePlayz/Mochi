@@ -23,7 +23,10 @@ export function GameArtwork({ className, cacheKey, fallback, name, kind, sourceI
   // <-> artwork swaps during fast scrolling.
   useEffect(() => {
     const onChanged = (event: Event) => {
-      if ((event as CustomEvent<string>).detail === cacheKey) setRevision((value) => value + 1);
+      if ((event as CustomEvent<string>).detail !== cacheKey) return;
+      // An explicit artwork edit/removal is the one case where the current image must be replaced.
+      setCached("");
+      setRevision((value) => value + 1);
     };
     window.addEventListener(ARTWORK_CHANGED_EVENT, onChanged);
     return () => window.removeEventListener(ARTWORK_CHANGED_EVENT, onChanged);
