@@ -54,7 +54,7 @@ export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
   return <div className="tofu-snapshots">
     <div className="tofu-snapshots-actions">
       <button type="button" className="play-button" disabled={busy || !last} onClick={() => last && void restore(last)} title={last ? `Back to ${when(last.createdAt)}` : t("No snapshot yet")}><History size={14}/> {t("Restore last working state")}</button>
-      <button type="button" className="secondary-button" disabled={busy || !tofu.path} onClick={() => void take()}><Camera size={14}/> Take snapshot now</button>
+      <button type="button" className="secondary-button" disabled={busy || !tofu.path} onClick={() => void take()}><Camera size={14}/> {t("Take snapshot now")}</button>
     </div>
     {error && <p className="metadata-note" role="alert">{error}</p>}
     {snapshots === null ? <p className="muted" role="status">{t("Loading snapshots…")}</p>
