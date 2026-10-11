@@ -11,7 +11,7 @@ describe("describeDownload", () => {
     expect(describeDownload(entry({ downloaded: 512, total: 1024 }))).toMatchObject({ percent: 50, state: "active", canCancel: true });
     expect(describeDownload(entry({ downloaded: 2048 }))).toMatchObject({ percent: null, state: "active", detail: "2 KiB downloaded" });
     expect(describeDownload(entry({ status: "completed", downloaded: 10, total: 10 }))).toMatchObject({ percent: 100, state: "done", canCancel: false });
-    expect(describeDownload(entry({ status: "failed", error: "SHA-1 mismatch" }))).toMatchObject({ state: "failed", detail: "SHA-1 mismatch" });
+    expect(describeDownload(entry({ status: "failed", error: "SHA-1 mismatch" }))).toMatchObject({ state: "failed", detail: "Failed: SHA-1 mismatch" });
     expect(describeDownload(entry({ status: "failed" })).detail).toBe("Failed");
     expect(describeDownload(entry({ status: "cancelled" }))).toMatchObject({ state: "cancelled", canCancel: false });
   });
