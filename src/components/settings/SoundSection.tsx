@@ -50,7 +50,7 @@ export function SoundSection() {
   const resolvedName = packName(resolved);
 
   const packOptions = useMemo<Array<SelectOption<string>>>(() => [
-    { value: "theme", label: "Match theme", description: theme ? `${theme.name} suggests ${packName(resolveSoundPack("theme", theme.soundPack, packs))}` : undefined },
+    { value: "theme", label: t("Match theme"), description: theme ? t("{theme} suggests {pack}").replace("{theme}", theme.name).replace("{pack}", packName(resolveSoundPack("theme", theme.soundPack, packs))) : undefined },
     ...BUILTIN_PACKS.map((pack) => ({ value: pack.id, label: pack.name, description: pack.description, group: t("Built in") })),
     ...packs.map((pack) => ({ value: pack.id, label: pack.name, description: pack.description || undefined, group: t("Installed") })),
   ], [packs, theme, t]);
