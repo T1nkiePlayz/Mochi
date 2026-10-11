@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { useApp } from "../../state/AppContext";
 import { hasPin, PIN_PATTERN, removePin, setPin, verifyPin } from "../../lib/accountPin";
 import { askPin } from "../../lib/pinPrompt";
@@ -6,6 +7,7 @@ import { SettingsGroup, ToggleRow } from "./Section";
 
 /** Optional PIN for switching to a saved account. Off by default. */
 export function AccountPinSection() {
+  const t = useTranslation();
   const { behavior, setBehavior, account } = useApp();
   const user = account.user;
   const [version, setVersion] = useState(0);
@@ -16,26 +18,26 @@ export function AccountPinSection() {
     if (!user) return;
     setNote("");
     if (hasPin(user.id)) {
-      const current = await askPin({ title: "Current PIN", message: "Enter the current PIN to change it." });
+      const current = await askPin({ title: t("Current PIN"), message: t("Enter the current PIN to change it.") });
       if (current === null) return;
-      if (!await verifyPin(user.id, current)) { setNote("That is not the current PIN."); return; }
+      if (!await verifyPin(user.id, current)) { setNote(t("That is not the current PIN.")); return; }
     }
-    const first = await askPin({ title: "New PIN", message: "Choose 4 to 8 digits." });
+    const first = await askPin({ title: t("New PIN"), message: t("Choose 4 to 8 digits.") });
     if (first === null || !PIN_PATTERN.test(first)) return;
-    const again = await askPin({ title: "Repeat the PIN", message: "Type it once more to confirm." });
-    if (again !== first) { if (again !== null) setNote("The two PINs did not match."); return; }
+    const again = await askPin({ title: t("Repeat the PIN"), message: t("Type it once more to confirm.") });
+    if (again !== first) { if (again !== null) setNote(t("The two PINs did not match.")); return; }
     await setPin(user.id, first);
     setVersion((value) => value + 1);
-    setNote("PIN saved on this device.");
+    setNote(t("PIN saved on this device."));
   };
   const remove = async () => {
     if (!user) return;
-    const current = await askPin({ title: "Remove PIN", message: "Enter the current PIN to remove it." });
+    const current = await askPin({ title: t("Remove PIN"), message: t("Enter the current PIN to remove it.") });
     if (current === null) return;
     if (!await verifyPin(user.id, current)) { setNote("That is not the current PIN."); return; }
     removePin(user.id);
     setVersion((value) => value + 1);
-    setNote("PIN removed.");
+    setNote(t("PIN removed."));
   };
 
   return <SettingsGroup title="Account PINs" subtitle="Keep other people on this computer out of your account" id="settings-accountpin">
