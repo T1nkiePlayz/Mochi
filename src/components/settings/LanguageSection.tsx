@@ -30,7 +30,7 @@ export function LanguageSection() {
       <div className="language-settings-summary">
         <div className="language-settings-description">
           <strong><Languages size={16} aria-hidden="true" /> {t("Display language")}</strong>
-          <small>Used throughout Mochi wherever translations are available. Game news follows this language automatically.</small>
+          <small>{t("Used throughout Mochi wherever translations are available. Game news follows this language automatically.")}</small>
         </div>
         <div className="language-current" aria-live="polite">
           <span>{t("Display language")}</span>
