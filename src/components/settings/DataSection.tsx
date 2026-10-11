@@ -59,7 +59,7 @@ export function DataSection() {
     setBusy(id); setNote("");
     try {
       const removed = id === "all" ? await clearAllDataSources(lib.library, lib.setLibrary, user?.id) : await clearDataSource(id, lib.library, lib.setLibrary, user?.id);
-      setNote(id === "all" ? "Cleared saved data for every source. Your own artwork was kept." : `Cleared ${dataSources.find((source) => source.id === id)?.label} data${removed ? ` and ${removed} cover${removed === 1 ? "" : "s"}` : ""}.`);
+      setNote(id === "all" ? t("Cleared saved data for every source. Your own artwork was kept.") : t("Cleared {source} data{covers}.").replace("{source}", t(dataSources.find((source) => source.id === id)?.label ?? "data source")).replace("{covers}", removed ? ` ${t("and {count} covers").replace("{count}", String(removed))}` : ""));
     } catch (error) { setNote(error instanceof Error ? error.message : t("Could not clear that data.")); }
     finally { setBusy(null); }
   };
