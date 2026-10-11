@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { keepIfEqual } from "../lib/equal";
 import { getDownloads, type DownloadEntry } from "../lib/modrinth";
 import { subscribeNative } from "../lib/nativeEvents";
@@ -6,7 +6,7 @@ import { translate } from "../lib/i18n";
 
 /** The native side owns download state; poll it while the Downloads page is open or anything is in flight. */
 export function useDownloads(active: boolean, notify: (title: string, message: string, opts?: { group?: string; item?: string }) => void, language: unknown) {
-  const t = (message: string) => translate(message, language);
+  const t = useCallback((message: string) => translate(message, language), [language]);
   const [downloads, setDownloads] = useState<DownloadEntry[]>([]);
   const statuses = useRef(new Map<string, string>());
   const notifyRef = useRef(notify);
@@ -44,7 +44,7 @@ export function useDownloads(active: boolean, notify: (title: string, message: s
     // The native side announces every start, finish and cancel, so the list reacts at once instead of on the next tick.
     const unsubscribe = subscribeNative("mod-download-changed", () => void poll());
     return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener("visibilitychange", tick); unsubscribe(); };
-  }, [active, hasActive, language]);
+  }, [active, hasActive, t]);
 
   return downloads;
 }
