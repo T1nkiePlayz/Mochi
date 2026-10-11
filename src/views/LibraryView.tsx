@@ -223,8 +223,8 @@ export function LibraryView() {
           <span className="continue-copy"><strong>{piko.name}</strong><small>{sessions.isRunning(piko.id) ? "Running now" : `Last played ${formatRelativeTime(entry.lastPlayed)}`} · {formatPlaytime(entry.seconds)} played</small></span>
         </button>
         {sessions.isRunning(piko.id)
-          ? <button type="button" className="icon-button continue-play stop-button" aria-label={`Stop ${piko.name}`} onClick={() => void actions.stopRunningGame(piko)}><X size={15} /></button>
-          : <button type="button" className="icon-button continue-play" aria-label={`Play ${piko.name}`} onClick={() => { lib.selectPiko(piko); void actions.launchGame(piko); }}><MochiIcon name="play" fallback={Play} size={15} fill="currentColor" /></button>}
+          ? <button type="button" className="icon-button continue-play stop-button" aria-label={t("Stop {name}").replace("{name}", piko.name)} onClick={() => void actions.stopRunningGame(piko)}><X size={15} /></button>
+          : <button type="button" className="icon-button continue-play" aria-label={t("Play {name}").replace("{name}", piko.name)} onClick={() => { lib.selectPiko(piko); void actions.launchGame(piko); }}><MochiIcon name="play" fallback={Play} size={15} fill="currentColor" /></button>}
       </article>)}</div>
       {actions.launchError && <p className="metadata-note">{actions.launchError}</p>}
     </section>}
@@ -287,7 +287,7 @@ export function LibraryView() {
       onPlay={(piko) => { lib.selectPiko(piko); void actions.launchGame(piko); }} onClose={() => setShowPicker(false)} />}
     {showDuplicates && <DuplicatesDialog groups={duplicates.groups} onMerge={duplicates.merge} onDismiss={duplicates.dismiss} onClose={() => setShowDuplicates(false)} />}
     {showCollections && <CollectionManager state={collections} counts={collectionCounts} onClose={() => setShowCollections(false)} />}
-    {removal && <ConfirmDialog title={removal.length === 1 ? `Remove ${removal[0].name}?` : `Remove ${removal.length} games?`} message="They are removed from your Mochi library only, with their Tofus, tags and collection memberships. Nothing is uninstalled and no game files are deleted." items={removal.map((game) => game.name)} confirmLabel={removal.length === 1 ? "Remove" : `Remove ${removal.length} games`} danger
+    {removal && <ConfirmDialog title={removal.length === 1 ? t("Remove {name}?").replace("{name}", removal[0].name) : t("Remove {count} games?").replace("{count}", String(removal.length))} message="They are removed from your Mochi library only, with their Tofus, tags and collection memberships. Nothing is uninstalled and no game files are deleted." items={removal.map((game) => game.name)} confirmLabel={removal.length === 1 ? "Remove" : `Remove ${removal.length} games`} danger
       onCancel={() => setRemoval(null)}
       onConfirm={() => { removal.forEach((game) => void removeGameShortcut(game.id).catch(() => {})); lib.removeGames(removal.map((game) => game.id)); setChecked(new Set()); setRemoval(null); }} />}
     <LibraryModSearch query={search} nexusEnabled={credentials.status.nexus} supabase={supabase} />

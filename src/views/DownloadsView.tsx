@@ -25,7 +25,7 @@ export function DownloadsView() {
   const report = (reason: unknown) => setError(reason instanceof Error ? reason.message : typeof reason === "string" ? reason : "That did not work.");
   const clearFinished = async () => {
     const count = downloads.filter((entry) => entry.status !== "downloading").length;
-    if (!count || !await confirmAction({ title: "Clear finished downloads?", message: `Removes ${count} finished download${count === 1 ? "" : "s"} from the list. Downloaded files stay on disk.`, confirmLabel: "Clear" })) return;
+    if (!count || !await confirmAction({ title: t("Clear finished downloads?"), message: `Removes ${count} finished download${count === 1 ? "" : "s"} from the list. Downloaded files stay on disk.`, confirmLabel: "Clear" })) return;
     await clearFinishedDownloads().catch(report);
   };
   return <section className="downloads-page">
@@ -75,8 +75,8 @@ export function DownloadsView() {
                   <small role={row.state === "failed" ? "alert" : undefined}>{row.detail}</small>
                 </div>
                 <div className="download-row-actions">
-                  {row.canCancel && <button type="button" className="icon-button" aria-label={`Cancel ${download.itemName}`} title="Cancel" onClick={() => void cancelModDownload(download.id).catch(report)}><X size={15} /></button>}
-                  {download.dir && <button type="button" className="icon-button" aria-label={`Open folder of ${download.itemName}`} title="Open folder" onClick={() => void openPath(download.dir).catch(report)}><FolderOpen size={15} /></button>}
+                  {row.canCancel && <button type="button" className="icon-button" aria-label={t("Cancel {name}").replace("{name}", download.itemName)} title="Cancel" onClick={() => void cancelModDownload(download.id).catch(report)}><X size={15} /></button>}
+                  {download.dir && <button type="button" className="icon-button" aria-label={t("Open folder of {name}").replace("{name}", download.itemName)} title="Open folder" onClick={() => void openPath(download.dir).catch(report)}><FolderOpen size={15} /></button>}
                 </div>
               </article>;
             })}</div>
