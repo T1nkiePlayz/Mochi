@@ -96,7 +96,7 @@ function ImportSheet({ file, onClose, onDone }: { file: SettingsFile; onClose: (
           const entry = selection[id] ?? { enabled: false, mode: "merge" as ImportMode };
           const summary = plan.summary.find((item) => item.id === id);
           return <div className="settings-import-row" role="listitem" key={id}>
-            <label className="settings-import-check"><input type="checkbox" checked={entry.enabled} onChange={(event) => set(id, { enabled: event.target.checked })} /><span><strong>{sectionInfo[id].label}</strong><small>{sectionInfo[id].detail}</small></span></label>
+            <label className="settings-import-check"><input type="checkbox" checked={entry.enabled} onChange={(event) => set(id, { enabled: event.target.checked })} /><span><strong>{t(sectionInfo[id].label)}</strong><small>{t(sectionInfo[id].detail)}</small></span></label>
             {sectionInfo[id].modes && <Select<ImportMode> label={`${sectionInfo[id].label}: how to apply`} value={entry.mode} options={MODES} disabled={!entry.enabled} onChange={(mode) => set(id, { mode })} align="end" />}
             <small className="settings-import-summary" aria-live="polite">{entry.enabled ? summary?.lines.join(" · ") : t("Skipped")}</small>
           </div>;
