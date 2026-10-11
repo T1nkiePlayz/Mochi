@@ -16,6 +16,7 @@ import { SafeHtml } from "./SafeHtml";
 import type { InstallNotice } from "./useModInstall";
 import { Checkbox } from "../ui/Checkbox";
 import { useTranslation } from "../../lib/useTranslation";
+import { useTranslation } from "../../lib/useTranslation";
 
 type Props = {
   source: ModSource;
@@ -76,7 +77,7 @@ export function ModDetailsModal({ source, item, filter, installLabel, busy, noti
           {item.source === "curseforge" && <CurseforgeCredit />}
         </div>
       </section>
-      {details?.facts.length ? <div className="project-info-grid">{details.facts.map((fact) => <span key={fact.label}><strong>{fact.label}</strong>{fact.value}</span>)}</div> : null}
+      {details?.facts.length ? <div className="project-info-grid">{details.facts.map((fact) => <span key={fact.label}><strong>{t(fact.label)}</strong>{fact.label === "Distribution" && fact.value === "Downloads only on CurseForge" ? t("Downloads only on CurseForge") : fact.value}</span>)}</div> : null}
       {error && <p className="metadata-note" role="alert">{error}</p>}
       <h3 className="project-overview-heading">Description</h3>
       {details === null ? <p className="muted"><RefreshCw size={13} className="spin" /> Loading description...</p> : details.body ? (details.body.kind === "html" ? <SafeHtml html={details.body.text} /> : <Markdown source={details.body.text} />) : <p className="muted">No description was provided.</p>}

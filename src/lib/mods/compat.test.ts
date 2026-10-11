@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Tofu } from "../../models";
-import { bestCompatibility, compatibility, compareGameVersions, groupTofusByLoader, metaFromCurseforgeVersions, parseLoader, tofuTarget } from "./compat";
+import { bestCompatibility, compatibility, compareGameVersions, groupTofusByLoader, metaFromCurseforgeVersions, parseLoader, tofuTarget, translateCompatibilityReason } from "./compat";
 
 const tofu = (over: Partial<Tofu> = {}): Tofu => ({ id: "t", name: "T", version: "1.20.1", runtime: "Native", mods: 0, status: "Ready", loader: "fabric", ...over });
 
