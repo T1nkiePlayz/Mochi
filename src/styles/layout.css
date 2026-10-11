@@ -41,7 +41,7 @@
   [data-mochi-shell="top"] .main-content, [data-mochi-shell="bottom"] .main-content { height: auto !important; }
   /* Keep top-bar content layered over the page instead of exposing the scroll pane's rectangular edge. */
   [data-mochi-shell="top"] .main-content { background: transparent !important; }
-  [data-mochi-shell="top"] .sidebar { position: relative; z-index: 5; }\n  /* In top-bar themes, let the page scroll beneath transparent navigation instead of painting a hard pane edge. */\n  [data-mochi-shell="top"] .app-shell { position: relative; }\n  [data-mochi-shell="top"] .main-content { background: transparent !important; }\n  [data-mochi-shell="top"] .sidebar { z-index: 5; }
+  [data-mochi-shell="top"] .sidebar { position: relative; z-index: 5; }
   .content { min-width: 0 !important; width: 100% !important; margin-inline: auto !important; max-width: max(var(--mochi-content-max-width, 1160px), min(72vw, 2200px)) !important; }
   .content > * { min-width: 0; max-width: 100%; }
   .content img, .content video, .content canvas { max-width: 100%; }
