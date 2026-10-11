@@ -137,7 +137,8 @@ code, .mfa-setup-card code, .theme-config-path code, .setting-location-value cod
   border-color: var(--mochi-card-hover-border); background: var(--mochi-card-hover-background);
   box-shadow: inset 0 0 0 1px var(--mochi-card-hover-border), var(--mochi-card-shadow);
 }
-/* Keep the card hitbox stationary on hover. Moving the card itself can make pointer hover enter/leave repeatedly near its edges. */
+/* Lift transformed cards above neighbours so hover controls don't flicker as cards overlap. */
+.game-card:hover { transform: translateY(-2px); z-index: 2; }
 .game-card-art, .game-details-cover, .game-trailer-poster { background-color: var(--mochi-surface-raised); }
 .game-card { overflow: hidden; }
 
