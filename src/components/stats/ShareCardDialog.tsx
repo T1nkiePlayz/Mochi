@@ -46,19 +46,19 @@ export function ShareCardDialog({ records, library, unlocked, totalAchievements,
   const onCopy = () => run(async (blob) => ((await copyPng(blob)) === "copied" ? t("Copied to the clipboard.") : t("Copying images is not supported here. Use Save PNG instead.")));
 
   return (
-    <ModalShell label="Share card" className="modal share-card-modal" onClose={onClose}>
-      <div className="modal-header"><div><p className="eyebrow">Experimental</p><h2>Share card</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button></div>
+    <ModalShell label={t("Share card")} className="modal share-card-modal" onClose={onClose}>
+      <div className="modal-header"><div><p className="eyebrow">{t("Experimental")}</p><h2>{t("Share card")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
       <div className="share-card-body">
-        <img className="share-card-preview" src={svgDataUrl(svg)} alt="Preview of the share card" />
+        <img className="share-card-preview" src={svgDataUrl(svg)} alt={t("Preview of the share card")} />
         <div className="share-card-controls">
-          <fieldset className="share-card-fieldset"><legend>Include</legend>
+          <fieldset className="share-card-fieldset"><legend>{t("Include")}</legend>
             {TOGGLES.map(([key, label]) => <label key={key} className="check-row"><input type="checkbox" checked={options[key]} onChange={(event) => toggle(key, event.target.checked)} /> {t(label)}</label>)}
           </fieldset>
-          <Segmented label="Period" value={options.period} options={[{ value: "all", label: t("All time") }, { value: "30", label: t("Last 30 days") }]} onChange={(period: SharePeriod) => setOptions((current) => ({ ...current, period }))} />
-          <p className="stats-muted">Built on this device. Nothing is uploaded; only what is ticked appears on the image.</p>
+          <Segmented label={t("Period")} value={options.period} options={[{ value: "all", label: t("All time") }, { value: "30", label: t("Last 30 days") }]} onChange={(period: SharePeriod) => setOptions((current) => ({ ...current, period }))} />
+          <p className="stats-muted">{t("Built on this device. Nothing is uploaded; only what is ticked appears on the image.")}</p>
           <div className="share-card-actions">
-            <button type="button" className="primary-button" disabled={busy} onClick={() => void onSave()}><Download size={14} /> Save PNG</button>
-            <button type="button" className="secondary-button" disabled={busy} onClick={() => void onCopy()}><Copy size={14} /> Copy image</button>
+            <button type="button" className="primary-button" disabled={busy} onClick={() => void onSave()}><Download size={14} /> {t("Save PNG")}</button>
+            <button type="button" className="secondary-button" disabled={busy} onClick={() => void onCopy()}><Copy size={14} /> {t("Copy image")}</button>
           </div>
           <p className="metadata-note" role="status">{message}</p>
         </div>
