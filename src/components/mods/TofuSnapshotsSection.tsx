@@ -62,8 +62,8 @@ export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
       : <ul className="tofu-snapshot-list" aria-label={t("Snapshots")}>{snapshots.map((snapshot) => <li key={snapshot.id} className="tofu-snapshot">
         <div className="tofu-snapshot-text"><strong>{snapshot.reason || t("Snapshot")}</strong><small>{when(snapshot.createdAt)} · {snapshot.files} mod{snapshot.files === 1 ? "" : "s"} · {formatBytes(snapshot.size)}{snapshot.isRestore ? " · safety copy" : ""}</small></div>
         <div className="tofu-snapshot-buttons">
-          <button type="button" className="secondary-button" disabled={busy} aria-label={`Restore the snapshot from ${when(snapshot.createdAt)}`} onClick={() => void restore(snapshot)}><RotateCcw size={14}/> Restore</button>
-          <button type="button" className="icon-button" disabled={busy} aria-label={`Delete the snapshot from ${when(snapshot.createdAt)}`} title={t("Delete")} onClick={() => void remove(snapshot)}><Trash2 size={14}/></button>
+          <button type="button" className="secondary-button" disabled={busy} aria-label={t("Restore the snapshot from {date}").replace("{date}", when(snapshot.createdAt))} onClick={() => void restore(snapshot)}><RotateCcw size={14}/> {t("Restore")}</button>
+          <button type="button" className="icon-button" disabled={busy} aria-label={t("Delete the snapshot from {date}").replace("{date}", when(snapshot.createdAt))} title={t("Delete")} onClick={() => void remove(snapshot)}><Trash2 size={14}/></button>
         </div>
       </li>)}</ul>}
   </div>;

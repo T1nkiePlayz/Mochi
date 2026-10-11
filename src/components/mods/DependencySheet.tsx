@@ -41,7 +41,7 @@ export function DependencySheet({ prompt }: { prompt: DependencyPrompt }) {
     <div className="modal-header"><div><p className="eyebrow">{t("Install")} {item.name}</p><h2>{t("Dependencies")}</h2></div><button type="button" className="icon-button" aria-label={t("Cancel")} onClick={() => answer(null)}><X size={17} /></button></div>
     <div className="dep-body">
     <p className="modal-description">{item.name} needs {plan.entries.length === 1 ? "another mod" : `${plan.entries.length || "no other"} mods`} to work. Checked ones are downloaded first, with the same checks as any download.</p>
-    {plan.warnings.map((warning) => <p key={`${warning.declaredBy}>${warning.name}`} className="metadata-note dep-warning" role="alert"><AlertTriangle size={13} aria-hidden="true" /> {warning.declaredBy} is marked incompatible with {warning.installedTitle}, which is installed. <button type="button" className="secondary-button dep-link" onClick={() => open(warning.pageUrl)}>{t("View")}</button></p>)}
+    {plan.warnings.map((warning) => <p key={`${warning.declaredBy}>${warning.name}`} className="metadata-note dep-warning" role="alert"><AlertTriangle size={13} aria-hidden="true" /> {t("{name} is marked incompatible with {installed}, which is installed.").replace("{name}", warning.declaredBy).replace("{installed}", warning.installedTitle)} <button type="button" className="secondary-button dep-link" onClick={() => open(warning.pageUrl)}>{t("View")}</button></p>)}
     <ul className="dep-list" aria-label={t("Mod and dependencies")}>
       <li className="dep-row"><Checkbox checked disabled onChange={() => undefined} label={item.name} description={t("The mod you chose")} /><span className="compat-badge dep-badge dep-install"><CheckCircle2 size={12} aria-hidden="true" />{t("Will install")}</span></li>
       {installable.map((entry) => <Row key={entry.key} entry={entry} checked={!skipped.has(entry.key)} onChange={(on) => toggle(entry.key, on)} t={t} />)}
@@ -57,7 +57,7 @@ export function DependencySheet({ prompt }: { prompt: DependencyPrompt }) {
     <div className="mod-download-actions dep-actions">
       <button type="button" className="play-button" onClick={() => answer(chosen)} data-autofocus>{t("Install")} {total}</button>
       <button type="button" className="secondary-button" onClick={() => answer([])}>{t("Install without dependencies")}</button>
-      <button type="button" className="secondary-button" onClick={() => answer(null)}>Cancel</button>
+      <button type="button" className="secondary-button" onClick={() => answer(null)}>{t("Cancel")}</button>
     </div>
   </ModalShell>;
 }

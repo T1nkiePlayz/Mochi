@@ -19,7 +19,7 @@ export const minecraftTabs: Array<{ id: ModrinthProjectType; label: string; titl
 ];
 
 const loaderOptions: SelectOption[] = [
-  { value: "", label: "Any loader", icon: <Layers size={14} /> },
+  { value: "", label: t("Any loader"), icon: <Layers size={14} /> },
   { value: "fabric", label: "Fabric", icon: <Shirt size={14} /> },
   { value: "forge", label: "Forge", icon: <Hammer size={14} /> },
   { value: "neoforge", label: "NeoForge", icon: <Flame size={14} /> },
@@ -76,7 +76,7 @@ export function MinecraftBrowser({ category, onCategory, tofuVersion, busy, onVi
   const pickVersion = (version: string) => { setGameVersion(version); recordRecentVersion(version); };
 
   return <>
-    <div className="discover-tabs" role="tablist" aria-label={t("Minecraft content categories")}>
+    <div className="discover-tabs" role="tablist" aria-label={t(t("Minecraft content categories"))}>
       {minecraftTabs.map((item) => <button key={item.id} className={category === item.id ? "active" : ""} type="button" role="tab" aria-selected={category === item.id} onClick={() => onCategory(item.id)}>{t(item.label)}</button>)}
     </div>
     <div className={`discover-controls minecraft-controls${category === "mod" ? "" : " no-loader"}`}>
@@ -90,7 +90,7 @@ export function MinecraftBrowser({ category, onCategory, tofuVersion, busy, onVi
       <div className="discover-section-heading"><div><h3>{t(tab.title)}</h3><p>{t(tab.description)}</p></div><span aria-live="polite">{feed.loading ? t("Loading...") : t("{shown} of {total} projects").replace("{shown}", feed.items.length.toLocaleString()).replace("{total}", feed.total.toLocaleString())}</span></div>
       {feed.loading && <div className="discover-grid" aria-busy="true"><ProjectSkeletons count={9} /></div>}
       {!feed.loading && feed.items.length > 0 && <div className="discover-grid">{feed.items.map((project) => <ProjectCard key={project.project_id} project={project} badge={projectTypeLabel(project.project_type)} chooseLabel={t("Choose Tofu instance")} busy={busy} onView={view} onChoose={choose} />)}</div>}
-      {feed.error && <div className="discover-error" role="alert"><p>{feed.items.length ? t("Could not load more projects.") : t("Could not load projects from Modrinth.")}</p><small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> Retry</button></div>}
+      {feed.error && <div className="discover-error" role="alert"><p>{feed.items.length ? t("Could not load more projects.") : t("Could not load projects from Modrinth.")}</p><small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> {t("Retry")}</button></div>}
       {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty">
         <p>{t("No {type} projects match{filters}.").replace("{type}", t(projectTypeLabel(category)).toLowerCase()).replace("{filters}", filtered ? t(" these filters") : "")}</p>
         {filtered && <button type="button" className="secondary-button" onClick={() => { setSearch(""); setDebounced(""); setGameVersion(""); setLoader(""); }}>{t("Clear filters")}</button>}

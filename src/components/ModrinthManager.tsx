@@ -133,19 +133,19 @@ export function ModrinthManager({ piko, tofu, onUpdate }: Props) {
   const openTarget = tofu.gameDir && !tofu.path ? tofu.gameDir : tofu.path;
 
   return <section className="modrinth-manager">
-    <div className="tofu-workspace-header"><div><p className="eyebrow">Tofu workspace</p><h3>{tofu.name}{target.loader || target.gameVersion ? <small className="workspace-meta"> {[target.loader ? loaderLabels[target.loader] : "", target.gameVersion ?? ""].filter(Boolean).join(" ")}</small> : null}</h3><p className="workspace-path">{tofu.path ? describeFolders(tofu) : t("Choose a folder to enable content management.")}</p></div>
-      <div className="tofu-workspace-actions">{openTarget && <button type="button" className="secondary-button" onClick={() => void openPath(openTarget).catch((error) => setMessage(errorText(error, "Unable to open the folder.")))}><FolderOpen size={14}/> {t("Open")}</button>}<button type="button" className="secondary-button" onClick={() => setFolderOpen(true)}><Settings2 size={14}/> {t("Mod folders")}</button></div></div>
-    {auto.state === "applied" && auto.applied && <p className="metadata-note" role="status">Found {auto.applied.label}. Mochi will manage mods in {auto.applied.modsDir}.{auto.others > 0 && <> {auto.others} other place{auto.others === 1 ? "" : "s"} found. <button type="button" className="text-button" onClick={() => setFolderOpen(true)}>Change</button></>}</p>}
-    {auto.state === "missing" && <p className="metadata-note" role="status">Mochi could not find a Minecraft folder. <button type="button" className="text-button" onClick={() => setFolderOpen(true)}>Choose the folder</button></p>}
+    <div className="tofu-workspace-header"><div><p className="eyebrow">Tofu workspace</p><h3>{tofu.name}{target.loader || target.gameVersion ? <small className="workspace-meta"> {[target.loader ? loaderLabels[target.loader] : "", target.gameVersion ?? ""].filter(Boolean).join(" ")}</small> : null}</h3><p className="workspace-path">{tofu.path ? describeFolders(tofu) : t(t("Choose a folder to enable content management."))}</p></div>
+      <div className="tofu-workspace-actions">{openTarget && <button type="button" className="secondary-button" onClick={() => void openPath(openTarget).catch((error) => setMessage(errorText(error, t("Unable to open the folder."))))}><FolderOpen size={14}/> {t("Open")}</button>}<button type="button" className="secondary-button" onClick={() => setFolderOpen(true)}><Settings2 size={14}/> {t("Mod folders")}</button></div></div>
+    {auto.state === "applied" && auto.applied && <p className="metadata-note" role="status">Found {t("{label}. Mochi will manage mods in {path}.").replace("{label}", auto.applied.label).replace("{path}", auto.applied.modsDir)}{auto.others > 0 && <> {t("{count} other places found.").replace("{count}", String(auto.others))} <button type="button" className="text-button" onClick={() => setFolderOpen(true)}>{t("Change")}</button></>}</p>}
+    {auto.state === "missing" && <p className="metadata-note" role="status">{t("Mochi could not find a Minecraft folder.")} <button type="button" className="text-button" onClick={() => setFolderOpen(true)}>{t("Choose the folder")}</button></p>}
     <div className="workspace-tabs">{tabs.map((item) => <button type="button" key={item.id} className={tab === item.id ? "active" : ""} aria-pressed={tab === item.id} onClick={() => setTab(item.id)}>{item.id === "updates" ? updatesLabel : item.label}</button>)}</div>
     <ModSyncStatus tofuId={tofu.id} />
     {switching.message && <p className="metadata-note" role="status">{switching.message}</p>}
     {message && <p className="metadata-note" role="status">{message}</p>}
     <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />
     {install.prompt && <DependencySheet prompt={install.prompt} />}
-    {pendingDownloads > 0 && <p className="metadata-note">{pendingDownloads} download{pendingDownloads === 1 ? "" : "s"} in progress. See Downloads.</p>}
-    {isSearchTab && enabledSources.length > 1 && <div className="mod-source-switch" role="group" aria-label="Mod source">
-      <span>Source</span>{enabledSources.map((id) => <button key={id} type="button" className={effective === id ? "active" : ""} aria-pressed={effective === id} onClick={() => setProvider(id as "modrinth" | "curseforge")}>{id === "modrinth" ? "Modrinth" : "CurseForge"}</button>)}
+    {pendingDownloads > 0 && <p className="metadata-note">{t("{count} downloads in progress. See Downloads.").replace("{count}", String(pendingDownloads))}</p>}
+    {isSearchTab && enabledSources.length > 1 && <div className="mod-source-switch" role="group" aria-label={t("Mod source")}>
+      <span>{t("Source")}</span>{enabledSources.map((id) => <button key={id} type="button" className={effective === id ? "active" : ""} aria-pressed={effective === id} onClick={() => setProvider(id as "modrinth" | "curseforge")}>{id === "modrinth" ? "Modrinth" : "CurseForge"}</button>)}
     </div>}
     {isSearchTab && effective === "curseforge" && curseforgeSource ? <>
       <div className="modrinth-controls"><input className="compact-input" value={gameVersion} onChange={(e) => setGameVersion(e.target.value)} placeholder={t("Game version")} aria-label={t("Game version")} />{tab === "mod" && <Select className="compact-select" value={loader} onChange={setLoader} options={loaderOptions} label={t("Loader")} searchable={false} />}</div>
@@ -168,6 +168,7 @@ export function ModrinthManager({ piko, tofu, onUpdate }: Props) {
 
 /** Install button of a Modrinth search result, following the mod's state in the Tofu (downloading, downloaded). */
 function ModrinthInstallButton({ project, state, busy, onInstall }: { project: ModrinthProject; state: InstallState; busy: boolean; onInstall: () => void }) {
+  const t = useTranslation();
   if (state.kind === "downloading") return <button type="button" className="secondary-button mod-action is-downloading" disabled aria-busy="true"><RefreshCw size={13} className="spin" /> {t("Downloading")}{state.progress != null ? ` ${Math.round(state.progress * 100)}%` : "…"}</button>;
   if (state.kind === "installed" || state.kind === "update") return <button type="button" className="secondary-button mod-action is-installed" disabled aria-label={`${project.title} is downloaded`}><Check size={13} /> {state.kind === "update" ? t("Update in Updates tab") : t("Downloaded")}</button>;
   return <button type="button" className="secondary-button mod-action" onClick={onInstall} disabled={busy} aria-label={`Install ${project.title}`}><Download size={13} /> {t("Install")}</button>;

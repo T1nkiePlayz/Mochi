@@ -61,7 +61,7 @@ export function GameDiscoverTab({ game, pikos, supabase, settings, below, refres
   return <section className="discover-section">
     <div className="discover-section-heading"><div>
       <h3>{game.name} {t("mods")}</h3>
-      <p>{sources.primary ? `From ${choice === "auto" && sources.extras.length ? "CurseForge, and Nexus Mods when CurseForge has few" : primaryLabel}.` : "No mod site is available for this game right now."}{sources.primary === "nexus" ? " Free Nexus accounts download the file on the Nexus site." : ""}</p>
+      <p>{sources.primary ? `From ${choice === "auto" && sources.extras.length ? "CurseForge, and Nexus Mods when CurseForge has few" : primaryLabel}.` : t("No mod site is available for this game right now.")}{sources.primary === "nexus" ? " Free Nexus accounts download the file on the Nexus site." : ""}</p>
     </div></div>
 
     {sources.choices.length > 1 && <div className="mod-source-switch" role="group" aria-label={t("Mod source for this game")}><span>{t("Source")}</span>
@@ -70,7 +70,7 @@ export function GameDiscoverTab({ game, pikos, supabase, settings, below, refres
     {info?.extended && <p className="metadata-note discover-extend-note" role="status">{info.note}{info.failed.length ? ` ${info.failed.join(", ")} did not answer.` : ""}</p>}
     {fewOnCurseforge && game.cf && <p className="metadata-note discover-limit-note" role="note">
       CurseForge shares only {info!.primaryTotal.toLocaleString()} {info!.primaryTotal === 1 ? "project" : "projects"} of this game with apps; browse the rest on curseforge.com.{" "}
-      <button type="button" className="text-button" onClick={() => link(`${CF_SITE}/${game.cf!.slug}`)}><ExternalLink size={12} /> Open {game.name} on CurseForge</button>
+      <button type="button" className="text-button" onClick={() => link(`${CF_SITE}/${game.cf!.slug}`)}><ExternalLink size={12} /> {t("Open {name} on CurseForge").replace("{name}", game.name)}</button>
     </p>}
     {source
       ? <ModsBrowser key={`${game.key}:${choice}:${refreshKey}:${below}:${sources.extras.join()}`} source={source} target={{ kind: "choose", pikos, ecosystem, gameName: game.name }} noun="mods" />

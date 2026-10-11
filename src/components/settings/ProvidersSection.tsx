@@ -48,6 +48,7 @@ function CurseforgeCard({ enabled, t }: { enabled: boolean; t: (message: string)
 }
 
 function NexusMembership() {
+  const t = useTranslation();
   const [status, setStatus] = useState<NexusStatus | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -57,9 +58,9 @@ function NexusMembership() {
     return () => { cancelled = true; };
   }, []);
   return <small className="metadata-note" role="status">
-    {failed ? "{t("Could not check your Nexus membership right now.")}" : !status ? "{t("Checking your Nexus membership...")}" : status.premium
-      ? `Nexus Premium${status.name ? ` (${status.name})` : ""}: Mochi can download files directly into a Tofu.`
-      : `Free Nexus account${status.name ? ` (${status.name})` : ""}: you can browse mods and Mochi opens the Nexus page for each file, because Nexus only gives direct download links to Premium members.`}
+    {failed ? t("Could not check your Nexus membership right now.") : !status ? t("Checking your Nexus membership...") : status.premium
+      ? t("Nexus Premium{account}: Mochi can download files directly into a Tofu.").replace("{account}", status.name ? ` (${status.name})` : "")
+      : t("Free Nexus account{account}: you can browse mods and Mochi opens the Nexus page for each file, because Nexus only gives direct download links to Premium members.").replace("{account}", status.name ? ` (${status.name})` : "")}
     {" "}{t("Nexus is used only for games that are not on CurseForge.")}
   </small>;
 }
@@ -78,20 +79,20 @@ export function ProvidersSection() {
       <Select label={t("Metadata source")} value={behavior.metadataProvider} options={sourceOptions.map((option) => ({ ...option, label: t(option.label), description: t(option.description) }))} onChange={(metadataProvider) => setBehavior((current) => ({ ...current, metadataProvider }))} />
     </div>
     <small className="metadata-note settings-note" role="status">
-      Ready: {[user && c.status.igdb ? "IGDB" : null, user && c.status.steamgriddb ? "SteamGridDB" : null, "Steam Store (Steam games, no key needed)"].filter(Boolean).join(", ")}.
-      {" IGDB and SteamGridDB keys are kept on your Mochi account (never on this device), so those two need you to be signed in. The Steam Store and CurseForge work signed out, and each source works without the others."}
-      {!online && " You are offline: Mochi keeps showing saved details and artwork and will refresh when you reconnect."}
+      {t("Ready: {sources}.").replace("{sources}", [user && c.status.igdb ? "IGDB" : null, user && c.status.steamgriddb ? "SteamGridDB" : null, t("Steam Store (Steam games, no key needed)")].filter(Boolean).join(", "))}
+      {t("IGDB and SteamGridDB keys are kept on your Mochi account (never on this device), so those two need you to be signed in. The Steam Store and CurseForge work signed out, and each source works without the others.")}
+      {!online && ` ${t("You are offline: Mochi keeps showing saved details and artwork and will refresh when you reconnect.")}` }
     </small>
     <div className="provider-grid">
       <div className="provider-credential-card">
-        <div className="provider-credential-heading"><div><strong>{t("IGDB")}</strong><small>{t("{t("Descriptions, genres, release dates, screenshots and trailers. Needs a free Twitch Client ID and Secret.")}")}</small></div>{state(c.status.igdb)}</div>
+        <div className="provider-credential-heading"><div><strong>{t("IGDB")}</strong><small>{t("Descriptions, genres, release dates, screenshots and trailers. Needs a free Twitch Client ID and Secret.")}</small></div>{state(c.status.igdb)}</div>
         {user ? <>
           <div className="provider-fields"><input value={c.igdbClientId} onChange={(event) => c.setIgdbClientId(event.target.value)} placeholder={t("Twitch Client ID")} aria-label={t("Twitch Client ID")} autoComplete="off" /><input type="password" value={c.igdbClientSecret} onChange={(event) => c.setIgdbClientSecret(event.target.value)} placeholder={t("Twitch Client Secret")} aria-label={t("Twitch Client Secret")} autoComplete="off" /></div>
           <button className="secondary-button" onClick={() => void c.save("igdb")} disabled={c.busy !== null}>{c.busy === "igdb" ? t("Saving...") : t("Save IGDB securely")}</button>{removeButton("igdb", c.status.igdb)}
         </> : signIn}
       </div>
       <div className="provider-credential-card">
-        <div className="provider-credential-heading"><div><strong>{t("SteamGridDB")}</strong><small>{t("{t("Community cover art, heroes, logos and icons. Needs a free API key from your SteamGridDB preferences page.")}")}</small></div>{state(c.status.steamgriddb)}</div>
+        <div className="provider-credential-heading"><div><strong>{t("SteamGridDB")}</strong><small>{t("Community cover art, heroes, logos and icons. Needs a free API key from your SteamGridDB preferences page.")}</small></div>{state(c.status.steamgriddb)}</div>
         {user ? <>
           <input type="password" value={c.steamGridDbKey} maxLength={256} onChange={(event) => c.setSteamGridDbKey(event.target.value)} placeholder={c.status.steamgriddb ? t("Enter a new key to replace the saved key") : t("Paste your SteamGridDB API key")} aria-label={t("SteamGridDB API key")} autoComplete="off" spellCheck={false} />
           <button className="secondary-button" onClick={() => void c.save("steamgriddb")} disabled={c.busy !== null || Boolean(validateSteamGridDbKey(c.steamGridDbKey))}>{c.busy === "steamgriddb" ? t("Saving...") : t("Save SteamGridDB securely")}</button>{removeButton("steamgriddb", c.status.steamgriddb)}

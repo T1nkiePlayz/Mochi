@@ -13,7 +13,7 @@ import { useTranslation } from "../../lib/useTranslation";
 
 type Props = { piko: Piko; tofu: Tofu; onUpdate: (patch: Partial<Tofu>) => void; /** The Tofu settings form already has its own game version field. */ showVersion?: boolean };
 
-const errorText = (error: unknown) => (error instanceof Error ? error.message : typeof error === "string" ? error : "That did not work.");
+const errorText = (error: unknown) => (error instanceof Error ? error.message : typeof error === "string" ? error : t("That did not work."));
 
 /**
  * Where a Tofu's mods live and where the game loads them from: detected locations (Minecraft launchers, per-game table),
@@ -45,7 +45,7 @@ export function ModFolderEditor({ piko, tofu, onUpdate, showVersion = true }: Pr
     catch (error) { setMessage(errorText(error)); }
   };
   const pick = async () => {
-    const dir = await open({ directory: true, multiple: false, title: minecraft ? "Choose the folder Minecraft loads mods from" : "Choose the folder the game loads mods from" });
+    const dir = await open({ directory: true, multiple: false, title: minecraft ? t("Choose the folder Minecraft loads mods from") : t("Choose the folder the game loads mods from") });
     if (typeof dir === "string") onUpdate(applyManualFolder(tofu, dir));
   };
   const toggleSeparate = async (on: boolean) => {
@@ -56,7 +56,7 @@ export function ModFolderEditor({ piko, tofu, onUpdate, showVersion = true }: Pr
       onUpdate(patch);
       if (on && tofu.gameDir) {
         const copied = await importModsFromFolder(tofu.gameDir, patch.path as string);
-        setMessage(copied ? `Copied ${copied} mod${copied === 1 ? "" : "s"} from the game folder into this Tofu. The originals were left where they are.` : "This Tofu now keeps its own mods.");
+        setMessage(copied ? `Copied ${copied} mod${copied === 1 ? "" : "s"} from the game folder into this Tofu. The originals were left where they are.` : t("This Tofu now keeps its own mods."));
       }
     } catch (error) { setMessage(errorText(error)); } finally { setBusy(false); }
   };

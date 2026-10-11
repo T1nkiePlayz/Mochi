@@ -76,18 +76,18 @@ export function ImportModpackModal({ piko, tofu, onCreateTofu, onClose }: Props)
 
   const rows = plan ? (showAll ? plan.items : plan.items.slice(0, SHOWN)) : [];
   const toInstall = plan ? downloadable(plan.items, includeDisabled).length : 0;
-  const link = (item: PlanItem) => item.availability.status === "manual" && item.availability.pageUrl ? <button type="button" className="secondary-button" onClick={() => void openExternalUrl(item.availability.status === "manual" ? item.availability.pageUrl ?? "" : "").catch(() => undefined)}><ExternalLink size={11}/> Open page</button> : null;
+  const link = (item: PlanItem) => item.availability.status === "manual" && item.availability.pageUrl ? <button type="button" className="secondary-button" onClick={() => void openExternalUrl(item.availability.status === "manual" ? item.availability.pageUrl ?? "" : "").catch(() => undefined)}><ExternalLink size={11}/> {t("Open page")}</button> : null;
 
   return <ModalShell label={t("Import modpack")} className="modal import-pack-modal" onClose={onClose}>
     <div className="modal-header"><div><p className="eyebrow">{piko.name}</p><h2>{t("Import modpack")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17}/></button></div>
     <div className="import-pack-body">
       {report ? <div className="import-pack-report" role="status">
-        <p><strong>{report.queued}</strong> download{report.queued === 1 ? "" : "s"} queued. Each file is checked against its checksum; failures show in Downloads.</p>
+        <p>{t("{count} downloads queued. Each file is checked against its checksum; failures show in Downloads.").replace("{count}", String(report.queued))}</p>
         {report.failed.length > 0 && <ReportList title={t("Could not start")} rows={report.failed.map((entry) => `${titleFromFile(entry.item.mod.fileName)}: ${entry.error}`)} />}
         {report.changed.length > 0 && <ReportList title={t("Changed since the pack was made (skipped)")} rows={report.changed.map((item) => item.mod.fileName)} />}
         {report.manual.length > 0 && <ReportList title={t("Download these by hand")} rows={report.manual.map((item) => item.mod.fileName)} />}
         {report.unavailable.length > 0 && <ReportList title={t("Not available")} rows={report.unavailable.map((item) => `${item.mod.fileName}: ${item.availability.status === "unavailable" ? item.availability.reason : ""}`)} />}
-        {report.unknownFiles > 0 && <p className="muted">{report.unknownFiles} file{report.unknownFiles === 1 ? " was" : "s were"} not matched to any site when the pack was made. They are not installed.</p>}
+        {report.unknownFiles > 0 && <p className="muted">{t("{count} files were not matched to any site when the pack was made. They are not installed.").replace("{count}", String(report.unknownFiles))}</p>}
       </div> : <>
         <fieldset className="import-pack-target"><legend>{t("Install into")}</legend>
           <label><input type="radio" name="pack-target" checked={intoNew} disabled={!tofu.gameDir || Boolean(plan) || progress !== null} onChange={() => setIntoNew(true)} /> {t("A new Tofu")}{!tofu.gameDir && ` (${t("choose a game folder first")})`}</label>
@@ -95,7 +95,7 @@ export function ImportModpackModal({ piko, tofu, onCreateTofu, onClose }: Props)
         </fieldset>
         {!pack && <div className="import-pack-input">
           <button type="button" className="secondary-button" onClick={() => void chooseFile()}><FileUp size={14}/> {t("Choose .mochipack file…")}</button>
-          <label className="mochi-field"><span className="mochi-field-label">{t("Or paste a code")}</span><textarea rows={3} value={text} placeholder="mochipack:…" spellCheck={false} onChange={(event) => setText(event.target.value)} /></label>
+          <label className="mochi-field"><span className="mochi-field-label">{t("Or paste a code")}</span><textarea rows={3} value={text} placeholder={t("mochipack:…")} spellCheck={false} onChange={(event) => setText(event.target.value)} /></label>
           <button type="button" className="play-button" disabled={!text.trim()} onClick={() => void load(text)}>{t("Preview")}</button>
         </div>}
         {error && <p className="metadata-note import-pack-error" role="alert">{error}</p>}
@@ -105,21 +105,21 @@ export function ImportModpackModal({ piko, tofu, onCreateTofu, onClose }: Props)
           {progress && <p className="muted" role="status">{t("Checking availability…")} {progress[0]} / {progress[1]}</p>}
           {plan && summary && <>
             <p className="import-pack-summary" role="status">{summary.ready} ready · {summary.manual} manual · {summary.unavailable} unavailable{summary.changed ? ` · ${summary.changed} changed` : ""}{plan.alreadyInstalled.length ? ` · ${plan.alreadyInstalled.length} already installed` : ""}{pack.unknown.length ? ` · ${pack.unknown.length} unidentified in pack` : ""}</p>
-            {pack.mods.some((mod) => !mod.enabled) && <Checkbox checked={includeDisabled} onChange={setIncludeDisabled} label={t("Also install mods that were switched off in the pack")} description="They are installed switched on." />}
-            <ul className="import-pack-list" aria-label="Mods in the pack">{rows.map((item) => <li key={`${item.mod.provider}:${item.mod.projectId}:${item.mod.fileId}`} className={`import-pack-row is-${item.availability.status}`}>
+            {pack.mods.some((mod) => !mod.enabled) && <Checkbox checked={includeDisabled} onChange={setIncludeDisabled} label={t("Also install mods that were switched off in the pack")} description={t("They are installed switched on.")} />}
+            <ul className="import-pack-list" aria-label={t("Mods in the pack")}>{rows.map((item) => <li key={`${item.mod.provider}:${item.mod.projectId}:${item.mod.fileId}`} className={`import-pack-row is-${item.availability.status}`}>
               <div className="import-pack-row-text"><strong>{titleFromFile(item.mod.fileName)}</strong><small>{item.mod.fileName} · {PROVIDER[item.mod.provider]}{item.mod.folder !== "mods" ? ` · ${item.mod.folder}` : ""}{!item.mod.enabled ? " · off in pack" : ""}</small>
                 {item.availability.status !== "ready" && <small className="import-pack-reason">{item.availability.reason}</small>}</div>
               <span className={`chip import-pack-status is-${item.availability.status}`}>{t(LABEL[item.availability.status])}</span>{link(item)}
             </li>)}</ul>
-            {plan.items.length > SHOWN && !showAll && <button type="button" className="secondary-button" onClick={() => setShowAll(true)}>Show all {plan.items.length}</button>}
+            {plan.items.length > SHOWN && !showAll && <button type="button" className="secondary-button" onClick={() => setShowAll(true)}>{t("Show all {count}").replace("{count}", String(plan.items.length))}</button>}
           </>}
         </>}
       </>}
     </div>
     <div className="tofu-manager-actions">
-      {report ? <button type="button" className="play-button" onClick={onClose}>Done</button> : <>
-        <button type="button" className="secondary-button" onClick={onClose}>Cancel</button>
-        <button type="button" className="play-button" disabled={!plan || busy || toInstall === 0} onClick={() => void start()}>{busy ? "Starting…" : `Import ${toInstall} mod${toInstall === 1 ? "" : "s"}`}</button>
+      {report ? <button type="button" className="play-button" onClick={onClose}>{t("Done")}</button> : <>
+        <button type="button" className="secondary-button" onClick={onClose}>{t("Cancel")}</button>
+        <button type="button" className="play-button" disabled={!plan || busy || toInstall === 0} onClick={() => void start()}>{busy ? t("Starting…") : t("Import {count} mods").replace("{count}", String(toInstall))}</button>
       </>}
     </div>
   </ModalShell>;

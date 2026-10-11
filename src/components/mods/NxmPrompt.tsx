@@ -89,12 +89,12 @@ function NxmDialog({ url, onClose }: { url: string; onClose: () => void }) {
   return <ModalShell label={t("Nexus Mods download")} className="modal nxm-modal" onClose={onClose}>
     <div className="modal-header"><div><p className="eyebrow">{t("Nexus Mods · Mod Manager Download")}</p><h2>{title || (link ? `Mod ${link.modId}`  : t("Download link"))}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
     {!link ? <p className="metadata-note" role="alert">{parsed.ok ? "" : parsed.reason}</p>
-      : !ready ? <div className="nxm-body"><p className="metadata-note" role="status">{!client ? "Mochi cloud features are not available in this build, so Nexus Mods downloads cannot start." : !account.user ? "Sign in to Mochi and save your Nexus Mods API key to download from this link." : "Save your Nexus Mods API key in Settings to download from this link."}</p>
+      : !ready ? <div className="nxm-body"><p className="metadata-note" role="status">{!client ? t("Mochi cloud features are not available in this build, so Nexus Mods downloads cannot start.") : !account.user ? t("Sign in to Mochi and save your Nexus Mods API key to download from this link.") : t("Save your Nexus Mods API key in Settings to download from this link.")}</p>
         {client && <button type="button" className="secondary-button" onClick={() => { setActiveNav("Settings"); onClose(); }}>{t("Settings")}</button>}</div>
       : <div className="nxm-body">
         <p className="muted">{t("File")} {link.fileId} {t("of mod")} {link.modId} {t("for")} <strong>{link.gameDomain}</strong>. {t("Pick the Tofu it goes into.")}</p>
         {options.length ? <label className="mochi-field"><span className="mochi-field-label">{t("Tofu")}</span><Select value={choice} onChange={setChoice} options={options} label={t("Tofu")} searchable={options.length > 8} /></label>
-          : <p className="metadata-note" role="status">No game in your library can take Nexus mods for {link.gameDomain}. Add the game first.</p>}
+          : <p className="metadata-note" role="status">{t("No game in your library can take Nexus mods for {domain}. Add the game first.").replace("{domain}", link.gameDomain)}</p>}
         {message && <p className={`metadata-note ${state === "error" ? "is-error" : ""}`} role={state === "error" ? "alert" : "status"}>{message}</p>}
         <div className="nxm-actions">
           <button type="button" className="secondary-button" onClick={onClose}>{state === "done" ? t("Close") : t("Cancel")}</button>

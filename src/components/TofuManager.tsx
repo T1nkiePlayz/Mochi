@@ -99,22 +99,22 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
   const commitName = () => { const name = draftName.trim(); if (name && name !== selected.name) patch({ name }); else setDraftName(selected.name); };
 
   return <div className="modal-backdrop" onClick={onClose}><div className="modal tofu-manager-modal" role="dialog" aria-modal="true" aria-labelledby="tofu-manager-title" onClick={(event) => event.stopPropagation()}>
-    <div className="modal-header"><div><p className="eyebrow">{piko.name}</p><h2 id="tofu-manager-title">Manage Tofus</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17}/></button></div>
+    <div className="modal-header"><div><p className="eyebrow">{piko.name}</p><h2 id="tofu-manager-title">{t("Manage Tofus")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17}/></button></div>
     <div className="tofu-manager-body">
-      <div className="tofu-manager-list" role="listbox" aria-label="Tofus">
+      <div className="tofu-manager-list" role="listbox" aria-label={t("Tofus")}>
         {tofus.map((tofu) => <button type="button" role="option" aria-selected={tofu.id === selected.id} key={tofu.id} className={"tofu-manager-item " + (tofu.id === selected.id ? "active" : "")} onClick={() => onSelect(tofu.id)}><strong>{tofu.name}</strong><small>{tofu.version} · {tofu.runtime}{tofu.mods ? ` · ${tofu.mods} mods` : ""}</small></button>)}
-        <button type="button" className="tofu-manager-item add" onClick={create}><Plus size={14}/> New Tofu</button>
+        <button type="button" className="tofu-manager-item add" onClick={create}><Plus size={14}/> {t("New Tofu")}</button>
       </div>
       <div className="tofu-manager-form tofu-settings">
         <Section title={t("General")}>
-          <Field label="Name"><input value={draftName} maxLength={60} onChange={(e) => setDraftName(e.target.value)} onBlur={commitName} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} /></Field>
+          <Field label={t("Name")}><input value={draftName} maxLength={60} onChange={(e) => setDraftName(e.target.value)} onBlur={commitName} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} /></Field>
           <div className="tofu-settings-row">
             <Field label={t("Game version")}><input value={selected.version} maxLength={40} onChange={(e) => patch({ version: e.target.value })} /></Field>
-            <Field label="Runtime label"><input value={selected.runtime} maxLength={40} onChange={(e) => patch({ runtime: e.target.value })} /></Field>
+            <Field label={t("Runtime label")}><input value={selected.runtime} maxLength={40} onChange={(e) => patch({ runtime: e.target.value })} /></Field>
           </div>
         </Section>
 
-        {piko.id === "minecraft" && selected.launchTarget && <Section title="Modpack" description="The Modrinth or CurseForge modpack this instance came from.">
+        {piko.id === "minecraft" && selected.launchTarget && <Section title={t("Modpack")} description={t("The Modrinth or CurseForge modpack this instance came from.")}>
           <LinkedPackSection tofu={selected} onPatch={(change) => onChange(tofus.map((tofu) => tofu.id === selected.id ? change(tofu) : tofu))} />
         </Section>}
 
@@ -129,7 +129,7 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
         </Section>}
 
         {selected.path && <Section title={t("Mod check")} description={t("Looks for duplicates, mods for another game version or loader, and missing required mods. Works offline from what Mochi saved when the mods were installed.")}>
-          <div className="conflict-check-row"><button type="button" className="secondary-button" disabled={checking} onClick={() => void runCheck()}><ShieldCheck size={14}/> {checking ? "Checking…" : "Check mods"}</button>
+          <div className="conflict-check-row"><button type="button" className="secondary-button" disabled={checking} onClick={() => void runCheck()}><ShieldCheck size={14}/> {checking ? t("Checking…") : t("Check mods")}</button>
             {checked?.tofuId === selected.id && <span className="conflict-message" role="status" aria-live="polite">{summarizeIssues(checked.issues)}</span>}</div>
           {checked?.tofuId === selected.id && checked.issues.length > 0 && <ConflictIssues issues={checked.issues} tofu={selected} onFixed={runCheck} />}
           <Checkbox checked={selected.skipModCheck !== true} onChange={(on) => patch({ skipModCheck: on ? undefined : true })} label="Check mods before launching" description={t("Shows a warning with fixes first. You can always launch anyway.")} />
@@ -140,19 +140,19 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
         </Section>
 
         <Section title={t("Launch settings")}>
-          {compat.length > 0 && <Field label={t("Compatibility runtime")} hint="Used for Windows programs (.exe). Native games ignore it."><Select value={launch.runtime ?? ""} onChange={(value) => patchLaunch({ runtime: value || undefined })} label="Compatibility runtime" searchable={false} options={[{ value: "", label: "Automatic" }, ...compat.map((runtime) => ({ value: runtime.id, label: runtime.name }))]} /></Field>}
-          {wrappers.length > 0 && <div className="tofu-settings-wrappers" role="group" aria-label="Wrappers"><span className="mochi-field-label">{t("Wrappers")}</span>
+          {compat.length > 0 && <Field label={t("Compatibility runtime")} hint={t("Used for Windows programs (.exe). Native games ignore it.")}><Select value={launch.runtime ?? ""} onChange={(value) => patchLaunch({ runtime: value || undefined })} label={t("Compatibility runtime")} searchable={false} options={[{ value: "", label: t("Automatic") }, ...compat.map((runtime) => ({ value: runtime.id, label: runtime.name }))]} /></Field>}
+          {wrappers.length > 0 && <div className="tofu-settings-wrappers" role="group" aria-label={t("Wrappers")}><span className="mochi-field-label">{t("Wrappers")}</span>
             {wrappers.map((wrapper) => <Switch key={wrapper.id} label={wrapper.name} checked={launch.wrappers.includes(wrapper.id)} onChange={(on) => patchLaunch({ wrappers: on ? [...launch.wrappers, wrapper.id] : launch.wrappers.filter((id) => id !== wrapper.id) })} />)}
           </div>}
-          <Field label={t("Launch arguments")}><input value={launch.args} placeholder="--fullscreen -windowed" onChange={(e) => patchLaunch({ args: e.target.value })} /></Field>
-          <Field label={t("Environment variables")} hint="One KEY=value per line."><textarea rows={3} value={launch.env} placeholder={"DXVK_HUD=fps\nMANGOHUD=1"} onChange={(e) => patchLaunch({ env: e.target.value })} spellCheck={false} /></Field>
+          <Field label={t("Launch arguments")}><input value={launch.args} placeholder={t("--fullscreen -windowed")} onChange={(e) => patchLaunch({ args: e.target.value })} /></Field>
+          <Field label={t("Environment variables")} hint={t("One KEY=value per line.")}><textarea rows={3} value={launch.env} placeholder={"DXVK_HUD=fps\nMANGOHUD=1"} onChange={(e) => patchLaunch({ env: e.target.value })} spellCheck={false} /></Field>
           <div className="mochi-field"><span className="mochi-field-label" id="tofu-workdir-label">{t("Working directory")}</span>
-            <div className="tofu-settings-inline"><input aria-labelledby="tofu-workdir-label" value={launch.workingDir ?? ""} placeholder="Default" onChange={(e) => patchLaunch({ workingDir: e.target.value || undefined })} />
+            <div className="tofu-settings-inline"><input aria-labelledby="tofu-workdir-label" value={launch.workingDir ?? ""} placeholder={t("Default")} onChange={(e) => patchLaunch({ workingDir: e.target.value || undefined })} />
               <button type="button" className="secondary-button" aria-label={t("Choose working directory")} onClick={() => void chooseFolder((path) => patchLaunch({ workingDir: path }), t("Choose working directory"))}><FolderOpen size={14}/></button></div>
           </div>
         </Section>
       </div>
     </div>
-    <div className="tofu-manager-actions"><button type="button" className="secondary-button" onClick={duplicate}><Copy size={14}/> {t("Duplicate")}</button><button type="button" className="secondary-button danger-outline" onClick={() => void remove()} disabled={tofus.length < 2}><Trash2 size={14}/> Delete</button><button type="button" className="play-button" onClick={onClose}>Done</button></div>
+    <div className="tofu-manager-actions"><button type="button" className="secondary-button" onClick={duplicate}><Copy size={14}/> {t("Duplicate")}</button><button type="button" className="secondary-button danger-outline" onClick={() => void remove()} disabled={tofus.length < 2}><Trash2 size={14}/> {t("Delete")}</button><button type="button" className="play-button" onClick={onClose}>{t("Done")}</button></div>
   </div></div>;
 }
