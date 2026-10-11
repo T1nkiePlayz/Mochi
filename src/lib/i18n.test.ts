@@ -118,7 +118,7 @@ describe("shared UI translations", () => {
     expect(translated).toContain("{query}");
     const rendered = translated.replace("{query}", "Stardew Valley");
     expect(rendered).toBe("Aucun jeu ne correspond à « Stardew Valley ».");
-    expect(rendered).not.toMatch(/\\{[^}]+\\}/);
+    expect(rendered).not.toMatch(/\{[^}]+\}/);
     expect(translate("A dynamic provider error", "fr")).toBe("A dynamic provider error");
   });
 
