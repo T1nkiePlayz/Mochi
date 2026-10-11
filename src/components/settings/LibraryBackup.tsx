@@ -37,7 +37,7 @@ export function LibraryBackup() {
     finally { setBusy(false); }
   };
   const chooseFolder = async () => {
-    const picked = await open({ title: "Choose backup folder", directory: true, multiple: false });
+    const picked = await open({ title: t("Choose backup folder"), directory: true, multiple: false });
     if (typeof picked === "string") setSchedule({ folder: picked, enabled: true, lastAt: 0 });
   };
 
@@ -50,8 +50,8 @@ export function LibraryBackup() {
     <div className="setting-row setting-location-row"><span><strong>{t("Automatic backup")}</strong><small>{t("While Mochi is open, saves a copy to a folder when one is due and keeps the newest few.")}</small></span>
       <span className="setting-location-value">
         <label><input type="checkbox" checked={schedule.enabled} disabled={!schedule.folder} onChange={(event) => setSchedule({ enabled: event.target.checked })} /> On</label>
-        <select aria-label={t("How often")} value={schedule.everyDays} onChange={(event) => setSchedule({ everyDays: Number(event.target.value) as BackupSchedule["everyDays"] })}><option value={1}>Daily</option><option value={7}>Weekly</option><option value={30}>Monthly</option></select>
-        <select aria-label={t("Copies to keep")} value={schedule.keep} onChange={(event) => setSchedule({ keep: Number(event.target.value) })}>{[3, 5, 10, 20].map((count) => <option key={count} value={count}>Keep {count}</option>)}</select>
+        <select aria-label={t("How often")} value={schedule.everyDays} onChange={(event) => setSchedule({ everyDays: Number(event.target.value) as BackupSchedule["everyDays"] })}><option value={1}>{t("Daily")}</option><option value={7}>{t("Weekly")}</option><option value={30}>{t("Monthly")}</option></select>
+        <select aria-label={t("Copies to keep")} value={schedule.keep} onChange={(event) => setSchedule({ keep: Number(event.target.value) })}>{[3, 5, 10, 20].map((count) => <option key={count} value={count}>{t("Keep {count}").replace("{count}", String(count))}</option>)}</select>
         <code>{schedule.folder || "No folder chosen"}</code>
         <button type="button" className="secondary-button" onClick={() => void chooseFolder()}><FolderOpen size={14} aria-hidden="true" /> Folder…</button>
       </span></div>

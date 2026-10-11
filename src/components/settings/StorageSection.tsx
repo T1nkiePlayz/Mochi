@@ -45,7 +45,7 @@ export function StorageSection() {
   const clear = async (action: (typeof clearActions)[number]) => {
     const present = formatBytes(sizeOf(action.category));
     const scope = action.needsAge ? ` older than ${ageLabel(age)}` : "";
-    const ok = await confirmAction({ title: `${action.label}?`, danger: action.danger, confirmLabel: "Remove", message: `${action.detail} This cannot be undone. Game installs and your own mod folders are never touched here.`,
+    const ok = await confirmAction({ title: t("{label}?").replace("{label}", t(action.label)), danger: action.danger, confirmLabel: t("Remove"), message: t("{detail} This cannot be undone. Game installs and your own mod folders are never touched here.").replace("{detail}", t(action.detail)),
       items: [`${categoryLabels[action.category]}${scope}${started && totals.measured ? ` (up to ${present} now)` : ""}`] });
     if (!ok) return;
     setBusy(action.kind); setNote("");
@@ -57,7 +57,7 @@ export function StorageSection() {
     finally { setBusy(null); }
   };
   const clearAll = async () => {
-    const ok = await confirmAction({ title: "Clear all unused data?", danger: true, confirmLabel: "Clear everything", message: `Removes every cache and leftover Mochi keeps: artwork cache, unfinished downloads, game logs, and rollback copies and snapshots older than ${ageLabel(age)}. This cannot be undone. Game installs, your own mod folders, covers you picked yourself and anything in use are never touched.`,
+    const ok = await confirmAction({ title: t("Clear all unused data?"), danger: true, confirmLabel: t("Clear everything"), message: `Removes every cache and leftover Mochi keeps: artwork cache, unfinished downloads, game logs, and rollback copies and snapshots older than ${ageLabel(age)}. This cannot be undone. Game installs, your own mod folders, covers you picked yourself and anything in use are never touched.`,
       items: clearActions.map((action) => action.needsAge ? `${action.label} (older than ${ageLabel(age)})` : action.label) });
     if (!ok) return;
     setBusy("all"); setNote("");
@@ -83,7 +83,7 @@ export function StorageSection() {
     </div>
     {error && <p className="metadata-note settings-note" role="alert">{error}</p>}
     {started && <>
-      <div className="storage-bar" role="img" aria-label={`Storage by kind: ${totals.categories.map((item) => `${categoryLabels[item.category]} ${formatBytes(item.bytes)}`).join(", ") || "nothing measured yet"}`}>
+      <div className="storage-bar" role="img" aria-label={t("Storage by kind: {items}").replace("{items}", totals.categories.map((item) => `${t(categoryLabels[item.category])} ${formatBytes(item.bytes)}`).join(", ") || t("nothing measured yet"))}>
         {totals.categories.map((item) => <span key={item.category} className={`storage-segment storage-cat-${item.category}`} style={{ flexGrow: item.bytes }} title={`${categoryLabels[item.category]}: ${formatBytes(item.bytes)}`} />)}
       </div>
       <ul className="storage-legend" aria-label={t("Kinds")}>
@@ -93,7 +93,7 @@ export function StorageSection() {
         <table className="storage-table">
           <thead><tr>
             {columns.map((column) => <th key={column.key} scope="col" aria-sort={sort.key === column.key ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
-              <button type="button" className="storage-sort" onClick={() => sortBy(column.key)}>{column.label}{sort.key === column.key && (sort.dir === "asc" ? <ArrowUp size={12} aria-hidden="true" /> : <ArrowDown size={12} aria-hidden="true" />)}</button>
+              <button type="button" className="storage-sort" onClick={() => sortBy(column.key)}>{t(column.label)}{sort.key === column.key && (sort.dir === "asc" ? <ArrowUp size={12} aria-hidden="true" /> : <ArrowDown size={12} aria-hidden="true" />)}</button>
             </th>)}
             <th scope="col" className="storage-share-col">{t("Share")}</th>
             <th scope="col"><span className="visually-hidden">{t("Actions")}</span></th>
@@ -101,24 +101,24 @@ export function StorageSection() {
           <tbody>
             {locations.length === 0 && [0, 1, 2, 3].map((index) => <tr key={index}><td colSpan={5}><span className="storage-skeleton storage-skeleton-row" /></td></tr>)}
             {shown.map((row) => <tr key={row.key}>
-              <td className="storage-name"><strong>{row.name}</strong>{row.inside && <small>Included in {categoryLabels[row.inside]}</small>}</td>
+              <td className="storage-name"><strong>{row.name}</strong>{row.inside && <small>{t("Included in {category}").replace("{category}", t(categoryLabels[row.inside]))}</small>}</td>
               <td>{categoryLabels[row.category]}</td>
               <td><SizeCell row={row} max={max} t={t} /></td>
               <td className="storage-share-col">{row.inside ? "" : formatShare(row.measurement && !row.measurement.error ? row.measurement.bytes : null, totals.total)}</td>
-              <td className="storage-row-actions">{row.path && <button type="button" className="secondary-button storage-open" onClick={() => open(row.path!)} aria-label={`Open folder of ${row.name}`}><FolderOpen size={14} aria-hidden="true" />Open</button>}</td>
+              <td className="storage-row-actions">{row.path && <button type="button" className="secondary-button storage-open" onClick={() => open(row.path!)} aria-label={t("Open folder of {name}").replace("{name}", row.name)}><FolderOpen size={14} aria-hidden="true" />{t("Open")}</button>}</td>
             </tr>)}
           </tbody>
         </table>
       </div>
-      {hidden > 0 && <div className="storage-more"><button type="button" className="secondary-button" onClick={() => setLimit((current) => current + PAGE)}>Show {Math.min(PAGE, hidden)} more ({hidden.toLocaleString()} hidden)</button></div>}
+      {hidden > 0 && <div className="storage-more"><button type="button" className="secondary-button" onClick={() => setLimit((current) => current + PAGE)}>{t("Show {count} more ({hidden} hidden)").replace("{count}", String(Math.min(PAGE, hidden))).replace("{hidden}", hidden.toLocaleString())}</button></div>}
       <small className="metadata-note storage-note">Game installs and mod folders can only be opened here, never deleted. Sizes of nested folders can overlap, and very large folders are measured up to a limit.</small>
     </>}
-    <div className="setting-row storage-clear-head"><span><strong>Free up space</strong><small>Only Mochi's own caches and leftovers can be removed here.</small></span><Select value={String(age)} onChange={(value) => setAge(Number(value))} options={ageOption} label={t("Age for old items")} className="storage-age" /></div>
-    <div className="setting-row"><span><strong>Clear all unused data</strong><small>Runs every action below at once, using the age chosen above.</small></span>
-      <button type="button" className="secondary-button danger-outline" disabled={busy !== null || scanning} onClick={() => void clearAll()}>{busy === "all" ? "Clearing…" : "Clear all"}</button></div>
+    <div className="setting-row storage-clear-head"><span><strong>{t("Free up space")}</strong><small>Only Mochi's own caches and leftovers can be removed here.</small></span><Select value={String(age)} onChange={(value) => setAge(Number(value))} options={ageOption} label={t("Age for old items")} className="storage-age" /></div>
+    <div className="setting-row"><span><strong>{t("Clear all unused data")}</strong><small>{t("Runs every action below at once, using the age chosen above.")}</small></span>
+      <button type="button" className="secondary-button danger-outline" disabled={busy !== null || scanning} onClick={() => void clearAll()}>{busy === "all" ? t("Clearing…") : t("Clear all")}</button></div>
     {clearActions.map((action) => <div className="setting-row" key={action.kind}>
-      <span><strong>{action.label}{action.needsAge ? ` (older than ${ageLabel(age)})` : ""}</strong><small>{action.detail}</small></span>
-      <button type="button" className="secondary-button danger-outline" disabled={busy !== null || scanning} onClick={() => void clear(action)}>{busy === action.kind ? "Removing…" : "Remove"}</button>
+      <span><strong>{t(action.label)}{action.needsAge ? ` (${t("older than")} ${ageLabel(age)})` : ""}</strong><small>{t(action.detail)}</small></span>
+      <button type="button" className="secondary-button danger-outline" disabled={busy !== null || scanning} onClick={() => void clear(action)}>{busy === action.kind ? t("Removing…") : t("Remove")}</button>
     </div>)}
     {note && <p className="metadata-note settings-note" role="status">{note}</p>}
   </SettingsGroup>;
