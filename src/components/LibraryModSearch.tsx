@@ -44,7 +44,7 @@ export function LibraryModSearch({ query, nexusEnabled, supabase }: { query: str
     <div className="library-mod-results">
       {modrinth.map(project => <article className="library-mod-result" key={`modrinth-${project.project_id}`}>
         <RemoteImage src={project.icon_url} alt="" loading="lazy" fallback={<span className="library-mod-fallback"><Package size={17}/></span>}/>
-        <span><strong>{project.title}</strong><small>Modrinth · {(project.downloads ?? 0).toLocaleString()} downloads</small><small>{project.description}</small></span>
+        <span><strong>{project.title}</strong><small>Modrinth · {(project.downloads ?? 0).toLocaleString(getTranslationLocale())} downloads</small><small>{project.description}</small></span>
         <button className="icon-button" aria-label={`Open ${project.title} on Modrinth`} onClick={() => void openExternalUrl(`https://modrinth.com/mod/${encodeURIComponent(project.slug)}`).catch(() => undefined)}><ExternalLink size={14}/></button>
       </article>)}
       {nexus.map(({ game, mod }) => <article className="library-mod-result" key={`nexus-${game.domainName}-${mod.id}`}>
