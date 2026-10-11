@@ -9,6 +9,7 @@ import { readSteamConfig, sortSteamAchievements, steamPercent, writeSteamConfig,
 
 const PREVIEW = 8;
 const dateText = (seconds: number) => new Date(seconds * 1000).toLocaleDateString(getTranslationLocale(), { day: "numeric", month: "short", year: "numeric" });
+const numberText = (value: number) => value.toLocaleString(getTranslationLocale());
 
 function Row({ item }: { item: SteamAchievement }) {
   const t = useTranslation();
@@ -50,13 +51,13 @@ export function SteamAchievements({ appid, gameName }: { appid: number; gameName
   return (
     <section className="game-details-section steam-ach" aria-labelledby={headingId} aria-busy={loading}>
       <div className="discover-section-heading">
-        <div><h3 id={headingId}>{t("Steam achievements")}</h3><p>{data ? `${data.unlocked} ${t("of")} ${data.total} ${t("unlocked")}` : "Your progress in this game, read from your Steam profile."}</p></div>
+        <div><h3 id={headingId}>{t("Steam achievements")}</h3><p>{data ? `${numberText(data.unlocked)} ${t("of")} ${numberText(data.total)} ${t("unlocked")}` : "Your progress in this game, read from your Steam profile."}</p></div>
         <button type="button" className="text-button" onClick={() => void refresh()} disabled={loading || !online} aria-label={`${t("Refresh achievements")}: ${gameName}`}><RefreshCw size={13} className={loading ? "spin" : undefined} /> {loading ? t("Loading…") : t("Refresh")}</button>
       </div>
       {data && (
         <div className="steam-ach-summary">
-          <div className="stat-meter wide" role="progressbar" aria-label={`${gameName} Steam achievements unlocked`} aria-valuemin={0} aria-valuemax={data.total} aria-valuenow={data.unlocked} aria-valuetext={`${data.unlocked} ${t("of")} ${data.total}, ${percent} ${t("percent")}`}><i style={{ width: `${percent}%` }} /></div>
-          <span>{percent}%</span>
+          <div className="stat-meter wide" role="progressbar" aria-label={`${gameName} Steam achievements unlocked`} aria-valuemin={0} aria-valuemax={data.total} aria-valuenow={data.unlocked} aria-valuetext={`${numberText(data.unlocked)} ${t("of")} ${numberText(data.total)}, ${numberText(percent)} ${t("percent")}`}><i style={{ width: `${percent}%` }} /></div>
+          <span>{numberText(percent)}%</span>
         </div>
       )}
       {loading && !data && <p className="stats-muted" role="status">{t("Loading achievements…")}</p>}
@@ -78,7 +79,7 @@ export function SteamAchievements({ appid, gameName }: { appid: number; gameName
       {data && (
         <>
           <ul className="steam-ach-list" id={listId}>{shown.map((item) => <Row key={item.apiName || item.name} item={item} />)}</ul>
-          {sorted.length > PREVIEW && <button type="button" className="text-button steam-ach-toggle" aria-expanded={expanded} aria-controls={listId} onClick={() => setExpanded(!expanded)}>{expanded ? t("Show fewer") : `${t("Show all")} ${sorted.length}`}</button>}
+          {sorted.length > PREVIEW && <button type="button" className="text-button steam-ach-toggle" aria-expanded={expanded} aria-controls={listId} onClick={() => setExpanded(!expanded)}>{expanded ? t("Show fewer") : `${t("Show all")} ${numberText(sorted.length)}`}</button>}
         </>
       )}
     </section>
