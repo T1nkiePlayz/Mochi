@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { groupVersions, latestRelease, pinnedVersions, type GameVersion } from "../../lib/gameVersions";
 import { usePopoverPlacement } from "../ui/usePopoverPlacement";
@@ -21,7 +22,8 @@ type Props = {
  * Minecraft version dropdown: search, "All versions", "Latest release", recent/most-used
  * pins, releases grouped by major line, and snapshots only when asked for.
  */
-export function VersionPicker({ value, onChange, versions, loading, label = "Minecraft version", className = "" }: Props) {
+export function VersionPicker({
+  const t = useTranslation(); value, onChange, versions, loading, label = "Minecraft version", className = "" }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [snapshots, setSnapshots] = useState(false);
@@ -78,10 +80,10 @@ export function VersionPicker({ value, onChange, versions, loading, label = "Min
       <ChevronDown size={15} className="mochi-select-chevron" aria-hidden="true" />
     </button>
     {open && <div className="mochi-select-popover version-picker-popover" style={{ maxHeight }}>
-      <label className="mochi-select-search"><Search size={14} aria-hidden="true" /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search versions…" aria-label="Search Minecraft versions" /></label>
-      <label className="version-picker-switch"><input type="checkbox" role="switch" checked={snapshots} onChange={(event) => setSnapshots(event.target.checked)} /><span>Include snapshots</span><small>Pre-releases, release candidates, April Fools</small></label>
+      <label className="mochi-select-search"><Search size={14} aria-hidden="true" /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Search versions…")} aria-label={t("Search Minecraft versions")} /></label>
+      <label className="version-picker-switch"><input type="checkbox" role="switch" checked={snapshots} onChange={(event) => setSnapshots(event.target.checked)} /><span>{t("Include snapshots")}</span><small>{t("Pre-releases, release candidates, April Fools")}</small></label>
       <div ref={list} id={listId} className="mochi-select-list" role="listbox" aria-label={label} aria-activedescendant={`${listId}-${active}`}>
-        {loading && !versions.length && <div className="mochi-select-empty">Loading versions…</div>}
+        {loading && !versions.length && <div className="mochi-select-empty">{t("Loading versions…")}</div>}
         {rows.map((row, index) => <div key={row.id} role="presentation">
           {row.heading && <div className="mochi-select-group" role="presentation">{row.heading}</div>}
           <div id={`${listId}-${index}`} role="option" data-index={index} aria-selected={row.value === value && row.id !== "latest"} className={`mochi-select-option ${index === active ? "active" : ""} ${row.value === value && row.id !== "latest" ? "selected" : ""}`} onMouseEnter={() => setActive(index)} onClick={() => choose(row)}>
@@ -90,7 +92,7 @@ export function VersionPicker({ value, onChange, versions, loading, label = "Min
           </div>
         </div>)}
         {!loading && !rows.length && <div className="mochi-select-empty">{query ? `No version matches “${query}”.` : "No versions available."}</div>}
-        {!query && !snapshots && versions.length > 0 && <div className="mochi-select-empty version-picker-note">Snapshots are hidden. Turn on “Include snapshots” to see them.</div>}
+        {!query && !snapshots && versions.length > 0 && <div className="mochi-select-empty version-picker-note">{t("Snapshots are hidden. Turn on “Include snapshots” to see them.")}</div>}
       </div>
     </div>}
   </div>;
