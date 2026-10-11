@@ -11,7 +11,7 @@ export function WelcomeStep() {
       <p className="setup-welcome-line">{t("Welcome to")}</p>
       <h1 className="mochi-wordmark">Mochi</h1>
       <p className="setup-subtitle">{t("Your games, your way.")}</p>
-      <div className="setup-platform-strip" aria-label="Supported game platforms">
+      <div className="setup-platform-strip" aria-label={t("Supported game platforms")}>
         {brands.map(([id, name]) => <div className="setup-platform-logo" key={id} title={name}><img src={launcherIcon(id)} alt={name} /></div>)}
       </div>
       <div className="setup-pulse" />

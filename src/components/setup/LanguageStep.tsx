@@ -16,7 +16,7 @@ export function LanguageStep({ language, setLanguage }: { language: string; setL
     <h1>{t("Choose your language.")}</h1>
     <p className="setup-description">{t("Choose the language Mochi should use wherever a translation is available. Game news will automatically follow this choice. You can change it any time in Settings.")}</p>
     <label className="setup-language-search">
-      <span className="sr-only">Search languages</span>
+      <span className="sr-only">{t("Search languages")}</span>
       <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("Search languages…")} autoComplete="off" />
     </label>
     <div className="setup-language-list" role="radiogroup" aria-label={t("Language")}>
@@ -27,7 +27,7 @@ export function LanguageStep({ language, setLanguage }: { language: string; setL
           {active && <Check size={16} aria-hidden="true" />}
         </button>;
       })}
-      {!options.length && <p className="setup-language-empty">No languages match “{query}”.</p>}
+      {!options.length && <p className="setup-language-empty">{t("No languages match {query}.").replace("{query}", query)}</p>}
     </div>
   </section>;
 }

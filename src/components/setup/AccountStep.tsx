@@ -27,13 +27,13 @@ export function AccountStep({ user, onSignIn, onAddUser }: { user: User | null; 
           {benefits.map(({ icon: Icon, title, detail }) => <li key={title}><span className="setup-account-benefit-icon"><Icon size={17} /></span><div><strong>{t(title)}</strong><span className="setup-account-sub">{t(detail)}</span></div></li>)}
         </ul>}
         {signedIn
-          ? <div className="setup-account-connected-details"><Check size={17} /><span><strong>Secure account access is on</strong><small>Your games and files remain on this device. You can change accounts from the account menu.</small></span></div>
+          ? <div className="setup-account-connected-details"><Check size={17} /><span><strong>{t("Secure account access is on")}</strong><small>{t("Your games and files remain on this device. You can change accounts from the account menu.")}</small></span></div>
           : <button type="button" className="setup-account-signin play-button" onClick={onSignIn}><LogIn size={16} /> {t("Sign in")}</button>}
-        {signedIn && onAddUser && <div className="setup-account-add" role="group" aria-label="Add another user">
-          <div><strong>Sharing this computer?</strong><span className="setup-account-sub">Give another person a separate Mochi library and settings.</span></div>
-          <button type="button" className="secondary-button" onClick={onAddUser}><UserPlus size={16} /> Add another user</button>
+        {signedIn && onAddUser && <div className="setup-account-add" role="group" aria-label={t("Add another user")}>
+          <div><strong>{t("Sharing this computer?")}</strong><span className="setup-account-sub">{t("Give another person a separate Mochi library and settings.")}</span></div>
+          <button type="button" className="secondary-button" onClick={onAddUser}><UserPlus size={16} /> {t("Add another user")}</button>
         </div>}
-        {!signedIn && <p className="setup-account-note">Optional. Mochi works fully offline without an account.</p>}
+        {!signedIn && <p className="setup-account-note">{t("Optional. Mochi works fully offline without an account.")}</p>}
       </div>
     </section>
   );
