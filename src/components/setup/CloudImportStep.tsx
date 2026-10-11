@@ -22,7 +22,7 @@ export function CloudImportStep({ busy, ready, accessAllowed, settingsReady, mes
     <div className="setup-cloud-card">
       <div className="setup-cloud-status">
         {syncEnabled ? <Check size={18} /> : <CloudOff size={18} />}
-        <span><strong>{syncEnabled ? "Cloud sync is enabled" : "Cloud sync is not enabled"}</strong><small>{syncing ? "Mochi is checking your cloud account…" : syncEnabled ? "Your account can sync library metadata." : accessAllowed ? "Your cloud library is available to import." : settingsReady ? "Cloud data access is disabled for this account. Enable it in Settings before importing." : "Mochi is loading this account’s cloud permissions."}</small></span>
+        <span><strong>{syncEnabled ? t("Cloud sync is enabled") : t("Cloud sync is not enabled")}</strong><small>{syncing ? t("Mochi is checking your cloud account…") : syncEnabled ? t("Your account can sync library metadata.") : accessAllowed ? t("Your cloud library is available to import.") : settingsReady ? t("Cloud data access is disabled for this account. Enable it in Settings before importing.") : "Mochi is loading this account’s cloud permissions."}</small></span>
       </div>
       <button type="button" className="play-button setup-cloud-import" onClick={() => void onImport()} disabled={busy || !ready || !settingsReady || !accessAllowed}>
         {busy ? <LoaderCircle size={16} className="spin" /> : <RefreshCw size={16} />}
