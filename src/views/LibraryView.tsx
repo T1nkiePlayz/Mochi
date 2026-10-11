@@ -43,6 +43,7 @@ function MinecraftInstancesGroup({ piko, instances, onOpen, onPlay, onShowAll }:
   onPlay: (piko: Piko, tofuId: string) => void;
   onShowAll: (piko: Piko) => void;
 }) {
+  const t = useTranslation();
   const listRef = useRef<HTMLDivElement>(null);
   const [hasOverflow, setHasOverflow] = useState(false);
   useEffect(() => {
@@ -55,10 +56,10 @@ function MinecraftInstancesGroup({ piko, instances, onOpen, onPlay, onShowAll }:
     return () => observer?.disconnect();
   }, [instances.length]);
 
-  return <div className={`tofu-entry-group${hasOverflow ? " has-overflow" : ""}`} role="group" aria-label={`${piko.name} instances`}>
-    <span className="tofu-entry-title">{piko.name} instances · {instances.length}</span>
+  return <div className={`tofu-entry-group${hasOverflow ? " has-overflow" : ""}`} role="group" aria-label={t("{name} instances").replace("{name}", piko.name)}>
+    <span className="tofu-entry-title">{piko.name} · {t("{count} instances").replace("{count}", String(instances.length))}</span>
     <div className="tofu-entry-list" ref={listRef}>{instances.map((tofu) => <TofuEntryCard key={tofu.id} piko={piko} tofu={tofu} onOpen={onOpen} onPlay={onPlay} />)}</div>
-    {hasOverflow && <button type="button" className="tofu-entry-more" onClick={() => onShowAll(piko)} aria-label={`Show all ${instances.length} ${piko.name} instances`}>
+    {hasOverflow && <button type="button" className="tofu-entry-more" onClick={() => onShowAll(piko)} aria-label={t("Show all {count} {name} instances").replace("{count}", String(instances.length)).replace("{name}", piko.name)}>
       Show all {instances.length} <ChevronRight size={14} />
     </button>}
   </div>;
@@ -186,7 +187,7 @@ export function LibraryView() {
                 <div className="tofu-card-top"><span className="tofu-symbol">🧊</span><span className={`ready-status ${tofu.status === "Ready" ? "" : "attention"}`}><span />{tofu.status}</span></div>
                 <strong>{tofu.name}</strong>
                 <span className="tofu-details">{tofu.version} <i /> {tofu.runtime}</span>
-                <span className="tofu-mods">{tofu.mods ? `${tofu.mods} mods installed` : "No mods installed"}</span>
+                <span className="tofu-mods">{tofu.mods ? t("{count} mods installed").replace("{count}", String(tofu.mods)) : t("No mods installed")}</span>
               </button>
             ))}
             <button className="new-tofu-card" onClick={() => { lib.createTofu(); app.setShowTofuManager(true); }}><MochiIcon name="plus" fallback={Plus} size={17} /><span>{t("New Tofu")}</span><small>Set up another environment</small></button>
@@ -220,7 +221,7 @@ export function LibraryView() {
       <div className="continue-grid">{lib.continuePlaying.map(({ piko, entry }) => <article className="continue-card" key={piko.id}>
         <button type="button" className="continue-main" onClick={() => { lib.selectPiko(piko); lib.setGameDetailsId(piko.id); }}>
           <GameArtwork className="continue-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} name={piko.name} kind={piko.kind} sourceId={piko.sourceId} />
-          <span className="continue-copy"><strong>{piko.name}</strong><small>{sessions.isRunning(piko.id) ? "Running now" : `Last played ${formatRelativeTime(entry.lastPlayed)}`} · {formatPlaytime(entry.seconds)} played</small></span>
+          <span className="continue-copy"><strong>{piko.name}</strong><small>{sessions.isRunning(piko.id) ? t("Running now") : t("Last played {time}").replace("{time}", formatRelativeTime(entry.lastPlayed))} · {formatPlaytime(entry.seconds)} {t("played")}</small></span>
         </button>
         {sessions.isRunning(piko.id)
           ? <button type="button" className="icon-button continue-play stop-button" aria-label={t("Stop {name}").replace("{name}", piko.name)} onClick={() => void actions.stopRunningGame(piko)}><X size={15} /></button>
