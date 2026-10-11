@@ -7,59 +7,57 @@ import type { Piko } from "../models";
 import { useNearViewport } from "../hooks";
 import { GeneratedMarks, generatedStyle } from "./GeneratedArt";
 
-/** Resolve after the browser has loaded and, where supported, decoded the artwork. */
-function prepareArtwork(url: string): Promise<void> {
-  return new Promise((resolve) => {
-    const image = new Image();
-    image.decoding = "async";
-    const finish = () => resolve();
-    image.onload = finish;
-    image.onerror = finish;
-    image.src = url;
-    if (typeof image.decode === "function") void image.decode().then(finish, finish);
-    else if (image.complete) finish();
-  });
-}
-
 /** The game's cover, or a generated local cover (its initials on a colour taken from its name) when there is none. Never an empty box. */
 export function GameArtwork({ className, cacheKey, fallback, name, kind, sourceId }: { className: string; cacheKey?: string; fallback: string; name?: string } & Pick<Piko, "kind" | "sourceId">) {
   const ref = useRef<HTMLDivElement>(null);
   const [cached, setCached] = useState(() => (cacheKey ? peekArtwork(cacheKey) ?? "" : ""));
-  const [readyCached, setReadyCached] = useState("");
   const [revision, setRevision] = useState(0);
-  // Load well before a cover enters view. Once a card has been near the viewport it stays eligible,
-  // avoiding repeated native lookups when the user scrolls back and forth through the Library.
-  const near = useNearViewport(ref, cached !== "", "1200px 0px");
 
-  // Do not swap the placeholder for a URL until the browser has decoded the image. This avoids
-  // exposing a blank/unpainted background while WebKit catches up during fast scrolling.
-  useEffect(() => {
-    if (!cached) { setReadyCached(""); return; }
-    let cancelled = false;
-    void prepareArtwork(cached).then(() => { if (!cancelled) setReadyCached(cached); });
-    return () => { cancelled = true; };
-  }, [cached]);
+  // Start artwork lookup well before a card reaches the viewport. Once observed, the hook keeps
+  // the card eligible, so scrolling back through a large library does not restart its lookup.
+  const near = useNearViewport(ref, cached !== "", "2400px 0px");
 
-  // Reload when the editor saved or removed this game's cover.
+  // Reload only when this game's artwork changes. The displayed URL stays in place while the
+  // browser manages decoded surfaces; do not gate the background behind a temporary Image.decode()
+  // result, which can resolve before WebKit has painted the CSS background and cause placeholder
+  // <-> artwork swaps during fast scrolling.
   useEffect(() => {
-    const onChanged = (event: Event) => { if ((event as CustomEvent<string>).detail === cacheKey) setRevision((value) => value + 1); };
+    const onChanged = (event: Event) => {
+      if ((event as CustomEvent<string>).detail !== cacheKey) return;
+      // An explicit artwork edit/removal is the one case where the current image must be replaced.
+      setCached("");
+      setRevision((value) => value + 1);
+    };
     window.addEventListener(ARTWORK_CHANGED_EVENT, onChanged);
     return () => window.removeEventListener(ARTWORK_CHANGED_EVENT, onChanged);
   }, [cacheKey]);
 
   useEffect(() => {
-    if (!cacheKey) { setCached(""); return; }
+    if (!cacheKey) {
+      setCached("");
+      return;
+    }
+
     const known = peekArtwork(cacheKey);
-    if (known !== undefined) { setCached(known); return; }
-    setCached("");
+    if (known !== undefined) {
+      setCached(known);
+      return;
+    }
+
+    // Do not clear an already displayed image while a refresh is pending. A miss is represented by
+    // the existing fallback and is not cached by loadArtwork, so it can be retried when appropriate.
     if (!near) return;
+
     let cancelled = false;
-    void loadArtwork(cacheKey).then((value) => { if (!cancelled && value) setCached(value); });
+    void loadArtwork(cacheKey).then((value) => {
+      if (!cancelled && value) setCached(value);
+    });
     return () => { cancelled = true; };
   }, [cacheKey, revision, near]);
 
-  const visibleCached = cached && readyCached === cached ? cached : "";
-  const background = visibleCached ? `linear-gradient(145deg, rgba(10,15,20,.02), rgba(11,15,20,.12)), ${cssUrl(visibleCached)}` : artworkBackground(fallback);
+  const background = cached
+    ? `linear-gradient(145deg, rgba(10,15,20,.02), rgba(11,15,20,.12)), ${cssUrl(cached)}`
+    : artworkBackground(fallback);
   if (background || !name) return <div ref={ref} className={className} style={{ backgroundImage: background }} />;
   const art = generatedArt({ name, kind, sourceId });
   return <div ref={ref} className={`${className} generated-art${art.launcher ? " is-launcher" : ""}`} style={generatedStyle(art)} data-generated-art=""><GeneratedMarks art={art} /></div>;
