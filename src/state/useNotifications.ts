@@ -36,13 +36,13 @@ export function useNotifications(behavior: Behavior) {
     const id = crypto.randomUUID();
     const current = behaviorRef.current;
     if (current.notificationsEnabled && current.inAppNotifications) {
-      setNotifications((list) => [{ id, title, message, createdAt: Date.now(), progress: { value: 0, total } }, ...list].slice(0, 20));
+      setNotifications((list) => [{ id, title: translateUiMessage(title), message: translateUiMessage(message), createdAt: Date.now(), progress: { value: 0, total } }, ...list].slice(0, 20));
     }
     return id;
   }, []);
 
   const updateProgress = useCallback((id: string, progress: { value: number; total: number }, message: string) => {
-    setNotifications((list) => list.map((item) => (item.id === id ? { ...item, message, progress } : item)));
+    setNotifications((list) => list.map((item) => (item.id === id ? { ...item, message: translateUiMessage(message), progress } : item)));
   }, []);
 
   return { notifications, setNotifications, showNotifications, setShowNotifications, notify, startProgress, updateProgress };
