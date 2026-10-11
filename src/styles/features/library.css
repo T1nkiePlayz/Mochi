@@ -101,4 +101,4 @@
 .tag-suggestions li:hover, .tag-suggestions li.active { background: var(--mochi-surface-hover); }
 
 @media (prefers-reduced-motion: reduce) { .game-card-heart { transition: none; } }
-@media (max-width: 700px) { .bulk-actions { margin-left: 0; } .game-card-heart { opacity: 1; } }
+@media (max-width: 700px) { .bulk-actions { margin-left: 0; } .game-card-heart { opacity: 1; pointer-events: auto; } }
