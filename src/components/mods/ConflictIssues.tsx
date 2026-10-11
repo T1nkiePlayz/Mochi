@@ -20,7 +20,6 @@ export function ConflictIssues({ issues, tofu, onFixed }: { issues: Issue[]; tof
     if (issue.kind === "duplicate-project") return t("{name} is installed twice").replace("{name}", title.replace(/ is installed twice$/, ""));
     if (issue.kind === "wrong-loader") return t("{name} is for a different loader").replace("{name}", title.replace(/ is for a different loader$/, ""));
     if (issue.kind === "wrong-version") return t("{name} is for a different game version").replace("{name}", title.replace(/ is for a different game version$/, ""));
-    if (issue.kind === "wrong-loader" || issue.kind === "wrong-version") return translateCompatibilityReason(issue.detail, t);
     if (issue.kind === "incompatible") {
       const [name, other] = title.split(" does not work with ");
       return t("{name} does not work with {other}").replace("{name}", name).replace("{other}", other ?? "");
@@ -38,6 +37,7 @@ export function ConflictIssues({ issues, tofu, onFixed }: { issues: Issue[]; tof
     return t(label);
   };
   const issueDetail = (issue: Issue) => {
+    if (issue.kind === "wrong-loader" || issue.kind === "wrong-version") return translateCompatibilityReason(issue.detail, t);
     if (issue.kind === "duplicate-file") return t("Both the switched-on and the switched-off copy are in the folder, so switching it on or off again can fail. Remove the copy you do not need.");
     if (issue.kind === "duplicate-project") {
       const keep = issue.detail.match(/Keep (.*), the newest\./)?.[1] ?? issue.files[0] ?? "";
