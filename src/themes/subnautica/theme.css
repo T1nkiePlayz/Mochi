@@ -34,7 +34,7 @@
   clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); backdrop-filter: blur(6px); }
 .modal, .setup-panel, .notification-popover, .account-menu { clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px); }
 .secondary-button, .play-button, .setup-nav, .icon-button, .search-box { clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
-.game-card:hover { filter: drop-shadow(0 0 14px rgba(77, 232, 255, .45)); }
+.game-card:hover { transform: translateY(-2px); filter: drop-shadow(0 0 14px rgba(77, 232, 255, .45)); }
 .game-card-copy { background: rgba(2, 23, 34, .55); }
 .game-card .game-card-art { filter: saturate(1.15) contrast(1.05); }
 .game-card-play { border-radius: 2px; }
