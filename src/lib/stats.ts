@@ -1,4 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
+import { formatPlaytime } from "./format";
+import { getTranslationLocale } from "./translationLocale";
 
 /** One entry of native play history. `daily` rows are old sessions rolled up per day; `historic` is pre-history playtime. */
 export type SessionRecord = {
