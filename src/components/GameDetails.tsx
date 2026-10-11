@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "../lib/useTranslation";
+import { getTranslationLocale } from "../lib/translationLocale";
 import { invoke } from "@tauri-apps/api/core";
 import { ArrowLeft, ExternalLink, FolderOpen, FolderPlus, Heart, Pencil, Play, Square, Trash2 } from "lucide-react";
 import { GameScreenshots } from "./GameScreenshots";

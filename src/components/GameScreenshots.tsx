@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "../lib/useTranslation";
+import { getTranslationLocale } from "../lib/translationLocale";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { FolderPlus, X } from "lucide-react";
 import type { Piko } from "../models";

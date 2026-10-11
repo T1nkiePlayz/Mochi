@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "../lib/useTranslation";
+import { getTranslationLocale } from "../lib/translationLocale";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { ChevronDown, ChevronRight, DatabaseBackup, FolderOpen, FolderPlus, History, RotateCcw, Trash2, X } from "lucide-react";
 import {

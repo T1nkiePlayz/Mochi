@@ -7,6 +7,7 @@ import { sameWish, useWishlist, type WishlistInput } from "../lib/wishlist";
 import { unwatchPrice, watchPrice } from "../lib/deals";
 import { openExternalUrl } from "../lib/platform";
 import { useTranslation } from "../lib/useTranslation";
+import { getTranslationLocale } from "../lib/translationLocale";
 import {
   buildChart, createDebouncedSearch, createProviderBackend, dailyLowest, gameSearchAvailable, gameSearchBackendOverride, historyCaption, historyKey,
   observationsFromPrices, recordObservations, type GameDetails, type GameSearchBackend, type PriceObservation, type SearchHit,
