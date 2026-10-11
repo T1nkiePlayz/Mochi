@@ -36,8 +36,22 @@ describe("shared UI translations", () => {
         expect(translate(message, language.code), `${language.code}: ${message}`).not.toBe(message);
       }
     }
+    for (const language of launcherLanguages) {
+      for (const message of [
+        "Could not load {noun}.",
+        "No {noun} to show yet.",
+        "{count} download in progress. See Downloads.",
+        "{count} downloads in progress. See Downloads.",
+      ]) {
+        const translated = translate(message, language.code);
+        for (const token of message.match(/\\{[^}]+\\}/g) ?? []) {
+          expect(translated, `${language.code}: ${message}`).toContain(token);
+        }
+      }
+    }
     expect(translate("No {noun} to show yet.", "fr").replace("{noun}", "mods")).not.toContain("{noun}");
     expect(translate("{count} downloads in progress. See Downloads.", "de").replace("{count}", "3")).toContain("3");
+    expect(translate("native error: platform code 0x55", "fr")).toBe("native error: platform code 0x55");
   });
 
   it("has an explicit translation for every catalogue entry in every supported locale", () => {
