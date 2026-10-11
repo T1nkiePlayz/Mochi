@@ -130,7 +130,7 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
 
         {selected.path && <Section title={t("Mod check")} description={t("Looks for duplicates, mods for another game version or loader, and missing required mods. Works offline from what Mochi saved when the mods were installed.")}>
           <div className="conflict-check-row"><button type="button" className="secondary-button" disabled={checking} onClick={() => void runCheck()}><ShieldCheck size={14}/> {checking ? t("Checking…") : t("Check mods")}</button>
-            {checked?.tofuId === selected.id && <span className="conflict-message" role="status" aria-live="polite">{t(summarizeIssues(checked.issues))}</span>}</div>
+            {checked?.tofuId === selected.id && <span className="conflict-message" role="status" aria-live="polite">{checked.issues.length === 0 ? t("No problems found.") : t("Possible mod problems: {count}").replace("{count}", String(checked.issues.length))}</span>}</div>
           {checked?.tofuId === selected.id && checked.issues.length > 0 && <ConflictIssues issues={checked.issues} tofu={selected} onFixed={runCheck} />}
           <Checkbox checked={selected.skipModCheck !== true} onChange={(on) => patch({ skipModCheck: on ? undefined : true })} label={t("Check mods before launching")} description={t("Shows a warning with fixes first. You can always launch anyway.")} />
         </Section>}
