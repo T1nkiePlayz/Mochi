@@ -287,29 +287,78 @@ pub fn open_path(path: &str) -> Result<(), String> {
     os::open_path(path)
 }
 
-/// Add conservative GStreamer ranks for AV1 decoders when the user has not explicitly
-/// configured them. Some WebKitGTK/GStreamer stacks advertise AV1 to YouTube but cannot
-/// reliably decode the selected stream, which produces YouTube's generic playback error.
-#[cfg(any(target_os = "linux", test))]
-fn gstreamer_feature_rank_with_av1_disabled(existing: Option<&str>) -> String {
-    let mut ranks: Vec<String> = existing
-        .unwrap_or_default()
-        .split(',')
-        .map(str::trim)
-        .filter(|rank| !rank.is_empty())
-        .map(str::to_owned)
+/// Configure GStreamer paths before WebKitGTK starts its media processes.
+///
+/// AppImages may bundle GStreamer core and plugins from the build distribution. Keep
+/// plugin discovery inside the AppImage when those plugins are present: loading host
+/// plugins built against another GStreamer version can leave WebKit without usable
+/// decoders. Native installs retain GStreamer's normal system plugin discovery.
+#[cfg(target_os = "linux")]
+fn configure_gstreamer_plugin_environment() {
+    let appdir = std::env::var_os("APPDIR").map(PathBuf::from);
+    if let Some(appdir) = appdir.as_deref() {
+        let plugin_dirs: Vec<PathBuf> = [
+            appdir.join("usr/lib/gstreamer-1.0"),
+            appdir.join("usr/lib/x86_64-linux-gnu/gstreamer-1.0"),
+            appdir.join("usr/lib/aarch64-linux-gnu/gstreamer-1.0"),
+        ]
+        .into_iter()
+        .filter(|path| path.is_dir() && contains_gstreamer_plugin(path))
         .collect();
 
-    for decoder in ["avdec_av1", "av1dec"] {
-        // An explicit rank from the user takes precedence over Mochi's fallback.
-        let explicitly_configured = ranks.iter().any(|rank| {
-            rank.split_once(':').is_some_and(|(name, _)| name.trim() == decoder)
-        });
-        if !explicitly_configured {
-            ranks.push(format!("{decoder}:NONE"));
+        if !plugin_dirs.is_empty() {
+            if let Ok(paths) = std::env::join_paths(&plugin_dirs) {
+                // Do not mix bundled and host plugins: their GStreamer ABI versions may differ.
+                std::env::set_var("GST_PLUGIN_SYSTEM_PATH_1_0", paths);
+            }
+        }
+
+        // Prefer the scanner bundled with the same GStreamer build as the AppImage.
+        let bundled_scanner = [
+            appdir.join("usr/lib/gstreamer-1.0/gst-plugin-scanner"),
+            appdir.join("usr/lib/x86_64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
+            appdir.join("usr/lib/aarch64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
+            appdir.join("usr/libexec/gstreamer-1.0/gst-plugin-scanner"),
+        ]
+        .into_iter()
+        .find(|path| path.is_file());
+        if let Some(scanner) = bundled_scanner {
+            std::env::set_var("GST_PLUGIN_SCANNER", scanner);
+            return;
         }
     }
-    ranks.join(",")
+
+    // Preserve a valid explicit scanner for native installations.
+    if std::env::var_os("GST_PLUGIN_SCANNER")
+        .as_deref()
+        .is_some_and(|value| Path::new(value).is_file())
+    {
+        return;
+    }
+
+    let candidates = [
+        PathBuf::from("/usr/lib/gstreamer-1.0/gst-plugin-scanner"),
+        PathBuf::from("/usr/lib/x86_64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
+        PathBuf::from("/usr/lib/aarch64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
+        PathBuf::from("/usr/libexec/gstreamer-1.0/gst-plugin-scanner"),
+    ];
+    if let Some(scanner) = candidates.into_iter().find(|path| path.is_file()) {
+        std::env::set_var("GST_PLUGIN_SCANNER", scanner);
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn contains_gstreamer_plugin(directory: &Path) -> bool {
+    std::fs::read_dir(directory)
+        .ok()
+        .into_iter()
+        .flatten()
+        .flatten()
+        .any(|entry| {
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            name.starts_with("libgst") && name.contains(".so")
+        })
 }
 
 /// WebKitGTK renders a blank window with some NVIDIA drivers unless DMA-BUF rendering is off.
@@ -320,40 +369,8 @@ pub fn prepare_linux_webview_environment() {
         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
     }
 
-    // WebKitGTK can choose an AV1 stream that its available GStreamer decoder cannot play.
-    // Disable AV1 decoders by default so YouTube negotiates a more widely supported codec.
-    // Respect a user's explicit rank for either decoder.
-    let existing_rank = std::env::var("GST_PLUGIN_FEATURE_RANK").ok();
-    let feature_rank = gstreamer_feature_rank_with_av1_disabled(existing_rank.as_deref());
-    if existing_rank.as_deref() != Some(feature_rank.as_str()) {
-        std::env::set_var("GST_PLUGIN_FEATURE_RANK", feature_rank);
-    }
-
-    // WebKitGTK's GStreamer integration launches gst-plugin-scanner as a helper process.
-    // AppImages can contain the scanner outside the host distribution's usual path, so
-    // GStreamer may otherwise emit "External plugin loader failed" on startup.
-    if std::env::var_os("GST_PLUGIN_SCANNER").as_deref().is_some_and(|value| Path::new(value).is_file()) {
-        return;
-    }
-    let mut candidates = Vec::new();
-    if let Some(appdir) = std::env::var_os("APPDIR") {
-        let appdir = Path::new(&appdir);
-        candidates.extend([
-            appdir.join("usr/lib/gstreamer-1.0/gst-plugin-scanner"),
-            appdir.join("usr/lib/x86_64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
-            appdir.join("usr/lib/aarch64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
-            appdir.join("usr/libexec/gstreamer-1.0/gst-plugin-scanner"),
-        ]);
-    }
-    candidates.extend([
-        PathBuf::from("/usr/lib/gstreamer-1.0/gst-plugin-scanner"),
-        PathBuf::from("/usr/lib/x86_64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
-        PathBuf::from("/usr/lib/aarch64-linux-gnu/gstreamer1.0/gst-plugin-scanner"),
-        PathBuf::from("/usr/libexec/gstreamer-1.0/gst-plugin-scanner"),
-    ]);
-    if let Some(scanner) = candidates.into_iter().find(|path| path.is_file()) {
-        std::env::set_var("GST_PLUGIN_SCANNER", scanner);
-    }
+    // Keep GStreamer decoder discovery intact (including AV1 when supported).
+    configure_gstreamer_plugin_environment();
 }
 
 /// Whether the OS shows tray / menu-bar icons Mochi can hide its window behind.
@@ -422,35 +439,6 @@ fn command_exists_cached(name: &str) -> bool {
 #[tauri::command(async)]
 pub fn check_launch_targets(targets: Vec<String>) -> Vec<bool> {
     targets.iter().take(5000).map(|target| launch_target_exists(target)).collect()
-}
-
-#[cfg(test)]
-mod gstreamer_feature_rank_tests {
-    use super::gstreamer_feature_rank_with_av1_disabled;
-
-    #[test]
-    fn disables_av1_decoders_without_discarding_existing_ranks() {
-        assert_eq!(
-            gstreamer_feature_rank_with_av1_disabled(Some("vp9dec:256")),
-            "vp9dec:256,avdec_av1:NONE,av1dec:NONE"
-        );
-    }
-
-    #[test]
-    fn does_not_override_explicit_user_decoder_ranks() {
-        assert_eq!(
-            gstreamer_feature_rank_with_av1_disabled(Some("avdec_av1:256, vp9dec:128")),
-            "avdec_av1:256,vp9dec:128,av1dec:NONE"
-        );
-    }
-
-    #[test]
-    fn adds_only_missing_av1_rank() {
-        assert_eq!(
-            gstreamer_feature_rank_with_av1_disabled(Some("av1dec:NONE")),
-            "av1dec:NONE,avdec_av1:NONE"
-        );
-    }
 }
 
 #[cfg(test)]
