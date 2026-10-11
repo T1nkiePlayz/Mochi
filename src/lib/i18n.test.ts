@@ -16,6 +16,30 @@ describe("shared UI translations", () => {
     }
   });
 
+  it("translates launch errors, diagnostics feedback, cancellation prompts, and dynamic mod-feed states", () => {
+    const messages = [
+      "This game does not have a launch target. Edit the game to set one.",
+      "Debug info copied. It contains no passwords, keys or email addresses, and your home folder name is hidden.",
+      "Could not copy debug info.",
+      "Cancel this download?",
+      "The download will stop. You can start it again from the mod page.",
+      "You appear to be offline.",
+      "Could not load {noun}.",
+      "No {noun} to show yet.",
+      "{count} download in progress. See Downloads.",
+      "{count} downloads in progress. See Downloads.",
+    ];
+    for (const language of launcherLanguages) {
+      if (language.code === "en") continue;
+      for (const message of messages) {
+        expect(hasTranslation(message, language.code), `${language.code}: ${message}`).toBe(true);
+        expect(translate(message, language.code), `${language.code}: ${message}`).not.toBe(message);
+      }
+    }
+    expect(translate("No {noun} to show yet.", "fr").replace("{noun}", "mods")).not.toContain("{noun}");
+    expect(translate("{count} downloads in progress. See Downloads.", "de").replace("{count}", "3")).toContain("3");
+  });
+
   it("has an explicit translation for every catalogue entry in every supported locale", () => {
     for (const language of launcherLanguages) {
       if (language.code === "en") continue;
