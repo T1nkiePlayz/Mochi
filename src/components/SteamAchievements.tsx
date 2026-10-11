@@ -60,7 +60,7 @@ export function SteamAchievements({ appid, gameName }: { appid: number; gameName
         </div>
       )}
       {loading && !data && <p className="stats-muted" role="status">{t("Loading achievements…")}</p>}
-      {data && result?.stale && <p className="steam-ach-note" role="status">{online ? result.message || "Showing saved data; Steam could not be reached." : "You are offline. Showing the last saved achievements."}</p>}
+      {data && result?.stale && <p className="steam-ach-note" role="status">{online ? result.message || t("Showing saved data; Steam could not be reached.") : t("You are offline. Showing the last saved achievements.")}</p>}
       {busy && !data && <p className="steam-ach-note" role="status">{result?.message || "Steam is busy right now. Mochi will try again later."}</p>}
       {status === "no-achievements" && <p className="stats-muted" role="status">{result?.message || t("This game has no Steam achievements.")}</p>}
       {problem && !busy && <p className="steam-ach-note" role="status">{!online && status === "offline" ? "You are offline, and no saved achievements exist for this game yet." : problem}</p>}
