@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "../../lib/useTranslation";
+import { getTranslationLocale } from "../../lib/translationLocale";
 import { ArrowDown, ArrowUp, FolderOpen } from "lucide-react";
 import { Select, type SelectOption } from "../ui/Select";
 import { useApp } from "../../state/AppContext";
@@ -18,7 +19,7 @@ function SizeCell({ row, max, t }: { row: StorageRow; max: number; t: (message: 
   if (!size) return <span className="storage-skeleton" aria-label={t("Measuring")} />;
   if (size.error) return <span className="storage-error" title={size.error}>{t("Unavailable")}</span>;
   const width = max > 0 ? Math.max(size.bytes > 0 ? 2 : 0, (size.bytes / max) * 100) : 0;
-  return <span className="storage-size" title={size.truncated ? t("A very large folder: this is a lower bound.") : t("{count} files").replace("{count}", size.files.toLocaleString())}>
+  return <span className="storage-size" title={size.truncated ? t("A very large folder: this is a lower bound.") : t("{count} files").replace("{count}", size.files.toLocaleString(getTranslationLocale()))}>
     <span className="storage-size-bar" aria-hidden="true"><span className={`storage-fill storage-cat-${row.category}`} style={{ width: `${width}%` }} /></span>
     <span>{size.truncated ? "≥ " : ""}{formatBytes(size.bytes)}{!size.done && " …"}</span>
   </span>;
@@ -51,7 +52,7 @@ export function StorageSection() {
     setBusy(action.kind); setNote("");
     try {
       const result = await clearStorageLocation(action.kind, action.needsAge ? age : undefined);
-      setNote(result.files ? `Removed ${result.files.toLocaleString()} file${result.files === 1 ? "" : "s"} and freed ${formatBytes(result.bytes)}.` : "There was nothing to remove.");
+      setNote(result.files ? `Removed ${result.files.toLocaleString(getTranslationLocale())} file${result.files === 1 ? "" : "s"} and freed ${formatBytes(result.bytes)}.` : "There was nothing to remove.");
       void scan();
     } catch (cause) { setNote(errorText(cause)); }
     finally { setBusy(null); }
@@ -74,7 +75,7 @@ export function StorageSection() {
     <div className="storage-summary">
       <span>
         <strong className="storage-total">{started ? formatBytes(totals.total) : "Not measured yet"}</strong>
-        <small role="status">{!started ? "Measuring reads folder sizes only and can take a while for big libraries, so it runs when you ask." : scanning ? `Measuring… ${totals.measured + totals.failed} of ${locations.length || "?"} locations done.` : `${totals.measured} location${totals.measured === 1 ? "" : "s"} measured${totals.failed ? `, ${totals.failed} unavailable` : ""}.`}</small>
+        <small role="status">{!started ? "Measuring reads folder sizes only and can take a while for big libraries, so it runs when you ask." : scanning ? `Measuring… ${(totals.measured + totals.failed).toLocaleString(getTranslationLocale())} of ${locations.length || "?"} locations done.` : `${totals.measured.toLocaleString(getTranslationLocale())} location${totals.measured === 1 ? "" : "s"} measured${totals.failed ? `, ${totals.failed.toLocaleString(getTranslationLocale())} unavailable` : ""}.`}</small>
       </span>
       <span className="storage-summary-actions">
         {scanning && <button type="button" className="secondary-button" onClick={cancel}>{t("Stop")}</button>}
@@ -110,7 +111,7 @@ export function StorageSection() {
           </tbody>
         </table>
       </div>
-      {hidden > 0 && <div className="storage-more"><button type="button" className="secondary-button" onClick={() => setLimit((current) => current + PAGE)}>{t("Show {count} more ({hidden} hidden)").replace("{count}", String(Math.min(PAGE, hidden))).replace("{hidden}", hidden.toLocaleString())}</button></div>}
+      {hidden > 0 && <div className="storage-more"><button type="button" className="secondary-button" onClick={() => setLimit((current) => current + PAGE)}>{t("Show {count} more ({hidden} hidden)").replace("{count}", String(Math.min(PAGE, hidden))).replace("{hidden}", hidden.toLocaleString(getTranslationLocale()))}</button></div>}
       <small className="metadata-note storage-note">{t("Game installs and mod folders can only be opened here, never deleted. Sizes of nested folders can overlap, and very large folders are measured up to a limit.")}</small>
     </>}
     <div className="setting-row storage-clear-head"><span><strong>{t("Free up space")}</strong><small>{t("Only Mochi's own caches and leftovers can be removed here.")}</small></span><Select value={String(age)} onChange={(value) => setAge(Number(value))} options={ageOption} label={t("Age for old items")} className="storage-age" /></div>
