@@ -2,9 +2,10 @@ import { useApp } from "../../state/AppContext";
 import { useTranslation } from "../../lib/useTranslation";
 import { useUpdater } from "../../state/useUpdater";
 import { formatBytes } from "../../lib/updater";
+import { getTranslationLocale } from "../../lib/translationLocale";
 import { SettingsGroup, ToggleRow } from "./Section";
 
-const formatWhen = (time: number | undefined, t: (message: string) => string) => (time ? new Date(time).toLocaleString() : t("Never"));
+const formatWhen = (time: number | undefined, t: (message: string) => string) => (time ? new Date(time).toLocaleString(getTranslationLocale()) : t("Never"));
 
 export function UpdateSection() {
   const t = useTranslation();
