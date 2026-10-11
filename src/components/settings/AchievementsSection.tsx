@@ -31,11 +31,11 @@ export function AchievementsSection() {
     : t("Keep unlocks and their dates in your Mochi account. Devices merge their achievements, keeping the earliest unlock.");
 
   const clear = async () => {
-    const items = [`${unlockedCount} unlocked achievement${unlockedCount === 1 ? "" : "s"} and their unlock dates`, "Recorded milestones (themes tried, sections opened, controller and Big Picture use)"];
-    if (account.user) items.push("The copy saved in your Mochi account");
+    const items = [t("{count} unlocked achievements and their unlock dates").replace("{count}", String(unlockedCount)), t("Recorded milestones (themes tried, sections opened, controller and Big Picture use)")];
+    if (account.user) items.push(t("The copy saved in your Mochi account"));
     const ok = await confirmAction({
-      title: "Clear achievements data?", danger: true, confirmLabel: "Clear achievements", items,
-      message: "Play history, playtime and your library are not touched, so achievements you still qualify for unlock again (with today's date). This cannot be undone.",
+      title: t("Clear achievements data?"), danger: true, confirmLabel: t("Clear achievements"), items,
+      message: t("Play history, playtime and your library are not touched, so achievements you still qualify for unlock again (with today's date). This cannot be undone."),
     });
     if (!ok) return;
     setBusy(true); setNote("");
