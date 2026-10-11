@@ -55,7 +55,7 @@ export function SteamAchievements({ appid, gameName }: { appid: number; gameName
       </div>
       {data && (
         <div className="steam-ach-summary">
-          <div className="stat-meter wide" role="progressbar" aria-label={`${gameName} Steam achievements unlocked`} aria-valuemin={0} aria-valuemax={data.total} aria-valuenow={data.unlocked} aria-valuetext={`${data.unlocked} of ${data.total}, ${percent} percent`}><i style={{ width: `${percent}%` }} /></div>
+          <div className="stat-meter wide" role="progressbar" aria-label={`${gameName} Steam achievements unlocked`} aria-valuemin={0} aria-valuemax={data.total} aria-valuenow={data.unlocked} aria-valuetext={`${data.unlocked} ${t("of")} ${data.total}, ${percent} ${t("percent")}`}><i style={{ width: `${percent}%` }} /></div>
           <span>{percent}%</span>
         </div>
       )}
