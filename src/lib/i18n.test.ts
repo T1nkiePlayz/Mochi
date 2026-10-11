@@ -126,6 +126,23 @@ describe("shared UI translations", () => {
     expect(translate("A dynamic provider error", "fr")).toBe("A dynamic provider error");
   });
 
+  it("preserves price-history interpolation tokens in every supported locale", () => {
+    const messages = [
+      "Local observations since {date} ({count} points)",
+      "Plus the lowest-ever price from CheapShark{dateSuffix}.",
+      "Price history. {caption} Lowest {min}, highest {max}.",
+      "Dashed line: lowest ever, {price}.",
+    ];
+    for (const { code } of launcherLanguages) {
+      for (const message of messages) {
+        const translated = translate(message, code);
+        for (const token of message.match(/\{[^}]+\}/g) ?? []) {
+          expect(translated, `${code}: ${message}`).toContain(token);
+        }
+      }
+    }
+  });
+
   it("uses navigation translations from the existing catalogue", () => {
     expect(translate("Library", "fr")).toBe("Bibliothèque");
     expect(translate("Downloads", "ja")).toBe("ダウンロード");
@@ -135,6 +152,12 @@ describe("shared UI translations", () => {
       "Playtime", "Streaks", "Habits", "Variety", "Library", "Explore", "Mods",
       "Common", "Uncommon", "Rare", "Epic", "Legendary",
       "No price data yet.", "Search failed.", "No provider is set up.", "No games found.",
+      "Local observations since {date} ({count} point)", "Local observations since {date} ({count} points)",
+      "No local observations yet", "Plus the lowest-ever price from CheapShark{dateSuffix}.", "Prices are in USD.",
+      "Price history. {caption} Lowest {min}, highest {max}.", "Dashed line: lowest ever, {price}.",
+      "Discover giveaways, sales and price watches for your wishlist, alongside updates for games in your library.",
+      "Recent announcements for games in your library, using your current launcher locale.",
+      "Updates detected for your installed content", "Latest news posts from your games",
     ];
     for (const { code } of launcherLanguages) {
       if (code === "en") continue;
