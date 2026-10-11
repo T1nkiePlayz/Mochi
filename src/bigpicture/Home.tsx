@@ -25,12 +25,12 @@ function Hero({ piko, entry, running, onPlay, onOpen }: { piko: Piko; entry?: Pl
   const t = useTranslation();
   return <section className="bp-hero" aria-label={t("Featured game")}>
     <div className="bp-hero-copy" key={piko.id}>
-      <p className="bp-eyebrow">{running ? t("Playing now") : entry?.lastPlayed ? `${t("Last played")} ${formatRelativeTime(entry.lastPlayed)}` : piko.platformCategory || t("In your library")}</p>
+      <p className="bp-eyebrow">{running ? t("Playing now") : entry?.lastPlayed ? `${t("Last played")} ${formatRelativeTime(entry.lastPlayed)}` : t(piko.platformCategory || "In your library")}</p>
       <h1 className="bp-hero-title">{piko.name}</h1>
       <p className="bp-hero-meta">
         {entry?.seconds ? <span>{formatPlaytime(entry.seconds)} {t("played")}</span> : <span>{t("Not played yet")}</span>}
-        {piko.platformCategory && <span>{piko.platformCategory}</span>}
-        {(piko.categories ?? []).slice(0, 2).map((category) => <span key={category}>{category}</span>)}
+        {piko.platformCategory && <span>{t(piko.platformCategory)}</span>}
+        {(piko.categories ?? []).slice(0, 2).map((category) => <span key={category}>{t(category)}</span>)}
       </p>
       {piko.description && <p className="bp-hero-description">{piko.description}</p>}
       <div className="bp-hero-actions">
@@ -67,8 +67,8 @@ export function Home({ hero, entryFor, shelves, query, isRunning, onOpen, onPlay
   return <>
     {!query && <Hero piko={hero} entry={entryFor(hero.id)} running={isRunning(hero.id)} onPlay={onPlay} onOpen={onOpen} />}
     {query && !shelves.some((shelf) => shelf.items.length) && <section className="bp-empty" aria-live="polite"><h1>{t("No games match “{query}”.").replace("{query}", query)}</h1><p>{t("Press B to clear the search.")}</p></section>}
-    {shelves.filter((shelf) => shelf.items.length).map((shelf) => <section className="bp-shelf" key={shelf.id} data-shelf={shelf.id} aria-label={shelf.title}>
-      <h2 className="bp-shelf-title">{shelf.title}<span>{shelf.items.length}</span></h2>
+    {shelves.filter((shelf) => shelf.items.length).map((shelf) => <section className="bp-shelf" key={shelf.id} data-shelf={shelf.id} aria-label={t(shelf.title)}>
+      <h2 className="bp-shelf-title">{t(shelf.title)}<span>{shelf.items.length}</span></h2>
       <div className={grid ? "bp-shelf-grid" : "bp-shelf-row"}>
         {shelf.items.map((piko) => <GameCard key={piko.id} piko={piko} running={isRunning(piko.id)} onOpen={onOpen} onFocus={onFocusCard} />)}
       </div>
