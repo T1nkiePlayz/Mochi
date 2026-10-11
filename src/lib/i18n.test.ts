@@ -23,6 +23,9 @@ describe("shared UI translations", () => {
       "Could not copy debug info.",
       "Cancel this download?",
       "The download will stop. You can start it again from the mod page.",
+      "This game was started through another app (Steam, a launcher or an .app opened by macOS), so Mochi cannot see its output. Look in the Console app, in ~/Library/Logs, or in the launcher's own logs.",
+      "This game was started through another program (Steam, Flatpak or a launcher), so Mochi cannot see its output. For Steam games add PROTON_LOG=1 %command% to the launch options (log in your home folder); Steam's own logs are in ~/.local/share/Steam/logs; Flatpak apps log to the journal (journalctl --user).",
+      "Cancel download",
       "You appear to be offline.",
       "Could not load {noun}.",
       "No {noun} to show yet.",
@@ -44,7 +47,7 @@ describe("shared UI translations", () => {
         "{count} downloads in progress. See Downloads.",
       ]) {
         const translated = translate(message, language.code);
-        for (const token of message.match(/\\{[^}]+\\}/g) ?? []) {
+        for (const token of message.match(/\{[^}]+\}/g) ?? []) {
           expect(translated, `${language.code}: ${message}`).toContain(token);
         }
       }
