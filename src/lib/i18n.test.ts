@@ -138,7 +138,7 @@ describe("shared UI translations", () => {
     expect(translateCommandTitle("A future command from a plugin", t)).toBe("A future command from a plugin");
     expect(translateCommandGroup("A future provider group", t)).toBe("A future provider group");
     expect(translatePaletteSubtitle("A future provider description", t)).toBe("A future provider description");
-    expect(translateCommandTitle("Settings: General", t)).toBe("Paramètres: Général");
+    expect(translateCommandTitle("Settings: General", t)).toBe("Paramètres : Général");
     expect(translateCommandGroup("Recent · Settings", t)).toBe("Récent · Paramètres");
   });
 });
