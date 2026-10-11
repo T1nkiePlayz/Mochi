@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import type { Piko } from "../models";
 import { analyse, formatDuration, type SessionRecord } from "./stats";
+import { getTranslationLocale } from "./translationLocale";
 
 export type SharePeriod = "all" | "30";
 export type ShareOptions = { games: boolean; playtime: boolean; achievements: boolean; account: boolean; period: SharePeriod };
@@ -76,7 +77,10 @@ export function buildCardSvg(data: CardData, palette: CardPalette, covers: CardC
   let y = 290;
   const tiles: Array<[string, string]> = [];
   if (data.totalSeconds !== undefined) tiles.push([labels.timePlayed, formatDuration(data.totalSeconds)]);
-  if (data.achievements) tiles.push([labels.achievements, `${data.achievements.unlocked} / ${data.achievements.total}`]);
+  if (data.achievements) {
+    const number = new Intl.NumberFormat(getTranslationLocale());
+    tiles.push([labels.achievements, `${number.format(data.achievements.unlocked)} / ${number.format(data.achievements.total)}`]);
+  }
   if (tiles.length) {
     const width = (CARD_WIDTH - 144 - (tiles.length - 1) * 24) / tiles.length;
     tiles.forEach(([label, value], i) => {

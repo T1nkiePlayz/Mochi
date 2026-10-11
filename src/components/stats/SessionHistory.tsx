@@ -6,6 +6,7 @@ import { useTranslation } from "../../lib/useTranslation";
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const when = (start: number) => new Date(start * 1000).toLocaleString(getTranslationLocale(), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const numberText = (value: number) => value.toLocaleString(getTranslationLocale());
 
 /** Newest sessions, one row each. */
 export function RecentSessions({ records }: { records: SessionRecord[] }) {
@@ -26,7 +27,7 @@ export function YearInReview({ records }: { records: SessionRecord[] }) {
   const peak = Math.max(...review.secondsByMonth, 1);
   const topGame = review.topGames[0] ? t(", most of it in {game}").replace("{game}", review.topGames[0].name) : "";
   const summary = t(review.gamesPlayed === 1 ? "{year} in Mochi: {hours} across {games} game{topGame}." : "{year} in Mochi: {hours} across {games} games{topGame}.")
-    .replace("{year}", String(review.year)).replace("{hours}", formatHours(review.totalSeconds)).replace("{games}", String(review.gamesPlayed)).replace("{topGame}", topGame);
+    .replace("{year}", numberText(review.year)).replace("{hours}", formatHours(review.totalSeconds)).replace("{games}", numberText(review.gamesPlayed)).replace("{topGame}", topGame);
   return <div className="year-review">
     <div className="year-review-head">
       <label>{t("Year")} <select value={year} onChange={(event) => setChosen(Number(event.target.value))}>{years.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>

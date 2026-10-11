@@ -15,9 +15,11 @@ import { usernameOf } from "../state/useAccount";
 import { Share2 } from "lucide-react";
 import { RecentSessions, YearInReview } from "../components/stats/SessionHistory";
 import { useTranslation } from "../lib/useTranslation";
+import { getTranslationLocale } from "../lib/translationLocale";
 import { AchievementsPanel, RecentAchievements } from "../components/stats/AchievementsPanel";
 
 const RANGES = [{ value: 7, label: "7 days" }, { value: 30, label: "30 days" }, { value: 90, label: "90 days" }, { value: 365, label: "Year" }] as const;
+const numberText = (value: number) => value.toLocaleString(getTranslationLocale());
 const RANGE_KEY = "mochi:stats-range";
 
 function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
@@ -95,11 +97,11 @@ export function StatsView() {
               </div>
               <div className="stats-kpis">
                 <Kpi label={t("Time played")} value={formatDuration(analysis.totalSeconds)} />
-                <Kpi label={t("Sessions")} value={String(analysis.sessionCount)} />
+                <Kpi label={t("Sessions")} value={numberText(analysis.sessionCount)} />
                 <Kpi label={t("Average session")} value={analysis.sessionCount ? formatDuration(analysis.averageSeconds) : t("None")} />
                 <Kpi label={t("Longest session")} value={analysis.longestSeconds ? formatDuration(analysis.longestSeconds) : t("None")} />
-                <Kpi label={t("Games played")} value={String(analysis.gamesPlayed)} />
-                <Kpi label={t("Current streak")} value={`${streaks.current} ${t(streaks.current === 1 ? "day" : "days")}`} hint={t("Longest {count}").replace("{count}", String(streaks.longest))} />
+                <Kpi label={t("Games played")} value={numberText(analysis.gamesPlayed)} />
+                <Kpi label={t("Current streak")} value={`${numberText(streaks.current)} ${t(streaks.current === 1 ? "day" : "days")}`} hint={t("Longest {count}").replace("{count}", numberText(streaks.longest)) />
               </div>
               <Card id="st-days" title={weekly ? t("Hours per week") : t("Hours per day")} wide><StackedBars buckets={buckets} games={analysis.games} weekly={weekly} /></Card>
               <div className="stats-grid">

@@ -9,6 +9,10 @@ import { ChartTip, DataTable, niceMax, OTHER_SERIES, seriesVar, useChartTip, use
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const longDate = (date: Date) => date.toLocaleDateString(getTranslationLocale(), { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+const numberText = (value: number) => value.toLocaleString(getTranslationLocale());
+const hourAxisLabel = (hours: number) => hours === 0
+  ? (getTranslationLocale() === "en" ? "0h" : new Intl.NumberFormat(getTranslationLocale(), { style: "unit", unit: "hour", unitDisplay: "short", maximumFractionDigits: 0 }).format(0))
+  : formatHours(hours * 3600);
 
 type Series = { id: string; name: string; color: string };
 
@@ -32,7 +36,7 @@ export function StackedBars({ buckets, games, weekly }: { buckets: DayBucket[]; 
         {[0, 0.5, 1].map((fraction) => (
           <g key={fraction}>
             <line className="stat-grid" x1={left} x2={W - right} y1={y(max * fraction)} y2={y(max * fraction)} />
-            <text className="stat-axis" x={left - 6} y={y(max * fraction) + 4} textAnchor="end">{max * fraction >= 1 || fraction === 0 ? `${Math.round(max * fraction * 10) / 10}h` : `${Math.round(max * fraction * 60)}m`}</text>
+            <text className="stat-axis" x={left - 6} y={y(max * fraction) + 4} textAnchor="end">{hourAxisLabel(max * fraction)}</text>
           </g>
         ))}
         {buckets.map((bucket, i) => {
@@ -201,13 +205,13 @@ export function Composition({ library, playtime }: { library: Piko[]; playtime: 
   const total = library.length || 1;
   return (
     <div className="stat-composition">
-      <div className="stat-stack" role="img" aria-label={t("Library of {count} games: {sources}").replace("{count}", String(library.length)).replace("{sources}", rows.map(([id, g]) => `${t(sourceNames[id] ?? id)} ${g.count}`).join(", "))}>
+      <div className="stat-stack" role="img" aria-label={t("Library of {count} games: {sources}").replace("{count}", numberText(library.length)).replace("{sources}", rows.map(([id, g]) => `${t(sourceNames[id] ?? id)} ${numberText(g.count)}`).join(", "))}>
         {rows.map(([id, g], i) => <i key={id} style={{ width: `${(g.count / total) * 100}%`, background: i < 5 ? seriesVar(i) : OTHER_SERIES }} />)}
       </div>
       <ul className="stat-comp-list">
         {rows.map(([id, g], i) => (
           <li key={id}><i style={{ background: i < 5 ? seriesVar(i) : OTHER_SERIES }} /><span>{t(sourceNames[id] ?? id)}</span>
-            <strong>{g.count}</strong><small>{Math.round((g.count / total) * 100)}% · {g.seconds ? formatHours(g.seconds) : t("no play")}</small></li>
+            <strong>{numberText(g.count)}</strong><small>{numberText(Math.round((g.count / total) * 100))}% · {g.seconds ? formatHours(g.seconds) : t("no play")}</small></li>
         ))}
       </ul>
     </div>
