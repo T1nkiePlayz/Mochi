@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useTranslation } from "../../../lib/useTranslation";
 import { RefreshCw, Search, Trash2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { lookupIgdbGames, type IgdbGame } from "../../../lib/igdb";
@@ -17,6 +18,7 @@ const providerOf = (ctx: EditorContext, field: "name" | "description" | "categor
 const year = (game: IgdbGame) => game.first_release_date ? new Date(game.first_release_date * 1000).getFullYear() : null;
 
 export function MetadataTab({ ctx }: { ctx: EditorContext }) {
+  const t = useTranslation();
   const { draft, patch, unlock, hasIgdb } = ctx;
   const [query, setQuery] = useState(draft.name);
   const [candidates, setCandidates] = useState<IgdbGame[] | null>(null);
@@ -74,8 +76,8 @@ export function MetadataTab({ ctx }: { ctx: EditorContext }) {
         {row.field !== "artwork" && draft.lockedFields?.includes(row.field) && <button type="button" className="text-button" onClick={() => unlock(row.field as "name")}>Reset to automatic</button>}
       </li>)}
     </ul>
-    <div className="editor-field"><span className="editor-field-label">Genres</span>
-      <TagEditor label="Genres" tags={draft.categories ?? []} suggestions={[]} onChange={(categories) => patch({ categories }, "categories")} /></div>
+    <div className="editor-field"><span className="editor-field-label">{t("Genres")}</span>
+      <TagEditor label={t("Genres")} tags={draft.categories ?? []} suggestions={[]} onChange={(categories) => patch({ categories }, "categories")} /></div>
 
     <div className="editor-actions-row">
       <button type="button" className="secondary-button" onClick={() => void refresh()} disabled={busy || (!hasIgdb && !ctx.refreshGame)}><RefreshCw size={14} className={busy ? "spin" : ""} /> Refresh this game</button>
@@ -83,20 +85,20 @@ export function MetadataTab({ ctx }: { ctx: EditorContext }) {
     </div>
 
     <section className="metadata-match">
-      <h3>Wrong match?</h3>
+      <h3>{t("Wrong match?")}</h3>
       {hasIgdb ? <>
         <form className="artwork-search-bar" onSubmit={(event) => void search(event)}>
-          <label className="artwork-search-input"><Search size={14} aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search IGDB" placeholder="Search IGDB by name" /></label>
-          <button type="submit" className="secondary-button" disabled={busy || !query.trim()}>Search</button>
+          <label className="artwork-search-input"><Search size={14} aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label={t("Search IGDB")} placeholder={t("Search IGDB by name")} /></label>
+          <button type="submit" className="secondary-button" disabled={busy || !query.trim()}>{t("Search")}</button>
         </form>
         {candidates && <div className="igdb-candidates">{candidates.map((game) => {
           const art = resolveIgdbImage(game.cover?.url, "t_cover_big");
           return <button type="button" key={game.id ?? game.name} className={`igdb-candidate ${game.id && game.id === draft.igdbId ? "selected" : ""}`} onClick={() => apply(game)}>
             <div className="igdb-candidate-art" style={{ backgroundImage: art ? cssUrl(art) : undefined }} />
-            <div className="igdb-candidate-copy"><strong>{game.name}{year(game) ? ` (${year(game)})` : ""}</strong><small>{game.genres?.map((genre) => genre.name).join(" · ") || "Genre unknown"}</small>{game.summary && <p>{game.summary}</p>}</div>
+            <div className="igdb-candidate-copy"><strong>{game.name}{year(game) ? ` (${year(game)})` : ""}</strong><small>{game.genres?.map((genre) => genre.name).join(" · ") || t("Genre unknown")}</small>{game.summary && <p>{game.summary}</p>}</div>
           </button>;
-        })}{!candidates.length && !busy && <p className="metadata-note">No games found for that search.</p>}</div>}
-      </> : <p className="metadata-note">{offline ? "You are offline. " : ""}IGDB matching needs you to be signed in with an IGDB key saved in Settings. Everything here can still be edited by hand.</p>}
+        })}{!candidates.length && !busy && <p className="metadata-note">{t("No games found for that search.")}</p>}</div>}
+      </> : <p className="metadata-note">{offline ? t("You are offline. ") : ""}IGDB matching needs you to be signed in with an IGDB key saved in Settings. Everything here can still be edited by hand.</p>}
     </section>
     {message && <p className="metadata-note" role="status">{message}</p>}
   </div>;
