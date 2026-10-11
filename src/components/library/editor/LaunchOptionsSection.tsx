@@ -142,7 +142,7 @@ export function LaunchOptionsSection({ ctx }: { ctx: EditorContext }) {
         <code className="launch-command" aria-labelledby="launch-steam-label" tabIndex={0}>{preview.steamOptions}</code>
         <button type="button" className="secondary-button" onClick={copySteam}><Copy size={14} /> {copied ? t("Copied") : t("Copy")}</button>
       </div>
-      <small className="launch-hint">{t("Paste this into the game's Properties, General, Launch options in Steam. Runtimes and the working directory are managed by Steam.</small>
+      <small className="launch-hint">{t("Paste this into the game's Properties, General, Launch options in Steam. Runtimes and the working directory are managed by Steam.")}</small>
     </div>}
     {(applies === "full" || applies === "flatpak") && <div className="editor-field"><span className="editor-field-label" id="launch-final-label">{t("Final command")}</span>
       <code className="launch-command" role="textbox" aria-readonly="true" aria-labelledby="launch-final-label" tabIndex={0}>{preview?.command ?? (previewFailed ? t("Preview unavailable.") : preview?.errors.length ? t("Fix the problems above to see the command.") : "…")}</code>
