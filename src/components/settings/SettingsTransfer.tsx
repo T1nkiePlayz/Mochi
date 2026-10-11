@@ -15,6 +15,7 @@ const message = (error: unknown) => (error instanceof Error ? error.message : ty
 
 /** Export and import of portable settings (Settings > Data). Import shows a preview first and changes nothing until confirmed. */
 export function SettingsTransfer() {
+  const t = useTranslation();
   const app = useApp();
   const { settings: accessibility } = useAccessibility();
   const [busy, setBusy] = useState(false);
@@ -25,13 +26,13 @@ export function SettingsTransfer() {
   const runExport = async () => {
     setBusy(true); setNote("");
     try { setNote((await exportSettings(snapshot(), true)) ? "Settings exported. The file holds no passwords, keys or sign-in data." : ""); }
-    catch (error) { setNote(`Could not export: ${message(error)}`); }
+    catch (error) { setNote(t("Could not export: {error}").replace("{error}", message(error))); }
     finally { setBusy(false); }
   };
   const runPick = async () => {
     setBusy(true); setNote("");
     try { setFile(await pickSettingsFile()); }
-    catch (error) { setNote(`Could not read that file: ${message(error)}`); }
+    catch (error) { setNote(t("Could not read that file: {error}").replace("{error}", message(error))); }
     finally { setBusy(false); }
   };
 
