@@ -62,6 +62,7 @@ export function DataSection() {
     finally { setBusy(null); }
   };
   return <SettingsGroup title="Data & privacy" subtitle="Local-first storage" id="settings-data">
+    <div className="setting-row"><span><strong>Refresh all metadata</strong><small>Refresh every available provider for games in your library. Manually locked fields and artwork you chose yourself are preserved.</small></span><button type="button" className="secondary-button" disabled={metadata.refreshBusy || lib.library.length === 0} onClick={() => void metadata.refreshAll(lib.library)}>{metadata.refreshingAll ? "Refreshing all…" : "Refresh all metadata"}</button></div>
     <div className="data-source-list" role="list" aria-label="Metadata sources">
       {dataSources.map((source) => {
         const provider = source.id === "igdb" || source.id === "steamgriddb" || source.id === "steam" ? source.id : null;
@@ -71,7 +72,7 @@ export function DataSection() {
         return <div className="data-source-row" role="listitem" key={source.id}>
           <span><strong>{source.label}</strong><small>{source.detail}</small></span>
           <span className="data-source-actions">
-            {provider && <button type="button" className="secondary-button" disabled={!need?.ready || count === 0 || metadata.refreshBusy} title={!need?.ready ? need?.text : count === 0 ? "No game in your library can use this source." : undefined} onClick={() => void metadata.refreshProvider(lib.library, provider)}>{metadata.refreshBusy ? "Refreshing…" : `Refresh${count ? ` (${count})` : ""}`}</button>}
+            {provider && <button type="button" className="secondary-button" disabled={!need?.ready || count === 0 || metadata.refreshBusy} title={!need?.ready ? need?.text : count === 0 ? "No game in your library can use this source." : undefined} onClick={() => void metadata.refreshProvider(lib.library, provider)}>{metadata.refreshingProvider === provider ? "Refreshing…" : `Refresh${count ? ` (${count})` : ""}`}</button>}
             <button type="button" className="secondary-button danger-outline" disabled={busy !== null || (source.id === "custom-artwork" && covers === 0)} onClick={() => void run(source.id)}>{busy === source.id ? "Clearing…" : `Clear ${source.label} data`}</button>
           </span>
           {need && <p className={`data-source-state${need.ready ? " ready" : ""}`}>{need.ready && count === 0 ? "No game in your library can use this source yet." : need.text}</p>}
