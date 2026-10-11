@@ -13,6 +13,28 @@ export function ConflictIssues({ issues, tofu, onFixed }: { issues: Issue[]; tof
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
   const [showAll, setShowAll] = useState(false);
+  const issueTitle = (issue: Issue) => {
+    const title = issue.title;
+    if (issue.kind === "duplicate-file") return t("{name} exists twice").replace("{name}", title.replace(/ exists twice$/, ""));
+    if (issue.kind === "duplicate-project") return t("{name} is installed twice").replace("{name}", title.replace(/ is installed twice$/, ""));
+    if (issue.kind === "wrong-loader") return t("{name} is for a different loader").replace("{name}", title.replace(/ is for a different loader$/, ""));
+    if (issue.kind === "wrong-version") return t("{name} is for a different game version").replace("{name}", title.replace(/ is for a different game version$/, ""));
+    if (issue.kind === "incompatible") {
+      const [name, other] = title.split(" does not work with ");
+      return t("{name} does not work with {other}").replace("{name}", name).replace("{other}", other ?? "");
+    }
+    if (issue.kind === "missing-dependency") {
+      if (title.endsWith(" is switched off")) return t("{name} is switched off").replace("{name}", title.replace(/ is switched off$/, ""));
+      if (title.endsWith(" is missing")) return t("{name} is missing").replace("{name}", title.replace(/ is missing$/, ""));
+    }
+    return t(title);
+  };
+  const actionLabel = (label: string) => {
+    if (label.startsWith("Disable ")) return `${t("Disable")} ${label.slice("Disable ".length)}`;
+    if (label.startsWith("Enable ")) return `${t("Enable")} ${label.slice("Enable ".length)}`;
+    if (label === "Disable duplicate") return t("Disable");
+    return t(label);
+  };
   const run = async (issue: Issue, action: IssueAction) => {
     setBusy(`${issue.id}:${action.label}`);
     setMessage(await applyIssueAction(action, tofu));
@@ -26,9 +48,9 @@ export function ConflictIssues({ issues, tofu, onFixed }: { issues: Issue[]; tof
         const Icon = issue.severity === "warning" ? AlertTriangle : Info;
         return <li key={issue.id} className="conflict-row" data-severity={issue.severity}>
           <Icon size={15} aria-hidden="true" />
-          <div className="conflict-text"><strong>{issue.title}</strong><small>{issue.detail}</small></div>
+          <div className="conflict-text"><strong>{issueTitle(issue)}</strong><small>{t(issue.detail)}</small></div>
           {issue.actions.length > 0 && <div className="conflict-actions">
-            {issue.actions.map((action) => <button key={action.label} type="button" className="secondary-button" disabled={busy !== ""} onClick={() => void run(issue, action)}>{busy === `${issue.id}:${action.label}` ? t("Working…") : t(action.label)}</button>)}
+            {issue.actions.map((action) => <button key={action.label} type="button" className="secondary-button" disabled={busy !== ""} onClick={() => void run(issue, action)}>{busy === `${issue.id}:${action.label}` ? t("Working…") : actionLabel(action.label)}</button>)}
           </div>}
         </li>;
       })}
