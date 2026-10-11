@@ -181,7 +181,7 @@ export default function BigPicture() {
 
   const leave = (nav?: "Library" | "Downloads" | "Settings") => { if (nav) setActiveNav(nav); exitBigPicture(); };
   const legend = searching ? [] : menu !== "closed" ? MENU_LEGEND : gameId ? GAME_LEGEND : HOME_LEGEND;
-  const reportError = (error: unknown) => { playSound("error"); actions.setLaunchError(t(error instanceof Error ? error.message : String(error))); };
+  const reportError = (error: unknown) => { playSound("error"); actions.setLaunchError(error instanceof Error ? error.message : String(error)); };
 
   return <div className="bp-root" data-bp-root data-bp-screen={gameId ? "game" : "home"}
     data-bp-layout={display.layout} data-bp-tile={display.shape} data-bp-size={display.size} data-bp-titles={display.titles}>
