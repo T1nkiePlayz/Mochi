@@ -16,6 +16,7 @@ const icons: Record<string, LucideIcon> = {
   Medal, Moon, Mountain, Palette, PartyPopper, PenLine, Puzzle, RotateCcw, Rocket, Shapes, Shuffle, Star, Sunrise, Tag, Timer, Trophy, Tv, Undo2, Wrench, Zap, Heart, Map: MapIcon,
 };
 const dateText = (ms: number) => new Date(ms).toLocaleDateString(getTranslationLocale(), { day: "numeric", month: "short", year: "numeric" });
+const numberText = (value: number) => value.toLocaleString(getTranslationLocale());
 const roman = ["", "I", "II", "III", "IV", "V", "VI", "VII"];
 
 /** Memoised: filter and tab changes re-render the grid, but most badges keep the same props. */
@@ -34,7 +35,7 @@ export const AchievementBadge = memo(function AchievementBadge({ item, unlockedA
         <div className="ach-title"><strong>{t(mystery ? "Hidden achievement" : def.title)}</strong><span className="ach-rarity">{t(rarityLabels[def.rarity])}</span></div>
         <p>{t(mystery ? "Keep playing to find out what this is." : def.description)}</p>
         {!unlocked && !mystery && item.available && <div className="ach-progress"><div className="stat-meter" role="progressbar" aria-label={t("{name} progress").replace("{name}", t(def.title))} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(item.fraction * 100)} aria-valuetext={progressText(item, t)}><i style={{ width: `${Math.max(2, item.fraction * 100)}%` }} /></div></div>}
-        <small>{t(status)}{tier && !mystery ? <span className="ach-tier"> · {t(tier)}</span> : null}</small>
+        <small>{status}{tier && !mystery ? <span className="ach-tier"> · {tier}</span> : null}</small>
       </div>
     </li>
   );
@@ -68,15 +69,15 @@ export function AchievementsPanel({ progress, unlocked }: { progress: Achievemen
 
   return (
     <section aria-labelledby="ach-heading" className="stats-card ach-panel">
-      <div className="stats-card-head"><h2 id="ach-heading">{t("Achievements")}</h2><span className="stats-muted">{done} {t("of")} {progress.length} {t("unlocked")}</span></div>
+      <div className="stats-card-head"><h2 id="ach-heading">{t("Achievements")}</h2><span className="stats-muted">{numberText(done)} {t("of")} {numberText(progress.length)} {t("unlocked")}</span></div>
       <div className="stat-meter wide" role="progressbar" aria-label={t("Achievements unlocked")} aria-valuemin={0} aria-valuemax={progress.length} aria-valuenow={done}><i style={{ width: `${(done / Math.max(1, progress.length)) * 100}%` }} /></div>
       <p className="stats-muted">{t("Mochi's own achievements, tracked on this device from your play history and library. Tiered ones show the next tier to go for. Steam achievements for each game are in its Overview.")}</p>
       <div className="ach-filters">
         <div className="ach-chips" role="group" aria-label={t("Achievement categories")}>
-          <button type="button" className="ach-chip" aria-pressed={category === "all"} onClick={() => setCategory("all")}>{t("All")} <small>{done}/{progress.length}</small></button>
+          <button type="button" className="ach-chip" aria-pressed={category === "all"} onClick={() => setCategory("all")}>{t("All")} <small>{numberText(done)}/{numberText(progress.length)}</small></button>
           {achievementCategories.map((name) => {
             const counts = perCategory.get(name);
-            return counts ? <button key={name} type="button" className="ach-chip" aria-pressed={category === name} onClick={() => setCategory(name)}>{t(name)} <small>{counts.done}/{counts.total}</small></button> : null;
+            return counts ? <button key={name} type="button" className="ach-chip" aria-pressed={category === name} onClick={() => setCategory(name)}>{t(name)} <small>{numberText(counts.done)}/{numberText(counts.total)}</small></button> : null;
           })}
         </div>
         <div className="ach-chips" role="group" aria-label={t("Achievement status")}>
