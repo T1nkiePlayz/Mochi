@@ -16,6 +16,7 @@ import { isLauncher } from "./hooks";
 import { exitBigPicture, isGamescopeSession, quitMochi } from "./mode";
 import { getPowerCapabilities, minimizeWindow, powerAction, toggleFullscreen, type PowerCapabilities } from "./native";
 import { playSound, useSoundSettings } from "../lib/sound";
+import { useTranslation } from "../lib/useTranslation";
 import { useSoundPacks } from "../lib/sound/useSoundPacks";
 import { useDisplaySettings } from "./display";
 
@@ -29,6 +30,7 @@ const MENU_LEGEND: LegendItem[] = [{ action: "confirm", label: "Select" }, { act
 const shelfSize = 16;
 
 export default function BigPicture() {
+  const t = useTranslation();
   const app = useApp();
   const { lib, playtime, sessions, actions, themeEngine, downloads, platformCapabilities, setActiveNav } = app;
   const [sound, updateSound] = useSoundSettings();
@@ -196,7 +198,7 @@ export default function BigPicture() {
         : <Home hero={hero} entryFor={(id) => entries.get(id)} shelves={shelves} query={query} isRunning={sessions.isRunning} grid={display.layout === "grid" || Boolean(query)}
             onOpen={openGame} onPlay={play} onFocusCard={focusCard} onExit={() => leave()} />}
     </main>
-    {launchError && <div className="bp-toast" role="alert">{launchError}</div>}
+    {launchError && <div className="bp-toast" role="alert">{t(launchError)}</div>}
     <Legend items={legend} />
     {menu !== "closed" && <SideMenu view={menu} themes={themeEngine.themes} theme={themeEngine.theme} sound={sound} soundPacks={soundPacks} display={display}
       power={power} macos={platformCapabilities?.platform === "macos"} windowControls={!isGamescopeSession()} activeDownloads={activeDownloads}

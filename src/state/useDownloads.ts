@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { keepIfEqual } from "../lib/equal";
 import { getDownloads, type DownloadEntry } from "../lib/modrinth";
 import { subscribeNative } from "../lib/nativeEvents";
+import { translate } from "../lib/i18n";
 
 /** The native side owns download state; poll it while the Downloads page is open or anything is in flight. */
-export function useDownloads(active: boolean, notify: (title: string, message: string, opts?: { group?: string; item?: string }) => void) {
+export function useDownloads(active: boolean, notify: (title: string, message: string, opts?: { group?: string; item?: string }) => void, language: unknown) {
+  const t = useCallback((message: string) => translate(message, language), [language]);
   const [downloads, setDownloads] = useState<DownloadEntry[]>([]);
   const statuses = useRef(new Map<string, string>());
   const notifyRef = useRef(notify);
@@ -22,8 +24,10 @@ export function useDownloads(active: boolean, notify: (title: string, message: s
         for (const download of next) {
           if (statuses.current.get(download.id) === "downloading" && download.status !== "downloading" && download.status !== "cancelled") {
             notifyRef.current(
-              download.status === "completed" ? "Download finished" : "Download failed",
-              download.status === "completed" ? `${download.itemName} was added to ${download.tofuName}.` : `${download.itemName}: ${download.error ?? "unknown error"}`,
+              download.status === "completed" ? t("Download finished") : t("Download failed"),
+              download.status === "completed"
+                ? t("{name} was added to {tofu}.").replace("{name}", download.itemName).replace("{tofu}", download.tofuName)
+                : `${download.itemName}: ${t("Failed")}. ${download.error ?? t("Unknown error")}`,
               download.status === "completed" ? { group: "downloads", item: download.itemName } : undefined);
           }
           statuses.current.set(download.id, download.status);
@@ -40,7 +44,7 @@ export function useDownloads(active: boolean, notify: (title: string, message: s
     // The native side announces every start, finish and cancel, so the list reacts at once instead of on the next tick.
     const unsubscribe = subscribeNative("mod-download-changed", () => void poll());
     return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener("visibilitychange", tick); unsubscribe(); };
-  }, [active, hasActive]);
+  }, [active, hasActive, t]);
 
   return downloads;
 }

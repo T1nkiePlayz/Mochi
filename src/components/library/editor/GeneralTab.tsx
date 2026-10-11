@@ -1,4 +1,5 @@
 import { normalizeTag } from "../../../lib/library";
+import { useTranslation } from "../../../lib/useTranslation";
 import { CollectionPicker } from "../CollectionPicker";
 import { TagEditor } from "../TagEditor";
 import { BacklogControl } from "../BacklogControl";
@@ -8,6 +9,7 @@ import type { EditorContext } from "./types";
 const COMMON_CATEGORIES = ["Custom", "Steam", "Heroic", "Lutris", "Bottles", "itch.io", "Flatpak", "Applications", "Emulator"];
 
 export function GeneralTab({ ctx }: { ctx: EditorContext }) {
+  const t = useTranslation();
   const { draft, patch, unlock } = ctx;
   const locked = (field: "name" | "description") => draft.lockedFields?.includes(field);
   const kind: KindOverride = draft.kind === "launcher" ? "launcher" : "game";
@@ -24,32 +26,32 @@ export function GeneralTab({ ctx }: { ctx: EditorContext }) {
     <label>Game name
       <input value={draft.name} onChange={(event) => patch({ name: event.target.value }, "name")} required autoFocus />
     </label>
-    {locked("name") && <p className="metadata-note editor-locked">Edited by you, so automatic updates keep it. <button type="button" className="text-button" onClick={() => unlock("name")}>Reset to automatic</button></p>}
+    {locked("name") && <p className="metadata-note editor-locked">{t("Edited by you, so automatic updates keep it.")} <button type="button" className="text-button" onClick={() => unlock("name")}>{t("Reset to automatic")}</button></p>}
     <label>Description
       <textarea rows={4} value={draft.description} onChange={(event) => patch({ description: event.target.value }, "description")} />
     </label>
-    {locked("description") && <p className="metadata-note editor-locked">Edited by you. <button type="button" className="text-button" onClick={() => unlock("description")}>Reset to automatic</button></p>}
-    <div className="editor-field"><span className="editor-field-label" id="editor-kind-label">Type</span>
+    {locked("description") && <p className="metadata-note editor-locked">{t("Edited by you.")} <button type="button" className="text-button" onClick={() => unlock("description")}>Reset to automatic</button></p>}
+    <div className="editor-field"><span className="editor-field-label" id="editor-kind-label">{t("Type")}</span>
       <div className="a11y-segmented" role="group" aria-labelledby="editor-kind-label">
-        {(["game", "launcher"] as const).map((option) => <button type="button" key={option} aria-pressed={kind === option} onClick={() => setKind(option)}>{option === "game" ? "Game" : "Launcher"}</button>)}
+        {(["game", "launcher"] as const).map((option) => <button type="button" key={option} aria-pressed={kind === option} onClick={() => setKind(option)}>{option === "game" ? t("Game") : t("Launcher")}</button>)}
       </div>
-      <p className="metadata-note">Wrong detection? Choose what this really is. Mochi remembers your choice.</p>
+      <p className="metadata-note">{t("Wrong detection? Choose what this really is. Mochi remembers your choice.")}</p>
     </div>
     <label className="check-row">
       <input type="checkbox" checked={isExtraType} onChange={(event) => patch({ contentType: event.target.checked ? "soundtrack" : "game", contentTypeLocked: true })} />
-      <span>This is a soundtrack or extra (hide from library)</span>
+      <span>{t("This is a soundtrack or extra (hide from library)")}</span>
     </label>
     <label>Platform category
-      <input value={draft.platformCategory ?? ""} onChange={(event) => patch({ platformCategory: event.target.value || undefined })} placeholder="e.g. Steam, Heroic, Custom" maxLength={40} />
+      <input value={draft.platformCategory ?? ""} onChange={(event) => patch({ platformCategory: event.target.value || undefined })} placeholder={t("e.g. Steam, Heroic, Custom")} maxLength={40} />
     </label>
-    <div className="editor-suggestions" role="group" aria-label="Common categories">{COMMON_CATEGORIES.map((category) => <button type="button" key={category} className={`filter-chip ${draft.platformCategory === category ? "active" : ""}`} aria-pressed={draft.platformCategory === category} onClick={() => patch({ platformCategory: category })}>{category}</button>)}</div>
-    <div className="editor-field"><span className="editor-field-label">Backlog</span>
+    <div className="editor-suggestions" role="group" aria-label={t("Common categories")}>{COMMON_CATEGORIES.map((category) => <button type="button" key={category} className={`filter-chip ${draft.platformCategory === category ? "active" : ""}`} aria-pressed={draft.platformCategory === category} onClick={() => patch({ platformCategory: category })}>{category}</button>)}</div>
+    <div className="editor-field"><span className="editor-field-label">{t("Backlog")}</span>
       <BacklogControl value={draft.backlog} commit="change" onChange={(backlog) => patch({ backlog })} />
     </div>
-    <div className="editor-field"><span className="editor-field-label">Tags</span>
+    <div className="editor-field"><span className="editor-field-label">{t("Tags")}</span>
       <TagEditor tags={draft.tags ?? []} suggestions={ctx.tagSuggestions} onChange={(tags) => patch({ tags: tags.map(normalizeTag).filter(Boolean) })} />
     </div>
-    <div className="editor-field"><span className="editor-field-label">Collections</span>
+    <div className="editor-field"><span className="editor-field-label">{t("Collections")}</span>
       <CollectionPicker collections={ctx.collections} games={[draft]} onCreate={ctx.createCollection}
         onToggle={(id, on) => patch({ collectionIds: on ? [...new Set([...(draft.collectionIds ?? []), id])] : (draft.collectionIds ?? []).filter((item) => item !== id) })} />
     </div>

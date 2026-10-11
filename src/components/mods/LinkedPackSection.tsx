@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { openExternalUrl } from "../../lib/platform";
 import type { Tofu } from "../../models";
 import { rematchPack, unlinkPack } from "../../lib/mods/packLink";
@@ -8,6 +9,7 @@ const HOW = { managed: "recorded by your launcher", index: "from the pack's mani
 
 /** "Linked modpack: <name> · Unlink" for a Minecraft instance. Names, icons and descriptions are fetched live (CurseForge ones are never saved). */
 export function LinkedPackSection({ tofu, onPatch }: { tofu: Tofu; onPatch: (change: (tofu: Tofu) => Tofu) => void }) {
+  const t = useTranslation();
   const pack = tofu.pack;
   const [info, setInfo] = useState<LinkedPackInfo | null>(null);
   const [error, setError] = useState("");
@@ -16,28 +18,28 @@ export function LinkedPackSection({ tofu, onPatch }: { tofu: Tofu; onPatch: (cha
     setInfo(null); setError("");
     if (!pack) return;
     let live = true;
-    void import("../../lib/mods/packApi").then((api) => api.loadLinkedPack(tofu, pack)).then((value) => { if (live) setInfo(value); }).catch((reason) => { if (live) setError(reason instanceof Error ? reason.message : "Could not load the modpack."); });
+    void import("../../lib/mods/packApi").then((api) => api.loadLinkedPack(tofu, pack)).then((value) => { if (live) setInfo(value); }).catch((reason) => { if (live) { const detail = reason instanceof Error ? reason.message : ""; const translated = detail ? t(detail) : ""; setError(translated && translated !== detail ? translated : detail ? `${t("Could not load the modpack.")} ${detail}` : t("Could not load the modpack.")); } });
     return () => { live = false; };
-  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!pack) return <div className="linked-pack">
-    <p className="muted">{tofu.packCheckedAt ? "No modpack was recognised for this instance." : "Looking for a matching modpack in the background."}</p>
-    {tofu.packCheckedAt && <button type="button" className="secondary-button" onClick={() => onPatch(rematchPack)}>Search again</button>}
+    <p className="muted">{tofu.packCheckedAt ? t("No modpack was recognised for this instance.") : t("Looking for a matching modpack in the background.")}</p>
+    {tofu.packCheckedAt && <button type="button" className="secondary-button" onClick={() => onPatch(rematchPack)}>{t("Search again")}</button>}
   </div>;
   const site = pack.source === "modrinth" ? "Modrinth" : "CurseForge";
   return <div className="linked-pack">
     <div className="tofu-settings-inline">
       {info?.iconUrl && <img src={info.iconUrl} alt="" width={40} height={40} loading="lazy" decoding="async" style={{ borderRadius: 8 }} />}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <strong>Linked modpack: {info?.name ?? (error ? `${site} pack ${pack.projectId}` : "Loading…")}</strong>
-        <small className="muted" style={{ display: "block" }}>{site} · {HOW[pack.matchedBy]}</small>
+        <strong>{t("Linked modpack: {name}").replace("{name}", info?.name ?? (error ? `${site} pack ${pack.projectId}` : t("Loading…")))}</strong>
+        <small className="muted" style={{ display: "block" }}>{site} · {t(HOW[pack.matchedBy])}</small>
       </div>
-      <button type="button" className="secondary-button" onClick={() => onPatch(unlinkPack(Date.now()))}>Unlink</button>
+      <button type="button" className="secondary-button" onClick={() => onPatch(unlinkPack(Date.now()))}>{t("Unlink")}</button>
     </div>
     {info?.description && <p className="muted">{info.description}</p>}
     {error && <p className="muted" role="status">{error}</p>}
-    {info?.update && <p role="status"><strong>Update available: {info.update.versionName}</strong> <button type="button" className="secondary-button" onClick={() => void openExternalUrl(info.pageUrl).catch(() => {})}>Open pack page</button>
-      <small className="muted" style={{ display: "block" }}>Update the pack in your launcher. Mochi updates the individual mods under Updates.</small></p>}
-    {pack.source === "curseforge" && <small className="metadata-note">Powered by CurseForge</small>}
+    {info?.update && <p role="status"><strong>{t("Update available: {version}").replace("{version}", info.update.versionName)}</strong> <button type="button" className="secondary-button" onClick={() => void openExternalUrl(info.pageUrl).catch(() => {})}>{t("Open pack page")}</button>
+      <small className="muted" style={{ display: "block" }}>{t("Update the pack in your launcher. Mochi updates the individual mods under Updates.")}</small></p>}
+    {pack.source === "curseforge" && <small className="metadata-note">{t("Powered by CurseForge")}</small>}
   </div>;
 }

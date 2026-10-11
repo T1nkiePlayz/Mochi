@@ -1,0 +1,3 @@
+export const editFilterMessages: Record<string, Record<string, string>> = {
+"Edit “{name}”": {ar:"تعديل «{name}»",bg:"Редактиране на „{name}“","zh-Hans":"编辑“{name}”","zh-Hant":"編輯「{name}」",cs:"Upravit „{name}“",da:"Rediger „{name}“",nl:"' {name} ' bewerken",fi:"Muokkaa kohdetta ”{name}”",fr:"Modifier « {name} »",de:"„{name}“ bearbeiten",el:"Επεξεργασία «{name}»",hu:"„{name}” szerkesztése",id:"Edit “{name}”",it:"Modifica «{name}»",ja:"「{name}」を編集",ko:"'{name}' 편집",no:"Rediger «{name}»",pl:"Edytuj „{name}”",pt:"Editar «{name}»","pt-BR":"Editar “{name}”",ro:"Editează „{name}”",ru:"Изменить «{name}»",es:"Editar «{name}»",sv:"Redigera ”{name}”",th:"แก้ไข “{name}”",tr:"“{name}” öğesini düzenle",uk:"Редагувати «{name}»",vi:"Chỉnh sửa “{name}”"}
+};

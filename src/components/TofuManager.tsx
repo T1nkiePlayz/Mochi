@@ -6,7 +6,7 @@ import { defaultLaunchConfig } from "../lib/launch";
 import type { RuntimeInfo } from "../lib/platform";
 import { copyInstanceRecords } from "../lib/mods/instances";
 import { checkTofuMods } from "../lib/mods/conflictService";
-import { summarizeIssues, type Issue } from "../lib/mods/conflicts";
+import type { Issue } from "../lib/mods/conflicts";
 import { ConflictIssues } from "./mods/ConflictIssues";
 import type { Piko, Tofu } from "../models";
 import { Select } from "./ui/Select";
@@ -15,6 +15,7 @@ import { ModFolderEditor } from "./mods/ModFolderEditor";
 import { LinkedPackSection } from "./mods/LinkedPackSection";
 import { TofuSnapshotsSection } from "./mods/TofuSnapshotsSection";
 import { TofuShareSection } from "./mods/TofuShareSection";
+import { useTranslation } from "../lib/useTranslation";
 
 type Props = {
   piko: Piko;
@@ -35,6 +36,7 @@ function Section({ title, description, children }: { title: string; description?
 }
 
 export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange, onClose }: Props) {
+  const t = useTranslation();
   const tofus = piko.tofus;
   const selected = tofus.find((tofu) => tofu.id === selectedTofuId) ?? tofus[0];
   const [draftName, setDraftName] = useState(selected?.name ?? "");
@@ -72,14 +74,14 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
     return tofu;
   };
   const duplicate = () => {
-    const copy: Tofu = { ...selected, id: newId(selected.name), name: `${selected.name} copy`, activeProfileId: undefined, profiles: (selected.profiles ?? []).map((profile) => ({ ...profile })), launch: { ...launch, wrappers: [...launch.wrappers] } };
+    const copy: Tofu = { ...selected, id: newId(selected.name), name: t("{name} copy").replace("{name}", selected.name), activeProfileId: undefined, profiles: (selected.profiles ?? []).map((profile) => ({ ...profile })), launch: { ...launch, wrappers: [...launch.wrappers] } };
     // Same mods as the original (its records), so the copy starts as an identical mod set.
     void copyInstanceRecords(selected.id, copy.id).catch(() => undefined);
     onChange([...tofus, copy]);
     onSelect(copy.id);
   };
   const remove = async () => {
-    if (tofus.length < 2 || !await confirmAction({ title: `Delete the Tofu “${selected.name}”?`, danger: true, confirmLabel: "Delete Tofu", message: "Its settings and mod profiles are removed from Mochi. Files in its folder are not touched.", items: [selected.name] })) return;
+    if (tofus.length < 2 || !await confirmAction({ title: t("Delete the Tofu “{name}”?").replace("{name}", selected.name), danger: true, confirmLabel: t("Delete Tofu"), message: t("Its settings and mod profiles are removed from Mochi. Files in its folder are not touched."), items: [selected.name] })) return;
     const remaining = tofus.filter((tofu) => tofu.id !== selected.id);
     onChange(remaining);
     onSelect(remaining[0].id);
@@ -97,60 +99,60 @@ export function TofuManager({ piko, selectedTofuId, runtimes, onSelect, onChange
   const commitName = () => { const name = draftName.trim(); if (name && name !== selected.name) patch({ name }); else setDraftName(selected.name); };
 
   return <div className="modal-backdrop" onClick={onClose}><div className="modal tofu-manager-modal" role="dialog" aria-modal="true" aria-labelledby="tofu-manager-title" onClick={(event) => event.stopPropagation()}>
-    <div className="modal-header"><div><p className="eyebrow">{piko.name}</p><h2 id="tofu-manager-title">Manage Tofus</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17}/></button></div>
+    <div className="modal-header"><div><p className="eyebrow">{piko.name}</p><h2 id="tofu-manager-title">{t("Manage Tofus")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17}/></button></div>
     <div className="tofu-manager-body">
-      <div className="tofu-manager-list" role="listbox" aria-label="Tofus">
-        {tofus.map((tofu) => <button type="button" role="option" aria-selected={tofu.id === selected.id} key={tofu.id} className={"tofu-manager-item " + (tofu.id === selected.id ? "active" : "")} onClick={() => onSelect(tofu.id)}><strong>{tofu.name}</strong><small>{tofu.version} · {tofu.runtime}{tofu.mods ? ` · ${tofu.mods} mods` : ""}</small></button>)}
-        <button type="button" className="tofu-manager-item add" onClick={create}><Plus size={14}/> New Tofu</button>
+      <div className="tofu-manager-list" role="listbox" aria-label={t("Tofus")}>
+        {tofus.map((tofu) => <button type="button" role="option" aria-selected={tofu.id === selected.id} key={tofu.id} className={"tofu-manager-item " + (tofu.id === selected.id ? "active" : "")} onClick={() => onSelect(tofu.id)}><strong>{tofu.name}</strong><small>{tofu.version} · {tofu.runtime}{tofu.mods ? ` · ${t("{count} mods").replace("{count}", String(tofu.mods))}` : ""}</small></button>)}
+        <button type="button" className="tofu-manager-item add" onClick={create}><Plus size={14}/> {t("New Tofu")}</button>
       </div>
       <div className="tofu-manager-form tofu-settings">
-        <Section title="General">
-          <Field label="Name"><input value={draftName} maxLength={60} onChange={(e) => setDraftName(e.target.value)} onBlur={commitName} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} /></Field>
+        <Section title={t("General")}>
+          <Field label={t("Name")}><input value={draftName} maxLength={60} onChange={(e) => setDraftName(e.target.value)} onBlur={commitName} onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} /></Field>
           <div className="tofu-settings-row">
-            <Field label="Game version"><input value={selected.version} maxLength={40} onChange={(e) => patch({ version: e.target.value })} /></Field>
-            <Field label="Runtime label"><input value={selected.runtime} maxLength={40} onChange={(e) => patch({ runtime: e.target.value })} /></Field>
+            <Field label={t("Game version")}><input value={selected.version} maxLength={40} onChange={(e) => patch({ version: e.target.value })} /></Field>
+            <Field label={t("Runtime label")}><input value={selected.runtime} maxLength={40} onChange={(e) => patch({ runtime: e.target.value })} /></Field>
           </div>
         </Section>
 
-        {piko.id === "minecraft" && selected.launchTarget && <Section title="Modpack" description="The Modrinth or CurseForge modpack this instance came from.">
+        {piko.id === "minecraft" && selected.launchTarget && <Section title={t("Modpack")} description={t("The Modrinth or CurseForge modpack this instance came from.")}>
           <LinkedPackSection tofu={selected} onPatch={(change) => onChange(tofus.map((tofu) => tofu.id === selected.id ? change(tofu) : tofu))} />
         </Section>}
 
-        <Section title="Mod folders" description="Where this Tofu's mods live and where the game loads them from.">
+        <Section title={t("Mod folders")} description={t("Where this Tofu’s mods live and where the game loads them from.")}>
           <ModFolderEditor key={selected.id} piko={piko} tofu={selected} onUpdate={patch} showVersion={false} />
-          <Checkbox checked={selected.extractArchives === true} onChange={(checked) => patch({ extractArchives: checked })} label="Extract .zip downloads into the folder"
-            description="For games whose mods are archives. A downloaded .zip is unpacked into the content folder and the archive is removed." />
+          <Checkbox checked={selected.extractArchives === true} onChange={(checked) => patch({ extractArchives: checked })} label={t("Extract .zip downloads into the folder")}
+            description={t("For games whose mods are archives. A downloaded .zip is unpacked into the content folder and the archive is removed.")} />
         </Section>
 
-        {selected.path && <Section title="Snapshots" description="Mochi saves the mod files and records before updates. Restore puts the Tofu back to a saved state; the current one is saved first.">
+        {selected.path && <Section title={t("Snapshots")} description={t("Mochi saves the mod files and records before updates. Restore puts the Tofu back to a saved state; the current one is saved first.")}>
           <TofuSnapshotsSection tofu={selected} />
         </Section>}
 
-        {selected.path && <Section title="Mod check" description="Looks for duplicates, mods for another game version or loader, and missing required mods. Works offline from what Mochi saved when the mods were installed.">
-          <div className="conflict-check-row"><button type="button" className="secondary-button" disabled={checking} onClick={() => void runCheck()}><ShieldCheck size={14}/> {checking ? "Checking…" : "Check mods"}</button>
-            {checked?.tofuId === selected.id && <span className="conflict-message" role="status" aria-live="polite">{summarizeIssues(checked.issues)}</span>}</div>
+        {selected.path && <Section title={t("Mod check")} description={t("Looks for duplicates, mods for another game version or loader, and missing required mods. Works offline from what Mochi saved when the mods were installed.")}>
+          <div className="conflict-check-row"><button type="button" className="secondary-button" disabled={checking} onClick={() => void runCheck()}><ShieldCheck size={14}/> {checking ? t("Checking…") : t("Check mods")}</button>
+            {checked?.tofuId === selected.id && <span className="conflict-message" role="status" aria-live="polite">{checked.issues.length === 0 ? t("No problems found.") : t("Possible mod problems: {count}").replace("{count}", String(checked.issues.length))}</span>}</div>
           {checked?.tofuId === selected.id && checked.issues.length > 0 && <ConflictIssues issues={checked.issues} tofu={selected} onFixed={runCheck} />}
-          <Checkbox checked={selected.skipModCheck !== true} onChange={(on) => patch({ skipModCheck: on ? undefined : true })} label="Check mods before launching" description="Shows a warning with fixes first. You can always launch anyway." />
+          <Checkbox checked={selected.skipModCheck !== true} onChange={(on) => patch({ skipModCheck: on ? undefined : true })} label={t("Check mods before launching")} description={t("Shows a warning with fixes first. You can always launch anyway.")} />
         </Section>}
 
-        <Section title="Share" description="Export this Tofu's mod list as a small .mochipack file or code (ids and hashes only), or import one.">
+        <Section title={t("Share")} description={t("Export this Tofu's mod list as a small .mochipack file or code (ids and hashes only), or import one.")}>
           <TofuShareSection piko={piko} tofu={selected} onCreateTofu={createImported} />
         </Section>
 
-        <Section title="Launch settings">
-          {compat.length > 0 && <Field label="Compatibility runtime" hint="Used for Windows programs (.exe). Native games ignore it."><Select value={launch.runtime ?? ""} onChange={(value) => patchLaunch({ runtime: value || undefined })} label="Compatibility runtime" searchable={false} options={[{ value: "", label: "Automatic" }, ...compat.map((runtime) => ({ value: runtime.id, label: runtime.name }))]} /></Field>}
-          {wrappers.length > 0 && <div className="tofu-settings-wrappers" role="group" aria-label="Wrappers"><span className="mochi-field-label">Wrappers</span>
-            {wrappers.map((wrapper) => <Switch key={wrapper.id} label={wrapper.name} checked={launch.wrappers.includes(wrapper.id)} onChange={(on) => patchLaunch({ wrappers: on ? [...launch.wrappers, wrapper.id] : launch.wrappers.filter((id) => id !== wrapper.id) })} />)}
+        <Section title={t("Launch settings")}>
+          {compat.length > 0 && <Field label={t("Compatibility runtime")} hint={t("Used for Windows programs (.exe). Native games ignore it.")}><Select value={launch.runtime ?? ""} onChange={(value) => patchLaunch({ runtime: value || undefined })} label={t("Compatibility runtime")} searchable={false} options={[{ value: "", label: t("Automatic") }, ...compat.map((runtime) => ({ value: runtime.id, label: runtime.name }))]} /></Field>}
+          {wrappers.length > 0 && <div className="tofu-settings-wrappers" role="group" aria-label={t("Wrappers")}><span className="mochi-field-label">{t("Wrappers")}</span>
+            {wrappers.map((wrapper) => <Switch key={wrapper.id} label={t(wrapper.name)} checked={launch.wrappers.includes(wrapper.id)} onChange={(on) => patchLaunch({ wrappers: on ? [...launch.wrappers, wrapper.id] : launch.wrappers.filter((id) => id !== wrapper.id) })} />)}
           </div>}
-          <Field label="Launch arguments"><input value={launch.args} placeholder="--fullscreen -windowed" onChange={(e) => patchLaunch({ args: e.target.value })} /></Field>
-          <Field label="Environment variables" hint="One KEY=value per line."><textarea rows={3} value={launch.env} placeholder={"DXVK_HUD=fps\nMANGOHUD=1"} onChange={(e) => patchLaunch({ env: e.target.value })} spellCheck={false} /></Field>
-          <div className="mochi-field"><span className="mochi-field-label" id="tofu-workdir-label">Working directory</span>
-            <div className="tofu-settings-inline"><input aria-labelledby="tofu-workdir-label" value={launch.workingDir ?? ""} placeholder="Default" onChange={(e) => patchLaunch({ workingDir: e.target.value || undefined })} />
-              <button type="button" className="secondary-button" aria-label="Choose working directory" onClick={() => void chooseFolder((path) => patchLaunch({ workingDir: path }), "Choose working directory")}><FolderOpen size={14}/></button></div>
+          <Field label={t("Launch arguments")}><input value={launch.args} placeholder={t("--fullscreen -windowed")} onChange={(e) => patchLaunch({ args: e.target.value })} /></Field>
+          <Field label={t("Environment variables")} hint={t("One KEY=value per line.")}><textarea rows={3} value={launch.env} placeholder={"DXVK_HUD=fps\nMANGOHUD=1"} onChange={(e) => patchLaunch({ env: e.target.value })} spellCheck={false} /></Field>
+          <div className="mochi-field"><span className="mochi-field-label" id="tofu-workdir-label">{t("Working directory")}</span>
+            <div className="tofu-settings-inline"><input aria-labelledby="tofu-workdir-label" value={launch.workingDir ?? ""} placeholder={t("Default")} onChange={(e) => patchLaunch({ workingDir: e.target.value || undefined })} />
+              <button type="button" className="secondary-button" aria-label={t("Choose working directory")} onClick={() => void chooseFolder((path) => patchLaunch({ workingDir: path }), t("Choose working directory"))}><FolderOpen size={14}/></button></div>
           </div>
         </Section>
       </div>
     </div>
-    <div className="tofu-manager-actions"><button type="button" className="secondary-button" onClick={duplicate}><Copy size={14}/> Duplicate</button><button type="button" className="secondary-button danger-outline" onClick={() => void remove()} disabled={tofus.length < 2}><Trash2 size={14}/> Delete</button><button type="button" className="play-button" onClick={onClose}>Done</button></div>
+    <div className="tofu-manager-actions"><button type="button" className="secondary-button" onClick={duplicate}><Copy size={14}/> {t("Duplicate")}</button><button type="button" className="secondary-button danger-outline" onClick={() => void remove()} disabled={tofus.length < 2}><Trash2 size={14}/> {t("Delete")}</button><button type="button" className="play-button" onClick={onClose}>{t("Done")}</button></div>
   </div></div>;
 }

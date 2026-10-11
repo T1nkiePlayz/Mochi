@@ -39,6 +39,11 @@ export function resetNewsLanguage(state: NewsState, language: string): NewsState
   return { ...emptyNewsState(language), seen: state.seen.filter((key) => key.startsWith("mod:")) };
 }
 
+/** Return cached announcements only when they belong to the currently selected launcher language. */
+export function newsForLocale(state: NewsState, locale: string): NewsItem[] {
+  return state.language === steamNewsLanguage(locale) ? state.items : [];
+}
+
 /** Appids due for a fetch: never or >= interval ago (or clock moved back), oldest first, at most `cap`. */
 export function dueApps(appids: readonly number[], checked: Readonly<Record<string, number>>, now: number, interval = NEWS_INTERVAL_MS, cap = NEWS_CYCLE_CAP): number[] {
   return [...new Set(appids)]

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Tofu } from "../../models";
-import { bestCompatibility, compatibility, compareGameVersions, groupTofusByLoader, metaFromCurseforgeVersions, parseLoader, tofuTarget } from "./compat";
+import { bestCompatibility, compatibility, compareGameVersions, groupTofusByLoader, metaFromCurseforgeVersions, parseLoader, tofuTarget, translateCompatibilityReason } from "./compat";
 
 const tofu = (over: Partial<Tofu> = {}): Tofu => ({ id: "t", name: "T", version: "1.20.1", runtime: "Native", mods: 0, status: "Ready", loader: "fabric", ...over });
 
@@ -67,5 +67,15 @@ describe("helpers", () => {
     const groups = groupTofusByLoader(list);
     expect(groups.map((group) => group.label)).toEqual(["Vanilla", "Fabric", "Forge", "No loader set"]);
     expect(groups[1].tofus.map((item) => item.id)).toEqual(["c", "b"]);
+  });
+});
+
+
+describe("translateCompatibilityReason", () => {
+  const t = (message: string) => `[${message}]`;
+  it("translates reason templates while preserving version and loader details", () => {
+    expect(translateCompatibilityReason("Built for 1.20.1, not 1.21.0.", t)).toBe("[Built for {versions}, not {gameVersion}.]".replace("{versions}", "1.20.1").replace("{gameVersion}", "1.21.0"));
+    expect(translateCompatibilityReason("Needs Fabric; this Tofu has no loader set.", t)).toBe("[Needs {loaders}; this Tofu has no loader set.]".replace("{loaders}", "Fabric"));
+    expect(translateCompatibilityReason("This Tofu has no game version set.", t)).toBe("[This Tofu has no game version set.]");
   });
 });

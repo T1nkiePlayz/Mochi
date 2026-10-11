@@ -1,6 +1,7 @@
 import type { Piko } from "../models";
 import { computeStreaks, STREAK_MIN_SECONDS, splitAtMidnight, type SessionRecord } from "./stats";
 import { achievements } from "./achievementDefs";
+import { getTranslationLocale } from "./translationLocale";
 import { rarityOrder, type AchievementCategory, type AchievementDef, type AchievementFlags, type Facts } from "./achievementTypes";
 
 export * from "./achievementTypes";
@@ -140,12 +141,17 @@ export function evaluate(facts: Facts, defs: AchievementDef[] = achievements): A
 export const newlyMet = (progress: AchievementProgress[], unlocked: Record<string, unknown>) =>
   progress.filter((item) => item.met && !(item.def.id in unlocked)).map((item) => item.def);
 
-export function progressText(item: AchievementProgress): string {
+export function progressText(item: AchievementProgress, t: (message: string) => string = (message) => message, locale = getTranslationLocale()): string {
   const { def, value } = item;
-  if (!item.available) return "Needs Steam data";
-  if (def.unit === "hours") return `${Math.min(value, def.target) / 3600 >= 10 ? Math.floor(Math.min(value, def.target) / 3600) : (Math.min(value, def.target) / 3600).toFixed(1)} / ${def.target / 3600} h`;
-  if (def.target === 1) return item.met ? "Done" : "Not yet";
-  return `${Math.min(Math.floor(value), def.target)} / ${def.target}${def.unit ? ` ${def.unit}` : ""}`;
+  const number = (amount: number, maximumFractionDigits = 0) => new Intl.NumberFormat(locale, { maximumFractionDigits, minimumFractionDigits: maximumFractionDigits }).format(amount);
+  if (!item.available) return t("Needs Steam data");
+  if (def.unit === "hours") {
+    const hours = Math.min(value, def.target) / 3600;
+    const displayed = hours >= 10 ? Math.floor(hours) : Number(hours.toFixed(1));
+    return `${number(displayed, hours < 10 ? 1 : 0)} / ${number(def.target / 3600)} h`;
+  }
+  if (def.target === 1) return item.met ? t("Done") : t("Not yet");
+  return `${number(Math.min(Math.floor(value), def.target))} / ${number(def.target)}${def.unit ? ` ${t(def.unit)}` : ""}`;
 }
 
 export type AchievementFilter = { category: AchievementCategory | "all"; status: "all" | "unlocked" | "locked" };

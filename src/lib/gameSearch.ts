@@ -1,3 +1,4 @@
+import { getTranslationLocale } from "./translationLocale";
 import { invoke } from "@tauri-apps/api/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { lookupIgdbGames, type IgdbGame } from "./igdb";
@@ -161,12 +162,13 @@ export function buildChart(points: ChartPoint[], ever: number | null, width = 32
   return { width, height, line: dots.map((d, i) => `${i ? "L" : "M"}${round(d.x)} ${round(d.y)}`).join(" "), dots, everY: ever === null ? null : y(ever), min, max };
 }
 
-const day = (t: number) => new Date(t).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+const day = (t: number) => new Date(t).toLocaleDateString(getTranslationLocale(), { year: "numeric", month: "short", day: "numeric" });
 /** The graph's caption: always says where the data comes from and how far back it goes. */
-export function historyCaption(observations: PriceObservation[], everDate: number | null): string {
+export function historyCaption(observations: PriceObservation[], everDate: number | null, t: (message: string) => string): string {
   const usd = observations.filter((o) => o.currency === "USD");
-  const since = usd[0] ? `Local observations since ${day(usd[0].t)} (${usd.length} point${usd.length === 1 ? "" : "s"})` : "No local observations yet";
-  return `${since} + CheapShark lowest ever${everDate ? ` (${day(everDate * 1000)})` : ""}. Prices are in USD.`;
+  const since = usd[0] ? t(usd.length === 1 ? "Local observations since {date} ({count} point)" : "Local observations since {date} ({count} points)").replace("{date}", day(usd[0].t)).replace("{count}", String(usd.length)) : t("No local observations yet");
+  const dateSuffix = everDate ? ` (${day(everDate * 1000)})` : "";
+  return `${since} ${t("Plus the lowest-ever price from CheapShark{dateSuffix}.").replace("{dateSuffix}", dateSuffix)} ${t("Prices are in USD.")}`;
 }
 
 // --- Assembling a result page ----------------------------------------------------------------------------------

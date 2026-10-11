@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { AlertTriangle, CheckCircle2, Info, RefreshCw, X } from "lucide-react";
 import { openExternalUrl } from "../../lib/platform";
 import type { DependencyPlan } from "../../lib/mods/dependencies";
@@ -16,6 +17,7 @@ type Summary = ApplyResult & { dependencies: number; dependencyFailures: Array<{
 
 /** Review before "Update all": pick mods, see changelogs and warnings, then apply (one snapshot first). */
 export function UpdateReviewSheet({ tofu, piko, items, onClose, onDone }: { tofu: Tofu; piko?: Piko; items: readonly ModUpdateItem[]; onClose: () => void; onDone: () => Promise<void> }) {
+  const t = useTranslation();
   const state = useTofuUpdates(tofu.id);
   const [rows] = useState(items);
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => defaultSelection(items));
@@ -54,21 +56,21 @@ export function UpdateReviewSheet({ tofu, piko, items, onClose, onDone }: { tofu
   const busy = phase === "applying";
   const close = () => { if (!busy) onClose(); };
 
-  return <ModalShell label="Review updates" className="tofu-picker-window dependency-sheet update-review" onClose={close}>
-    <div className="modal-header"><div><p className="eyebrow">{tofu.name}</p><h2>Review updates</h2></div><button type="button" className="icon-button" aria-label="Close" disabled={busy} onClick={close}><X size={17} /></button></div>
+  return <ModalShell label={t("Review updates")} className="tofu-picker-window dependency-sheet update-review" onClose={close}>
+    <div className="modal-header"><div><p className="eyebrow">{tofu.name}</p><h2>{t("Review updates")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} disabled={busy} onClick={close}><X size={17} /></button></div>
     <div className="dep-body">
       {phase === "done" && summary ? <div role="status">
         <p className="modal-description"><CheckCircle2 size={14} aria-hidden="true" /> Updated {summary.updated} mod{summary.updated === 1 ? "" : "s"}{summary.dependencies ? `; ${summary.dependencies} dependenc${summary.dependencies === 1 ? "y" : "ies"} queued for download` : ""}.</p>
         {[...summary.failed.map((entry) => ({ name: entry.title, error: entry.error })), ...summary.dependencyFailures].map((entry) => <p key={entry.name} className="metadata-note dep-warning" role="alert"><AlertTriangle size={13} aria-hidden="true" /> {entry.name}: {entry.error}</p>)}
-        <p className="metadata-note">A snapshot was taken first. Restore it from Tofu settings if something is wrong.</p>
+        <p className="metadata-note">{t("A snapshot was taken first. Restore it from Tofu settings if something is wrong.")}</p>
       </div> : <>
-        <p className="modal-description">A snapshot will be taken first; you can restore it from Tofu settings. Every file is checked before it replaces the old one.</p>
-        {warnings.map((warning) => <p key={warning.id} className={`metadata-note dep-warning ${warning.tone === "info" ? "dep-note" : ""}`} role={warning.tone === "warning" ? "alert" : "note"}>{warning.tone === "warning" ? <AlertTriangle size={13} aria-hidden="true" /> : <Info size={13} aria-hidden="true" />} <span>{warning.message}</span>{warning.url && <button type="button" className="secondary-button dep-link" onClick={() => void openExternalUrl(warning.url!).catch(() => undefined)}>View</button>}</p>)}
+        <p className="modal-description">{t("A snapshot will be taken first; you can restore it from Tofu settings. Every file is checked before it replaces the old one.")}</p>
+        {warnings.map((warning) => <p key={warning.id} className={`metadata-note dep-warning ${warning.tone === "info" ? "dep-note" : ""}`} role={warning.tone === "warning" ? "alert" : "note"}>{warning.tone === "warning" ? <AlertTriangle size={13} aria-hidden="true" /> : <Info size={13} aria-hidden="true" />} <span>{warning.message}</span>{warning.url && <button type="button" className="secondary-button dep-link" onClick={() => void openExternalUrl(warning.url!).catch(() => undefined)}>{t("View")}</button>}</p>)}
         {missing.length > 0 && <div className="metadata-note"><Checkbox checked={addDeps} disabled={busy} onChange={setAddDeps} label={`Also install ${missing.length} missing dependenc${missing.length === 1 ? "y" : "ies"}`} description={missing.map((entry) => `${entry.name} (needed by ${entry.requiredBy})`).join(", ")} /></div>}
-        <ul className="dep-list" aria-label="Updates">
+        <ul className="dep-list" aria-label={t("Updates")}>
           {rows.map((item) => <li key={item.path} className="dep-row update-review-row" data-status={item.apply.kind === "download" ? "install" : "unavailable"}>
             <Checkbox checked={selected.has(item.path)} disabled={busy || item.apply.kind !== "download"} onChange={(on) => toggle(item.path, on)} label={item.title} description={`${item.currentVersion} to ${item.newVersion} · ${sourceLabels[item.source]}${item.apply.kind === "download" ? "" : " · manual"}`} />
-            <button type="button" className="update-changelog-toggle" aria-expanded={open === item.path} onClick={() => setOpen(open === item.path ? undefined : item.path)}>Changelog</button>
+            <button type="button" className="update-changelog-toggle" aria-expanded={open === item.path} onClick={() => setOpen(open === item.path ? undefined : item.path)}>{t("Changelog")}</button>
             {open === item.path && <div className="update-changelog-body update-review-log"><ChangelogBody item={item} active /></div>}
           </li>)}
         </ul>
@@ -76,10 +78,10 @@ export function UpdateReviewSheet({ tofu, piko, items, onClose, onDone }: { tofu
     </div>
     <div className="mod-download-actions dep-actions">
       {phase === "done"
-        ? <button type="button" className="play-button" onClick={onClose} data-autofocus>Close</button>
+        ? <button type="button" className="play-button" onClick={onClose} data-autofocus>{t("Close")}</button>
         : <><button type="button" className="play-button" disabled={busy || !chosen.length} onClick={() => void apply()} data-autofocus>{busy ? <><RefreshCw size={13} className="spin" /> Updating {finished} of {chosen.length}</> : `Update ${chosen.length} mod${chosen.length === 1 ? "" : "s"}`}</button>
           <button type="button" className="secondary-button" disabled={busy || !installableRows.length} onClick={() => setSelected(selected.size === installableRows.length ? new Set() : defaultSelection(rows))}>{selected.size === installableRows.length ? "Select none" : "Select all"}</button>
-          <button type="button" className="secondary-button" disabled={busy} onClick={close}>Cancel</button></>}
+          <button type="button" className="secondary-button" disabled={busy} onClick={close}>{t("Cancel")}</button></>}
     </div>
   </ModalShell>;
 }

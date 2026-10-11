@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { analyse, computeStreaks, dayKey, dayTotals, groupByWeek, hourHistogram, splitAtMidnight, type SessionRecord } from "./stats";
+import { analyse, computeStreaks, dayKey, dayTotals, formatDuration, formatHours, groupByWeek, hourHistogram, splitAtMidnight, type SessionRecord } from "./stats";
 
 const proc = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process;
 const original = proc.env.TZ;
@@ -46,4 +46,13 @@ describe("stats", () => {
     expect(a.totalSeconds).toBe(3600);
     expect(dayTotals([session(at(2026, 6, 10, 9), 60)]).get(dayKey(new Date(2026, 5, 10)))).toBe(60);
   });
+  it("formats statistics durations and hour summaries in the selected locale", () => {
+    expect(formatDuration(3700, "en")).toBe("1h 1m");
+    const frenchHours = new Intl.NumberFormat("fr", { style: "unit", unit: "hour", unitDisplay: "short", maximumFractionDigits: 0 }).format(1);
+    const frenchMinutes = new Intl.NumberFormat("fr", { style: "unit", unit: "minute", unitDisplay: "short", maximumFractionDigits: 0 }).format(1);
+    expect(formatDuration(3700, "fr")).toBe(frenchHours + " " + frenchMinutes);
+    expect(formatHours(5400, "en")).toBe("1.5h");
+    expect(formatHours(5400, "fr")).toBe(new Intl.NumberFormat("fr", { style: "unit", unit: "hour", unitDisplay: "short", maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(1.5));
+  });
+
 });

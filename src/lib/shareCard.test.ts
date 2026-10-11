@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getTranslationLocale, setTranslationLocale } from "./translationLocale";
 import type { Piko } from "../models";
 import type { SessionRecord } from "./stats";
 import { buildCardData, buildCardSvg, defaultShareOptions, escapeXml, initialsOf, topGamesOf, type CardPalette } from "./shareCard";
@@ -26,6 +27,14 @@ describe("share card data", () => {
     expect(build({ period: "30" }).periodLabel).toBe("Last 30 days");
     expect(build().games?.[1]?.name).toBe("Beta Renamed");
   });
+
+  it("localizes the period label embedded in the exported image", () => {
+    const translate = (message: string) => message === "Last 30 days" ? "Derniers 30 jours" : message === "All time" ? "Tout le temps" : message;
+    const data = buildCardData({ records, library, unlocked: 4, totalAchievements: 20, username: "Ash", options: { ...defaultShareOptions, period: "30" }, now: NOW }, translate);
+    expect(data.periodLabel).toBe("Derniers 30 jours");
+    expect(buildCardSvg(data, palette)).toContain("Derniers 30 jours");
+  });
+
   it("leaves out everything the user switched off", () => {
     const data = build({ games: false, playtime: false, achievements: false, account: false });
     expect(data.games).toBeUndefined(); expect(data.totalSeconds).toBeUndefined(); expect(data.achievements).toBeUndefined(); expect(data.account).toBeUndefined();
@@ -45,6 +54,19 @@ describe("share card svg", () => {
     const svg = buildCardSvg(build({ account: true }), palette);
     expect(svg).toContain("Ash&apos;s stats"); expect(svg).toContain("TIME PLAYED"); expect(svg).toContain("4 / 20"); expect(svg).toContain("TOP GAMES"); expect(svg).toContain('fill="#0f0"');
   });
+
+  it("formats achievement counts in the active locale", () => {
+    const previous = getTranslationLocale();
+    try {
+      setTranslationLocale("ar");
+      const svg = buildCardSvg(build({ achievements: true }), palette);
+      const number = new Intl.NumberFormat("ar");
+      expect(svg).toContain(number.format(4) + " / " + number.format(20));
+    } finally {
+      setTranslationLocale(previous);
+    }
+  });
+
   it("omits private sections entirely", () => {
     const svg = buildCardSvg(build({ games: false, playtime: false, achievements: false }), palette);
     expect(svg).not.toContain("TOP GAMES"); expect(svg).not.toContain("TIME PLAYED"); expect(svg).not.toContain("Alpha"); expect(svg).not.toContain("Ash");

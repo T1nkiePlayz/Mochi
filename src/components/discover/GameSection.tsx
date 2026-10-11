@@ -1,4 +1,5 @@
 import { useMemo, useRef } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { ChevronRight } from "lucide-react";
 import { createPreviewSource, type SectionPlan } from "../../lib/mods/allSections";
 import { minecraftFilterFor } from "../../lib/mods/gameVersion";
@@ -16,6 +17,7 @@ type Props = { plan: SectionPlan; source: ModSource; cacheKey: string; pikos: Pi
 
 /** One game on Discover > All: header plus its top mods. Nothing is fetched until the section is near the screen. */
 export function GameSection({ plan, source, cacheKey, pikos, ecosystem, onSeeAll }: Props) {
+  const t = useTranslation();
   const ref = useRef<HTMLElement>(null);
   const near = useNearViewport(ref, false);
   const preview = useMemo(() => createPreviewSource(source, cacheKey), [source, cacheKey]);
@@ -24,11 +26,11 @@ export function GameSection({ plan, source, cacheKey, pikos, ecosystem, onSeeAll
     <div className="all-game-head">
       {plan.minecraft && !plan.iconUrl ? <span className="game-avatar game-avatar-glyph" aria-hidden="true"><MinecraftIcon /></span> : <GameAvatar src={plan.iconUrl} fallbackSrcs={plan.iconFallbackUrls} name={plan.name} />}
       <h3 id={headingId}>{plan.name}</h3>
-      <span className="source-badge">{sourceLabels[plan.site]}</span>
-      <button type="button" className="text-button all-see-all" aria-label={`See all ${plan.name} mods`} onClick={onSeeAll}>See all <ChevronRight size={14} aria-hidden="true" /></button>
+      <span className="source-badge">{t(sourceLabels[plan.site])}</span>
+      <button type="button" className="text-button all-see-all" aria-label={t("See all {name} mods").replace("{name}", plan.name)} onClick={onSeeAll}>{t("See all")} <ChevronRight size={14} aria-hidden="true" /></button>
     </div>
     {near
-      ? <ModsBrowser preview source={preview} noun={`${plan.name} mods`} target={{ kind: "choose", pikos, ecosystem, gameName: plan.name, tofuFilter: plan.minecraft ? (tofu) => minecraftFilterFor(tofu, true) : undefined }} />
+      ? <ModsBrowser preview source={preview} noun={t("{name} mods").replace("{name}", plan.name)} target={{ kind: "choose", pikos, ecosystem, gameName: plan.name, tofuFilter: plan.minecraft ? (tofu) => minecraftFilterFor(tofu, true) : undefined }} />
       : <div className="discover-grid mods-grid mods-preview-grid" aria-hidden="true"><ProjectSkeletons count={4} /></div>}
   </section>;
 }

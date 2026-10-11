@@ -6,6 +6,7 @@ import type { Piko } from "../../models";
 
 const artworkRenders = vi.fn();
 vi.mock("../GameArtwork", () => ({ GameArtwork: () => { artworkRenders(); return null; } }));
+vi.mock("../../lib/useTranslation", () => ({ useTranslation: () => (message: string) => message }));
 
 import { GameCard } from "./GameCard";
 

@@ -1,4 +1,5 @@
 import type { ModrinthProjectDetails, ModrinthProjectType } from "../../lib/modrinth";
+import { getTranslationLocale } from "../../lib/translationLocale";
 
 export function projectTypeLabel(type: ModrinthProjectType) {
   return type === "resourcepack" ? "Resource Pack" : type.charAt(0).toUpperCase() + type.slice(1);
@@ -7,7 +8,7 @@ export function projectTypeLabel(type: ModrinthProjectType) {
 export function formatDate(value?: string) {
   if (!value) return "Unknown date";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(getTranslationLocale(), { year: "numeric", month: "short", day: "numeric" });
 }
 
 export function getPrimaryCreator(project: ModrinthProjectDetails) {

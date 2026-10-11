@@ -102,7 +102,7 @@ function useAppController() {
   useLibraryWatcher(behavior.watchFolders, storage.ready, lib.library, notify);
   const collections = useCollections(storage.ownerKey, storage.ready, lib.setLibrary);
   const cloud = useCloudSync(user, lib.library, lib.setLibrary, storage.ready, storage.ownerKey);
-  const downloads = useDownloads(activeNav === "Downloads", notify);
+  const downloads = useDownloads(activeNav === "Downloads", notify, behavior.language);
   const downloadPacing = useDownloadPacing();
   useInstancePacks({ ready: storage.ready, library: lib.library, setLibrary: lib.setLibrary, sources: behavior.modSources });
 

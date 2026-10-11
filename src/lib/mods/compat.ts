@@ -140,3 +140,21 @@ export function groupTofusByLoader(tofus: readonly Tofu[]): TofuGroup[] {
   return [...groups.entries()].map(([loader, items]) => ({ loader, label: loader ? loaderLabels[loader] : "No loader set", tofus: items }))
     .sort((a, b) => loaderOrder(a.loader) - loaderOrder(b.loader));
 }
+
+/** Translate compatibility explanations while preserving dynamic versions and loader names. */
+export function translateCompatibilityReason(reason: string, t: (message: string) => string): string {
+  if (reason === "This file does not say which game versions it supports." || reason === "This Tofu has no game version set." || reason === "Quilt runs most Fabric mods, but not all." || reason === "NeoForge on 1.20.1 still loads most Forge mods.") return t(reason);
+  let match = reason.match(/^Built for (.+); this Tofu runs (.+)\. Same release series, so it often works\.$/);
+  if (match) return t("Built for {versions}; this Tofu runs {gameVersion}. Same release series, so it often works.").replace("{versions}", match[1]).replace("{gameVersion}", match[2]);
+  match = reason.match(/^Built for (.+), not (.+)\.$/);
+  if (match) return t("Built for {versions}, not {gameVersion}.").replace("{versions}", match[1]).replace("{gameVersion}", match[2]);
+  match = reason.match(/^Needs (.+); this Tofu has no loader set\.$/);
+  if (match) return t("Needs {loaders}; this Tofu has no loader set.").replace("{loaders}", match[1]);
+  match = reason.match(/^Needs (.+), but this Tofu is vanilla\.$/);
+  if (match) return t("Needs {loaders}, but this Tofu is vanilla.").replace("{loaders}", match[1]);
+  match = reason.match(/^Built for Forge; NeoForge(?: (.*?))? needs NeoForge mods\.$/);
+  if (match) return t("Built for Forge; NeoForge {gameVersion} needs NeoForge mods.").replace("{gameVersion}", match[1] ?? "").replace(/\s{2,}/g, " ");
+  match = reason.match(/^Built for (.+), but this Tofu uses (.+)\.$/);
+  if (match) return t("Built for {loaders}, but this Tofu uses {loader}.").replace("{loaders}", match[1]).replace("{loader}", match[2]);
+  return reason;
+}

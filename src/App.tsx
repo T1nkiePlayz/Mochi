@@ -17,6 +17,7 @@ import { installAccessibilityEnhancer } from "./lib/dialogs";
 import { installTruncationTitles } from "./lib/truncationTitles";
 import { Cloud } from "lucide-react";
 import { OfflineBanner } from "./components/OfflineBanner";
+import { useTranslation } from "./lib/useTranslation";
 
 // Dialogs only mount when opened, so their code (and the pickers/editors behind them) stays out of the entry chunk.
 const AddGameModals = lazy(() => import("./components/AddGameModals").then((m) => ({ default: m.AddGameModals })));
@@ -35,11 +36,13 @@ const DealsView = lazy(() => import("./views/DealsView").then((m) => ({ default:
 const StatsView = lazy(() => import("./views/StatsView").then((m) => ({ default: m.StatsView })));
 
 function ViewFallback() {
-  return <div className="view-loading" role="status" aria-live="polite"><span className="view-loading-dot" /><span>Loading…</span></div>;
+  const t = useTranslation();
+  return <div className="view-loading" role="status" aria-live="polite"><span className="view-loading-dot" /><span>{t("Loading…")}</span></div>;
 }
 
 function CurrentView() {
   const { activeNav } = useApp();
+  const t = useTranslation();
   switch (activeNav) {
     case "Library": return <LibraryView />;
     case "Settings": return <SettingsView />;
@@ -48,18 +51,20 @@ function CurrentView() {
     case "Installed": return <InstalledView />;
     case "Stats": return <StatsView />;
     case "Deals": return <DealsView />;
-    default: return <div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>Not found.</h2></div>;
+    default: return <div className="empty-state"><div className="empty-icon"><MochiIcon name="gamepad" fallback={Gamepad2} size={23} /></div><h2>{t("Not found.")}</h2></div>;
   }
 }
 
 const Footer = memo(function Footer() {
+  const t = useTranslation();
   const { syncState, cloudSyncEnabled, signedIn } = useAppSelector((app) => ({ syncState: app.cloud.syncState, cloudSyncEnabled: app.cloud.cloudSyncEnabled, signedIn: Boolean(app.account.user) }), shallowEqual);
-  const label = syncState === "syncing" ? "Cloud sync in progress…" : syncState === "retrying" ? "Cloud sync retrying…" : syncState === "synced" ? "Cloud sync active" : syncState === "empty" ? "Cloud library empty" : syncState === "error" ? "Cloud sync error" : signedIn && !cloudSyncEnabled ? "Cloud sync disabled" : "Cloud sync unavailable";
-  return <footer><span>Mochi v{__APP_VERSION__} · Local-first by design</span><span><MochiIcon name="cloud" fallback={Cloud} size={13} /> {label}</span></footer>;
+  const label = syncState === "syncing" ? t("Cloud sync in progress…") : syncState === "retrying" ? t("Cloud sync retrying…") : syncState === "synced" ? t("Cloud sync active") : syncState === "empty" ? t("Cloud library empty") : syncState === "error" ? t("Cloud sync error") : signedIn && !cloudSyncEnabled ? t("Cloud sync disabled") : t("Cloud sync unavailable");
+  return <footer><span>Mochi v{__APP_VERSION__} · {t("Local-first by design")}</span><span><MochiIcon name="cloud" fallback={Cloud} size={13} /> {label}</span></footer>;
 });
 
 function SkipLink() {
-  return <a className="skip-link" href="#main-content" onClick={(event) => { event.preventDefault(); const main = document.getElementById("main-content"); main?.focus(); main?.scrollIntoView(); }}>Skip to content</a>;
+  const t = useTranslation();
+  return <a className="skip-link" href="#main-content" onClick={(event) => { event.preventDefault(); const main = document.getElementById("main-content"); main?.focus(); main?.scrollIntoView(); }}>{t("Skip to content")}</a>;
 }
 
 function Shell() {

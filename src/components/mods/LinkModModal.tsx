@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { Link2, PackageOpen, RefreshCw, Search, X } from "lucide-react";
 import { CF_MINECRAFT_ID } from "../../lib/curseforge";
 import { createCurseforgeSource } from "../../lib/mods/curseforgeSource";
@@ -29,6 +30,7 @@ export function sameFile(files: readonly ModFile[], installedName: string): ModF
  * the project (and the exact file when the site still lists it), so updates and "Downloaded" states work from then on.
  */
 export function LinkModModal({ piko, tofu, file, subdir = "", onLinked, onClose }: Props) {
+  const t = useTranslation();
   const { behavior } = useApp();
   const minecraft = modSupportOf(piko) === "minecraft";
   const sources = useMemo(() => {
@@ -53,7 +55,7 @@ export function LinkModModal({ piko, tofu, file, subdir = "", onLinked, onClose 
     try {
       const page = await source.search({ query: query.trim(), offset: 0, limit: 20, sort: source.searchesServerSide ? (source.sorts.find((sort) => /relev/i.test(sort.value))?.value ?? source.defaultSort) : source.defaultSort });
       setResults(page.items); setState("idle");
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Search failed."); setState("error"); }
+    } catch (reason) { const detail = reason instanceof Error ? reason.message : ""; const translated = detail ? t(detail) : ""; setError(translated && translated !== detail ? translated : detail ? `${t("Search failed.")} ${detail}` : t("Search failed.")); setState("error"); }
   };
   useEffect(() => { void search(); }, [sourceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -67,28 +69,30 @@ export function LinkModModal({ piko, tofu, file, subdir = "", onLinked, onClose 
         file: file.filename.replace(/\.disabled$/, ""), subdir, enabled: file.enabled,
         record: { source: item.source, projectId: item.id, fileId: match?.id ?? "", version: match?.version ?? match?.name ?? file.record?.version, title: item.name, iconUrl: item.source === "curseforge" ? undefined : item.iconUrl, fileDate },
       }]);
-      onLinked(match ? `Linked ${file.filename} to ${item.name} on ${sourceLabels[item.source]}.` : `Linked ${file.filename} to ${item.name}. Mochi could not find this exact file on ${sourceLabels[item.source]}, so the next newer release counts as an update.`);
+      onLinked(match
+        ? t("Linked {file} to {name} on {source}.").replace("{file}", file.filename).replace("{name}", item.name).replace("{source}", sourceLabels[item.source])
+        : t("Linked {file} to {name}. Mochi could not find this exact file on {source}, so the next newer release counts as an update.").replace("{file}", file.filename).replace("{name}", item.name).replace("{source}", sourceLabels[item.source]));
       onClose();
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not link the mod."); setState("error"); }
+    } catch (reason) { const detail = reason instanceof Error ? reason.message : ""; const translated = detail ? t(detail) : ""; setError(translated && translated !== detail ? translated : detail ? `${t("Could not link the mod.")} ${detail}` : t("Could not link the mod.")); setState("error"); }
   };
 
-  return <ModalShell label={`Link ${file.filename}`} className="modal link-mod-modal" onClose={onClose}>
-    <div className="modal-header"><div><p className="eyebrow">Identify a mod</p><h2>{file.filename.replace(/\.disabled$/, "")}</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button></div>
-    {!sources.length ? <p className="metadata-note" role="status">No mod site is linked to {piko.name}. Link the game to a mod site first (Link game), or turn a site on in Settings.</p> : <>
-      {sources.length > 1 && <div className="mod-source-switch" role="group" aria-label="Mod site">{sources.map((item) => <button key={item.id} type="button" className={item.id === source?.id ? "active" : ""} aria-pressed={item.id === source?.id} onClick={() => setSourceId(item.id)}>{item.label}</button>)}</div>}
+  return <ModalShell label={t("Identify a mod")} className="modal link-mod-modal" onClose={onClose}>
+    <div className="modal-header"><div><p className="eyebrow">{t("Identify a mod")}</p><h2>{file.filename.replace(/\.disabled$/, "")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
+    {!sources.length ? <p className="metadata-note" role="status">{t("No mod site is linked to {name}. Link the game to a mod site first (Link game), or turn a site on in Settings.").replace("{name}", piko.name)}</p> : <>
+      {sources.length > 1 && <div className="mod-source-switch" role="group" aria-label={t("Mod site")}>{sources.map((item) => <button key={item.id} type="button" className={item.id === source?.id ? "active" : ""} aria-pressed={item.id === source?.id} onClick={() => setSourceId(item.id)}>{item.label}</button>)}</div>}
       <form className="link-mod-search" onSubmit={(event) => { event.preventDefault(); void search(); }}>
-        <label className="search-box"><Search size={14} /><input data-autofocus value={query} onChange={(event) => setQuery(event.target.value)} aria-label={`Search ${source?.label ?? ""}`} placeholder="Mod name" /></label>
-        <button type="submit" className="secondary-button" disabled={state === "searching"}>{state === "searching" ? <RefreshCw size={13} className="spin" /> : <Search size={13} />} Search</button>
+        <label className="search-box"><Search size={14} /><input data-autofocus value={query} onChange={(event) => setQuery(event.target.value)} aria-label={t("Search {source}").replace("{source}", source?.label ?? "")} placeholder={t("Mod name")} /></label>
+        <button type="submit" className="secondary-button" disabled={state === "searching"}>{state === "searching" ? <RefreshCw size={13} className="spin" /> : <Search size={13} />} {t("Search")}</button>
       </form>
       {error && <p className="metadata-note" role="alert">{error}</p>}
       <ul className="link-mod-results" aria-busy={state === "searching"}>
         {results.map((item) => <li key={`${item.source}:${item.id}`} className="link-mod-row">
           {item.iconUrl ? <DiscoveryImage src={item.iconUrl} className="link-mod-icon" alt="" label={item.name} /> : <span className="link-mod-icon fallback"><PackageOpen size={15} /></span>}
           <span className="link-mod-copy"><strong>{item.name}</strong><small>{item.author ?? sourceLabels[item.source]}{item.summary ? ` · ${item.summary}` : ""}</small></span>
-          <button type="button" className="secondary-button" disabled={state === "linking"} onClick={() => void link(item)} aria-label={`Link to ${item.name}`}><Link2 size={13} /> This one</button>
+          <button type="button" className="secondary-button" disabled={state === "linking"} onClick={() => void link(item)} aria-label={t("Link to {name}").replace("{name}", item.name)}><Link2 size={13} /> {t("This one")}</button>
         </li>)}
       </ul>
-      {state === "idle" && !results.length && <p className="muted">Nothing found. Try a shorter name.</p>}
+      {state === "idle" && !results.length && <p className="muted">{t("Nothing found. Try a shorter name.")}</p>}
     </>}
   </ModalShell>;
 }

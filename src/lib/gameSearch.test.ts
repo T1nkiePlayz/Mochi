@@ -101,9 +101,9 @@ describe("price history", () => {
     expect(chart.everY).toBeGreaterThan(chart.dots[0].y);
     expect(buildChart([{ t: 1, price: 3 }], null).dots).toHaveLength(1);
     expect(buildChart([], null).line).toBe("");
-    const caption = historyCaption([obs(Date.UTC(2026, 0, 5), 8)], 1_740_000_000);
-    expect(caption).toMatch(/^Local observations since .*2026.* \(1 point\) \+ CheapShark lowest ever/);
-    expect(historyCaption([], null)).toMatch(/No local observations yet/);
+    const caption = historyCaption([obs(Date.UTC(2026, 0, 5), 8)], 1_740_000_000, (message) => message);
+    expect(caption).toMatch(/^Local observations since .*2026.* \(1 point\) Plus the lowest-ever price from CheapShark/);
+    expect(historyCaption([], null, (message) => message)).toMatch(/No local observations yet/);
   });
 });
 

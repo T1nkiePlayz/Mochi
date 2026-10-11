@@ -1,4 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
+import { formatPlaytime } from "./format";
+import { getTranslationLocale } from "./translationLocale";
 
 /** One entry of native play history. `daily` rows are old sessions rolled up per day; `historic` is pre-history playtime. */
 export type SessionRecord = {
@@ -173,11 +175,15 @@ export function groupByWeek(buckets: DayBucket[]): DayBucket[] {
   return weeks;
 }
 
-export const formatHours = (seconds: number) => {
+export const formatHours = (seconds: number, language = getTranslationLocale()) => {
   const hours = seconds / 3600;
-  return hours >= 100 ? `${Math.round(hours)}h` : hours >= 10 ? `${hours.toFixed(0)}h` : hours >= 1 ? `${hours.toFixed(1)}h` : `${Math.round(seconds / 60)}m`;
+  if (language === "en") {
+    return hours >= 100 ? String(Math.round(hours)) + "h" : hours >= 10 ? hours.toFixed(0) + "h" : hours >= 1 ? hours.toFixed(1) + "h" : String(Math.round(seconds / 60)) + "m";
+  }
+  if (hours >= 100) return new Intl.NumberFormat(language, { style: "unit", unit: "hour", unitDisplay: "short", maximumFractionDigits: 0 }).format(Math.round(hours));
+  if (hours >= 10) return new Intl.NumberFormat(language, { style: "unit", unit: "hour", unitDisplay: "short", maximumFractionDigits: 0 }).format(Math.round(hours));
+  if (hours >= 1) return new Intl.NumberFormat(language, { style: "unit", unit: "hour", unitDisplay: "short", maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(hours);
+  return new Intl.NumberFormat(language, { style: "unit", unit: "minute", unitDisplay: "short", maximumFractionDigits: 0 }).format(Math.round(seconds / 60));
 };
-export const formatDuration = (seconds: number) => {
-  const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60);
-  return h ? `${h}h ${m}m` : `${m}m`;
-};
+
+export const formatDuration = (seconds: number, language = getTranslationLocale()) => formatPlaytime(seconds, language);

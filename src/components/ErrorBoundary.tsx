@@ -1,4 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { translate } from "../lib/i18n";
+import { getTranslationLocale } from "../lib/translationLocale";
 
 /** Keeps one broken view from blanking the whole launcher. */
 export class ErrorBoundary extends Component<{ children: ReactNode; resetKey?: string }, { error: Error | null }> {
@@ -10,6 +12,6 @@ export class ErrorBoundary extends Component<{ children: ReactNode; resetKey?: s
   }
   render() {
     if (!this.state.error) return this.props.children;
-    return <div className="empty-state" role="alert"><h2>Something went wrong.</h2><p>{this.state.error.message}</p><button className="secondary-button" onClick={() => this.setState({ error: null })}>Try again</button></div>;
+    return <div className="empty-state" role="alert"><h2>{translate("Something went wrong.", getTranslationLocale())}</h2><p>{translate(this.state.error.message, getTranslationLocale())}</p><button className="secondary-button" onClick={() => this.setState({ error: null })}>{translate("Try again", getTranslationLocale())}</button></div>;
   }
 }

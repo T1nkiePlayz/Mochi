@@ -13,6 +13,7 @@ import { openExternalUrl } from "../../lib/platform";
 import type { Piko } from "../../models";
 import { ModsBrowser } from "../mods/ModsBrowser";
 import { useGameSourceChoice, type DiscoverGame } from "./useDiscoverGames";
+import { useTranslation } from "../../lib/useTranslation";
 
 type Props = {
   game: DiscoverGame;
@@ -33,6 +34,7 @@ const choiceHint: Record<GameSourceChoice, string> = {
 
 /** One game's mods: a source switcher when two sites list it, automatic extension when the first site has too few, and honest notes. */
 export function GameDiscoverTab({ game, pikos, supabase, settings, below, refreshKey }: Props) {
+  const t = useTranslation();
   const [choice, setChoice] = useGameSourceChoice(game.key);
   const sources = resolveGameSources({ onCurseforge: Boolean(game.cf), onNexus: Boolean(game.nexusDomain), choice }, settings);
   const [info, setInfo] = useState<ExtendInfo | null>(null);
@@ -58,20 +60,20 @@ export function GameDiscoverTab({ game, pikos, supabase, settings, below, refres
 
   return <section className="discover-section">
     <div className="discover-section-heading"><div>
-      <h3>{game.name} mods</h3>
-      <p>{sources.primary ? `From ${choice === "auto" && sources.extras.length ? "CurseForge, and Nexus Mods when CurseForge has few" : primaryLabel}.` : "No mod site is available for this game right now."}{sources.primary === "nexus" ? " Free Nexus accounts download the file on the Nexus site." : ""}</p>
+      <h3>{game.name} {t("mods")}</h3>
+      <p>{sources.primary ? `From ${choice === "auto" && sources.extras.length ? "CurseForge, and Nexus Mods when CurseForge has few" : primaryLabel}.` : t("No mod site is available for this game right now.")}{sources.primary === "nexus" ? " Free Nexus accounts download the file on the Nexus site." : ""}</p>
     </div></div>
 
-    {sources.choices.length > 1 && <div className="mod-source-switch" role="group" aria-label="Mod source for this game"><span>Source</span>
-      {sources.choices.map((id) => <button key={id} type="button" className={choice === id ? "active" : ""} aria-pressed={choice === id} title={choiceHint[id]} onClick={() => setChoice(id)}>{choiceLabel[id]}</button>)}</div>}
+    {sources.choices.length > 1 && <div className="mod-source-switch" role="group" aria-label={t("Mod source for this game")}><span>{t("Source")}</span>
+      {sources.choices.map((id) => <button key={id} type="button" className={choice === id ? "active" : ""} aria-pressed={choice === id} title={t(choiceHint[id])} onClick={() => setChoice(id)}>{t(choiceLabel[id])}</button>)}</div>}
 
-    {info?.extended && <p className="metadata-note discover-extend-note" role="status">{info.note}{info.failed.length ? ` ${info.failed.join(", ")} did not answer.` : ""}</p>}
+    {info?.extended && <p className="metadata-note discover-extend-note" role="status">{t(info.note)}{info.failed.length ? ` ${t("{sites} did not answer.").replace("{sites}", info.failed.join(", "))}` : ""}</p>}
     {fewOnCurseforge && game.cf && <p className="metadata-note discover-limit-note" role="note">
       CurseForge shares only {info!.primaryTotal.toLocaleString()} {info!.primaryTotal === 1 ? "project" : "projects"} of this game with apps; browse the rest on curseforge.com.{" "}
-      <button type="button" className="text-button" onClick={() => link(`${CF_SITE}/${game.cf!.slug}`)}><ExternalLink size={12} /> Open {game.name} on CurseForge</button>
+      <button type="button" className="text-button" onClick={() => link(`${CF_SITE}/${game.cf!.slug}`)}><ExternalLink size={12} /> {t("Open {name} on CurseForge").replace("{name}", game.name)}</button>
     </p>}
     {source
       ? <ModsBrowser key={`${game.key}:${choice}:${refreshKey}:${below}:${sources.extras.join()}`} source={source} target={{ kind: "choose", pikos, ecosystem, gameName: game.name }} noun="mods" />
-      : <div className="discover-empty">This game is not available right now.</div>}
+      : <div className="discover-empty">{t("This game is not available right now.")}</div>}
   </section>;
 }
