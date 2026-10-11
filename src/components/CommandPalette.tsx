@@ -6,7 +6,7 @@ import { registerBuiltinCommands, registerLaunchProfileCommands, registerThemeCo
 import { OPEN_PALETTE_EVENT, parsePaletteQuery, paletteShortcutLabel, rankPalette, readRecents, rememberAction, type PaletteItem } from "../lib/palette";
 import { useBigPictureActive } from "../bigpicture/mode";
 import { useTranslation } from "../lib/useTranslation";
-import { translateCommandTitle, translateCommandGroup, translatePaletteSubtitle } from "../lib/paletteTranslations";
+import { translateCommandTitle, translatePaletteSubtitle } from "../lib/paletteTranslations";
 
 /**
  * Ctrl/Cmd+K command palette: games and actions in one list. ">" shows actions only. Rows are real buttons, so keyboard,
