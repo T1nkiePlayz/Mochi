@@ -16,7 +16,6 @@ import { SafeHtml } from "./SafeHtml";
 import type { InstallNotice } from "./useModInstall";
 import { Checkbox } from "../ui/Checkbox";
 import { useTranslation } from "../../lib/useTranslation";
-import { useTranslation } from "../../lib/useTranslation";
 
 type Props = {
   source: ModSource;
@@ -45,9 +44,9 @@ export function ModDetailsModal({ source, item, filter, installLabel, busy, noti
   useEffect(() => {
     let cancelled = false;
     setDetails(null); setFiles(null); setError("");
-    void source.details(item).then((value) => { if (!cancelled) setDetails(value); }).catch((reason) => { if (!cancelled) { setDetails({ body: null, facts: [] }); setError(t("Unable to load the description.")); } });
+    void source.details(item).then((value) => { if (!cancelled) setDetails(value); }).catch(() => { if (!cancelled) { setDetails({ body: null, facts: [] }); setError(t("Unable to load the description.")); } });
     void source.files(item, showAll ? undefined : filter).then((value) => { if (cancelled) return; setFiles(value); setFileId(defaultFile(value)?.id ?? ""); })
-      .catch((reason) => { if (!cancelled) { setFiles([]); setError((previous) => previous || t("Unable to load the files.")); } });
+      .catch(() => { if (!cancelled) { setFiles([]); setError((previous) => previous || t("Unable to load the files.")); } });
     return () => { cancelled = true; };
   }, [source, item, filter?.gameVersion, filter?.loader, showAll, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
