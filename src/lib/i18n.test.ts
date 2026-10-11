@@ -26,6 +26,9 @@ describe("shared UI translations", () => {
       "This game was started through another app (Steam, a launcher or an .app opened by macOS), so Mochi cannot see its output. Look in the Console app, in ~/Library/Logs, or in the launcher's own logs.",
       "This game was started through another program (Steam, Flatpak or a launcher), so Mochi cannot see its output. For Steam games add PROTON_LOG=1 %command% to the launch options (log in your home folder); Steam's own logs are in ~/.local/share/Steam/logs; Flatpak apps log to the journal (journalctl --user).",
       "Cancel download",
+      "Could not save the backup: {error}",
+      "Saving backup…",
+      "Restoring backup…",
       "You appear to be offline.",
       "Could not load {noun}.",
       "No {noun} to show yet.",
@@ -42,6 +45,7 @@ describe("shared UI translations", () => {
     for (const language of launcherLanguages) {
       for (const message of [
         "Could not load {noun}.",
+        "Could not save the backup: {error}",
         "No {noun} to show yet.",
         "{count} download in progress. See Downloads.",
         "{count} downloads in progress. See Downloads.",
