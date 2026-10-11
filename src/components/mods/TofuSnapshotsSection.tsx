@@ -24,7 +24,7 @@ export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
   const load = useCallback(async (id: string) => {
     try { const list = await listTofuSnapshots(id); if (current.current === id) { setSnapshots(list); setError(""); } }
     catch (reason) { if (current.current === id) { setSnapshots([]); setError(errorText(reason, t("Could not read the snapshots."))); } }
-  }, []);
+  }, [t]);
   useEffect(() => { setSnapshots(null); setError(""); void load(tofu.id); }, [tofu.id, load]);
 
   const run = async (work: () => Promise<void>, failure: string) => {
