@@ -31,19 +31,19 @@ export function DownloadsView() {
   return <section className="downloads-page">
     <div className="downloads-intro">
       <p className="eyebrow">{t("Activity")}</p><h2>{t("Downloads")}</h2>
-      <p>Mods, resource packs and shaders from Modrinth, CurseForge and Nexus Mods download here and keep going while Mochi is hidden in the tray. Finished downloads stay in this list for 10 minutes.</p>
+      <p>{t("Mods, resource packs and shaders from Modrinth, CurseForge and Nexus Mods download here and keep going while Mochi is hidden in the tray. Finished downloads stay in this list for 10 minutes.")}</p>
     </div>
     <section className="download-group download-pacing" aria-label={t("Download controls")}>
-      <div className="download-group-heading"><div className="download-control-heading-copy"><strong>{t("Download controls")}</strong><small>Manage bandwidth and when downloads are allowed to run.</small></div><span className={held ? "download-control-status held" : "download-control-status"}><i />{held ? (prefs.paused ? "Paused" : "Scheduled wait") : "Downloads enabled"}</span></div>
+      <div className="download-group-heading"><div className="download-control-heading-copy"><strong>{t("Download controls")}</strong><small>{t("Manage bandwidth and when downloads are allowed to run.")}</small></div><span className={held ? "download-control-status held" : "download-control-status"}><i />{held ? (prefs.paused ? t("Paused") : t("Scheduled wait")) : t("Downloads enabled")}</span></div>
       <div className="download-control-body">
         <div className="download-control-primary">
           <div><strong>{prefs.paused ? "Downloads are paused" : held ? "Waiting for your schedule" : "Downloads can run"}</strong><small>{prefs.paused ? "Resume when you're ready to continue." : held ? "Downloads will resume automatically during your allowed hours." : "Your active downloads will continue in the background."}</small></div>
           <button type="button" className="secondary-button" aria-pressed={prefs.paused} onClick={() => setPrefs((current) => ({ ...current, paused: !current.paused }))}>{prefs.paused ? <><Play size={14} /> Resume all</> : <><Pause size={14} /> Pause all</>}</button>
         </div>
         <div className="download-control-grid">
-          <label className="download-pacing-field download-speed-field"><span>{t("Bandwidth limit")}</span><select value={prefs.limitKiB} onChange={(event) => setPrefs((current) => ({ ...current, limitKiB: Number(event.target.value) }))}>{speedLimits.map((item) => <option key={item.kib} value={item.kib}>{item.label}</option>)}</select><small>Shared across active downloads</small></label>
+          <label className="download-pacing-field download-speed-field"><span>{t("Bandwidth limit")}</span><select value={prefs.limitKiB} onChange={(event) => setPrefs((current) => ({ ...current, limitKiB: Number(event.target.value) }))}>{speedLimits.map((item) => <option key={item.kib} value={item.kib}>{item.label}</option>)}</select><small>{t("Shared across active downloads")}</small></label>
           <div className="download-schedule-card">
-            <label className="download-schedule-toggle"><span><strong>{t("Download schedule")}</strong><small>Only download during a time window</small></span><input type="checkbox" checked={prefs.window.enabled} onChange={(event) => setPrefs((current) => ({ ...current, window: { ...current.window, enabled: event.target.checked } }))} /></label>
+            <label className="download-schedule-toggle"><span><strong>{t("Download schedule")}</strong><small>{t("Only download during a time window")}</small></span><input type="checkbox" checked={prefs.window.enabled} onChange={(event) => setPrefs((current) => ({ ...current, window: { ...current.window, enabled: event.target.checked } }))} /></label>
             <div className="download-schedule-times">
               <label className="download-pacing-field"><span>{t("Start time")}</span><input type="time" aria-label={t("Allowed from")} value={prefs.window.start} disabled={!prefs.window.enabled} onChange={(event) => event.target.value && setPrefs((current) => ({ ...current, window: { ...current.window, start: event.target.value } }))} /></label>
               <label className="download-pacing-field"><span>{t("End time")}</span><input type="time" aria-label={t("Allowed until")} value={prefs.window.end} disabled={!prefs.window.enabled} onChange={(event) => event.target.value && setPrefs((current) => ({ ...current, window: { ...current.window, end: event.target.value } }))} /></label>
@@ -55,7 +55,7 @@ export function DownloadsView() {
     </section>
     {error && <p className="auth-error" role="alert">{error}</p>}
     {updating.length > 0 && <section className="download-group download-updates" aria-label={t("Mod updates")}>
-      <div className="download-group-heading"><strong>Mod updates</strong><button type="button" className="text-button" onClick={() => setActiveNav("Installed")}>Open Mods &amp; Content</button></div>
+      <div className="download-group-heading"><strong>{t("Mod updates")}</strong><button type="button" className="text-button" onClick={() => setActiveNav("Installed")}>{t("Open Mods &amp; Content")}</button></div>
       <ul className="download-update-list">{updating.map(({ piko, tofu, state }) => <li key={tofu.id}><span>{piko.name}: {tofu.name}</span><small>{state.updating.length ? t("Updating {count}…").replace("{count}", String(state.updating.length)) : t(updateCount(state) === 1 ? "{count} update available" : "{count} updates available").replace("{count}", String(updateCount(state)))}</small></li>)}</ul>
     </section>}
     {hasFinished(downloads) && <div className="download-toolbar"><button type="button" className="secondary-button" onClick={() => void clearFinished()}><Trash2 size={13} /> {t("Clear finished")}</button></div>}
@@ -75,7 +75,7 @@ export function DownloadsView() {
                   <small role={row.state === "failed" ? "alert" : undefined}>{row.detail}</small>
                 </div>
                 <div className="download-row-actions">
-                  {row.canCancel && <button type="button" className="icon-button" aria-label={t("Cancel {name}").replace("{name}", download.itemName)} title="Cancel" onClick={() => void cancelModDownload(download.id).catch(report)}><X size={15} /></button>}
+                  {row.canCancel && <button type="button" className="icon-button" aria-label={t("Cancel {name}").replace("{name}", download.itemName)} title={t("Cancel")} onClick={() => void cancelModDownload(download.id).catch(report)}><X size={15} /></button>}
                   {download.dir && <button type="button" className="icon-button" aria-label={t("Open folder of {name}").replace("{name}", download.itemName)} title={t("Open folder")} onClick={() => void openPath(download.dir).catch(report)}><FolderOpen size={15} /></button>}
                 </div>
               </article>;

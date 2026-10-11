@@ -22,7 +22,7 @@ export function YearInReview({ records }: { records: SessionRecord[] }) {
   const [chosen, setChosen] = useState<number | null>(null);
   const year = chosen ?? years[0];
   const review = useMemo(() => (year === undefined ? null : reviewYear(records, year)), [records, year]);
-  if (!review || year === undefined) return <p className="stats-muted">Your year in review appears after you have played something.</p>;
+  if (!review || year === undefined) return <p className="stats-muted">{t("Your year in review appears after you have played something.")}</p>;
   const peak = Math.max(...review.secondsByMonth, 1);
   const topGame = review.topGames[0] ? t(", most of it in {game}").replace("{game}", review.topGames[0].name) : "";
   const summary = t(review.gamesPlayed === 1 ? "{year} in Mochi: {hours} across {games} game{topGame}." : "{year} in Mochi: {hours} across {games} games{topGame}.")

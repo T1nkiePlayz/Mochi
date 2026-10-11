@@ -180,7 +180,7 @@ export function LibraryView() {
       onShortcutSteam={(userId) => void actions.addToSteam(details, userId)}
       workspace={<>
         <section className="tofu-section">
-          <div className="section-heading"><div><p className="eyebrow">Environments</p><h3>{t("Your Tofus")}</h3></div><button className="text-button" onClick={() => app.setShowTofuManager(true)}><MochiIcon name="manage" fallback={SlidersHorizontal} size={15} /> {t("Manage")}</button></div>
+          <div className="section-heading"><div><p className="eyebrow">{t("Environments")}</p><h3>{t("Your Tofus")}</h3></div><button className="text-button" onClick={() => app.setShowTofuManager(true)}><MochiIcon name="manage" fallback={SlidersHorizontal} size={15} /> {t("Manage")}</button></div>
           <div className="tofu-grid">
             {selectedPiko.tofus.map((tofu) => (
               <button className={`tofu-card ${selectedTofu.id === tofu.id ? "active" : ""}`} key={tofu.id} onClick={() => lib.setSelectedTofuId(tofu.id)}>
@@ -190,14 +190,14 @@ export function LibraryView() {
                 <span className="tofu-mods">{tofu.mods ? t("{count} mods installed").replace("{count}", String(tofu.mods)) : t("No mods installed")}</span>
               </button>
             ))}
-            <button className="new-tofu-card" onClick={() => { lib.createTofu(); app.setShowTofuManager(true); }}><MochiIcon name="plus" fallback={Plus} size={17} /><span>{t("New Tofu")}</span><small>Set up another environment</small></button>
+            <button className="new-tofu-card" onClick={() => { lib.createTofu(); app.setShowTofuManager(true); }}><MochiIcon name="plus" fallback={Plus} size={17} /><span>{t("New Tofu")}</span><small>{t("Set up another environment")}</small></button>
           </div>
         </section>
         <section className="details-strip">
           <div><span className="detail-label">Selected Tofu</span><strong>🧊 {selectedTofu.name}</strong></div>
           <div><span className="detail-label">Runtime</span><strong>{selectedTofu.runtime} <span className="muted">· {selectedTofu.version}</span></strong></div>
           <div><span className="detail-label">Install location</span><strong className="path-text">{selectedTofu.path || t("No folder chosen yet")}</strong></div>
-          <button className="icon-button" aria-label="Tofu settings" onClick={() => app.setShowTofuManager(true)}><MochiIcon name="settings" fallback={Settings} size={16} /></button>
+          <button className="icon-button" aria-label={t("Tofu settings")} onClick={() => app.setShowTofuManager(true)}><MochiIcon name="settings" fallback={Settings} size={16} /></button>
         </section>
       </>}
       mods={<GameMods key={`${details.id}:${selectedTofu.id}`} piko={details} tofu={selectedTofu} onUpdate={lib.updateSelectedTofu} />}

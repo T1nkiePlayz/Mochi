@@ -69,11 +69,11 @@ export function StatsView() {
   return (
     <div className="stats-view">
       <div className="page-heading stats-heading">
-        <div><p className="eyebrow">Your activity</p><h1>Stats</h1></div>
+        <div><p className="eyebrow">{t("Your activity")}</p><h1>{t("Stats")}</h1></div>
         <Segmented kind="tab" label={t("Stats sections")} value={tab} onChange={setTab} controls={(v) => `stats-panel-${v}`}
           options={[{ value: "overview", label: t("Overview") }, { value: "achievements", label: t("Achievements") }]} />
       </div>
-      {failed && <p className="stats-note" role="status">Play history is unavailable right now. Showing what is cached.</p>}
+      {failed && <p className="stats-note" role="status">{t("Play history is unavailable right now. Showing what is cached.")}</p>}
 
       {tab === "achievements" ? (
         <div role="tabpanel" id="stats-panel-achievements"><AchievementsPanel progress={progress} unlocked={stored.unlocked} /></div>
@@ -82,8 +82,8 @@ export function StatsView() {
           {empty ? (
             <div className="empty-state stats-empty">
               <div className="empty-icon"><MochiIcon name="stats" fallback={BarChart3} size={23} /></div>
-              <h2>No playtime yet</h2>
-              <p>Launch a game from Mochi and your sessions will show up here: hours per day, favourites, streaks and more. Everything stays on this device.</p>
+              <h2>{t("No playtime yet")}</h2>
+              <p>{t("Launch a game from Mochi and your sessions will show up here: hours per day, favourites, streaks and more. Everything stays on this device.")}</p>
               <button type="button" className="secondary-button" onClick={() => setActiveNav("Library")}><Gamepad2 size={14} /> Open library</button>
             </div>
           ) : (
@@ -101,12 +101,12 @@ export function StatsView() {
                 <Kpi label={t("Games played")} value={String(analysis.gamesPlayed)} />
                 <Kpi label={t("Current streak")} value={`${streaks.current} ${t(streaks.current === 1 ? "day" : "days")}`} hint={t("Longest {count}").replace("{count}", String(streaks.longest))} />
               </div>
-              <Card id="st-days" title={weekly ? "Hours per week" : "Hours per day"} wide><StackedBars buckets={buckets} games={analysis.games} weekly={weekly} /></Card>
+              <Card id="st-days" title={weekly ? t("Hours per week") : t("Hours per day")} wide><StackedBars buckets={buckets} games={analysis.games} weekly={weekly} /></Card>
               <div className="stats-grid">
-                <Card id="st-top" title={t("Top games")}>{analysis.games.length ? <TopGames games={analysis.games} library={lib.library} /> : <p className="stats-muted">No games played in this range.</p>}</Card>
+                <Card id="st-top" title={t("Top games")}>{analysis.games.length ? <TopGames games={analysis.games} library={lib.library} /> : <p className="stats-muted">{t("No games played in this range.")}</p>}</Card>
                 <Card id="st-hours" title={t("Time of day")}><HourHistogram hours={analysis.hours} /></Card>
                 <Card id="st-week" title={t("Weekday pattern")}><WeekdayPattern weekdays={analysis.weekdays} /></Card>
-                <Card id="st-comp" title={t("Library by source")}>{lib.library.length ? <Composition library={lib.library.filter((piko) => !isExtra(piko))} playtime={playtimeById} /> : <p className="stats-muted">Your library is empty.</p>}</Card>
+                <Card id="st-comp" title={t("Library by source")}>{lib.library.length ? <Composition library={lib.library.filter((piko) => !isExtra(piko))} playtime={playtimeById} /> : <p className="stats-muted">{t("Your library is empty.")}</p>}</Card>
               </div>
               <Card id="st-heat" title={t("Past year")} wide><Heatmap totals={totals} /></Card>
               <div className="stats-grid">

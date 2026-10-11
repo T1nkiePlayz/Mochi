@@ -68,12 +68,12 @@ export function AchievementsPanel({ progress, unlocked }: { progress: Achievemen
 
   return (
     <section aria-labelledby="ach-heading" className="stats-card ach-panel">
-      <div className="stats-card-head"><h2 id="ach-heading">Achievements</h2><span className="stats-muted">{done} of {progress.length} {t("unlocked")}</span></div>
+      <div className="stats-card-head"><h2 id="ach-heading">{t("Achievements")}</h2><span className="stats-muted">{done} of {progress.length} {t("unlocked")}</span></div>
       <div className="stat-meter wide" role="progressbar" aria-label={t("Achievements unlocked")} aria-valuemin={0} aria-valuemax={progress.length} aria-valuenow={done}><i style={{ width: `${(done / Math.max(1, progress.length)) * 100}%` }} /></div>
       <p className="stats-muted">Mochi's own achievements, tracked on this device from your play history and library. Tiered ones show the next tier to go for. Steam achievements for each game are in its Overview.</p>
       <div className="ach-filters">
         <div className="ach-chips" role="group" aria-label={t("Achievement categories")}>
-          <button type="button" className="ach-chip" aria-pressed={category === "all"} onClick={() => setCategory("all")}>All <small>{done}/{progress.length}</small></button>
+          <button type="button" className="ach-chip" aria-pressed={category === "all"} onClick={() => setCategory("all")}>{t("All")} <small>{done}/{progress.length}</small></button>
           {achievementCategories.map((name) => {
             const counts = perCategory.get(name);
             return counts ? <button key={name} type="button" className="ach-chip" aria-pressed={category === name} onClick={() => setCategory(name)}>{t(name)} <small>{counts.done}/{counts.total}</small></button> : null;
@@ -90,7 +90,7 @@ export function AchievementsPanel({ progress, unlocked }: { progress: Achievemen
           {sync.message && !sync.running && <small>{sync.message}</small>}
         </div>
       )}
-      {shown.length ? <ul className="ach-grid">{shown.map((item) => <AchievementBadge key={item.def.id} item={item} unlockedAt={at(item)} translateText={t} />)}</ul> : <p className="stats-muted">Nothing matches these filters.</p>}
+      {shown.length ? <ul className="ach-grid">{shown.map((item) => <AchievementBadge key={item.def.id} item={item} unlockedAt={at(item)} translateText={t} />)}</ul> : <p className="stats-muted">{t("Nothing matches these filters.")}</p>}
     </section>
   );
 }
@@ -99,9 +99,9 @@ export function RecentAchievements({ progress, unlocked, onOpen }: { progress: A
   const recent = progress.filter((item) => unlocked[item.def.id] !== undefined).sort((a, b) => unlocked[b.def.id] - unlocked[a.def.id]).slice(0, 4);
   return (
     <section className="stats-card" aria-labelledby="recent-ach">
-      <div className="stats-card-head"><h2 id="recent-ach">Recent achievements</h2><button type="button" className="stats-link" onClick={onOpen}>View all</button></div>
+      <div className="stats-card-head"><h2 id="recent-ach">{t("Recent achievements")}</h2><button type="button" className="stats-link" onClick={onOpen}>{t("View all")}</button></div>
       {recent.length ? <ul className="ach-grid compact">{recent.map((item) => <AchievementBadge key={item.def.id} item={item} unlockedAt={unlocked[item.def.id]} />)}</ul>
-        : <p className="stats-muted">Nothing unlocked yet. Launch a game to earn your first one.</p>}
+        : <p className="stats-muted">{t("Nothing unlocked yet. Launch a game to earn your first one.")}</p>}
     </section>
   );
 }
