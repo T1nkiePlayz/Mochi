@@ -68,7 +68,7 @@ export function InstalledModsPanel({ piko, tofu, folder, withUpdates, files: all
 
   const run = async (job: () => Promise<unknown>, failure: string) => {
     setBusy(true);
-    try { await job(); } catch (error) { onMessage(errorText(error, failure)); }
+    try { await job(); } catch (error) { const detail = errorText(error, ""); const translated = detail ? t(detail) : ""; onMessage(translated && translated !== detail ? translated : detail ? `${t(failure)} ${detail}` : t(failure)); }
     await refresh();
     setBusy(false);
   };
@@ -99,7 +99,7 @@ export function InstalledModsPanel({ piko, tofu, folder, withUpdates, files: all
         const record = file.record;
         const title = record?.title || file.filename.replace(/\.disabled$/, "");
         return <li key={file.path} className={`imp-row ${file.enabled ? "" : "is-off"}`}>
-          <Checkbox ariaLabel={`Select ${title}`} checked={selected.has(file.path)} onChange={() => toggleSelected(file.path)} />
+          <Checkbox ariaLabel={`${t("Select")} ${title}`} checked={selected.has(file.path)} onChange={() => toggleSelected(file.path)} />
           <span className="imp-name">
             <strong title={file.filename}>{title}</strong>
             <small>
@@ -107,12 +107,12 @@ export function InstalledModsPanel({ piko, tofu, folder, withUpdates, files: all
               {record && record.source !== "manual" ? ` · ${sourceLabels[record.source]}` : ""}{file.enabled ? "" : " · disabled"}{file.foreign ? " · another Tofu's mod" : ""}
             </small>
           </span>
-          {!file.foreign && needsIdentification(file) && <button type="button" className="secondary-button imp-link" aria-label={`Identify ${title}`} title={t("Not identified yet: pick the mod on CurseForge, Modrinth or Nexus Mods")} onClick={() => setLinking(file)}><Link2 size={13} /> {t("Identify")}</button>}
+          {!file.foreign && needsIdentification(file) && <button type="button" className="secondary-button imp-link" aria-label={`${t("Identify")} ${title}`} title={t("Not identified yet: pick the mod on CurseForge, Modrinth or Nexus Mods")} onClick={() => setLinking(file)}><Link2 size={13} /> {t("Identify")}</button>}
           {update && <span className="imp-badge" role="status">{t("Update available: {version}").replace("{version}", update.newVersion)}</span>}
-          {update && update.apply.kind === "download" && <button type="button" className="secondary-button" disabled={busy || updates.updating.includes(update.path)} aria-label={`Update ${title}`} onClick={() => void run(() => applyUpdates(tofu, [update]), "Update failed.")}><ArrowUpCircle size={13} /> {t("Update")}</button>}
-          {update && update.apply.kind === "manual" && <button type="button" className="secondary-button" aria-label={`Open ${title} on its site`} title={update.apply.reason} onClick={() => void openExternalUrl((update.apply as { pageUrl: string }).pageUrl).catch(() => undefined)}><ExternalLink size={13} /> {t("Get update")}</button>}
+          {update && update.apply.kind === "download" && <button type="button" className="secondary-button" disabled={busy || updates.updating.includes(update.path)} aria-label={`${t("Update")} ${title}`} onClick={() => void run(() => applyUpdates(tofu, [update]), "Update failed.")}><ArrowUpCircle size={13} /> {t("Update")}</button>}
+          {update && update.apply.kind === "manual" && <button type="button" className="secondary-button" aria-label={`${t("Open mod page")} ${title}`} title={update.apply.reason} onClick={() => void openExternalUrl((update.apply as { pageUrl: string }).pageUrl).catch(() => undefined)}><ExternalLink size={13} /> {t("Get update")}</button>}
           {record?.rollback && <button type="button" className="icon-button" aria-label={t("Roll {name} back to {version}").replace("{name}", title).replace("{version}", record.rollback.version || t("the previous version"))} title={t("Roll back to {version}").replace("{version}", record.rollback.version || t("the previous version"))} disabled={busy} onClick={() => void run(async () => { await rollbackModUpdate(tofu.id, folder.path, record.file, folder.subdir); onMessage(t("Restored the earlier version of {name}.").replace("{name}", title)); }, "Unable to roll back.")}><RotateCcw size={14} /></button>}
-          <button type="button" role="switch" aria-checked={file.enabled} className={`imp-switch ${file.enabled ? "on" : ""}`} aria-label={`${file.enabled ? "Disable" : "Enable"} ${title}`} title={file.enabled ? t("Disable (kept, just not loaded)") : t("Enable")} disabled={busy} onClick={() => void setEnabled([file], !file.enabled)}><Power size={14} /></button>
+          <button type="button" role="switch" aria-checked={file.enabled} className={`imp-switch ${file.enabled ? "on" : ""}`} aria-label={`${t(file.enabled ? "Disable" : "Enable")} ${title}`} title={file.enabled ? t("Disable (kept, just not loaded)") : t("Enable")} disabled={busy} onClick={() => void setEnabled([file], !file.enabled)}><Power size={14} /></button>
           <button type="button" className="icon-button" aria-label={t("Delete {name}").replace("{name}", title)} title={t("Delete")} disabled={busy} onClick={() => void confirmAction({ title: t("Delete mod?"), message: t("{name} will be removed from this game's mods folder.").replace("{name}", file.filename.replace(/\.disabled$/, "")), confirmLabel: t("Delete"), danger: true }).then((ok) => { if (ok) void run(() => deleteModFile(file.path, tofu.id), "Unable to delete the file."); })}><Trash2 size={14} /></button>
         </li>;
       })}
