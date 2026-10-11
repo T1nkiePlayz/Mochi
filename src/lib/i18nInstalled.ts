@@ -356,3 +356,45 @@ const tofuStatusValues: Record<string, string[]> = {
 "vi":["Sẵn sàng","Cần chú ý","{count} mod","Đã cài {count} mod","Chưa cài mod nào","{count} tệp · {size}.","Bản chụp thủ công","Trước khi cập nhật mod"],
 };
 Object.assign(installedMessages, Object.fromEntries(tofuStatusKeys.map((message, index) => [message, Object.fromEntries(Object.entries(tofuStatusValues).map(([locale, values]) => [locale, values[index]]))])));
+
+const linkedPackKeys = [
+  "recorded by your launcher",
+  "from the pack's manifest",
+  "matched by name",
+  "No modpack was recognised for this instance.",
+  "Looking for a matching modpack in the background.",
+  "Linked modpack: {name}",
+  "Could not load the modpack.",
+  "Powered by CurseForge",
+] as const;
+const linkedPackValues: Record<string, string[]> = {
+"ar":["مسجّل بواسطة مشغّل الألعاب","من بيان الحزمة","تمت المطابقة بالاسم","لم يتم التعرّف على أي حزمة تعديلات لهذا المثيل.","جارٍ البحث في الخلفية عن حزمة تعديلات مطابقة.","حزمة التعديلات المرتبطة: {name}","تعذّر تحميل حزمة التعديلات.","مدعوم من CurseForge"],
+"bg":["записано от стартера","от манифеста на пакета","съвпадение по име","Не е разпознат модпак за този екземпляр.","Търсене на съвпадащ модпак във фонов режим.","Свързан модпак: {name}","Модпакът не можа да бъде зареден.","С поддръжката на CurseForge"],
+"zh-Hans":["由启动器记录","来自整合包清单","按名称匹配","未识别此实例对应的整合包。","正在后台查找匹配的整合包。","已关联整合包：{name}","无法加载整合包。","由 CurseForge 提供支持"],
+"zh-Hant":["由啟動器記錄","來自整合包清單","依名稱比對","未辨識此執行個體對應的整合包。","正在背景尋找相符的整合包。","已連結整合包：{name}","無法載入整合包。","由 CurseForge 提供支援"],
+"cs":["zaznamenáno vaším launcherem","z manifestu balíčku","shoda podle názvu","Pro tuto instanci nebyl rozpoznán žádný modpack.","Na pozadí se hledá odpovídající modpack.","Propojený modpack: {name}","Modpack se nepodařilo načíst.","S podporou CurseForge"],
+"da":["registreret af din launcher","fra pakkens manifest","matchet efter navn","Der blev ikke genkendt nogen modpakke for denne instans.","Leder efter en matchende modpakke i baggrunden.","Tilknyttet modpakke: {name}","Modpakken kunne ikke indlæses.","Drevet af CurseForge"],
+"nl":["vastgelegd door je launcher","uit het manifest van het pakket","gematcht op naam","Er is geen modpack herkend voor deze instantie.","Op de achtergrond wordt gezocht naar een overeenkomend modpack.","Gekoppeld modpack: {name}","Het modpack kon niet worden geladen.","Mogelijk gemaakt door CurseForge"],
+"fi":["käynnistysohjelman tallentama","paketin manifestista","nimellä täsmätty","Tälle instanssille ei tunnistettu modipakettia.","Vastaavaa modipakettia etsitään taustalla.","Linkitetty modipaketti: {name}","Modipaketin lataaminen epäonnistui.","CurseForgen tarjoama"],
+"fr":["enregistré par votre lanceur","depuis le manifeste du pack","correspondance par nom","Aucun modpack n’a été reconnu pour cette instance.","Recherche d’un modpack correspondant en arrière-plan.","Modpack associé : {name}","Impossible de charger le modpack.","Propulsé par CurseForge"],
+"de":["von deinem Launcher erfasst","aus dem Manifest des Pakets","nach Namen zugeordnet","Für diese Instanz wurde kein Modpack erkannt.","Im Hintergrund wird nach einem passenden Modpack gesucht.","Verknüpftes Modpack: {name}","Modpack konnte nicht geladen werden.","Unterstützt von CurseForge"],
+"el":["καταγράφηκε από τον launcher σας","από το manifest του πακέτου","αντιστοιχίστηκε με βάση το όνομα","Δεν αναγνωρίστηκε modpack για αυτήν την παρουσία.","Αναζήτηση αντίστοιχου modpack στο παρασκήνιο.","Συνδεδεμένο modpack: {name}","Δεν ήταν δυνατή η φόρτωση του modpack.","Με την υποστήριξη του CurseForge"],
+"hu":["az indító rögzítette","a csomag jegyzékéből","név alapján egyezik","Ehhez a példányhoz nem sikerült modcsomagot felismerni.","A megfelelő modcsomag keresése a háttérben folyamatban van.","Kapcsolt modcsomag: {name}","A modcsomag betöltése nem sikerült.","A CurseForge támogatásával"],
+"id":["dicatat oleh peluncur Anda","dari manifes paket","cocok berdasarkan nama","Tidak ada modpack yang dikenali untuk instans ini.","Mencari modpack yang cocok di latar belakang.","Modpack tertaut: {name}","Modpack tidak dapat dimuat.","Didukung oleh CurseForge"],
+"it":["registrato dal launcher","dal manifest del pacchetto","corrispondenza per nome","Nessun modpack riconosciuto per questa istanza.","Ricerca in background di un modpack corrispondente.","Modpack collegato: {name}","Impossibile caricare il modpack.","Offerto da CurseForge"],
+"ja":["ランチャーによって記録","パックのマニフェストから","名前で一致","このインスタンスに対応する Mod パックは認識されませんでした。","バックグラウンドで一致する Mod パックを検索しています。","リンク済み Mod パック：{name}","Mod パックを読み込めませんでした。","CurseForge 提供"],
+"ko":["런처에서 기록됨","팩 매니페스트에서 가져옴","이름으로 일치","이 인스턴스에서 모드팩을 찾지 못했습니다.","백그라운드에서 일치하는 모드팩을 찾는 중입니다.","연결된 모드팩: {name}","모드팩을 불러올 수 없습니다.","CurseForge 제공"],
+"no":["registrert av spillstarteren","fra pakkens manifest","matchet etter navn","Ingen modpakke ble gjenkjent for denne instansen.","Ser etter en matchende modpakke i bakgrunnen.","Tilknyttet modpakke: {name}","Kunne ikke laste inn modpakken.","Drevet av CurseForge"],
+"pl":["zapisane przez launcher","z manifestu paczki","dopasowano według nazwy","Nie rozpoznano modpacka dla tej instancji.","W tle wyszukiwany jest pasujący modpack.","Połączony modpack: {name}","Nie udało się wczytać modpacka.","Obsługiwane przez CurseForge"],
+"pt":["registado pelo launcher","do manifesto do pacote","correspondência pelo nome","Não foi reconhecido nenhum modpack para esta instância.","A procurar um modpack correspondente em segundo plano.","Modpack ligado: {name}","Não foi possível carregar o modpack.","Disponibilizado pelo CurseForge"],
+"pt-BR":["registrado pelo inicializador","do manifesto do pacote","correspondência pelo nome","Nenhum modpack foi reconhecido para esta instância.","Procurando um modpack correspondente em segundo plano.","Modpack vinculado: {name}","Não foi possível carregar o modpack.","Oferecido pelo CurseForge"],
+"ro":["înregistrat de lansator","din manifestul pachetului","potrivire după nume","Nu a fost recunoscut niciun modpack pentru această instanță.","Se caută în fundal un modpack corespunzător.","Modpack conectat: {name}","Modpackul nu a putut fi încărcat.","Oferit de CurseForge"],
+"ru":["записано лаунчером","из манифеста сборки","совпадение по названию","Для этого экземпляра не удалось определить сборку модов.","В фоновом режиме выполняется поиск подходящей сборки модов.","Связанная сборка модов: {name}","Не удалось загрузить сборку модов.","При поддержке CurseForge"],
+"es":["registrado por tu lanzador","del manifiesto del paquete","coincidencia por nombre","No se reconoció ningún modpack para esta instancia.","Buscando un modpack coincidente en segundo plano.","Modpack vinculado: {name}","No se pudo cargar el modpack.","Con tecnología de CurseForge"],
+"sv":["registrerat av din startare","från paketets manifest","matchat efter namn","Inget modpaket identifierades för den här instansen.","Söker efter ett matchande modpaket i bakgrunden.","Länkat modpaket: {name}","Det gick inte att läsa in modpaketet.","Drivs av CurseForge"],
+"th":["บันทึกโดยตัวเรียกใช้เกม","จากไฟล์ manifest ของแพ็ก","จับคู่ตามชื่อ","ไม่พบแพ็กม็อดสำหรับอินสแตนซ์นี้","กำลังค้นหาแพ็กม็อดที่ตรงกันในเบื้องหลัง","แพ็กม็อดที่เชื่อมโยง: {name}","โหลดแพ็กม็อดไม่ได้","สนับสนุนโดย CurseForge"],
+"tr":["başlatıcınız tarafından kaydedildi","paketin manifestinden","ada göre eşleşti","Bu örnek için bir mod paketi tanınmadı.","Arka planda eşleşen bir mod paketi aranıyor.","Bağlı mod paketi: {name}","Mod paketi yüklenemedi.","CurseForge tarafından desteklenir"],
+"uk":["записано вашим лаунчером","із маніфесту пакета","зіставлено за назвою","Для цього екземпляра не розпізнано модпак.","У фоновому режимі шукається відповідний модпак.","Пов’язаний модпак: {name}","Не вдалося завантажити модпак.","За підтримки CurseForge"],
+"vi":["được trình khởi chạy ghi lại","từ tệp kê khai của gói","khớp theo tên","Không nhận diện được gói mod cho phiên bản này.","Đang tìm gói mod phù hợp ở chế độ nền.","Gói mod đã liên kết: {name}","Không thể tải gói mod.","Được hỗ trợ bởi CurseForge"],
+};
+Object.assign(installedMessages, Object.fromEntries(linkedPackKeys.map((message, index) => [message, Object.fromEntries(Object.entries(linkedPackValues).map(([locale, values]) => [locale, values[index]]))])));
