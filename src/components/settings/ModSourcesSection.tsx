@@ -6,6 +6,7 @@ import { SettingsGroup, ToggleRow } from "./Section";
 
 /** "Add other mod sites when a game has fewer than [N] mods". Typing is free-form; the stored value is always a clamped integer 0..100. */
 function AutoExtendRow({ value, onChange }: { value: number; onChange: (value: number) => void }) {
+  const t = useTranslation();
   const [draft, setDraft] = useState(String(value));
   useEffect(() => setDraft(String(value)), [value]);
   return <label className="setting-row"><span><strong>{t("Add other mod sites for games with few mods")}</strong><small>Discover adds mods from the game's other enabled sites (for example Nexus Mods) when its first site lists fewer than this many. 0 never adds sites; the most is {MAX_AUTO_EXTEND_BELOW}.</small></span>
