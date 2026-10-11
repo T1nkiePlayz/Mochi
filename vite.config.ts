@@ -146,16 +146,31 @@ export default defineConfig({
           if (id.includes("/node_modules/@supabase/")) return "supabase";
           if (id.includes("/node_modules/lucide-react/")) return "icons";
           if (id.includes("/node_modules/react-dom/") || id.includes("/node_modules/react/")) return "react";
-          // Keep translation catalogues out of the app entry, but group them by
-          // feature instead of emitting one eagerly-loaded chunk per catalogue. The lookup
-          // is synchronous, so every catalogue is needed at startup; dozens of tiny chunks
-          // add request overhead without providing lazy-loading benefits.
+          // Keep translation catalogues out of the app entry. The lookup is synchronous,
+          // so they are all needed at startup; isolate the largest catalogues and group smaller
+          // ones by feature. This avoids dozens of tiny eager chunks without creating oversized bundles.
           if (id.includes("/src/lib/i18n") && !id.includes(".test.")) {
             const fileName = path.basename(id, path.extname(id));
+            const standaloneChunks: Record<string, string> = {
+              i18nCommonPart2: "translations-common-part2",
+              i18nRecentUi: "translations-recent-ui",
+              i18nMetadataPart2: "translations-metadata-part2",
+              i18nMetadataPart1: "translations-metadata-part1",
+              i18nUiExtra: "translations-ui-extra",
+              i18nCommonPart1: "translations-common-part1",
+              i18nSettingsRecent: "translations-settings-recent",
+              i18nSettings: "translations-settings-core",
+              i18nInstalled: "translations-installed",
+              i18nStats: "translations-stats",
+              i18nLongHelp: "translations-long-help",
+              i18nAccessibilitySettings: "translations-accessibility-settings",
+            };
+            const standaloneChunk = standaloneChunks[fileName];
+            if (standaloneChunk) return standaloneChunk;
             if (fileName === "i18n") return "translations-core";
             if (/^i18n(?:Setup|CloudSetup|AccountSetup|ServiceSetup|Chrome|AccountHardware|Accessibility)/.test(fileName)) return "translations-setup";
             if (/^i18n(?:Settings|Controls|Navigation|Keyboard|Launch|UpdateArtwork|ArtworkSources|ExportShare|PickerGuidance|EditFilter|SavedFilter)/.test(fileName)) return "translations-settings";
-            if (/^i18n(?:Library|Installed|Downloads|Mod|Tofu|Save|Saves|Duplicates)/.test(fileName)) return "translations-content";
+            if (/^i18n(?:Library|Downloads|Mod|Tofu|Save|Saves|Duplicates)/.test(fileName)) return "translations-content";
             if (/^i18n(?:Discover|Discovery|Project|Deals|Metadata|Stats)/.test(fileName)) return "translations-discovery";
             return "translations-common";
           }
