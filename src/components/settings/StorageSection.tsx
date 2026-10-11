@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { ArrowDown, ArrowUp, FolderOpen } from "lucide-react";
 import { Select, type SelectOption } from "../ui/Select";
 import { useApp } from "../../state/AppContext";
@@ -14,8 +15,8 @@ const errorText = (error: unknown) => (error instanceof Error ? error.message : 
 
 function SizeCell({ row, max }: { row: StorageRow; max: number }) {
   const size = row.measurement;
-  if (!size) return <span className="storage-skeleton" aria-label="Measuring" />;
-  if (size.error) return <span className="storage-error" title={size.error}>Unavailable</span>;
+  if (!size) return <span className="storage-skeleton" aria-label={t("Measuring")} />;
+  if (size.error) return <span className="storage-error" title={size.error}>{t("Unavailable")}</span>;
   const width = max > 0 ? Math.max(size.bytes > 0 ? 2 : 0, (size.bytes / max) * 100) : 0;
   return <span className="storage-size" title={size.truncated ? "A very large folder: this is a lower bound." : `${size.files.toLocaleString()} files`}>
     <span className="storage-size-bar" aria-hidden="true"><span className={`storage-fill storage-cat-${row.category}`} style={{ width: `${width}%` }} /></span>
@@ -76,8 +77,8 @@ export function StorageSection() {
         <small role="status">{!started ? "Measuring reads folder sizes only and can take a while for big libraries, so it runs when you ask." : scanning ? `Measuring… ${totals.measured + totals.failed} of ${locations.length || "?"} locations done.` : `${totals.measured} location${totals.measured === 1 ? "" : "s"} measured${totals.failed ? `, ${totals.failed} unavailable` : ""}.`}</small>
       </span>
       <span className="storage-summary-actions">
-        {scanning && <button type="button" className="secondary-button" onClick={cancel}>Stop</button>}
-        <button type="button" className="secondary-button" disabled={scanning} onClick={() => void scan()}>{started ? "Scan again" : "Measure disk usage"}</button>
+        {scanning && <button type="button" className="secondary-button" onClick={cancel}>{t("Stop")}</button>}
+        <button type="button" className="secondary-button" disabled={scanning} onClick={() => void scan()}>{started ? t("Scan again") : t("Measure disk usage")}</button>
       </span>
     </div>
     {error && <p className="metadata-note settings-note" role="alert">{error}</p>}
@@ -94,8 +95,8 @@ export function StorageSection() {
             {columns.map((column) => <th key={column.key} scope="col" aria-sort={sort.key === column.key ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
               <button type="button" className="storage-sort" onClick={() => sortBy(column.key)}>{column.label}{sort.key === column.key && (sort.dir === "asc" ? <ArrowUp size={12} aria-hidden="true" /> : <ArrowDown size={12} aria-hidden="true" />)}</button>
             </th>)}
-            <th scope="col" className="storage-share-col">Share</th>
-            <th scope="col"><span className="visually-hidden">Actions</span></th>
+            <th scope="col" className="storage-share-col">{t("Share")}</th>
+            <th scope="col"><span className="visually-hidden">{t("Actions")}</span></th>
           </tr></thead>
           <tbody>
             {locations.length === 0 && [0, 1, 2, 3].map((index) => <tr key={index}><td colSpan={5}><span className="storage-skeleton storage-skeleton-row" /></td></tr>)}

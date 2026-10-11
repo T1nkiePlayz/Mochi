@@ -1,4 +1,5 @@
 import { useApp } from "../../state/AppContext";
+import { useTranslation } from "../../lib/useTranslation";
 import { useUpdater } from "../../state/useUpdater";
 import { formatBytes } from "../../lib/updater";
 import { SettingsGroup, ToggleRow } from "./Section";

@@ -1,4 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { UserRound } from "lucide-react";
 import { Select } from "../ui/Select";
 import { MochiIcon } from "../MochiIcon";
@@ -39,10 +40,10 @@ function CurseforgeCard({ enabled }: { enabled: boolean }) {
     return () => { cancelled = true; };
   }, [enabled]);
   return <div className="provider-credential-card">
-    <div className="provider-credential-heading"><div><strong>CurseForge</strong><small>No key or account needed. Mochi provides access to CurseForge for you, so mods for most games work out of the box.</small></div>
+    <div className="provider-credential-heading"><div><strong>CurseForge</strong><small>{t("No key or account needed. Mochi provides access to CurseForge for you, so mods for most games work out of the box.")}</small></div>
       <span className={enabled && state === "reachable" ? "credential-status saved" : "credential-status"} role="status">{enabled ? t(cfStateText[state]) : "Turned off"}</span></div>
     <small className="metadata-note">Powered by CurseForge. Some authors disable downloads outside CurseForge; Mochi then opens the mod's CurseForge page instead. You can turn CurseForge off under Mod sources.</small>
-    <button type="button" className="secondary-button" onClick={() => void openExternalUrl(CF_SITE).catch(() => undefined)}>Open curseforge.com</button>
+    <button type="button" className="secondary-button" onClick={() => void openExternalUrl(CF_SITE).catch(() => undefined)}>{t("Open curseforge.com")}</button>
   </div>;
 }
 
@@ -70,7 +71,7 @@ export function ProvidersSection() {
   const { user } = account;
   const signIn = <button className="secondary-button" onClick={account.openSignIn}><MochiIcon name="account" fallback={UserRound} size={14} /> Sign in to save</button>;
   const state = (saved: boolean) => <span className={saved ? "credential-status saved" : "credential-status"}>{user ? (saved ? "Saved" : "Not saved") : "Sign in required"}</span>;
-  const removeButton = (provider: "igdb" | "nexus" | "steamgriddb", saved: boolean) => saved && <button className="secondary-button danger-outline" onClick={() => void c.remove(provider)} disabled={c.busy !== null}>Remove</button>;
+  const removeButton = (provider: "igdb" | "nexus" | "steamgriddb", saved: boolean) => saved && <button className="secondary-button danger-outline" onClick={() => void c.remove(provider)} disabled={c.busy !== null}>{t("Remove")}</button>;
   return <SettingsGroup title={t("Mod & metadata providers")} subtitle={t("Credentials are encrypted with Supabase Vault")} id="settings-providers">
     <div className="setting-row">
       <span><strong>{t("Metadata source")}</strong><small>Choose where Mochi gets descriptions and artwork. Automatic combines every provider you have set up.</small></span>
