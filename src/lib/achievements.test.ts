@@ -122,6 +122,11 @@ describe("facts and rules", () => {
     const item = evaluate(facts([rec(at(2026, 5, 1), 400 * 3600)])).find((p) => p.def.id === "hours-100")!;
     expect(progressText(item)).toBe("100 / 100 h");
   });
+  it("formats fractional achievement progress using the requested locale", () => {
+    const item = evaluate(facts([rec(at(2026, 5, 1), 1800)])).find((p) => p.def.id === "hour-1")!;
+    expect(progressText(item, (message) => message, "fr")).toBe("0,5 / 1 h");
+    expect(progressText(item, (message) => message, "en")).toBe("0.5 / 1 h");
+  });
 });
 
 describe("visibleAchievements", () => {
