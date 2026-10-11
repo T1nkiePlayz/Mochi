@@ -7,12 +7,12 @@ import { confirmAction } from "../../lib/confirm";
 import { formatRelativeTime } from "../../lib/format";
 import { SettingsGroup, ToggleRow } from "./Section";
 
-const statusText = (state: string, at?: number, message?: string): string => {
+const statusText = (state: string, at: number | undefined, message: string | undefined, t: (message: string) => string): string => {
   switch (state) {
-    case "syncing": return "Saving to Mochi Cloud…";
-    case "synced": return at ? `Saved to Mochi Cloud ${formatRelativeTime(Math.floor(at / 1000))}.` : "Saved to Mochi Cloud.";
-    case "offline": return "Offline. Achievements are kept on this device and saved when you are back online.";
-    case "error": return `Could not save to Mochi Cloud${message ? `: ${message}` : "."} Achievements are kept on this device.`;
+    case "syncing": return t("Saving to Mochi Cloud…");
+    case "synced": return at ? t("Saved to Mochi Cloud {time}.").replace("{time}", formatRelativeTime(Math.floor(at / 1000))) : t("Saved to Mochi Cloud.");
+    case "offline": return t("Offline. Achievements are kept on this device and saved when you are back online.");
+    case "error": return t("Could not save to Mochi Cloud{error}. Achievements are kept on this device.").replace("{error}", message ? `: ${message}` : "");
     default: return "";
   }
 };
@@ -26,9 +26,9 @@ export function AchievementsSection() {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
   const unlockedCount = Object.keys(stored.unlocked).length;
-  const description = !signedIn ? "Sign in to keep unlocks and their dates on every device you use."
-    : !available ? "Turn on Mochi cloud sync for this account to save achievements to the cloud."
-    : "Keep unlocks and their dates in your Mochi account. Devices merge their achievements, keeping the earliest unlock.";
+  const description = !signedIn ? t("Sign in to keep unlocks and their dates on every device you use.")
+    : !available ? t("Turn on Mochi cloud sync for this account to save achievements to the cloud.")
+    : t("Keep unlocks and their dates in your Mochi account. Devices merge their achievements, keeping the earliest unlock.");
 
   const clear = async () => {
     const items = [`${unlockedCount} unlocked achievement${unlockedCount === 1 ? "" : "s"} and their unlock dates`, "Recorded milestones (themes tried, sections opened, controller and Big Picture use)"];
@@ -40,11 +40,11 @@ export function AchievementsSection() {
     if (!ok) return;
     setBusy(true); setNote("");
     try { setNote(await clearAllAchievements(account.user?.id, active)); }
-    catch (error) { setNote(error instanceof Error ? error.message : "Could not clear achievements."); }
+    catch (error) { setNote(error instanceof Error ? error.message : t("Could not clear achievements.")); }
     finally { setBusy(false); }
   };
 
-  const line = active ? statusText(status.state, status.at, status.message) : "";
+  const line = active ? statusText(status.state, status.at, status.message, t) : "";
   return <SettingsGroup title={t("Achievements")} subtitle={t("Unlocks, cloud saving and reset")} id="settings-achievements">
     <ToggleRow title={t("Save achievements to cloud")} description={description} checked={available && enabled} disabled={!available} onChange={setAchievementCloudSetting} />
     {line && <p className={`metadata-note settings-note achievement-cloud-status is-${status.state}`} role="status">{line}</p>}
