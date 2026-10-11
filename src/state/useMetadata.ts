@@ -109,11 +109,21 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
     const wantsArt = !(piko.lockedFields ?? []).includes("artwork") && piko.artworkSource !== "custom";
     if (wantsArt) {
       let firstCandidate: ArtChoice | undefined;
-      artSearch: for (const id of plan.art) {
-        for (const candidate of (await ask(id)).art ?? []) {
-          firstCandidate ??= candidate;
-          // Only discard the cached file when the artwork actually changes, so a failed download keeps the old one.
-          if (await cacheArtworkUrl(candidate.url, cacheKey, candidate.url !== piko.artworkUrl)) { art = candidate; break artSearch; }
+      if (options.allProviders) {
+        // Refresh every configured artwork provider, even if a higher-priority source returns a usable image.
+        // Only cache the selected image afterwards so the on-disk file always matches the library's artwork URL.
+        const candidates = (await Promise.all(plan.art.map(async (id) => (await ask(id)).art ?? []))).flat();
+        firstCandidate = candidates[0];
+        for (const candidate of candidates) {
+          if (await cacheArtworkUrl(candidate.url, cacheKey, candidate.url !== piko.artworkUrl)) { art = candidate; break; }
+        }
+      } else {
+        artSearch: for (const id of plan.art) {
+          for (const candidate of (await ask(id)).art ?? []) {
+            firstCandidate ??= candidate;
+            // Only discard the cached file when the artwork actually changes, so a failed download keeps the old one.
+            if (await cacheArtworkUrl(candidate.url, cacheKey, candidate.url !== piko.artworkUrl)) { art = candidate; break artSearch; }
+          }
         }
       }
       // Nothing could be downloaded (offline?): keep the best remote URL so artwork appears once online.
