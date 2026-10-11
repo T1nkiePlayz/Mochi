@@ -1,5 +1,6 @@
 import { memo, useRef, type KeyboardEvent, type PointerEvent } from "react";
 import { Check, Heart, Play } from "lucide-react";
+import { useTranslation } from "../../lib/useTranslation";
 import type { Piko } from "../../models";
 import { GameArtwork } from "../GameArtwork";
 import { hasArtwork } from "../../lib/fallbackArt";
@@ -26,6 +27,7 @@ type Props = {
 const LONG_PRESS_MS = 550;
 
 export const GameCard = memo(function GameCard({ piko, selected, running, cloudStatus, selecting, checked, tabStop = true, onOpen, onToggleFavorite, onToggleChecked, onMenu }: Props) {
+  const t = useTranslation();
   const timer = useRef<number>();
   const fired = useRef(false);
   const cancel = () => window.clearTimeout(timer.current);
@@ -61,6 +63,6 @@ export const GameCard = memo(function GameCard({ piko, selected, running, cloudS
     </button>
     {selecting
       ? <span className={`game-card-check ${checked ? "on" : ""}`} aria-hidden="true">{checked && <Check size={13} />}</span>
-      : <button type="button" className={`game-card-heart ${piko.favorite ? "on" : ""}`} tabIndex={-1} data-nav="" aria-pressed={Boolean(piko.favorite)} aria-label={piko.favorite ? `Remove ${piko.name} from favourites` : `Add ${piko.name} to favourites`} onClick={() => onToggleFavorite(piko.id)}><Heart size={15} fill={piko.favorite ? "currentColor" : "none"} /></button>}
+      : <button type="button" className={`game-card-heart ${piko.favorite ? "on" : ""}`} tabIndex={-1} data-nav="" aria-pressed={Boolean(piko.favorite)} aria-label={piko.favorite ? t("Remove {name} from favourites").replace("{name}", piko.name) : t("Add {name} to favourites").replace("{name}", piko.name)} onClick={() => onToggleFavorite(piko.id)}><Heart size={15} fill={piko.favorite ? "currentColor" : "none"} /></button>}
   </article>;
 });

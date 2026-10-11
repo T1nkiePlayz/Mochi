@@ -46,7 +46,7 @@ export function GameContextMenu({ game, x, y, collections, canOpenFolder, onClos
     items[(index + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length]?.focus();
   };
 
-  return <div ref={ref} className="game-context-menu" role="menu" aria-label={`Actions for ${game.name}`} style={{ left: position.x, top: position.y }} onKeyDown={onKeyDown} onContextMenu={(event) => event.preventDefault()}>
+  return <div ref={ref} className="game-context-menu" role="menu" aria-label={t("Actions for {name}").replace("{name}", game.name)} style={{ left: position.x, top: position.y }} onKeyDown={onKeyDown} onContextMenu={(event) => event.preventDefault()}>
     {view === "menu" ? <>
       <button type="button" role="menuitem" onClick={run(onPlay)}><Play size={14} /> {t("Play")}</button>
       <button type="button" role="menuitem" onClick={run(onFavorite)}><Heart size={14} fill={game.favorite ? "currentColor" : "none"} /> {game.favorite ? t("Remove from favourites") : t("Add to favourites")}</button>
@@ -57,10 +57,10 @@ export function GameContextMenu({ game, x, y, collections, canOpenFolder, onClos
       <button type="button" role="menuitem" className="danger" onClick={run(onRemove)}><Trash2 size={14} /> {t("Remove")}</button>
     </> : view === "backlog" ? <>
       <button type="button" role="menuitem" onClick={() => setView("menu")}>{t("← Back")}</button>
-      {backlogStatuses.map(({ id, label }) => <button type="button" key={id} role="menuitemradio" aria-checked={game.backlog?.status === id} onClick={run(() => onBacklog(withBacklogStatus(game.backlog, id)))}><Check size={14} style={{ opacity: game.backlog?.status === id ? 1 : 0 }} /> {label}</button>)}
+      {backlogStatuses.map(({ id, label }) => <button type="button" key={id} role="menuitemradio" aria-checked={game.backlog?.status === id} onClick={run(() => onBacklog(withBacklogStatus(game.backlog, id)))}><Check size={14} style={{ opacity: game.backlog?.status === id ? 1 : 0 }} /> {t(label)}</button>)}
       {game.backlog && <button type="button" role="menuitem" onClick={run(() => onBacklog(undefined))}>{t("Remove from backlog")}</button>}
     </> : <>
-      <button type="button" role="menuitem" onClick={() => setView("menu")}>← Back</button>
+      <button type="button" role="menuitem" onClick={() => setView("menu")}>{t("← Back")}</button>
       <CollectionPicker collections={collections} games={[game]} onToggle={onToggleCollection} onCreate={onCreateCollection} />
     </>}
   </div>;
