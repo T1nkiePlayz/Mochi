@@ -59,15 +59,15 @@ export function ModDetailsModal({ source, item, filter, installLabel, busy, noti
   return <ModalShell label={t("{name} details").replace("{name}", item.name)} className="project-details-window mod-details" onClose={onClose}>
     <div className="project-details-header"><div>
       {item.iconUrl ? <DiscoveryImage src={item.iconUrl} alt="" className="discover-card-icon" label={item.name} /> : <div className="discover-card-icon fallback"><PackageOpen size={26} /></div>}
-      <div><p className="eyebrow">{item.kind ?? site} · {site}</p><h2>{item.name}</h2><p>{item.summary}</p><small>Created by <strong>{item.author || t("Unknown creator")}</strong></small></div>
-    </div><button type="button" className="icon-button" onClick={onClose} aria-label="Close mod details" data-autofocus><X size={17} /></button></div>
+      <div><p className="eyebrow">{item.kind ?? site} · {site}</p><h2>{item.name}</h2><p>{item.summary}</p><small>{t("Created by")} <strong>{item.author || t("Unknown creator")}</strong></small></div>
+    </div><button type="button" className="icon-button" onClick={onClose} aria-label={t("Close mod details")} data-autofocus><X size={17} /></button></div>
     <div className="project-overview">
       <InstallNoticeBar notice={notice} onDismiss={onDismissNotice} />
       <section className="mod-download-panel" aria-label="Download">
-        {narrowed && <Checkbox checked={showAll} onChange={setShowAll} label="Show files for other game versions and loaders (install anyway)" />}
-        {files === null ? <p className="muted"><RefreshCw size={13} className="spin" /> Loading files...</p> : files.length === 0 ? <p className="muted">{filter?.gameVersion ? t("No files are listed for this mod for {version}.").replace("{version}", filter.gameVersion) : t("No files are listed for this mod.")}</p> : <>
-          <label className="mod-file-picker"><span>File</span><Select value={fileId} onChange={setFileId} label="File to download" searchable={files.length > 12} options={files.map((candidate) => ({ value: candidate.id, label: fileLabel(candidate), description: candidate.gameVersions?.slice(0, 4).join(", ") }))} /></label>
-          {file?.dependencies?.length ? <p className="mod-dependencies" role="note">Requires: {file.dependencies.map((dependency, index) => <span key={dependency.id}>{index ? ", " : ""}<a href={dependency.url} onClick={(event) => { event.preventDefault(); void openExternalUrl(dependency.url).catch(() => undefined); }}>{dependency.name ?? t("mod {id}").replace("{id}", dependency.id)}</a></span>)}. Mochi offers to install them before the mod.</p> : null}
+        {narrowed && <Checkbox checked={showAll} onChange={setShowAll} label={t("Show files for other game versions and loaders (install anyway)")} />}
+        {files === null ? <p className="muted"><RefreshCw size={13} className="spin" /> {t("Loading files...")}</p> : files.length === 0 ? <p className="muted">{filter?.gameVersion ? t("No files are listed for this mod for {version}.").replace("{version}", filter.gameVersion) : t("No files are listed for this mod.")}</p> : <>
+          <label className="mod-file-picker"><span>{t("File")}</span><Select value={fileId} onChange={setFileId} label={t("File to download")} searchable={files.length > 12} options={files.map((candidate) => ({ value: candidate.id, label: fileLabel(candidate), description: candidate.gameVersions?.slice(0, 4).join(", ") }))} /></label>
+          {file?.dependencies?.length ? <p className="mod-dependencies" role="note">{t("Requires:")} {file.dependencies.map((dependency, index) => <span key={dependency.id}>{index ? ", " : ""}<a href={dependency.url} onClick={(event) => { event.preventDefault(); void openExternalUrl(dependency.url).catch(() => undefined); }}>{dependency.name ?? t("mod {id}").replace("{id}", dependency.id)}</a></span>)}. {t("Mochi offers to install them before the mod.")}</p> : null}
         </>}
         {fit && fit.status !== "compatible" && <p className="metadata-note" role="note">{t(fit.status === "incompatible" ? "May not work with this Tofu: {reason}" : "Check before installing: {reason}").replace("{reason}", fit.reasons.map((reason) => translateCompatibilityReason(reason, t)).join(" "))}</p>}
         {blocked && <p className="metadata-note" role="note">{t(RESTRICTED_MESSAGE)}</p>}
@@ -79,8 +79,8 @@ export function ModDetailsModal({ source, item, filter, installLabel, busy, noti
       </section>
       {details?.facts.length ? <div className="project-info-grid">{details.facts.map((fact) => <span key={fact.label}><strong>{t(fact.label)}</strong>{fact.label === "Distribution" && fact.value === "Downloads only on CurseForge" ? t("Downloads only on CurseForge") : fact.value}</span>)}</div> : null}
       {error && <p className="metadata-note" role="alert">{error}</p>}
-      <h3 className="project-overview-heading">Description</h3>
-      {details === null ? <p className="muted"><RefreshCw size={13} className="spin" /> Loading description...</p> : details.body ? (details.body.kind === "html" ? <SafeHtml html={details.body.text} /> : <Markdown source={details.body.text} />) : <p className="muted">No description was provided.</p>}
+      <h3 className="project-overview-heading">{t("Description")}</h3>
+      {details === null ? <p className="muted"><RefreshCw size={13} className="spin" /> {t("Loading description...")}</p> : details.body ? (details.body.kind === "html" ? <SafeHtml html={details.body.text} /> : <Markdown source={details.body.text} />) : <p className="muted">{t("No description was provided.")}</p>}
     </div>
   </ModalShell>;
 }
