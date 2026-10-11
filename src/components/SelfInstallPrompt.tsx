@@ -55,7 +55,7 @@ export function SelfInstallPrompt() {
       if (ok) await apply();
       else { try { await selfInstallSkip(); } catch { /* nothing more to do */ } setStatus(null); }
     })();
-  }, [apply]);
+  }, [apply, t]);
 
   useEffect(() => { if (phase.kind !== "idle") dialog.current?.focus(); }, [phase.kind]);
 
