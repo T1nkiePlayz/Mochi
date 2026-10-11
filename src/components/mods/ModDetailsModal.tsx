@@ -63,7 +63,7 @@ export function ModDetailsModal({ source, item, filter, installLabel, busy, noti
     </div><button type="button" className="icon-button" onClick={onClose} aria-label={t("Close mod details")} data-autofocus><X size={17} /></button></div>
     <div className="project-overview">
       <InstallNoticeBar notice={notice} onDismiss={onDismissNotice} />
-      <section className="mod-download-panel" aria-label="Download">
+      <section className="mod-download-panel" aria-label={t("Download")}>
         {narrowed && <Checkbox checked={showAll} onChange={setShowAll} label={t("Show files for other game versions and loaders (install anyway)")} />}
         {files === null ? <p className="muted"><RefreshCw size={13} className="spin" /> {t("Loading files...")}</p> : files.length === 0 ? <p className="muted">{filter?.gameVersion ? t("No files are listed for this mod for {version}.").replace("{version}", filter.gameVersion) : t("No files are listed for this mod.")}</p> : <>
           <label className="mod-file-picker"><span>{t("File")}</span><Select value={fileId} onChange={setFileId} label={t("File to download")} searchable={files.length > 12} options={files.map((candidate) => ({ value: candidate.id, label: fileLabel(candidate), description: candidate.gameVersions?.slice(0, 4).join(", ") }))} /></label>

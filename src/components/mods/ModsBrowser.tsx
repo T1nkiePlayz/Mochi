@@ -150,7 +150,7 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
     </div>
     <InstallNoticeBar notice={install.notice} onDismiss={() => install.setNotice(null)} />
     {active > 0 && <p className="metadata-note" role="status">{t(active === 1 ? "1 download in progress. See Downloads." : "{count} downloads in progress. See Downloads.").replace("{count}", String(active))}</p>}
-    {!source.searchesServerSide && effectiveQuery && <p className="metadata-note">Nexus Mods cannot search by text, so this filters the mods Mochi has loaded so far. Scroll to load more.</p>}
+    {!source.searchesServerSide && effectiveQuery && <p className="metadata-note">{t("Nexus Mods cannot search by text, so this filters the mods Mochi has loaded so far. Scroll to load more.")}</p>}
     <div className="mods-heading"><span aria-live="polite">{feed.loading ? t("Loading...") : `${feed.items.length.toLocaleString()} ${t("of")} ${feed.total.toLocaleString()} ${t(noun)}`}</span>{(source.id === "curseforge" || feed.items.some((item) => item.source === "curseforge")) && <CurseforgeCredit />}</div>
     {feed.loading && <div className="discover-grid mods-grid" aria-busy="true"><ProjectSkeletons count={6} /></div>}
     {!feed.loading && feed.items.length > 0 && <WindowedGrid className="discover-grid mods-grid" items={shown} keyOf={(item) => `${item.source}:${item.id}`}
@@ -158,7 +158,7 @@ export function ModsBrowser({ source, target, filter, noun, collapsedCount, prev
     {!expanded && !feed.loading && !feed.error && (feed.items.length > shown.length || feed.hasMore) && <div className="mods-show-more"><button type="button" className="secondary-button" onClick={() => { setExpanded(true); if (feed.items.length <= shown.length) feed.loadMore(); }}>{t("Show more {items}").replace("{items}", t(noun))}</button></div>}
     {feed.error && <div className="discover-error" role="alert">
       {feed.offline ? <p><WifiOff size={14} /> {t("You appear to be offline.")}</p> : <p>{feed.items.length ? t("Could not load more.") : t("Could not load {items} from {source}.").replace("{items}", t(noun)).replace("{source}", source.label)}</p>}
-      <small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> Retry</button>
+      <small>{feed.error}</small><button type="button" className="secondary-button" onClick={feed.retry}><RefreshCw size={13} /> {t("Retry")}</button>
     </div>}
     {!feed.loading && !feed.error && feed.items.length === 0 && <div className="discover-empty"><p>{t(filtered ? "No {items} match these filters." : "No {items} match.").replace("{items}", t(noun))}</p>{filtered && <button type="button" className="secondary-button" onClick={() => { setSearch(""); setDebounced(""); setCategoryId(""); }}>{t("Clear filters")}</button>}</div>}
     {expanded && feed.loadingMore && <div className="discover-grid mods-grid" aria-busy="true"><ProjectSkeletons count={3} /></div>}
