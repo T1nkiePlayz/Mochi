@@ -72,21 +72,21 @@ export function AchievementsPanel({ progress, unlocked }: { progress: Achievemen
       <div className="stat-meter wide" role="progressbar" aria-label={t("Achievements unlocked")} aria-valuemin={0} aria-valuemax={progress.length} aria-valuenow={done}><i style={{ width: `${(done / Math.max(1, progress.length)) * 100}%` }} /></div>
       <p className="stats-muted">Mochi's own achievements, tracked on this device from your play history and library. Tiered ones show the next tier to go for. Steam achievements for each game are in its Overview.</p>
       <div className="ach-filters">
-        <div className="ach-chips" role="group" aria-label="Achievement categories">
+        <div className="ach-chips" role="group" aria-label={t("Achievement categories")}>
           <button type="button" className="ach-chip" aria-pressed={category === "all"} onClick={() => setCategory("all")}>All <small>{done}/{progress.length}</small></button>
           {achievementCategories.map((name) => {
             const counts = perCategory.get(name);
             return counts ? <button key={name} type="button" className="ach-chip" aria-pressed={category === name} onClick={() => setCategory(name)}>{t(name)} <small>{counts.done}/{counts.total}</small></button> : null;
           })}
         </div>
-        <div className="ach-chips" role="group" aria-label="Achievement status">
+        <div className="ach-chips" role="group" aria-label={t("Achievement status")}>
           {statusOptions.map((option) => <button key={option.value} type="button" className="ach-chip" aria-pressed={status === option.value} onClick={() => setStatus(option.value)}>{t(option.label)}</button>)}
         </div>
       </div>
       {showSteamNote && (
         <div className="ach-steam-note" role="status">
           <span>{t("Steam achievements count once Steam data has been loaded.")} {sync.count ? t("Load it for every Steam game in your library, or open a game's Overview.") : t("Import Steam games to use them.")}</span>
-          {sync.count > 0 && <button type="button" className="secondary-button" onClick={() => void sync.start()} disabled={sync.running}>{sync.running ? t("Syncing {done} of {total}…").replace("{done}", String(sync.done)).replace("{total}", String(sync.total)) : t("Sync Steam achievements")}</button>}
+          {sync.count > 0 && <button type="button" className="secondary-button" onClick={() => void sync.start()} disabled={sync.running} aria-label={t("Load Steam achievements for each game in your library.")}>{sync.running ? t("Syncing {done} of {total}…").replace("{done}", String(sync.done)).replace("{total}", String(sync.total)) : t("Sync Steam achievements")}</button>}
           {sync.message && !sync.running && <small>{sync.message}</small>}
         </div>
       )}
