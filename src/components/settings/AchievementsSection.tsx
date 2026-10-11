@@ -17,6 +17,7 @@ const statusText = (state: string, at?: number, message?: string): string => {
 };
 
 export function AchievementsSection() {
+  const t = useTranslation();
   const { account } = useApp();
   const stored = useStoredAchievements();
   const { available, enabled, active, signedIn } = useAchievementCloudAvailability();
@@ -43,8 +44,8 @@ export function AchievementsSection() {
   };
 
   const line = active ? statusText(status.state, status.at, status.message) : "";
-  return <SettingsGroup title="Achievements" subtitle="Unlocks, cloud saving and reset" id="settings-achievements">
-    <ToggleRow title="Save achievements to cloud" description={description} checked={available && enabled} disabled={!available} onChange={setAchievementCloudSetting} />
+  return <SettingsGroup title={t("Achievements")} subtitle={t("Unlocks, cloud saving and reset")} id="settings-achievements">
+    <ToggleRow title={t("Save achievements to cloud")} description={description} checked={available && enabled} disabled={!available} onChange={setAchievementCloudSetting} />
     {line && <p className={`metadata-note settings-note achievement-cloud-status is-${status.state}`} role="status">{line}</p>}
     <div className="setting-row">
       <span><strong>Clear achievements data</strong><small>{unlockedCount ? `${unlockedCount} unlocked on this device${account.user ? " and in your account" : ""}.` : "No achievements unlocked yet."} Removes unlocks and recorded milestones.</small></span>

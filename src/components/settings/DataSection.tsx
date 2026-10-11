@@ -14,6 +14,7 @@ import { SettingsTransfer } from "./SettingsTransfer";
 import { LibraryBackup } from "./LibraryBackup";
 
 export function DataSection() {
+  const t = useTranslation();
   const { behavior, setBehavior, account, credentials, lib, metadata, cloud, themeEngine, chooseConfigLocation } = useApp();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const user = account.user;
@@ -61,7 +62,7 @@ export function DataSection() {
     } catch (error) { setNote(error instanceof Error ? error.message : "Could not clear that data."); }
     finally { setBusy(null); }
   };
-  return <SettingsGroup title="Data & privacy" subtitle="Local-first storage" id="settings-data">
+  return <SettingsGroup title={t("Data & privacy")} subtitle={t("Local-first storage")} id="settings-data">
     <div className="setting-row"><span><strong>Refresh all metadata</strong><small>Refresh every available provider for games in your library. Manually locked fields and artwork you chose yourself are preserved.</small></span><button type="button" className="secondary-button" disabled={metadata.refreshBusy || lib.library.length === 0} onClick={() => void metadata.refreshAll(lib.library)}>{metadata.refreshingAll ? "Refreshing all…" : "Refresh all metadata"}</button></div>
     <div className="data-source-list" role="list" aria-label="Metadata sources">
       {dataSources.map((source) => {
@@ -92,8 +93,8 @@ export function DataSection() {
     <LibraryBackup />
     <button className="setting-row setting-button" aria-expanded={showAdvanced} onClick={() => setShowAdvanced(!showAdvanced)}><span><strong>Advanced settings</strong><small>Diagnostics and launcher controls.</small></span><MochiIcon name="chevron" fallback={ChevronDown} className={showAdvanced ? "rotate" : ""} size={16} /></button>
     {showAdvanced && <div className="advanced-settings">
-      <ToggleRow title="Confirm before launching" description="Ask before starting a game." checked={behavior.confirmLaunch} onChange={(confirmLaunch) => setBehavior((current) => ({ ...current, confirmLaunch }))} />
-      <ToggleRow title="Detailed launch errors" description="Show extra information when a game fails to launch." checked={behavior.detailedErrors} onChange={(detailedErrors) => setBehavior((current) => ({ ...current, detailedErrors }))} />
+      <ToggleRow title={t("Confirm before launching")} description={t("Ask before starting a game.")} checked={behavior.confirmLaunch} onChange={(confirmLaunch) => setBehavior((current) => ({ ...current, confirmLaunch }))} />
+      <ToggleRow title={t("Detailed launch errors")} description={t("Show extra information when a game fails to launch.")} checked={behavior.detailedErrors} onChange={(detailedErrors) => setBehavior((current) => ({ ...current, detailedErrors }))} />
       <div className="setting-row"><span><strong>Copy debug info</strong><small>Version, system and library counts for a bug report. Secrets and your user name are removed.</small></span><button type="button" className="secondary-button" onClick={() => void copyDiagnostics()}>Copy</button></div>
     </div>}
   </SettingsGroup>;

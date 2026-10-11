@@ -4,6 +4,7 @@ import { SettingsGroup } from "./Section";
 
 /** Hidden entirely while the registry (src/lib/experimental.ts) is empty. */
 export function ExperimentalSection() {
+  const t = useTranslation();
   const { features, enabled, unseen, setEnabled, markSeen } = useExperimentalStatus();
   // Features that were new when the section opened keep their badge for this visit.
   const newOnOpen = useRef<string[] | null>(null);
@@ -11,7 +12,7 @@ export function ExperimentalSection() {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- mark features as seen once per change of the list, not whenever `markSeen` changes identity
   useEffect(() => { markSeen(); }, [features.length]);
   if (!features.length) return null;
-  return <SettingsGroup title="Experimental" subtitle="Unfinished features. They may change, break, or disappear." id="settings-experimental">
+  return <SettingsGroup title={t("Experimental")} subtitle={t("Unfinished features. They may change, break, or disappear.")} id="settings-experimental">
     {features.map((feature) => <label className="setting-row" key={feature.id}>
       <span>
         <strong>{feature.name}{newOnOpen.current?.includes(feature.id) && <span className="experimental-new-badge">New</span>}</strong>
