@@ -41,7 +41,7 @@ export function Select<T extends string>({ value, onChange, options, label, plac
   const root = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const listId = useId();
-  const { placement, maxHeight } = usePopoverPlacement(open, root);
+  const { placement, maxHeight } = usePopoverPlacement(open, root, className.split(/\s+/).includes("language-select") ? 420 : 320);
   const showSearch = searchable ?? options.length > 12;
   const selected = options.find((option) => option.value === value);
 
