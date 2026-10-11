@@ -60,7 +60,7 @@ function PaletteDialog({ getApp, platform, onClose }: { getApp: ReturnType<typeo
   const run = useCallback((item: PaletteItem) => {
     onClose();
     const app = getApp();
-    if (item.kind === "command") { if (!item.command.id.endsWith("install-query")) rememberAction(item.command.id); void Promise.resolve(item.command.run(context)).catch((error) => app.notifications.notify("Command failed", error instanceof Error ? error.message : String(error))); return; }
+    if (item.kind === "command") { if (!item.command.id.endsWith("install-query")) rememberAction(item.command.id); void Promise.resolve(item.command.run(context)).catch((error) => app.notifications.notify(t("Command failed"), error instanceof Error ? error.message : String(error))); return; }
     app.lib.selectPiko(item.piko, item.kind === "tofu" ? item.tofuId : undefined);
     app.setActiveNav("Library");
     if (item.kind === "tofu") app.setShowTofuManager(true); else app.lib.setGameDetailsId(item.piko.id);
@@ -92,7 +92,7 @@ function PaletteDialog({ getApp, platform, onClose }: { getApp: ReturnType<typeo
       </div>
       <div className="palette-list" id="palette-list" role="listbox" aria-label="Results" ref={list}>
         {items.map((item) => <button type="button" role="option" aria-selected="false" className="palette-item" data-kind={item.kind} key={item.key} onClick={() => run(item)}><span className="palette-title">{item.kind === "command" ? t(item.title) : item.title}</span><small>{item.kind === "command" ? t(item.subtitle) : item.subtitle}</small></button>)}
-        {!items.length && <div className="palette-empty" role="status">{raw.trim() ? "Nothing matches. Try a different word." : "No actions available."}</div>}
+        {!items.length && <div className="palette-empty" role="status">{raw.trim() ? t("Nothing matches. Try a different word.") : t("No actions available.")}</div>}
       </div>
       <div className="palette-hint" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Enter</kbd> run</span><span><kbd>Esc</kbd> close</span><span><kbd>&gt;</kbd> actions only</span></div>
     </div>
