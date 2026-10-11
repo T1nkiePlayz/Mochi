@@ -21,10 +21,10 @@ export function DealsView() {
       <header className="deals-section-head">
         <div className="deals-section-icon"><Newspaper size={19} aria-hidden="true" /></div>
         <div className="deals-section-title"><h3>{t("Game news")}</h3><p>{t("Recent announcements for games in your library, using your current launcher locale.")}</p></div>
-        <span className="deals-count">{news.items.length + mods.length}</span>
+        <span className="deals-count">{(news.items.length + mods.length).toLocaleString(getTranslationLocale())}</span>
       </header>
       {mods.length > 0 && <section className="deals-results">
-        <div className="deals-subhead"><Puzzle size={15} aria-hidden="true" /><div><strong>{t("Mod updates")}</strong><small>{t("Updates detected for your installed content")}</small></div><span className="deals-count">{mods.length}</span></div>
+        <div className="deals-subhead"><Puzzle size={15} aria-hidden="true" /><div><strong>{t("Mod updates")}</strong><small>{t("Updates detected for your installed content")}</small></div><span className="deals-count">{mods.length.toLocaleString(getTranslationLocale())}</span></div>
         <div className="deals-news-list">{mods.slice(0, 20).map((mod) => <article className="deals-news-item" key={mod.key}>
           <span className="deals-news-mark"><Puzzle size={15} aria-hidden="true" /></span><span className="deals-news-copy"><strong>Mod update: {mod.title}</strong><small>{mod.tofu} · Version {mod.version}</small></span>
         </article>)}</div>
