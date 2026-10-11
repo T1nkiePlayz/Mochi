@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyMetadata, cssUrl, planProviders, steamImportTargets, withSteam } from "./merge";
+import { applyMetadata, cssUrl, mergeText, planProviders, steamImportTargets, withSteam } from "./merge";
 import { MAX_ENTRIES, ProviderCache } from "./cache";
 
 describe("cssUrl", () => {
@@ -12,6 +12,33 @@ describe("cssUrl", () => {
     const next = applyMetadata({ id: "a", name: "A", description: "", accent: "", artwork: "", tofus: [] }, { art: { source: "igdb", url: "https://x/y.jpg')" } });
     expect(next.artwork).not.toContain("')\"");
     expect(next.artworkUrl).toBe("https://x/y.jpg')");
+  });
+});
+
+describe("mergeText", () => {
+  it("keeps preferred-provider values and fills fields missing from later providers", () => {
+    expect(mergeText([
+      { name: "IGDB name", description: "IGDB description", categories: ["Action"] },
+      { name: "Steam name", description: "Steam description", categories: ["Adventure"], screenshots: ["steam-shot"], firstReleaseDate: 123 },
+    ])).toEqual({
+      name: "IGDB name",
+      description: "IGDB description",
+      categories: ["Action"],
+      screenshots: ["steam-shot"],
+      firstReleaseDate: 123,
+    });
+  });
+
+  it("fills empty preferred-provider fields from the next provider", () => {
+    expect(mergeText([
+      { name: "  ", description: "", categories: [] },
+      { name: "Steam name", description: "Steam description", categories: ["Action"] },
+    ])).toEqual({
+      name: "Steam name",
+      description: "Steam description",
+      categories: ["Action"],
+      screenshots: [],
+    });
   });
 });
 
