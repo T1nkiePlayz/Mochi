@@ -28,7 +28,7 @@
 .modal { border-radius: 4px; }
 .game-card { border-radius: 3px; }
 .game-card .game-card-art { border: 1px solid #000; box-shadow: 0 0 0 1px #4a3018; }
-.game-card:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 3px #1a0c0e, inset 0 0 0 4px rgba(242, 201, 107, .6), 0 12px 28px rgba(0, 0, 0, .65), 0 0 22px rgba(212, 32, 44, .25); }
+.game-card:hover { box-shadow: inset 0 0 0 3px #1a0c0e, inset 0 0 0 4px rgba(242, 201, 107, .6), 0 12px 28px rgba(0, 0, 0, .65), 0 0 22px rgba(212, 32, 44, .25); }
 .game-card-copy { background: transparent; }
 .game-card-copy strong { font-family: var(--mochi-font-display); letter-spacing: .04em; }
 .game-card-play, .continue-play { border-radius: 2px; }
