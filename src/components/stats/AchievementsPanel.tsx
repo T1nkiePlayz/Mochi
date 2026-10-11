@@ -33,7 +33,7 @@ export const AchievementBadge = memo(function AchievementBadge({ item, unlockedA
       <div className="ach-body">
         <div className="ach-title"><strong>{t(mystery ? "Hidden achievement" : def.title)}</strong><span className="ach-rarity">{t(rarityLabels[def.rarity])}</span></div>
         <p>{t(mystery ? "Keep playing to find out what this is." : def.description)}</p>
-        {!unlocked && !mystery && item.available && <div className="ach-progress"><div className="stat-meter" role="progressbar" aria-label={`${def.title} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(item.fraction * 100)} aria-valuetext={progressText(item, t)}><i style={{ width: `${Math.max(2, item.fraction * 100)}%` }} /></div></div>}
+        {!unlocked && !mystery && item.available && <div className="ach-progress"><div className="stat-meter" role="progressbar" aria-label={t("{name} progress").replace("{name}", t(def.title))} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(item.fraction * 100)} aria-valuetext={progressText(item, t)}><i style={{ width: `${Math.max(2, item.fraction * 100)}%` }} /></div></div>}
         <small>{status}{tier && !mystery ? <span className="ach-tier"> · {tier}</span> : null}</small>
       </div>
     </li>
