@@ -64,7 +64,7 @@ export function DataSection() {
     finally { setBusy(null); }
   };
   return <SettingsGroup title={t("Data & privacy")} subtitle={t("Local-first storage")} id="settings-data">
-    <div className="setting-row"><span><strong>Refresh all metadata</strong><small>Refresh every available provider for games in your library. Manually locked fields and artwork you chose yourself are preserved.</small></span><button type="button" className="secondary-button" disabled={metadata.refreshBusy || lib.library.length === 0} onClick={() => void metadata.refreshAll(lib.library)}>{metadata.refreshingAll ? "Refreshing all…" : "Refresh all metadata"}</button></div>
+    <div className="setting-row"><span><strong>{t("Refresh all metadata")}</strong><small>{t("Refresh every available provider for games in your library. Manually locked fields and artwork you chose yourself are preserved.")}</small></span><button type="button" className="secondary-button" disabled={metadata.refreshBusy || lib.library.length === 0} onClick={() => void metadata.refreshAll(lib.library)}>{metadata.refreshingAll ? t("Refreshing all…") : t("Refresh all metadata")}</button></div>
     <div className="data-source-list" role="list" aria-label="Metadata sources">
       {dataSources.map((source) => {
         const provider = source.id === "igdb" || source.id === "steamgriddb" || source.id === "steam" ? source.id : null;
@@ -72,31 +72,31 @@ export function DataSection() {
         const count = provider ? metadata.refreshableCount(lib.library, provider) : 0;
         const covers = gamesWithArtworkFrom(lib.library, source.id).length;
         return <div className="data-source-row" role="listitem" key={source.id}>
-          <span><strong>{source.label}</strong><small>{source.detail}</small></span>
+          <span><strong>{source.label}</strong><small>{t(source.detail)}</small></span>
           <span className="data-source-actions">
-            {provider && <button type="button" className="secondary-button" disabled={!need?.ready || count === 0 || metadata.refreshBusy} title={!need?.ready ? need?.text : count === 0 ? "No game in your library can use this source." : undefined} onClick={() => void metadata.refreshProvider(lib.library, provider)}>{metadata.refreshingProvider === provider ? "Refreshing…" : `Refresh${count ? ` (${count})` : ""}`}</button>}
-            <button type="button" className="secondary-button danger-outline" disabled={busy !== null || (source.id === "custom-artwork" && covers === 0)} onClick={() => void run(source.id)}>{busy === source.id ? "Clearing…" : `Clear ${source.label} data`}</button>
+            {provider && <button type="button" className="secondary-button" disabled={!need?.ready || count === 0 || metadata.refreshBusy} title={!need?.ready ? need?.text : count === 0 ? t("No game in your library can use this source.") : undefined} onClick={() => void metadata.refreshProvider(lib.library, provider)}>{metadata.refreshingProvider === provider ? t("Refreshing…") : t("Refresh") + (count ? ` (${count})` : "")}</button>}
+            <button type="button" className="secondary-button danger-outline" disabled={busy !== null || (source.id === "custom-artwork" && covers === 0)} onClick={() => void run(source.id)}>{busy === source.id ? t("Clearing…") : t("Clear {source} data").replace("{source}", t(source.label))}</button>
           </span>
           {need && <p className={`data-source-state${need.ready ? " ready" : ""}`}>{need.ready && count === 0 ? "No game in your library can use this source yet." : need.text}</p>}
         </div>;
       })}
     </div>
-    <div className="setting-row"><span><strong>Find missing covers</strong><small>{(() => { const missing = metadata.missingCovers(lib.library).length; return missing ? `${missing} game${missing === 1 ? "" : "s"} show a generated cover. Mochi looks each one up once (Steam games need no keys).` : "Every game that can have a cover already has one."; })()}</small></span><button type="button" className="secondary-button" disabled={metadata.refreshBusy || metadata.missingCovers(lib.library).length === 0} onClick={() => void metadata.findMissingCovers(lib.library)}>{metadata.refreshBusy ? "Working…" : "Find covers"}</button></div>
+    <div className="setting-row"><span><strong>{t("Find missing covers")}</strong><small>{(() => { const missing = metadata.missingCovers(lib.library).length; return missing ? t("{count} games show a generated cover. Mochi looks each one up once (Steam games need no keys).").replace("{count}", String(missing)) : t("Every game that can have a cover already has one."); })()}</small></span><button type="button" className="secondary-button" disabled={metadata.refreshBusy || metadata.missingCovers(lib.library).length === 0} onClick={() => void metadata.findMissingCovers(lib.library)}>{metadata.refreshBusy ? t("Working…") : t("Find covers")}</button></div>
     <div className="data-source-footer">
       <small className="metadata-note">Clearing removes saved lookups and downloaded covers from this device only. Games stay in your library and Mochi shows generated covers until you refresh.</small>
-      <button type="button" className="secondary-button danger-outline" disabled={busy !== null} onClick={() => void run("all")}>{busy === "all" ? "Clearing…" : "Clear all cached data"}</button>
+      <button type="button" className="secondary-button danger-outline" disabled={busy !== null} onClick={() => void run("all")}>{busy === "all" ? t("Clearing…") : t("Clear all cached data")}</button>
     </div>
     {note && <p className="metadata-note settings-note" role="status">{note}</p>}
-    <div className="setting-row"><span><strong>Cloud data</strong><small>{cloud.cloudDataAccessAllowed ? "Delete your cloud Pikos and Tofus. Your local library, account, and saved provider credentials stay unchanged." : "Mochi Cloud data controls are not enabled for this account."}</small></span><button type="button" className="secondary-button danger-outline" disabled={!account.user || !cloud.cloudDataAccessAllowed || cloud.cloudDataBusy} onClick={() => void cloud.clearCloudData()}>{cloud.cloudDataBusy ? "Clearing…" : cloud.cloudDataAccessAllowed ? "Clear cloud data" : "Unavailable"}</button></div>
+    <div className="setting-row"><span><strong>{t("Cloud data")}</strong><small>{cloud.cloudDataAccessAllowed ? t("Delete your cloud Pikos and Tofus. Your local library, account, and saved provider credentials stay unchanged.") : t("Mochi Cloud data controls are not enabled for this account.")}</small></span><button type="button" className="secondary-button danger-outline" disabled={!account.user || !cloud.cloudDataAccessAllowed || cloud.cloudDataBusy} onClick={() => void cloud.clearCloudData()}>{cloud.cloudDataBusy ? t("Clearing…") : cloud.cloudDataAccessAllowed ? t("Clear cloud data") : t("Unavailable")}</button></div>
     {cloud.cloudDataMessage && <p className="metadata-note settings-note" role="status">{cloud.cloudDataMessage}</p>}
-    <div className="setting-row setting-location-row"><span><strong>Library location</strong><small>Your Mochi configuration, themes and launcher data are stored here.</small></span><span className="setting-location-value"><code>{themeEngine.configInfo?.configPath || "Default Mochi location"}</code><button type="button" className="secondary-button" onClick={() => void chooseConfigLocation()}>Change</button></span></div>
+    <div className="setting-row setting-location-row"><span><strong>{t("Library location")}</strong><small>{t("Your Mochi configuration, themes and launcher data are stored here.")}</small></span><span className="setting-location-value"><code>{themeEngine.configInfo?.configPath || t("Default Mochi location")}</code><button type="button" className="secondary-button" onClick={() => void chooseConfigLocation()}>{t("Change")}</button></span></div>
     <SettingsTransfer />
     <LibraryBackup />
-    <button className="setting-row setting-button" aria-expanded={showAdvanced} onClick={() => setShowAdvanced(!showAdvanced)}><span><strong>Advanced settings</strong><small>Diagnostics and launcher controls.</small></span><MochiIcon name="chevron" fallback={ChevronDown} className={showAdvanced ? "rotate" : ""} size={16} /></button>
+    <button className="setting-row setting-button" aria-expanded={showAdvanced} onClick={() => setShowAdvanced(!showAdvanced)}><span><strong>{t("Advanced settings")}</strong><small>{t("Diagnostics and launcher controls.")}</small></span><MochiIcon name="chevron" fallback={ChevronDown} className={showAdvanced ? "rotate" : ""} size={16} /></button>
     {showAdvanced && <div className="advanced-settings">
       <ToggleRow title={t("Confirm before launching")} description={t("Ask before starting a game.")} checked={behavior.confirmLaunch} onChange={(confirmLaunch) => setBehavior((current) => ({ ...current, confirmLaunch }))} />
       <ToggleRow title={t("Detailed launch errors")} description={t("Show extra information when a game fails to launch.")} checked={behavior.detailedErrors} onChange={(detailedErrors) => setBehavior((current) => ({ ...current, detailedErrors }))} />
-      <div className="setting-row"><span><strong>Copy debug info</strong><small>Version, system and library counts for a bug report. Secrets and your user name are removed.</small></span><button type="button" className="secondary-button" onClick={() => void copyDiagnostics()}>Copy</button></div>
+      <div className="setting-row"><span><strong>{t("Copy debug info")}</strong><small>{t("Version, system and library counts for a bug report. Secrets and your user name are removed.")}</small></span><button type="button" className="secondary-button" onClick={() => void copyDiagnostics()}>{t("Copy")}</button></div>
     </div>}
   </SettingsGroup>;
 }
