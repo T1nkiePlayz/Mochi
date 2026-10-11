@@ -99,8 +99,8 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
     for (const id of plan.text) {
       const result = await ask(id);
       textResults.push(result);
-      // Stop once something with a description arrived; later providers only fill gaps when asked for artwork anyway.
-      if (result.text?.description) break;
+      // Merge every planned text provider in priority order so later providers fill missing fields.
+      // Steam lookups are also reused by the artwork pass, so this does not duplicate their requests.
     }
     let art: ArtChoice | undefined;
     const cacheKey = piko.artworkCacheKey || sanitizeKey(piko.id);
