@@ -35,6 +35,26 @@ export function ConflictIssues({ issues, tofu, onFixed }: { issues: Issue[]; tof
     if (label === "Disable duplicate") return t("Disable");
     return t(label);
   };
+  const issueDetail = (issue: Issue) => {
+    if (issue.kind === "duplicate-file") return t("Both the switched-on and the switched-off copy are in the folder, so switching it on or off again can fail. Remove the copy you do not need.");
+    if (issue.kind === "duplicate-project") {
+      const keep = issue.detail.match(/Keep (.*), the newest\./)?.[1] ?? issue.files[0] ?? "";
+      const reason = issue.id.startsWith("duplicate-title:") ? t("The same mod from different sites:") : t("Two versions of the same mod:");
+      return `${reason} ${issue.files.join(", ")}. ${t("Two copies usually stop the game from starting. Keep {keep}, the newest.").replace("{keep}", keep)}`;
+    }
+    if (issue.kind === "incompatible") {
+      const [name, other] = issue.title.split(" does not work with ");
+      return t("{name} is marked incompatible with {other} by its author. Turn one of them off.").replace("{name}", name).replace("{other}", other ?? "");
+    }
+    if (issue.kind === "missing-dependency") {
+      const name = issue.title.replace(/ is switched off$| is missing$/, "");
+      const neededBy = issue.files.join(", ");
+      return issue.title.endsWith(" is switched off")
+        ? t("Missing requirement: {name} is installed but switched off (needed by {neededBy}).").replace("{name}", name).replace("{neededBy}", neededBy)
+        : t("Missing requirement: another mod is not installed (needed by {neededBy}).").replace("{neededBy}", neededBy);
+    }
+    return t(issue.detail);
+  };
   const run = async (issue: Issue, action: IssueAction) => {
     setBusy(`${issue.id}:${action.label}`);
     setMessage(await applyIssueAction(action, tofu));
@@ -48,7 +68,7 @@ export function ConflictIssues({ issues, tofu, onFixed }: { issues: Issue[]; tof
         const Icon = issue.severity === "warning" ? AlertTriangle : Info;
         return <li key={issue.id} className="conflict-row" data-severity={issue.severity}>
           <Icon size={15} aria-hidden="true" />
-          <div className="conflict-text"><strong>{issueTitle(issue)}</strong><small>{t(issue.detail)}</small></div>
+          <div className="conflict-text"><strong>{issueTitle(issue)}</strong><small>{issueDetail(issue)}</small></div>
           {issue.actions.length > 0 && <div className="conflict-actions">
             {issue.actions.map((action) => <button key={action.label} type="button" className="secondary-button" disabled={busy !== ""} onClick={() => void run(issue, action)}>{busy === `${issue.id}:${action.label}` ? t("Working…") : actionLabel(action.label)}</button>)}
           </div>}
