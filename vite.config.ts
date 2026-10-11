@@ -35,6 +35,8 @@ layerPlugin.postcss = true;
 export function jsxLocalizationPlugin() {
   const skippedTextTags = new Set(["CodeBlock", "WritingBlock", "AppBlock", "pre", "code", "textarea", "script", "style", "kbd"]);
   const visibleAttributes = new Set(["aria-label", "aria-description", "aria-valuetext", "title", "placeholder", "alt", "label", "description", "emptyLabel", "confirmLabel", "cancelLabel", "submitLabel", "buttonLabel", "heading", "caption", "tooltip", "helpText"]);
+  // State setters below feed visible feedback, not JSX literal text.
+  const uiMessageSetters = new Set(["setMessage", "setError", "setLaunchError", "setAuthNotice", "setNote", "setNotice", "setFeedback", "setSuccess", "setWarning", "setProblem", "setStatusMessage", "setErrorMessage"]);
 
   function normalizeText(value: string): string {
     const lines = value.split(/\r?\n/);
@@ -60,6 +62,7 @@ export function jsxLocalizationPlugin() {
 
       const source = ts.createSourceFile(filename, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
       let changed = false;
+      let changedSetter = false;
       const factory = ts.factory;
 
       const localizedText = (message: string, before: boolean, after: boolean) => {
@@ -116,6 +119,15 @@ export function jsxLocalizationPlugin() {
         if (ts.isJsxExpression(node) && node.expression && ts.isStringLiteralLike(node.expression) && !skipText) {
           return localizedText(decodeEntities(node.expression.text), false, false);
         }
+        if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && uiMessageSetters.has(node.expression.text) && node.arguments.length > 0) {
+          const first = node.arguments[0];
+          const alreadyTranslated = ts.isCallExpression(first) && ts.isIdentifier(first.expression) && first.expression.text === "translateUiMessage";
+          if (alreadyTranslated || ts.isArrowFunction(first) || ts.isFunctionExpression(first) || first.kind === ts.SyntaxKind.NullKeyword || first.kind === ts.SyntaxKind.TrueKeyword || first.kind === ts.SyntaxKind.FalseKeyword || (ts.isStringLiteralLike(first) && !first.text.trim())) return node;
+          changed = true;
+          changedSetter = true;
+          const translated = factory.createCallExpression(factory.createIdentifier("translateUiMessage"), undefined, [first]);
+          return factory.updateCallExpression(node, node.expression, node.typeArguments, [translated, ...node.arguments.slice(1)]);
+        }
         return ts.visitEachChild(node, (child) => visitNode(child, skipText), context);
       };
 
@@ -136,7 +148,13 @@ export function jsxLocalizationPlugin() {
         factory.createStringLiteral(path.relative(path.dirname(filename), path.resolve("src/lib/i18n")).replace(/\\/g, "/").replace(/^([^.]|$)/, "./$1")),
         undefined,
       );
-      const transformed = factory.updateSourceFile(source, [localizedImport, translateImport, ...statements]);
+      const messageImport = factory.createImportDeclaration(
+        undefined,
+        factory.createImportClause(false, undefined, factory.createNamedImports([factory.createImportSpecifier(false, undefined, factory.createIdentifier("translateUiMessage"))])),
+        factory.createStringLiteral(path.relative(path.dirname(filename), path.resolve("src/lib/i18n")).replace(/\\/g, "/").replace(/^([^.]|$)/, "./$1")),
+        undefined,
+      );
+      const transformed = factory.updateSourceFile(source, [localizedImport, translateImport, ...(changedSetter ? [messageImport] : []), ...statements]);
       return { code: ts.createPrinter({ newLine: ts.NewLineKind.LineFeed }).printFile(transformed), map: null };
     },
   };
