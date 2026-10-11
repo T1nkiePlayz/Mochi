@@ -20,7 +20,7 @@ export function LinkedPackSection({ tofu, onPatch }: { tofu: Tofu; onPatch: (cha
     let live = true;
     void import("../../lib/mods/packApi").then((api) => api.loadLinkedPack(tofu, pack)).then((value) => { if (live) setInfo(value); }).catch((reason) => { if (live) { const detail = reason instanceof Error ? reason.message : ""; const translated = detail ? t(detail) : ""; setError(translated && translated !== detail ? translated : detail ? `${t("Could not load the modpack.")} ${detail}` : t("Could not load the modpack.")); } });
     return () => { live = false; };
-  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!pack) return <div className="linked-pack">
     <p className="muted">{tofu.packCheckedAt ? t("No modpack was recognised for this instance.") : t("Looking for a matching modpack in the background.")}</p>
