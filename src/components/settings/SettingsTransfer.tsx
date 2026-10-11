@@ -74,13 +74,13 @@ function ImportSheet({ file, onClose, onDone }: { file: SettingsFile; onClose: (
       if (themeIds.length) {
         const result = await installThemesFromFile(file.path, themeIds);
         available = (await app.themeEngine.reloadThemes()).map((theme) => theme.id);
-        themeNote = result.installed.length ? t("{count} themes installed. ").replace("{count}", String(result.installed.length)) : "";
+        themeNote = result.installed.length ? `${t("{count} themes installed.").replace("{count}", String(result.installed.length))} ` : "";
       }
       await commitImport(plan, {
         setBehavior: app.setBehavior, updateAccessibility, replaceCollections: app.collections.replaceCollections, setLibrary: app.lib.setLibrary,
         setLibrarySort: app.lib.setLibrarySort, selectTheme: app.themeEngine.setTheme, currentTheme: app.themeEngine.theme, knownThemeIds: available,
       });
-      onDone(t("{themes}Imported {count} settings sections. Everything is applied now.").replace("{themes}", themeNote).replace("{count}", String(plan.changed.length)));
+      onDone(`${themeNote}${t("Imported {count} settings sections. Everything is applied now.").replace("{count}", String(plan.changed.length))}`);
     } catch (failure) { setError(message(failure, t)); setBusy(false); }
   };
 
