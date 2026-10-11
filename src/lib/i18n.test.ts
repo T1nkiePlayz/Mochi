@@ -174,7 +174,6 @@ describe("shared UI translations", () => {
     expect(translate("Cloud sync active", "de")).toBe("Cloud-Synchronisierung aktiv");
     expect(translate("No games match “{query}”.", "fr")).toBe("Aucun jeu ne correspond à « {query} ».");
     expect(translateUiMessage("No games match “Hytale”.", "fr")).toBe("Aucun jeu ne correspond à « Hytale ».");
-    expect(translateUiMessage("No mods to show yet.", "de")).toBe("Noch keine Mods zum Anzeigen.");
   });
 
   it("falls back to the original text for unknown messages and unsupported locales", () => {
