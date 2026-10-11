@@ -51,8 +51,8 @@ export function SoundSection() {
 
   const packOptions = useMemo<Array<SelectOption<string>>>(() => [
     { value: "theme", label: "Match theme", description: theme ? `${theme.name} suggests ${packName(resolveSoundPack("theme", theme.soundPack, packs))}` : undefined },
-    ...BUILTIN_PACKS.map((pack) => ({ value: pack.id, label: pack.name, description: pack.description, group: "Built in" })),
-    ...packs.map((pack) => ({ value: pack.id, label: pack.name, description: pack.description || undefined, group: "Installed" })),
+    ...BUILTIN_PACKS.map((pack) => ({ value: pack.id, label: pack.name, description: pack.description, group: t("Built in") })),
+    ...packs.map((pack) => ({ value: pack.id, label: pack.name, description: pack.description || undefined, group: t("Installed") })),
   ], [packs, theme]);
 
   const [audioProblem, setAudioProblem] = useState(false);
@@ -75,7 +75,7 @@ export function SoundSection() {
     if (!pack) return null;
     announceSoundPacksChanged();
     update({ pack: pack.id });
-    return `Installed “${pack.name}” and switched to it.`;
+    return t("Installed “{name}” and switched to it.").replace("{name}", pack.name);
   });
 
   const volume = Math.round(settings.volume * 100);
@@ -94,7 +94,7 @@ export function SoundSection() {
       <div className="setting-row"><span><strong>{t("Sound pack")}</strong><small>{t("Now playing: {name}. Themes can suggest a pack; Match theme follows it.").replace("{name}", resolvedName)}</small></span>
         <Select<string> label={t("Sound pack")} value={settings.pack} options={packOptions} onChange={(pack) => update({ pack })} align="end" /></div>
       <SoundFallbacks fallbacks={settings.fallbacks} packs={packs} loaded={loaded} onChange={(fallbacks) => update({ fallbacks })} />
-      {audioProblem && <p className="sound-pack-status is-error" role="alert">{AUDIO_UNAVAILABLE_MESSAGE}</p>}
+      {audioProblem && <p className="sound-pack-status is-error" role="alert">{t(AUDIO_UNAVAILABLE_MESSAGE)}</p>}
       <div className="setting-row sound-preview-row"><span><strong>{t("Preview")}</strong><small>{t("Hear each sound of {name}.").replace("{name}", resolvedName)}</small></span>
         <div className="sound-preview" role="group" aria-label={t("Preview sounds")} data-sound="none">
           {SOUND_EVENTS.map((event) => <button type="button" key={event} className="secondary-button sound-preview-button" onClick={() => void preview(event)}><Play size={13} aria-hidden="true" /> {t(SOUND_LABELS[event])}</button>)}
@@ -112,12 +112,12 @@ export function SoundSection() {
       {loaded && packs.length === 0 && <p className="metadata-note sound-pack-empty">{t("No packs installed. Built-in sound packs are always available.")}</p>}
       {packs.length > 0 && <ul className="sound-pack-list" aria-label={t("Installed sound packs")}>
         {packs.map((pack) => <PackRow key={pack.id} t={t} pack={pack}
-          onExport={() => void run(async () => ((await exportSoundPack(pack)) ? `Exported “${pack.name}”.` : null))}
+          onExport={() => void run(async () => ((await exportSoundPack(pack)) ? t("Exported “{name}”.").replace("{name}", pack.name) : null))}
           onRemove={() => void run(async () => {
             await removeSoundPack(pack.id);
             if (settings.pack === pack.id) update({ pack: "theme" });
             announceSoundPacksChanged();
-            return `Removed “${pack.name}”.`;
+            return t("Removed “{name}”.").replace("{name}", pack.name);
           })} />)}
       </ul>}
     </SettingsGroup>
