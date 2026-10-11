@@ -73,8 +73,17 @@ export function jsxLocalizationPlugin() {
       };
 
       const visitAttributes = (attributes: ts.JsxAttributes): ts.JsxAttributes => factory.updateJsxAttributes(attributes, attributes.properties.map((attribute) => {
-        if (!ts.isJsxAttribute(attribute) || !visibleAttributes.has(attribute.name.getText(source)) || !attribute.initializer || !ts.isStringLiteral(attribute.initializer)) return attribute;
-        const value = decodeEntities(attribute.initializer.text);
+        if (!ts.isJsxAttribute(attribute) || !visibleAttributes.has(attribute.name.getText(source)) || !attribute.initializer) return attribute;
+        // JSX allows visible attribute strings as either plain literals or literal expressions.
+        // Leave dynamic expressions (IDs, state and interpolation) untouched.
+        const initializer = attribute.initializer;
+        const literalValue = ts.isStringLiteral(initializer)
+          ? initializer.text
+          : ts.isJsxExpression(initializer) && initializer.expression && ts.isStringLiteralLike(initializer.expression)
+            ? initializer.expression.text
+            : null;
+        if (literalValue === null) return attribute;
+        const value = decodeEntities(literalValue);
         changed = true;
         return factory.updateJsxAttribute(attribute, attribute.name, factory.createJsxExpression(undefined, factory.createCallExpression(factory.createIdentifier("translate"), undefined, [factory.createStringLiteral(value)])));
       }));
