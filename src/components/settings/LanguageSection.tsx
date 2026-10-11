@@ -30,10 +30,10 @@ export function LanguageSection() {
       <div className="language-settings-summary">
         <div className="language-settings-description">
           <strong><Languages size={16} aria-hidden="true" /> {t("Display language")}</strong>
-          <small>Game news follows this language automatically. Some provider content may remain in its original language.</small>
+          <small>Used throughout Mochi wherever translations are available. Game news follows this language automatically.</small>
         </div>
         <div className="language-current" aria-live="polite">
-          <span>Current language</span>
+          <span>{t("Display language")}</span>
           <strong lang={selectedLanguage.locale}>{selectedLanguage.name}</strong>
         </div>
       </div>
@@ -44,13 +44,12 @@ export function LanguageSection() {
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search languages by name…"
-          aria-label="Search languages"
+          placeholder={t("Search {label}…").replace("{label}", t("Language").toLowerCase())}
+          aria-label={t("Search {label}").replace("{label}", t("Language"))}
         />
-        {query && <button type="button" className="language-search-clear" onClick={() => setQuery("")} aria-label="Clear language search">×</button>}
       </label>
 
-      <div className="language-options" role="group" aria-label="Available languages">
+      <div className="language-options" role="group" aria-label={t("Language")}>
         {visibleLanguages.map((item) => {
           const selected = item.code === language;
           return <button
@@ -69,8 +68,7 @@ export function LanguageSection() {
           </button>;
         })}
       </div>
-      {!visibleLanguages.length && <p className="language-no-results">No languages match your search.</p>}
-      <p className="language-settings-footnote">Language changes apply immediately. Your choice is saved with Mochi settings.</p>
+      {!visibleLanguages.length && <p className="language-no-results">{t("Nothing matches “{query}”.").replace("{query}", query)}</p>}
     </div>
   </SettingsGroup>;
 }
