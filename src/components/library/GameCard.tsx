@@ -51,7 +51,7 @@ export const GameCard = memo(function GameCard({ piko, selected, running, cloudS
   return <article data-game-id={piko.id} className={`game-card ${hasArtwork(piko) ? "" : "no-art"} ${selected ? "selected" : ""} ${checked ? "multi-selected" : ""} ${running ? "is-running" : ""}`}
     onContextMenu={(event) => { event.preventDefault(); onMenu(piko.id, event.clientX, event.clientY); }}
     onPointerDown={onPointerDown} onPointerUp={cancel} onPointerLeave={cancel} onPointerCancel={cancel} onKeyDown={onKeyDown}>
-    <button type="button" className="game-card-main" {...roving} aria-label={selecting ? t("{name}, {state}").replace("{name}", piko.name).replace("{state}", checked ? t("Selected") : t("Not selected")) : running ? t("{name}, running now").replace("{name}", piko.name) : piko.name} aria-pressed={selecting ? checked : undefined}
+    <button type="button" className="game-card-main" {...roving} aria-pressed={selecting ? checked : undefined}
       onClick={() => { if (fired.current) { fired.current = false; return; } if (selecting) onToggleChecked(piko.id); else onOpen(piko); }}>
       <GameArtwork className="game-card-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} name={piko.name} kind={piko.kind} sourceId={piko.sourceId} />
       <div className="game-card-copy">
