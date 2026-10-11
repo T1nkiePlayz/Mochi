@@ -9,11 +9,16 @@ function intlLocale(locale: string): string {
   }
 }
 
-export function formatBytes(bytes: number): string {
+export function formatBytes(bytes: number, language = getTranslationLocale()): string {
   if (!Number.isFinite(bytes) || bytes < 0) return "0 KiB";
-  if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + " KiB";
-  if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + " MiB";
-  return (bytes / 1024 / 1024 / 1024).toFixed(2) + " GiB";
+  const locale = intlLocale(language);
+  const number = (value: number, maximumFractionDigits: number, minimumFractionDigits = 0) =>
+    language === "en"
+      ? value.toFixed(minimumFractionDigits || maximumFractionDigits).replace(/\\.?0+$/, (match) => match.startsWith(".") ? "" : match)
+      : new Intl.NumberFormat(locale, { maximumFractionDigits, minimumFractionDigits }).format(value);
+  if (bytes < 1024 * 1024) return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.max(1, Math.round(bytes / 1024))) + " KiB";
+  if (bytes < 1024 * 1024 * 1024) return number(bytes / 1024 / 1024, 1, 1) + " MiB";
+  return number(bytes / 1024 / 1024 / 1024, 2, 2) + " GiB";
 }
 
 export function formatPlaytime(seconds: number, language = getTranslationLocale()): string {
