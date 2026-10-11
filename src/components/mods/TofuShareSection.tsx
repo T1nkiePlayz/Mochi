@@ -6,6 +6,7 @@ import { scanTofuMods } from "../../lib/mods/scanService";
 import { isOnline } from "../../lib/offline";
 import { supabase } from "../../lib/supabase";
 import { useApp } from "../../state/AppContext";
+import { useTranslation } from "../../lib/useTranslation";
 import type { Piko, Tofu } from "../../models";
 import { Checkbox } from "../ui/Checkbox";
 import { ImportModpackModal } from "./ImportModpackModal";
@@ -15,6 +16,7 @@ const errorText = (error: unknown, fallback: string) => (error instanceof Error 
 /** Share a Tofu's mod list as a `.mochipack` file or short code, and import one (see docs/mochipack.md). */
 export function TofuShareSection({ piko, tofu, onCreateTofu }: { piko: Piko; tofu: Tofu; onCreateTofu: (name: string, version?: string, loader?: Tofu["loader"]) => Tofu | null }) {
   const { notifications: { notify }, behavior, credentials } = useApp();
+  const t = useTranslation();
   const [identify, setIdentify] = useState(true);
   const [busy, setBusy] = useState<"" | "file" | "code">("");
   const [status, setStatus] = useState("");
@@ -27,7 +29,7 @@ export function TofuShareSection({ piko, tofu, onCreateTofu }: { piko: Piko; tof
       const unknown = countUnidentified(await listTofuFiles(piko, tofu));
       if (unknown) { setStatus(`Identifying ${unknown} unknown file${unknown === 1 ? "" : "s"}…`); await scanTofuMods(piko, tofu, behavior.modSources, credentials.status.nexus && Boolean(supabase)).catch(() => undefined); }
     }
-    setStatus("Reading the mod list…");
+    setStatus(t("Reading the mod list…"));
     return exportTofuPack(piko, tofu);
   };
   const describe = (mods: number, unknown: number, omitted: number) => `${mods} mod${mods === 1 ? "" : "s"}${unknown ? `, ${unknown} unidentified file${unknown === 1 ? "" : "s"} (hash only)` : ""}${omitted ? `, ${omitted} could not be listed` : ""}.`;
