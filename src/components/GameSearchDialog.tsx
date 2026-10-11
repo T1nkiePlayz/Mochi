@@ -103,7 +103,7 @@ function Details({ game, onSearch }: { game: GameDetails; onSearch: (name: strin
       {game.similar.map((item) => <button key={item.name} type="button" className="secondary-button" onClick={() => onSearch(item.name)}>{item.name}</button>)}
     </div></section>}
     {game.links.length > 0 && <section aria-label="Links"><h4>Links</h4><p className="game-search-links">{game.links.map((link) => <Link key={link.url} href={link.url}>{link.label}</Link>)}</p></section>}
-    <p className="game-search-muted">Data from {game.sources.join(", ") || "no provider"}. Artwork belongs to its authors.</p>
+    <p className="game-search-muted">Data from {game.sources.join(", ") || t("no provider")}. Artwork belongs to its authors.</p>
   </article>;
 }
 
@@ -129,7 +129,7 @@ export function GameSearchDialog({ onClose }: { onClose: () => void }) {
     {
       onStart: () => setStatus("searching"),
       onResult: (_text, result) => { setHits(result); setStatus("done"); setMessage(""); },
-      onError: (_text, error) => { setStatus("error"); setHits([]); setMessage(t("Search failed.")); },
+      onError: (_text) => { setStatus("error"); setHits([]); setMessage(t("Search failed.")); },
       onClear: () => { setHits([]); setStatus("idle"); setMessage(""); },
     },
   ), [backend, t]);
@@ -143,7 +143,7 @@ export function GameSearchDialog({ onClose }: { onClose: () => void }) {
     detailAbort.current = controller;
     setLoading(hit.name); setMessage("");
     backend.details(hit, controller.signal).then((details) => { if (!controller.signal.aborted) { setGame(details); setLoading(null); } })
-      .catch((error) => { if (!controller.signal.aborted) { setLoading(null); setMessage(t("Could not load the game.")); } });
+      .catch(() => { if (!controller.signal.aborted) { setLoading(null); setMessage(t("Could not load the game.")); } });
   };
 
   return <div className="modal-backdrop" onClick={onClose}>

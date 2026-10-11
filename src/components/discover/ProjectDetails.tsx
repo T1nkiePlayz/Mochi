@@ -44,7 +44,7 @@ function VersionRow({ version, fit, onDownload }: { version: ModrinthVersion; fi
       <span className={`release-badge release-${channel}`}>{t(channelLabel[channel])}</span>
       <div className="version-chips" aria-label="Loaders">{loaders.map((loader) => <span key={loader} className="chip chip-loader">{loaderLabels[parseLoader(loader)!]}</span>)}</div>
       <div className="version-chips" aria-label="Game versions">{games.shown.map((game) => <span key={game} className="chip">{game}</span>)}{games.more > 0 && <span className="chip chip-more" title={version.game_versions.slice(3).join(", ")}>+{games.more}</span>}</div>
-      <span className="version-date">{formatDate(version.date_published)}</span>
+      <span className="version-date">{formatDate(version.date_published) === "Unknown date" ? t("Unknown date") : formatDate(version.date_published)}</span>
       <span className="version-size">{primary ? formatBytes(primary.size) : ""}</span>
       <div className="version-action">
         {fit && fit.status !== "compatible" && <span className={`compat-badge compat-${fit.status}`} title={fit.reason}>{fit.status === "maybe" ? t("May work") : t("Not for your Tofu")}</span>}
@@ -90,7 +90,7 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
   const creator = getPrimaryCreator(project);
 
   return <div className="discover-modal-backdrop" onMouseDown={onClose}><div className="project-details-window" role="dialog" aria-modal="true" aria-label={`${project.title} details`} onMouseDown={(event) => event.stopPropagation()}>
-    <div className="project-details-header"><div>{project.icon_url ? <DiscoveryImage src={project.icon_url} alt="" className="discover-card-icon" label={project.title} /> : <div className="discover-card-icon fallback"><PackageOpen size={26} /></div>}<div><p className="eyebrow">{projectTypeLabel(project.project_type)}</p><h2>{project.title}</h2><p>{project.description}</p><small>Created by <strong>{creator.name || "Unknown creator"}</strong> · {(project.downloads ?? 0).toLocaleString()} downloads</small></div></div><div className="project-details-header-actions"><button type="button" className="secondary-button" onClick={() => { void openExternalUrl(`https://modrinth.com/${encodeURIComponent(project.project_type)}/${encodeURIComponent(project.slug || project.project_id)}`).catch(() => undefined); }}><ExternalLink size={13} /> View on Modrinth</button><button type="button" className="icon-button" onClick={onClose} aria-label="Close project details"><X size={17} /></button></div></div>
+    <div className="project-details-header"><div>{project.icon_url ? <DiscoveryImage src={project.icon_url} alt="" className="discover-card-icon" label={project.title} /> : <div className="discover-card-icon fallback"><PackageOpen size={26} /></div>}<div><p className="eyebrow">{t(projectTypeLabel(project.project_type))}</p><h2>{project.title}</h2><p>{project.description}</p><small>Created by <strong>{creator.name || t("Unknown creator")}</strong> · {(project.downloads ?? 0).toLocaleString()} downloads</small></div></div><div className="project-details-header-actions"><button type="button" className="secondary-button" onClick={() => { void openExternalUrl(`https://modrinth.com/${encodeURIComponent(project.project_type)}/${encodeURIComponent(project.slug || project.project_id)}`).catch(() => undefined); }}><ExternalLink size={13} /> View on Modrinth</button><button type="button" className="icon-button" onClick={onClose} aria-label="Close project details"><X size={17} /></button></div></div>
     <div className="project-tabs" role="tablist" aria-label="Project sections"><button type="button" role="tab" aria-selected={tab === "overview"} className={tab === "overview" ? "active" : ""} onClick={() => setTab("overview")}>Overview</button><button type="button" role="tab" aria-selected={tab === "versions"} className={tab === "versions" ? "active" : ""} onClick={() => setTab("versions")}>Versions{versions ? ` (${versions.length})` : ""}</button></div>
     {tab === "overview" ? <div className="project-overview">
       <section className="project-creator-primary">
@@ -101,8 +101,8 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
         <span><strong>Downloads</strong>{(project.downloads ?? 0).toLocaleString()}</span>
         <span><strong>Followers</strong>{(project.followers || 0).toLocaleString()}</span>
         <span><strong>Project type</strong>{projectTypeLabel(project.project_type)}</span>
-        <span><strong>Categories</strong>{project.categories?.join(", ") || "Not provided"}</span>
-        <span><strong>License</strong>{project.license?.name || "Not provided"}</span>
+        <span><strong>Categories</strong>{project.categories?.join(", ") || t("Not provided")}</span>
+        <span><strong>License</strong>{project.license?.name || t("Not provided")}</span>
         <span><strong>Members</strong>{project.members?.length ?? 0}</span>
       </div>
       <h3 className="project-overview-heading">Overview</h3>
