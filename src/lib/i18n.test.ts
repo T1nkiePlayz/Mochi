@@ -113,12 +113,16 @@ describe("shared UI translations", () => {
     expect(translate("Loading…", "not-a-language")).toBe("Loading…");
   });
 
-  it("preserves and replaces dynamic placeholders without leaking template tokens", () => {
-    const translated = translate("No games match “{query}”.", "fr");
-    expect(translated).toContain("{query}");
-    const rendered = translated.replace("{query}", "Stardew Valley");
-    expect(rendered).toBe("Aucun jeu ne correspond à « Stardew Valley ».");
-    expect(rendered).not.toMatch(/\{[^}]+\}/);
+  it("preserves and replaces dynamic placeholders without leaking template tokens in every supported locale", () => {
+    for (const { code } of launcherLanguages) {
+      const translated = translate("No games match “{query}”.", code);
+      expect(translated, `search message locale: ${code}`).toContain("{query}");
+      const rendered = translated.replace("{query}", "Stardew Valley");
+      expect(rendered, `rendered search message locale: ${code}`).not.toMatch(/\{[^}]+\}/);
+      expect(rendered).not.toContain("undefined");
+    }
+    expect(translate("No games match “{query}”.", "fr").replace("{query}", "Stardew Valley"))
+      .toBe("Aucun jeu ne correspond à « Stardew Valley ».");
     expect(translate("A dynamic provider error", "fr")).toBe("A dynamic provider error");
   });
 
