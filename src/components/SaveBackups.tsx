@@ -48,14 +48,14 @@ function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }
     const mine = ++seq.current;
     try { const next = await listSaveLocations(game.id, JSON.parse(hintsKey)); if (mine === seq.current) setLocations(next); }
     catch (error) { if (mine === seq.current) { setLocations([]); setMessage(t(errorText(error))); } }
-  }, [game.id, hintsKey]);
+  }, [game.id, hintsKey, t]);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { void getBackupSettings().then((next) => { setSettings(next); setKeep(String(next.keep)); setCap(String(Math.round(next.maxTotalBytes / GB * 10) / 10)); }).catch(() => {}); }, []);
 
   const loadBackups = useCallback(async (key: string) => {
     try { const list = await listSaveBackups(key); setBackups((current) => ({ ...current, [key]: list })); }
     catch (error) { setMessage(t(errorText(error))); }
-  }, []);
+  }, [t]);
   const toggle = (key: string) => { const next = expanded === key ? "" : key; setExpanded(next); if (next) void loadBackups(next); };
   const refresh = async (key: string) => { await Promise.all([load(), loadBackups(key)]); };
 
