@@ -6,7 +6,7 @@ import { openExternalUrl } from "../lib/platform";
 import { useEffect } from "react";
 import { useTranslation } from "../lib/useTranslation";
 import { getTranslationLocale } from "../lib/translationLocale";
-import { steamNewsLanguage } from "../lib/gameNews";
+import { newsForLocale } from "../lib/gameNews";
 
 const dateLabel = (seconds: number, t: (message: string) => string) => Number.isFinite(seconds) && seconds > 0 ? new Date(seconds * 1000).toLocaleDateString(getTranslationLocale()) : t("Recently");
 
@@ -15,7 +15,7 @@ export function DealsView() {
   const { behavior } = useApp();
   const { news, mods } = useGameNews();
   // Never flash cached announcements from a previous language while the poller resets and refetches.
-  const newsItems = news.language === steamNewsLanguage(behavior.language) ? news.items : [];
+  const newsItems = newsForLocale(news, behavior.language);
   useEffect(() => { if (behavior.gameNews) markNewsRead(); }, [behavior.gameNews, news.items]);
   return <div className="deals-view">
     <div className="settings-intro"><h2>{t("Deals")}</h2><p>{t("Discover giveaways, sales and price watches for your wishlist, alongside updates for games in your library.")}</p></div>
