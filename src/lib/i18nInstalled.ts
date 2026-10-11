@@ -431,3 +431,36 @@ const modpackStateValues: Record<string, string[]> = {
 "vi":["Tải xuống thủ công","Đã thay đổi","đã tắt trong gói","Đã thay đổi {count} mục"],
 };
 Object.assign(installedMessages, Object.fromEntries(modpackStateKeys.map((message, index) => [message, Object.fromEntries(Object.entries(modpackStateValues).map(([locale, values]) => [locale, values[index]]))])));
+
+const linkGameErrorKeys = ["Unable to load CurseForge games.","Unable to search Nexus Mods games."] as const;
+const linkGameErrorValues: Record<string, string[]> = {
+"ar":["تعذّر تحميل ألعاب CurseForge.","تعذّر البحث عن ألعاب Nexus Mods."],
+"bg":["Игрите от CurseForge не можаха да бъдат заредени.","Търсенето на игри в Nexus Mods не бе възможно."],
+"zh-Hans":["无法加载 CurseForge 游戏。","无法搜索 Nexus Mods 游戏。"],
+"zh-Hant":["無法載入 CurseForge 遊戲。","無法搜尋 Nexus Mods 遊戲。"],
+"cs":["Hry CurseForge se nepodařilo načíst.","Hry na Nexus Mods se nepodařilo vyhledat."],
+"da":["Kunne ikke indlæse CurseForge-spil.","Kunne ikke søge efter Nexus Mods-spil."],
+"nl":["CurseForge-games konden niet worden geladen.","Nexus Mods-games konden niet worden doorzocht."],
+"fi":["CurseForge-pelejä ei voitu ladata.","Nexus Mods -pelejä ei voitu hakea."],
+"fr":["Impossible de charger les jeux CurseForge.","Impossible de rechercher des jeux sur Nexus Mods."],
+"de":["CurseForge-Spiele konnten nicht geladen werden.","Nexus-Mods-Spiele konnten nicht gesucht werden."],
+"el":["Δεν ήταν δυνατή η φόρτωση παιχνιδιών CurseForge.","Δεν ήταν δυνατή η αναζήτηση παιχνιδιών στο Nexus Mods."],
+"hu":["Nem sikerült betölteni a CurseForge-játékokat.","Nem sikerült Nexus Mods-játékokra keresni."],
+"id":["Tidak dapat memuat game CurseForge.","Tidak dapat mencari game Nexus Mods."],
+"it":["Impossibile caricare i giochi CurseForge.","Impossibile cercare giochi su Nexus Mods."],
+"ja":["CurseForge のゲームを読み込めません。","Nexus Mods のゲームを検索できません。"],
+"ko":["CurseForge 게임을 불러올 수 없습니다.","Nexus Mods 게임을 검색할 수 없습니다."],
+"no":["Kunne ikke laste inn CurseForge-spill.","Kunne ikke søke etter Nexus Mods-spill."],
+"pl":["Nie udało się wczytać gier CurseForge.","Nie udało się wyszukać gier w Nexus Mods."],
+"pt":["Não foi possível carregar os jogos do CurseForge.","Não foi possível pesquisar jogos no Nexus Mods."],
+"pt-BR":["Não foi possível carregar os jogos do CurseForge.","Não foi possível pesquisar jogos no Nexus Mods."],
+"ro":["Nu s-au putut încărca jocurile CurseForge.","Nu s-au putut căuta jocuri pe Nexus Mods."],
+"ru":["Не удалось загрузить игры CurseForge.","Не удалось найти игры на Nexus Mods."],
+"es":["No se pudieron cargar los juegos de CurseForge.","No se pudieron buscar juegos en Nexus Mods."],
+"sv":["Det gick inte att läsa in CurseForge-spel.","Det gick inte att söka efter spel på Nexus Mods."],
+"th":["โหลดเกม CurseForge ไม่ได้","ค้นหาเกมบน Nexus Mods ไม่ได้"],
+"tr":["CurseForge oyunları yüklenemedi.","Nexus Mods oyunları aranamadı."],
+"uk":["Не вдалося завантажити ігри CurseForge.","Не вдалося знайти ігри на Nexus Mods."],
+"vi":["Không thể tải trò chơi CurseForge.","Không thể tìm trò chơi trên Nexus Mods."],
+};
+Object.assign(installedMessages, Object.fromEntries(linkGameErrorKeys.map((message, index) => [message, Object.fromEntries(Object.entries(linkGameErrorValues).map(([locale, values]) => [locale, values[index]]))])));
