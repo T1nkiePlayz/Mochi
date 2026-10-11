@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { DEFAULT_LANGUAGE, launcherLanguages, normalizeLanguage, steamLanguageForLauncher } from "./languages";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { applyLauncherLanguage, DEFAULT_LANGUAGE, launcherLanguages, normalizeLanguage, steamLanguageForLauncher } from "./languages";
+import { getTranslationLocale } from "./translationLocale";
+
+afterEach(() => {
+  if (typeof document !== "undefined") applyLauncherLanguage("en");
+  vi.unstubAllGlobals();
+});
 
 describe("launcher languages", () => {
   it("offers distinct language codes and readable native labels", () => {
@@ -13,6 +19,21 @@ describe("launcher languages", () => {
     expect(normalizeLanguage("fr-FR")).toBe("fr");
     expect(normalizeLanguage("xx-YY")).toBe(DEFAULT_LANGUAGE);
     expect(normalizeLanguage(null)).toBe(DEFAULT_LANGUAGE);
+  });
+
+  it("applies selected languages to the document locale and text direction", () => {
+    const documentStub = { documentElement: { lang: "", dir: "" } };
+    vi.stubGlobal("document", documentStub);
+
+    applyLauncherLanguage("fr");
+    expect(documentStub.documentElement.lang).toBe("fr");
+    expect(documentStub.documentElement.dir).toBe("ltr");
+    expect(getTranslationLocale()).toBe("fr");
+
+    applyLauncherLanguage("ar");
+    expect(documentStub.documentElement.lang).toBe("ar");
+    expect(documentStub.documentElement.dir).toBe("rtl");
+    expect(getTranslationLocale()).toBe("ar");
   });
 
   it("maps launcher preferences to Steam's language identifiers", () => {
