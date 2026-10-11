@@ -36,7 +36,7 @@ export function SettingsTransfer() {
   };
 
   return <>
-    <div className="setting-row"><span><strong>Settings backup</strong><small>Export your settings, themes, collections, wishlist and per-game choices to a zip, or restore them on another device. Passwords, keys and sign-in data are never included.</small></span>
+    <div className="setting-row"><span><strong>{t("Settings backup")}</strong><small>{t("Export your settings, themes, collections, wishlist and per-game choices to a zip, or restore them on another device. Passwords, keys and sign-in data are never included.")}</small></span>
       <span className="data-source-actions">
         <button type="button" className="secondary-button" disabled={busy} onClick={() => void runExport()}><Download size={14} aria-hidden="true" /> Export settings…</button>
         <button type="button" className="secondary-button" disabled={busy} onClick={() => void runPick()}><Upload size={14} aria-hidden="true" /> Import settings…</button>

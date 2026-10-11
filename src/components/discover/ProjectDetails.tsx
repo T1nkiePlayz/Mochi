@@ -56,7 +56,7 @@ function VersionRow({ version, fit, onDownload }: { version: ModrinthVersion; fi
       {version.game_versions.length > 3 && <p><strong>{t("Game versions")}</strong> {version.game_versions.join(", ")}</p>}
       {version.changelog ? <div className="version-changelog"><Markdown source={version.changelog} /></div> : <p className="muted">{t("No changelog was provided.")}</p>}
       <div className="project-file-list">{version.files.map((file) => <div key={file.filename}><span>{file.filename}</span><small>{formatBytes(file.size)}{file.primary ? ` · ${t("Primary")}` : ""}</small></div>)}</div>
-      {version.dependencies.length > 0 && <p className="muted">{t(version.dependencies.length === 1 ? t("1 dependency listed on Modrinth. Mochi offers to install the required ones before the mod.") : t("{count} dependencies listed on Modrinth. Mochi offers to install the required ones before the mod.").replace("{count}", String(version.dependencies.length))).replace("{count}", String(version.dependencies.length))}</p>}
+      {version.dependencies.length > 0 && <p className="muted">{t(version.dependencies.length === 1 ? "1 dependency listed on Modrinth. Mochi offers to install the required ones before the mod." : "{count} dependencies listed on Modrinth. Mochi offers to install the required ones before the mod.").replace("{count}", String(version.dependencies.length))}</p>}
     </div>}
   </div>;
 }
@@ -108,7 +108,7 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
       <h3 className="project-overview-heading">Overview</h3>
       <Markdown source={project.body || project.description} />
       {project.members?.length ? <section className="project-creators">
-        <div className="project-creators-heading"><div><h3>Creators & contributors</h3><p>{t(project.members.length === 1 ? t("1 team member credited on Modrinth.") : t("{count} team members credited on Modrinth.").replace("{count}", String(project.members.length))).replace("{count}", String(project.members.length))}</p></div></div>
+        <div className="project-creators-heading"><div><h3>Creators & contributors</h3><p>{t(project.members.length === 1 ? "1 team member credited on Modrinth." : "{count} team members credited on Modrinth.").replace("{count}", String(project.members.length))}</p></div></div>
         <div className="project-creator-grid">{project.members.map((member) => <div className="project-creator" key={member.user.id}>
           <Avatar src={member.user.avatar_url} name={member.user.name || member.user.username} />
           <div><strong>{member.user.name || member.user.username}</strong><small>@{member.user.username} · {member.role}</small></div>
@@ -124,7 +124,7 @@ export function ProjectDetails({ project, gameVersion, tofu, onClose, onDownload
       </div>
       {versions === null ? <p className="muted"><RefreshCw size={13} className="spin" /> Loading versions...</p> : <>
         {error && <p className="metadata-note" role="alert">{error}</p>}
-        <p className="version-count" aria-live="polite">{t(rows.length === 1 && versions.length === 1 ? t("1 of 1 version") : t("{shown} of {total} versions").replace("{shown}", String(rows.length)).replace("{total}", String(versions.length))).replace("{shown}", String(rows.length)).replace("{total}", String(versions.length))}</p>
+        <p className="version-count" aria-live="polite">{t(rows.length === 1 && versions.length === 1 ? "1 of 1 version" : "{shown} of {total} versions").replace("{shown}", String(rows.length)).replace("{total}", String(versions.length))}</p>
         {rows.length ? <div className="version-table" role="list">
           <div className="version-row version-head" aria-hidden="true"><div className="version-row-main"><span /><span>Version</span><span>Type</span><span>Loaders</span><span>Game versions</span><span>Published</span><span>Size</span><span /></div></div>
           {rows.slice(0, shown).map((version) => { const fit = target ? versionFit(version, target, mod) : undefined; return <div role="listitem" key={version.id}>
