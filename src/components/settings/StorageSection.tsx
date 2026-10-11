@@ -7,7 +7,7 @@ import { useApp } from "../../state/AppContext";
 import { confirmAction } from "../../lib/confirm";
 import { formatBytes } from "../../lib/format";
 import { useStorageScan } from "../../lib/useStorageScan";
-import { ageLabel, ageOptions, buildRows, categoryLabels, clearActions, clearAllUnused, clearStorageLocation, formatShare, openFolder, sortRows, summarise, visibleRows, type SortKey, type SortState, type StorageRow } from "../../lib/diskUsage";
+import { ageOptions, buildRows, categoryLabels, clearActions, clearAllUnused, clearStorageLocation, formatShare, openFolder, sortRows, summarise, visibleRows, type SortKey, type SortState, type StorageRow } from "../../lib/diskUsage";
 import { SettingsGroup } from "./Section";
 
 const PAGE = 200;
