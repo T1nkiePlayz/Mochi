@@ -23,6 +23,7 @@ describe("describeDownload", () => {
     };
     const t = (message: string) => messages[message] ?? message;
     expect(describeDownload(entry({ status: "failed" }), t).detail).toBe("Échec");
+    expect(describeDownload(entry({ status: "failed", error: "SHA-1 mismatch" }), t).detail).toBe("Échec: SHA-1 mismatch");
     expect(describeDownload(entry({ status: "cancelled" }), t).detail).toBe("Annulé");
     expect(describeDownload(entry({ status: "completed", total: 1024, tofuName: "Pack" }), t).detail).toBe("Terminé · 1 KiB · ajouté à Pack");
     expect(describeDownload(entry({ downloaded: 512, total: 1024 }), t).detail).toBe("50% · 1 KiB sur 1 KiB");
