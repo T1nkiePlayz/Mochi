@@ -59,14 +59,14 @@ export function SteamAchievements({ appid, gameName }: { appid: number; gameName
           <span>{percent}%</span>
         </div>
       )}
-      {loading && !data && <p className="stats-muted" role="status">Loading achievements…</p>}
+      {loading && !data && <p className="stats-muted" role="status">{t("Loading achievements…")}</p>}
       {data && result?.stale && <p className="steam-ach-note" role="status">{online ? result.message || "Showing saved data; Steam could not be reached." : "You are offline. Showing the last saved achievements."}</p>}
       {busy && !data && <p className="steam-ach-note" role="status">{result?.message || "Steam is busy right now. Mochi will try again later."}</p>}
-      {status === "no-achievements" && <p className="stats-muted" role="status">{result?.message || "This game has no Steam achievements."}</p>}
+      {status === "no-achievements" && <p className="stats-muted" role="status">{result?.message || t("This game has no Steam achievements.")}</p>}
       {problem && !busy && <p className="steam-ach-note" role="status">{!online && status === "offline" ? "You are offline, and no saved achievements exist for this game yet." : problem}</p>}
       {needsSetup && (
         <details className="steam-ach-setup">
-          <summary>Connect your Steam profile</summary>
+          <summary>{t("Connect your Steam profile")}</summary>
           <form onSubmit={save}>
             <label>SteamID64 (optional)<input value={config.steamId} onChange={(event) => setConfig({ ...config, steamId: event.target.value })} inputMode="numeric" placeholder="76561198…" autoComplete="off" spellCheck={false} /></label>
             <label>Steam Web API key (optional)<input type="password" value={config.apiKey} onChange={(event) => setConfig({ ...config, apiKey: event.target.value })} placeholder="32 character key" autoComplete="off" spellCheck={false} /></label>
