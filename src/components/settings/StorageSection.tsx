@@ -39,13 +39,14 @@ export function StorageSection() {
   const sorted = useMemo(() => sortRows(rows, sort), [rows, sort]);
   const { shown, hidden } = visibleRows(sorted, limit);
   const max = useMemo(() => rows.reduce((best, row) => (row.measurement && !row.measurement.error ? Math.max(best, row.measurement.bytes) : best), 0), [rows]);
-  const ageOption = useMemo<Array<SelectOption<string>>>(() => ageOptions.map((days) => ({ value: String(days), label: t("Older than {age}").replace("{age}", t(ageLabel(days))) })), [t]);
+  const localizedAge = (days: number) => days === 365 ? t("1 year") : t("{count} days").replace("{count}", String(days));
+  const ageOption = useMemo<Array<SelectOption<string>>>(() => ageOptions.map((days) => ({ value: String(days), label: t("Older than {age}").replace("{age}", localizedAge(days)) })), [t]);
   const sortBy = (key: SortKey) => setSort((current) => (current.key === key ? { key, dir: current.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "bytes" ? "desc" : "asc" }));
   const sizeOf = (category: string) => totals.categories.find((item) => item.category === category)?.bytes ?? 0;
 
   const clear = async (action: (typeof clearActions)[number]) => {
     const present = formatBytes(sizeOf(action.category));
-    const scope = action.needsAge ? ` ${t("older than")} ${t(ageLabel(age))}` : "";
+    const scope = action.needsAge ? ` ${t("older than")} ${localizedAge(age)}` : "";
     const ok = await confirmAction({ title: t("{label}?").replace("{label}", t(action.label)), danger: action.danger, confirmLabel: t("Remove"), message: t("{detail} This cannot be undone. Game installs and your own mod folders are never touched here.").replace("{detail}", t(action.detail)),
       items: [`${categoryLabels[action.category]}${scope}${started && totals.measured ? ` (up to ${present} now)` : ""}`] });
     if (!ok) return;
@@ -58,7 +59,7 @@ export function StorageSection() {
     finally { setBusy(null); }
   };
   const clearAll = async () => {
-    const ok = await confirmAction({ title: t("Clear all unused data?"), danger: true, confirmLabel: t("Clear everything"), message: t("Removes every cache and leftover Mochi keeps: artwork cache, unfinished downloads, game logs, and rollback copies and snapshots older than {age}. This cannot be undone. Game installs, your own mod folders, covers you picked yourself and anything in use are never touched.").replace("{age}", t(ageLabel(age))),
+    const ok = await confirmAction({ title: t("Clear all unused data?"), danger: true, confirmLabel: t("Clear everything"), message: t("Removes every cache and leftover Mochi keeps: artwork cache, unfinished downloads, game logs, and rollback copies and snapshots older than {age}. This cannot be undone. Game installs, your own mod folders, covers you picked yourself and anything in use are never touched.").replace("{age}", localizedAge(age)),
       items: clearActions.map((action) => action.needsAge ? `${t(action.label)} (${t("older than")} ${t(ageLabel(age))})` : t(action.label)) });
     if (!ok) return;
     setBusy("all"); setNote("");
