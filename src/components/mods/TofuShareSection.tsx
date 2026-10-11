@@ -46,7 +46,7 @@ export function TofuShareSection({ piko, tofu, onCreateTofu }: { piko: Piko; tof
         if (path) notify("Modpack exported", path);
       } else {
         const code = await encodeShortCode(pack);
-        if (!code) { setStatus(""); notify("Too big for a short code", "Use Export file instead."); return; }
+        if (!code) { setStatus(""); notify(t("Too big for a short code"), t("Use Export file instead.")); return; }
         await navigator.clipboard.writeText(code);
         setStatus(`Code copied (${code.length} characters). ${describe(pack.mods.length, pack.unknown.length, omitted)}`);
         notify("Code copied", "Paste it into Import modpack on another device.");
