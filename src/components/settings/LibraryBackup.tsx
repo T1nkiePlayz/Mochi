@@ -35,7 +35,7 @@ export function LibraryBackup() {
       writeBackupData(file);
       window.location.reload();
     } catch (error) { setNote(t("Could not restore: {error}").replace("{error}", message(error))); }
-    finally { setBusy(false); }
+    finally { setBusy(null); }
   };
   const chooseFolder = async () => {
     const picked = await open({ title: t("Choose backup folder"), directory: true, multiple: false });
