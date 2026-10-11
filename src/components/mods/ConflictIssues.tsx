@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "../../lib/useTranslation";
 import { AlertTriangle, Info } from "lucide-react";
 import { applyIssueAction } from "../../lib/mods/conflictService";
+import { translateCompatibilityReason } from "../../lib/mods/compat";
 import type { Issue, IssueAction } from "../../lib/mods/conflicts";
 import type { Tofu } from "../../models";
 
@@ -19,6 +20,7 @@ export function ConflictIssues({ issues, tofu, onFixed }: { issues: Issue[]; tof
     if (issue.kind === "duplicate-project") return t("{name} is installed twice").replace("{name}", title.replace(/ is installed twice$/, ""));
     if (issue.kind === "wrong-loader") return t("{name} is for a different loader").replace("{name}", title.replace(/ is for a different loader$/, ""));
     if (issue.kind === "wrong-version") return t("{name} is for a different game version").replace("{name}", title.replace(/ is for a different game version$/, ""));
+    if (issue.kind === "wrong-loader" || issue.kind === "wrong-version") return translateCompatibilityReason(issue.detail, t);
     if (issue.kind === "incompatible") {
       const [name, other] = title.split(" does not work with ");
       return t("{name} does not work with {other}").replace("{name}", name).replace("{other}", other ?? "");
