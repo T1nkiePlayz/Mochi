@@ -8,8 +8,8 @@ import { SECTION_IDS, planImport, sanitizeSections, sectionInfo, type ImportMode
 import { commitImport, exportSettings, installThemesFromFile, pickSettingsFile, readSnapshot, type SettingsFile } from "../../lib/settingsTransfer";
 
 const MODES: Array<{ value: ImportMode; label: string; description: string }> = [
-  { value: "merge", label: "Merge", description: "Keep what you have and add what is missing." },
-  { value: "replace", label: "Replace", description: "Overwrite with the file's version." },
+  { value: "merge", label: t("Merge"), description: t("Keep what you have and add what is missing.") },
+  { value: "replace", label: t("Replace"), description: t("Overwrite with the file's version.") },
 ];
 const message = (error: unknown) => (error instanceof Error ? error.message : typeof error === "string" ? error : "Something went wrong.");
 
@@ -39,8 +39,8 @@ export function SettingsTransfer() {
   return <>
     <div className="setting-row"><span><strong>{t("Settings backup")}</strong><small>{t("Export your settings, themes, collections, wishlist and per-game choices to a zip, or restore them on another device. Passwords, keys and sign-in data are never included.")}</small></span>
       <span className="data-source-actions">
-        <button type="button" className="secondary-button" disabled={busy} onClick={() => void runExport()}><Download size={14} aria-hidden="true" /> Export settings…</button>
-        <button type="button" className="secondary-button" disabled={busy} onClick={() => void runPick()}><Upload size={14} aria-hidden="true" /> Import settings…</button>
+        <button type="button" className="secondary-button" disabled={busy} onClick={() => void runExport()}><Download size={14} aria-hidden="true" /> {t("Export settings…")}</button>
+        <button type="button" className="secondary-button" disabled={busy} onClick={() => void runPick()}><Upload size={14} aria-hidden="true" /> {t("Import settings…")}</button>
       </span></div>
     {note && <p className="metadata-note settings-note" role="status">{note}</p>}
     {file && <ImportSheet file={file} onClose={() => setFile(null)} onDone={(text) => { setFile(null); setNote(text); announce(text); }} />}
@@ -108,7 +108,7 @@ function ImportSheet({ file, onClose, onDone }: { file: SettingsFile; onClose: (
             return <label className="settings-import-check" key={theme.id}><input type="checkbox" checked={themeIds.includes(theme.id)} disabled={exists} onChange={(event) => setThemeIds((current) => (event.target.checked ? [...current, theme.id] : current.filter((id) => id !== theme.id)))} /><span><strong>{theme.name}</strong><small>{exists ? t("Already installed, kept as is") : t("Install theme {id} v{version}").replace("{id}", theme.id).replace("{version}", theme.version)}</small></span></label>;
           })}
         </div>}
-        {present.length === 0 && file.themes.length === 0 && <p className="modal-description">This file has nothing to import.</p>}
+        {present.length === 0 && file.themes.length === 0 && <p className="modal-description">{t("This file has nothing to import.")}</p>}
       </div>
       {error && <p className="metadata-note settings-note" role="alert">{error}</p>}
       <div className="settings-import-actions">

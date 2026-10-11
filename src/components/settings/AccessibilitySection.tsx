@@ -29,8 +29,8 @@ export function A11yPreview() {
   const t = useTranslation();
   const { settings } = useAccessibility();
   return <div className="a11y-preview" aria-label={t("Live preview of your accessibility settings")} role="group">
-    <h4>Preview</h4>
-    <p>{t("Mochi keeps your games in one calm place.")} <a href="https://github.com/T1nkiePlayz/Mochi" onClick={(event) => event.preventDefault()}>{t("This is a link")}</a>, and this is body text at your chosen size and spacing.</p>
+    <h4>{t("Preview")}</h4>
+    <p>{t("Mochi keeps your games in one calm place.")} <a href="https://github.com/T1nkiePlayz/Mochi" onClick={(event) => event.preventDefault()}>{t("This is a link")}</a>, and {t("This is body text at your chosen size and spacing.")}</p>
     <div className="a11y-preview-row">
       <button type="button" className="play-button">{t("Play")}</button>
       <button type="button" className="secondary-button">{t("Details")}</button>
@@ -86,18 +86,18 @@ export function AccessibilitySection() {
     <SettingsGroup title={t("Reading")} subtitle={t("Fonts and spacing")} id="settings-accessibility-reading">
       {toggle("dyslexiaFont", t("Readable font"), t("Atkinson Hyperlegible, easier to tell letters apart."))}
       <A11yChoice title={t("Line spacing")} description={t("Space between lines of text.")} value={s.lineHeight} options={[{ value: "default", label: t("Default") }, { value: "relaxed", label: t("Relaxed") }, { value: "loose", label: t("Loose") }]} onChange={(lineHeight) => update({ lineHeight })} />
-      <A11yChoice title={t("Letter spacing")} description={t("Space between letters.")} value={s.letterSpacing} options={[{ value: "default", label: "Default" }, { value: "wide", label: t("Wide") }, { value: "wider", label: t("Wider") }]} onChange={(letterSpacing) => update({ letterSpacing })} />
-      <A11yChoice title={t("Word spacing")} description={t("Space between words.")} value={s.wordSpacing} options={[{ value: "default", label: "Default" }, { value: "wide", label: "Wide" }, { value: "wider", label: "Wider" }]} onChange={(wordSpacing) => update({ wordSpacing })} />
+      <A11yChoice title={t("Letter spacing")} description={t("Space between letters.")} value={s.letterSpacing} options={[{ value: "default", label: t("Default") }, { value: "wide", label: t("Wide") }, { value: "wider", label: t("Wider") }]} onChange={(letterSpacing) => update({ letterSpacing })} />
+      <A11yChoice title={t("Word spacing")} description={t("Space between words.")} value={s.wordSpacing} options={[{ value: "default", label: t("Default") }, { value: "wide", label: t("Wide") }, { value: "wider", label: t("Wider") }]} onChange={(wordSpacing) => update({ wordSpacing })} />
       {toggle("underlineLinks", t("Underline links"), t("Links are always underlined, not only coloured."))}
     </SettingsGroup>
 
     <SettingsGroup title={t("Interaction")} subtitle={t("Targets and labels")} id="settings-accessibility-interaction">
       {toggle("largeTargets", t("Larger click targets"), t("Buttons and fields are at least 44 pixels."))}
-      {toggle("textLabels", "Show text labels on icon buttons", "Icon-only buttons display their name next to the icon.")}
+      {toggle("textLabels", t("Show text labels on icon buttons"), t("Icon-only buttons display their name next to the icon."))}
     </SettingsGroup>
 
     <SettingsGroup title={t("Screen reader")} subtitle={t("Spoken feedback")} id="settings-accessibility-screen-reader">
-      {toggle("announcements", "Announce status changes", "Mochi reads out results such as saved settings and finished actions through a live region.")}
+      {toggle("announcements", t("Announce status changes"), t("Mochi reads out results such as saved settings and finished actions through a live region."))}
     </SettingsGroup>
   </>;
 }
