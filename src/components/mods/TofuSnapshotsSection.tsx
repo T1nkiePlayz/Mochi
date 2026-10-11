@@ -57,7 +57,7 @@ export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
       <button type="button" className="secondary-button" disabled={busy || !tofu.path} onClick={() => void take()}><Camera size={14}/> Take snapshot now</button>
     </div>
     {error && <p className="metadata-note" role="alert">{error}</p>}
-    {snapshots === null ? <p className="muted" role="status">Loading snapshots…</p>
+    {snapshots === null ? <p className="muted" role="status">{t("Loading snapshots…")}</p>
       : !snapshots.length ? <p className="muted">No snapshots yet. One is saved automatically before mods are updated.</p>
       : <ul className="tofu-snapshot-list" aria-label="Snapshots">{snapshots.map((snapshot) => <li key={snapshot.id} className="tofu-snapshot">
         <div className="tofu-snapshot-text"><strong>{snapshot.reason || "Snapshot"}</strong><small>{when(snapshot.createdAt)} · {snapshot.files} mod{snapshot.files === 1 ? "" : "s"} · {formatBytes(snapshot.size)}{snapshot.isRestore ? " · safety copy" : ""}</small></div>
