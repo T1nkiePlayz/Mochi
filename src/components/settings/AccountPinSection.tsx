@@ -40,13 +40,13 @@ export function AccountPinSection() {
     setNote(t("PIN removed."));
   };
 
-  return <SettingsGroup title="Account PINs" subtitle="Keep other people on this computer out of your account" id="settings-accountpin">
-    <ToggleRow title="Ask for a PIN when switching accounts" description="Only accounts that have a PIN ask for it. PINs stay on this device and are stored as a salted hash. This stops casual switching; it does not replace your sign-in security." checked={behavior.accountPins} onChange={(accountPins) => setBehavior((current) => ({ ...current, accountPins }))} />
+  return <SettingsGroup title={t("Account PINs")} subtitle={t("Keep other people on this computer out of your account")} id="settings-accountpin">
+    <ToggleRow title={t("Ask for a PIN when switching accounts")} description={t("Only accounts that have a PIN ask for it. PINs stay on this device and are stored as a salted hash. This stops casual switching; it does not replace your sign-in security.")} checked={behavior.accountPins} onChange={(accountPins) => setBehavior((current) => ({ ...current, accountPins }))} />
     {behavior.accountPins && (user
-      ? <div className="setting-row"><span><strong>PIN for {user.email?.split("@")[0] || "this account"}</strong><small>{protectedNow ? "A PIN is set." : "No PIN is set, so anyone can switch to this account."}</small></span>
-        <span className="settings-number-wrap"><button type="button" className="secondary-button" onClick={() => void choose()}>{protectedNow ? "Change PIN" : "Set PIN"}</button>
+      ? <div className="setting-row"><span><strong>PIN for {t("PIN for {account}").replace("{account}", user.email?.split("@")[0] || t("this account"))}</strong><small>{protectedNow ? t("A PIN is set.") : t("No PIN is set, so anyone can switch to this account.")}</small></span>
+        <span className="settings-number-wrap"><button type="button" className="secondary-button" onClick={() => void choose()}>{protectedNow ? t("Change PIN") : t("Set PIN")}</button>
           {protectedNow && <button type="button" className="secondary-button danger-outline" onClick={() => void remove()}>Remove</button>}</span></div>
-      : <p className="metadata-note settings-note">Sign in to set a PIN for your account.</p>)}
+      : <p className="metadata-note settings-note">{t("Sign in to set a PIN for your account.")}</p>)}
     {note && <p className="metadata-note settings-note" role="status">{note}</p>}
   </SettingsGroup>;
 }
