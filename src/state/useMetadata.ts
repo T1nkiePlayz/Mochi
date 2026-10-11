@@ -55,6 +55,8 @@ type Outcome = { piko: Piko; changed: boolean };
  */
 export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = false, provider = "auto", setLibrary, notify, startProgress, updateProgress }: Params) {
   const [refreshBusy, setRefreshBusy] = useState(false);
+  const [refreshingProvider, setRefreshingProvider] = useState<ProviderId | null>(null);
+  const [refreshingAll, setRefreshingAll] = useState(false);
   const busyRef = useRef(false);
   // Provider-wide cool-down after a 429, shared by all workers.
   const pausedUntil = useRef<Record<string, number>>({});
@@ -182,6 +184,8 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
     if (busyRef.current) return;
     busyRef.current = true;
     setRefreshBusy(true);
+    setRefreshingProvider(only ?? null);
+    setRefreshingAll(!only);
     const label = only ? providers[only].label : "metadata";
     try {
       clearProviderCaches(user?.id, only);
@@ -194,7 +198,7 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
       notify(`${only ? label : "Metadata"} refresh finished`, `Updated ${label === "metadata" ? "metadata" : `${label} data`} for ${candidates.length} library games.`);
     } catch (error) {
       notify("Metadata refresh failed", error instanceof Error ? error.message : "Could not refresh game metadata.");
-    } finally { busyRef.current = false; setRefreshBusy(false); }
+    } finally { busyRef.current = false; setRefreshBusy(false); setRefreshingProvider(null); setRefreshingAll(false); }
   };
 
   /** Refresh just this provider. Keeping the source required prevents a provider row from falling back to Auto/all. */
@@ -264,7 +268,7 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
     }
   };
 
-  return { enrich, enrichImported, refreshAll, refreshProvider, refreshGame, findMissingCovers, missingCovers, refreshBusy, refreshableCount, ready };
+  return { enrich, enrichImported, refreshAll, refreshProvider, refreshGame, findMissingCovers, missingCovers, refreshBusy, refreshingProvider, refreshingAll, refreshableCount, ready };
 }
 
 /** Applies only the metadata fields from a fresh result onto the live Piko, so edits made while it ran are kept. */
