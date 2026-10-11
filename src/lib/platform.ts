@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { translate } from "./i18n";
+import { translateUiMessage } from "./i18n";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { Piko, Tofu } from "../models";
 import { effectiveLaunchOptions } from "./launchProfiles";
@@ -89,17 +89,17 @@ export function launchGame(piko: Piko, tofu: Tofu | undefined): Promise<void> {
 }
 
 export async function chooseGameLibraryPath(): Promise<string | null> {
-  const selected = await open({ multiple: false, directory: true, title: translate("Choose game library") });
+  const selected = await open({ multiple: false, directory: true, title: translateUiMessage("Choose game library") });
   return typeof selected === "string" ? selected : null;
 }
 
 export async function chooseGameTarget(): Promise<string | null> {
-  const selected = await open({ multiple: false, directory: false, title: translate("Choose game executable or launcher") });
+  const selected = await open({ multiple: false, directory: false, title: translateUiMessage("Choose game executable or launcher") });
   return typeof selected === "string" ? selected : null;
 }
 
 export async function chooseGameAppBundle(): Promise<string | null> {
-  const selected = await open({ multiple: false, directory: true, title: translate("Choose macOS application") });
+  const selected = await open({ multiple: false, directory: true, title: translateUiMessage("Choose macOS application") });
   return typeof selected === "string" ? selected : null;
 }
 
