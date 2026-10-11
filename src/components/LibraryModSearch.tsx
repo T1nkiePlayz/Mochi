@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ExternalLink, Package } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { openExternalUrl } from "../lib/platform";
+import { getTranslationLocale } from "../lib/translationLocale";
 import { searchModrinth, type ModrinthProject } from "../lib/modrinth";
 import { getNexusGames, getNexusMods, type NexusGame, type NexusMod } from "../lib/nexus";
 
