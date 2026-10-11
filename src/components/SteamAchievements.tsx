@@ -68,10 +68,10 @@ export function SteamAchievements({ appid, gameName }: { appid: number; gameName
         <details className="steam-ach-setup">
           <summary>{t("Connect your Steam profile")}</summary>
           <form onSubmit={save}>
-            <label>SteamID64 (optional)<input value={config.steamId} onChange={(event) => setConfig({ ...config, steamId: event.target.value })} inputMode="numeric" placeholder="76561198…" autoComplete="off" spellCheck={false} /></label>
-            <label>Steam Web API key (optional)<input type="password" value={config.apiKey} onChange={(event) => setConfig({ ...config, apiKey: event.target.value })} placeholder="32 character key" autoComplete="off" spellCheck={false} /></label>
+            <label>{t("SteamID64 (optional)")}<input value={config.steamId} onChange={(event) => setConfig({ ...config, steamId: event.target.value })} inputMode="numeric" placeholder="76561198…" autoComplete="off" spellCheck={false} /></label>
+            <label>{t("Steam Web API key (optional)")}<input type="password" value={config.apiKey} onChange={(event) => setConfig({ ...config, apiKey: event.target.value })} placeholder="32 character key" autoComplete="off" spellCheck={false} /></label>
             <small>Mochi never ships a key. A key you enter stays on this device and is only sent to Steam. Without one, Mochi reads your public Steam profile, so set Game details to Public in Steam's privacy settings.</small>
-            <button type="submit" className="secondary-button">Save and retry</button>
+            <button type="submit" className="secondary-button">{t("Save and retry")}</button>
           </form>
         </details>
       )}
