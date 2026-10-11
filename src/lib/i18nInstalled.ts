@@ -398,3 +398,36 @@ const linkedPackValues: Record<string, string[]> = {
 "vi":["được trình khởi chạy ghi lại","từ tệp kê khai của gói","khớp theo tên","Không nhận diện được gói mod cho phiên bản này.","Đang tìm gói mod phù hợp ở chế độ nền.","Gói mod đã liên kết: {name}","Không thể tải gói mod.","Được hỗ trợ bởi CurseForge"],
 };
 Object.assign(installedMessages, Object.fromEntries(linkedPackKeys.map((message, index) => [message, Object.fromEntries(Object.entries(linkedPackValues).map(([locale, values]) => [locale, values[index]]))])));
+
+const modpackStateKeys = ["Manual download","Changed","off in pack","{count} changed"] as const;
+const modpackStateValues: Record<string, string[]> = {
+"ar":["تنزيل يدوي","تم التغيير","معطّل في الحزمة","{count} تغييرات"],
+"bg":["Ръчно изтегляне","Променен","изключен в пакета","{count} променени"],
+"zh-Hans":["手动下载","已更改","在整合包中关闭","已更改 {count} 项"],
+"zh-Hant":["手動下載","已變更","在整合包中關閉","已變更 {count} 項"],
+"cs":["Ruční stažení","Změněno","v balíčku vypnuto","{count} změněno"],
+"da":["Manuel download","Ændret","slået fra i pakken","{count} ændret"],
+"nl":["Handmatige download","Gewijzigd","uitgeschakeld in pakket","{count} gewijzigd"],
+"fi":["Manuaalinen lataus","Muutettu","paketissa pois käytöstä","{count} muutettu"],
+"fr":["Téléchargement manuel","Modifié","désactivé dans le pack","{count} modifiés"],
+"de":["Manueller Download","Geändert","im Paket deaktiviert","{count} geändert"],
+"el":["Μη αυτόματη λήψη","Άλλαξε","απενεργοποιημένο στο πακέτο","{count} αλλαγμένα"],
+"hu":["Kézi letöltés","Módosítva","kikapcsolva a csomagban","{count} módosítva"],
+"id":["Unduh manual","Diubah","nonaktif dalam paket","{count} diubah"],
+"it":["Download manuale","Modificato","disattivato nel pacchetto","{count} modificati"],
+"ja":["手動ダウンロード","変更済み","パック内で無効","{count} 件変更"],
+"ko":["수동 다운로드","변경됨","팩에서 꺼짐","{count}개 변경됨"],
+"no":["Manuell nedlasting","Endret","slått av i pakken","{count} endret"],
+"pl":["Pobieranie ręczne","Zmieniono","wyłączone w paczce","Zmieniono: {count}"],
+"pt":["Transferência manual","Alterado","desativado no pacote","{count} alterados"],
+"pt-BR":["Download manual","Alterado","desativado no pacote","{count} alterados"],
+"ro":["Descărcare manuală","Modificat","dezactivat în pachet","{count} modificate"],
+"ru":["Скачать вручную","Изменено","отключено в сборке","Изменено: {count}"],
+"es":["Descarga manual","Cambiado","desactivado en el paquete","{count} cambiados"],
+"sv":["Manuell nedladdning","Ändrad","avstängd i paketet","{count} ändrade"],
+"th":["ดาวน์โหลดด้วยตนเอง","เปลี่ยนแล้ว","ปิดอยู่ในแพ็ก","เปลี่ยนแล้ว {count} รายการ"],
+"tr":["Manuel indirme","Değiştirildi","pakette kapalı","{count} değiştirildi"],
+"uk":["Завантажити вручну","Змінено","вимкнено в пакеті","Змінено: {count}"],
+"vi":["Tải xuống thủ công","Đã thay đổi","đã tắt trong gói","Đã thay đổi {count} mục"],
+};
+Object.assign(installedMessages, Object.fromEntries(modpackStateKeys.map((message, index) => [message, Object.fromEntries(Object.entries(modpackStateValues).map(([locale, values]) => [locale, values[index]]))])));
