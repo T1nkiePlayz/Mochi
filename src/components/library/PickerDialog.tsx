@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { Dices, Play, X } from "lucide-react";
 import type { Piko } from "../../models";
 import { GameArtwork } from "../GameArtwork";
@@ -14,6 +15,7 @@ const choice = <T extends string>(label: string, items: Array<{ id: T; label: st
 
 /** "What should I play?": a weighted random pick from the backlog and barely-played games, by mood, time and length. */
 export function PickerDialog({ library, context: baseContext, loadHours, onPlay, onClose }: Props) {
+  const t = useTranslation();
   const [hoursToBeat, setHoursToBeat] = useState<ReadonlyMap<string, number> | undefined>();
   useEffect(() => {
     if (!loadHours) return;
@@ -32,8 +34,8 @@ export function PickerDialog({ library, context: baseContext, loadHours, onPlay,
   };
   const seconds = result ? context.playtime.get(result.id)?.seconds ?? 0 : 0;
   return <div className="modal-backdrop" onClick={onClose}>
-    <div className="modal picker-dialog" role="dialog" aria-modal="true" aria-label="What should I play?" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === "Escape") onClose(); }}>
-      <div className="modal-header"><div><p className="eyebrow">Library</p><h2>What should I play?</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button></div>
+    <div className="modal picker-dialog" role="dialog" aria-modal="true" aria-label={t("What should I play?")} onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === "Escape") onClose(); }}>
+      <div className="modal-header"><div><p className="eyebrow">Library</p><h2>{t("What should I play?")}</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button></div>
       {choice("Mood", moods, options.mood, (mood) => change({ mood }))}
       {choice("Time available", times, options.time, (time) => change({ time }))}
       {choice("Length", [{ id: "any" as const, label: "Any length" }, { id: "short" as const, label: "Short games" }], options.length, (length) => change({ length }))}

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { Download, Upload, X } from "lucide-react";
 import { useApp } from "../../state/AppContext";
 import { announce, useAccessibility } from "../../state/accessibility";
@@ -14,6 +15,7 @@ const message = (error: unknown) => (error instanceof Error ? error.message : ty
 
 /** Export and import of portable settings (Settings > Data). Import shows a preview first and changes nothing until confirmed. */
 export function SettingsTransfer() {
+  const t = useTranslation();
   const app = useApp();
   const { settings: accessibility } = useAccessibility();
   const [busy, setBusy] = useState(false);
@@ -85,7 +87,7 @@ function ImportSheet({ file, onClose, onDone }: { file: SettingsFile; onClose: (
     <div role="dialog" aria-modal="true" aria-labelledby="settings-import-title" className="modal settings-import-modal" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === "Escape") onClose(); }}>
       <div className="modal-header">
         <div><p className="eyebrow">Settings backup</p><h2 id="settings-import-title">Import settings</h2></div>
-        <button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button>
+        <button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button>
       </div>
       <p className="modal-description">Exported {created}{file.manifest.appVersion ? ` by Mochi ${file.manifest.appVersion}` : ""}. Nothing changes until you press Import.</p>
       <div className="settings-import-list" role="list">

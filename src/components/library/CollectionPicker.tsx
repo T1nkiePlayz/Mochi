@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useTranslation } from "../../lib/useTranslation";
 import { Check, Minus, Plus } from "lucide-react";
 import type { Collection, Piko } from "../../models";
 
@@ -11,6 +12,7 @@ type Props = {
 
 /** Toggle list used by the "Add to collection…" popover, the context menu and bulk actions. */
 export function CollectionPicker({ collections, games, onToggle, onCreate }: Props) {
+  const t = useTranslation();
   const [name, setName] = useState("");
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -27,7 +29,7 @@ export function CollectionPicker({ collections, games, onToggle, onCreate }: Pro
       </button></li>;
     })}</ul> : <p className="metadata-note">No collections yet. Create one below.</p>}
     <form className="collection-picker-new" onSubmit={submit}>
-      <input value={name} onChange={(event) => setName(event.target.value)} placeholder="New collection" aria-label="New collection name" maxLength={40} />
+      <input value={name} onChange={(event) => setName(event.target.value)} placeholder="New collection" aria-label={t("New collection name")} maxLength={40} />
       <button type="submit" className="icon-button" aria-label="Create collection" disabled={!name.trim()}><Plus size={14} /></button>
     </form>
   </div>;

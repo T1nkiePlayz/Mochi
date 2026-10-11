@@ -47,14 +47,14 @@ export function LibraryFilterBar({ lib, collections, tags, onManageCollections, 
     </button>;
   };
 
-  return <section className="library-filters" aria-label="Library filters">
-    <div className="filter-row" role="group" aria-label="Smart filters">
+  return <section className="library-filters" aria-label={t("Library filters")}>
+    <div className="filter-row" role="group" aria-label={t("Smart filters")}>
       {smartFilters.map(({ id, label }) => chip({ kind: "smart", id }, t(label), filterCounts.smart[id] ?? 0, `smart-${id}`))}
     </div>
-    {savedFilters.filters.length > 0 && <div className="filter-row" role="group" aria-label="Saved filters">
+    {savedFilters.filters.length > 0 && <div className="filter-row" role="group" aria-label={t("Saved filters")}>
       {savedFilters.filters.map((item) => chip({ kind: "saved", id: item.id }, item.name, filterCounts.saved.get(item.id) ?? 0, `saved-${item.id}`))}
     </div>}
-    {(filterCounts.sources.length > 1 || collections.length > 0) && <div className="filter-row" role="group" aria-label="Sources and collections">
+    {(filterCounts.sources.length > 1 || collections.length > 0) && <div className="filter-row" role="group" aria-label={t("Sources and collections")}>
       {filterCounts.sources.length > 1 && filterCounts.sources.map((source) => chip({ kind: "source", id: source.id }, source.label, source.count, `source-${source.id}`))}
       {collections.map((collection) => chip({ kind: "collection", id: collection.id }, `${collection.icon ? collection.icon + " " : ""}${collection.name}`, filterCounts.collections.get(collection.id) ?? 0, `col-${collection.id}`))}
     </div>}
@@ -66,7 +66,7 @@ export function LibraryFilterBar({ lib, collections, tags, onManageCollections, 
       {tags.length > 0 && <button type="button" className={`text-button ${tagFilters.length ? "has-active" : ""}`} aria-expanded={showTags} onClick={() => setShowTags(!showTags)}><Tag size={13} /> Tags{tagFilters.length ? ` (${tagFilters.length})` : ""}</button>}
       {tagFilters.length > 0 && <button type="button" className="text-button" onClick={() => setTagFilters([])}>Clear tags</button>}
     </div>
-    {showTags && tags.length > 0 && <div className="filter-row tag-filter-row" role="group" aria-label="Filter by tag (all selected tags must match)">
+    {showTags && tags.length > 0 && <div className="filter-row tag-filter-row" role="group" aria-label={t("Filter by tag (all selected tags must match)")}>
       {tags.map(([tag, count]) => <button type="button" key={tag} className={`filter-chip tag ${tagFilters.includes(tag) ? "active" : ""}`} aria-pressed={tagFilters.includes(tag)} onClick={() => toggleTagFilter(tag)}><span>#{tag}</span><span className="filter-count">{count}</span></button>)}
     </div>}
     {editing && <SavedFilterDialog initial={editing.initial} existing={editing.existing} hoursAvailable={hours.size > 0}

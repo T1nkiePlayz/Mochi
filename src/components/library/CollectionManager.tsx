@@ -25,8 +25,8 @@ export function CollectionManager({ state, counts, onClose }: Props) {
       onKeyDown={(event) => { if (event.key === "Escape" && !deleting) onClose(); }}>
       <div className="modal-header"><div><p className="eyebrow">Library</p><h2>Collections</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button></div>
       <form className="collection-create" onSubmit={submit}>
-        <EmojiField value={icon} onChange={setIcon} label="New collection emoji" />
-        <input value={name} onChange={(event) => setName(event.target.value)} placeholder="New collection name" aria-label="New collection name" maxLength={40} autoFocus />
+        <EmojiField value={icon} onChange={setIcon} label={t("New collection emoji")} />
+        <input value={name} onChange={(event) => setName(event.target.value)} placeholder={t("New collection name")} aria-label={t("New collection name")} maxLength={40} autoFocus />
         <button type="submit" className="play-button" disabled={!name.trim()}>Create</button>
       </form>
       <ul className="collection-list">
@@ -53,9 +53,9 @@ function EmojiField({ value, onChange, label }: { value: string; onChange: (valu
   useDismiss(root, open, () => setOpen(false));
   return <div className="emoji-field" ref={root}>
     <button type="button" className="emoji-trigger" aria-label={`${label}: ${value || t("none")}`} aria-expanded={open} onClick={() => setOpen(!open)}>{value || "☆"}</button>
-    {open && <div className="emoji-popover" role="group" aria-label="Choose an emoji">
+    {open && <div className="emoji-popover" role="group" aria-label={t("Choose an emoji")}>
       {EMOJI.map((emoji) => <button type="button" key={emoji} aria-label={emoji} onClick={() => { onChange(emoji); setOpen(false); }}>{emoji}</button>)}
-      <input aria-label="Type any emoji" placeholder="Any" maxLength={4} onChange={(event) => { onChange(event.target.value); }} />
+      <input aria-label={t("Type any emoji")} placeholder={t("Any")} maxLength={4} onChange={(event) => { onChange(event.target.value); }} />
       <button type="button" className="text-button" onClick={() => { onChange(""); setOpen(false); }}>None</button>
     </div>}
   </div>;
