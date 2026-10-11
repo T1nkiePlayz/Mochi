@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "../lib/useTranslation";
 import { X } from "lucide-react";
 
 const OPEN_EVENT = "mochi:open-shortcuts";
@@ -45,6 +46,7 @@ function isTyping(target: EventTarget | null) {
 }
 
 export function ShortcutsHelp() {
+  const t = useTranslation();
   const [open, setOpen] = useState(false);
   useEffect(() => {
     const show = () => setOpen(true);
@@ -65,10 +67,10 @@ export function ShortcutsHelp() {
   return <div className="modal-backdrop" onClick={close}>
     <div className="modal shortcuts-modal" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title" onClick={(event) => event.stopPropagation()}>
       <div className="modal-header">
-        <div><p className="eyebrow">Keyboard</p><h2 id="shortcuts-title">Keyboard shortcuts</h2></div>
-        <button type="button" className="icon-button" aria-label="Close shortcuts" onClick={close}><X size={16} aria-hidden="true" /></button>
+        <div><p className="eyebrow">{t("Keyboard")}</p><h2 id="shortcuts-title">{t("Keyboard shortcuts")}</h2></div>
+        <button type="button" className="icon-button" aria-label={t("Close shortcuts")} onClick={close}><X size={16} aria-hidden="true" /></button>
       </div>
-      <p className="modal-description">Everything in Mochi can be used without a mouse. Press <span className="shortcut-key">?</span> any time to open this list.</p>
+      <p className="modal-description">{t("Everything in Mochi can be used without a mouse. Press ? any time to open this list.")}</p>
       {groups.map((group) => <div key={group.title}>
         <h3 className="shortcuts-group">{group.title}</h3>
         <dl className="shortcuts-list">

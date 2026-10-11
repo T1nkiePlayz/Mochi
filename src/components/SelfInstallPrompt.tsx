@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "../lib/useTranslation";
 import { confirmAction } from "../lib/confirm";
 import { selfInstallApply, selfInstallSkip, selfInstallStatus, selfInstallVerify, type SelfInstallStatus, type VerifyResult } from "../lib/selfInstall";
 
@@ -16,6 +17,7 @@ export function unverifiedMessage(status: SelfInstallStatus, result: VerifyResul
 
 /** Verifies a freshly opened build before it installs over the managed copy. Mounted once in AppProvider. */
 export function SelfInstallPrompt() {
+  const t = useTranslation();
   const [status, setStatus] = useState<SelfInstallStatus | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const dialog = useRef<HTMLDivElement>(null);
@@ -67,8 +69,8 @@ export function SelfInstallPrompt() {
         : <>
           <p className="modal-description" role="alert">{phase.message}</p>
           <div className="confirm-actions">
-            <button type="button" className="secondary-button" onClick={close}>Close</button>
-            <button type="button" className="play-button" onClick={apply}>Try again</button>
+            <button type="button" className="secondary-button" onClick={close}>{t("Close")}</button>
+            <button type="button" className="play-button" onClick={apply}>{t("Try again")}</button>
           </div>
         </>}
     </div>

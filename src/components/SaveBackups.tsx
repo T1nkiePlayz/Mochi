@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "../lib/useTranslation";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { ChevronDown, ChevronRight, DatabaseBackup, FolderOpen, FolderPlus, History, RotateCcw, Trash2, X } from "lucide-react";
 import {
@@ -18,14 +19,16 @@ const GB = 1 << 30;
 
 /** "Saves" button for a game page and the dialog it opens: save folders, their backups, back up now / restore / delete. */
 export function SaveBackupsButton({ game }: { game: Piko }) {
+  const t = useTranslation();
   const [open, setOpen] = useState(false);
   return <>
-    <button type="button" className="secondary-button" aria-haspopup="dialog" onClick={() => setOpen(true)}><DatabaseBackup size={14} /> Saves</button>
+    <button type="button" className="secondary-button" aria-haspopup="dialog" onClick={() => setOpen(true)}><DatabaseBackup size={14} /> {t("Saves")}</button>
     {open && <SaveBackupsModal game={game} onClose={() => setOpen(false)} />}
   </>;
 }
 
 function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }) {
+  const t = useTranslation();
   const { lib, sessions } = useApp();
   const running = sessions.isRunning(game.id);
   const [locations, setLocations] = useState<SaveLocation[] | null>(null);
@@ -90,14 +93,14 @@ function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }
 
   const groups = groupLocations(locations ?? []);
   return <ModalShell label={`${game.name} saves`} className="modal save-backups-modal" onClose={onClose}>
-    <div className="modal-header"><div><p className="eyebrow">{game.name}</p><h2>Save backups</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button></div>
+    <div className="modal-header"><div><p className="eyebrow">{game.name}</p><h2>{t("Save backups")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
     <div className="save-backups-toolbar">
-      <label className="check-row"><input type="checkbox" checked={auto} onChange={(event) => patchGame((current) => ({ ...current, auto: event.target.checked }))} /> Back up saves when the game closes</label>
-      <button type="button" className="secondary-button" onClick={() => void add()}><FolderPlus size={13} /> Add folder</button>
+      <label className="check-row"><input type="checkbox" checked={auto} onChange={(event) => patchGame((current) => ({ ...current, auto: event.target.checked }))} /> {t("Back up saves when the game closes")}</label>
+      <button type="button" className="secondary-button" onClick={() => void add()}><FolderPlus size={13} /> {t("Add folder")}</button>
     </div>
     {message && <p className="metadata-note" role="status">{message}</p>}
     <div className="save-backups-body">
-      {locations === null ? <p className="muted save-backups-empty">Looking for saves...</p>
+      {locations === null ? <p className="muted save-backups-empty">{t("Looking for saves...")}</p>
         : !groups.length ? <p className="muted save-backups-empty">No save folders found yet. Add the folder your game keeps its saves in{game.id === "minecraft" ? ", or import a Minecraft instance first" : ""}.</p>
         : groups.map(([heading, items]) => <section key={heading} className="save-backups-group" aria-label={heading}>
           <h3>{heading}</h3>
@@ -108,18 +111,18 @@ function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }
                 <div className="save-backups-name"><strong>{location.label}</strong><small className="muted" title={location.path}>{location.problem ?? location.path}</small>
                   <small className="muted">{location.backups ? `${location.backups} backup${location.backups === 1 ? "" : "s"} · ${formatBytes(location.backupBytes)} · last ${when(location.lastBackup ?? 0)}` : "No backups yet"}</small></div>
                 <div className="save-backups-actions">
-                  <button type="button" className="secondary-button" onClick={() => void backUp(location)} disabled={Boolean(location.problem) || busy === location.key}><History size={13} /> Back up now</button>
-                  <button type="button" className="icon-button" aria-label={`Open folder of ${location.label}`} title="Open folder" onClick={() => void openPath(location.path).catch((error) => setMessage(errorText(error)))} disabled={Boolean(location.problem)}><FolderOpen size={15} /></button>
-                  {location.kind === "custom" && <button type="button" className="icon-button" aria-label={`Stop backing up ${location.label}`} title="Remove from this list (backups are kept)" onClick={() => patchGame((current) => ({ ...current, folders: removeFolder(current.folders, location.source ?? location.path) }))}><X size={15} /></button>}
+                  <button type="button" className="secondary-button" onClick={() => void backUp(location)} disabled={Boolean(location.problem) || busy === location.key}><History size={13} /> {t("Back up now")}</button>
+                  <button type="button" className="icon-button" aria-label={`Open folder of ${location.label}`} title={t("Open folder")} onClick={() => void openPath(location.path).catch((error) => setMessage(errorText(error)))} disabled={Boolean(location.problem)}><FolderOpen size={15} /></button>
+                  {location.kind === "custom" && <button type="button" className="icon-button" aria-label={`Stop backing up ${location.label}`} title={t("Remove from this list (backups are kept)")} onClick={() => patchGame((current) => ({ ...current, folders: removeFolder(current.folders, location.source ?? location.path) }))}><X size={15} /></button>}
                 </div>
               </div>
               {expanded === location.key && <ul className="save-backups-versions" aria-label={`Backups of ${location.label}`}>
-                {(backups[location.key] ?? []).length === 0 && <li className="muted">No backups yet.</li>}
+                {(backups[location.key] ?? []).length === 0 && <li className="muted">{t("No backups yet.")}</li>}
                 {(backups[location.key] ?? []).map((backup) => <li key={backup.id}>
                   <span>{when(backup.createdAt)}</span><span className="chip">{BACKUP_KIND_LABEL[backup.kind]}</span><small className="muted">{formatBytes(backup.size)} · {backup.files} file{backup.files === 1 ? "" : "s"}</small>
                   <span className="save-backups-actions">
-                    <button type="button" className="secondary-button" onClick={() => void restore(location, backup)} disabled={running || busy === location.key} title={running ? "Close the game before restoring" : undefined}><RotateCcw size={13} /> Restore</button>
-                    <button type="button" className="icon-button" aria-label={`Delete backup from ${when(backup.createdAt)}`} title="Delete backup" onClick={() => void remove(location, backup)}><Trash2 size={15} /></button>
+                    <button type="button" className="secondary-button" onClick={() => void restore(location, backup)} disabled={running || busy === location.key} title={running ? t("Close the game before restoring") : undefined}><RotateCcw size={13} /> {t("Restore")}</button>
+                    <button type="button" className="icon-button" aria-label={`Delete backup from ${when(backup.createdAt)}`} title={t("Delete backup")} onClick={() => void remove(location, backup)}><Trash2 size={15} /></button>
                   </span>
                 </li>)}
               </ul>}
@@ -128,10 +131,10 @@ function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }
         </section>)}
     </div>
     <div className="save-backups-limits">
-      <label>Keep <input className="compact-input" type="number" min={1} max={100} value={keep} onChange={(event) => setKeep(event.target.value)} aria-label="Backups to keep per folder" /> backups per folder</label>
-      <label>Total limit <input className="compact-input" type="number" min={0.1} max={200} step={0.1} value={cap} onChange={(event) => setCap(event.target.value)} aria-label="Total size limit in GB" /> GB</label>
-      <button type="button" className="secondary-button" onClick={() => void applyLimits()} disabled={!settings}>Apply</button>
+      <label>{t("Keep")} <input className="compact-input" type="number" min={1} max={100} value={keep} onChange={(event) => setKeep(event.target.value)} aria-label={t("Backups to keep per folder")} /> {t("backups per folder")}</label>
+      <label>{t("Total limit")} <input className="compact-input" type="number" min={0.1} max={200} step={0.1} value={cap} onChange={(event) => setCap(event.target.value)} aria-label={t("Total size limit in GB")} /> GB</label>
+      <button type="button" className="secondary-button" onClick={() => void applyLimits()} disabled={!settings}>{t("Apply")}</button>
     </div>
-    <small className="metadata-note">Backups are zip files stored on this computer. Restoring always keeps your current saves as a backup first. Shortcuts and links inside save folders are skipped.</small>
+    <small className="metadata-note">{t("Backups are zip files stored on this computer. Restoring always keeps your current saves as a backup first. Shortcuts and links inside save folders are skipped.")}</small>
   </ModalShell>;
 }
