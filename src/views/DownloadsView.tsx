@@ -29,7 +29,7 @@ export function DownloadsView() {
     setError(translated !== detail ? translated : `${t("That did not work.")} ${detail}`);
   };
   const cancelDownload = async (id: string) => {
-    const ok = await confirmAction({ title: t("Cancel this download?"), message: t("The download will stop. You can start it again from the mod page."), confirmLabel: t("Cancel"), danger: true });
+    const ok = await confirmAction({ title: t("Cancel this download?"), message: t("The download will stop. You can start it again from the mod page."), confirmLabel: t("Cancel download"), danger: true });
     if (!ok) return;
     await cancelModDownload(id).catch(report);
   };
