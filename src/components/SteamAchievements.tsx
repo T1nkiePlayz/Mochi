@@ -3,12 +3,15 @@ import { Lock, RefreshCw, Trophy } from "lucide-react";
 import { RemoteImage } from "./RemoteImage";
 import { useOnline } from "../lib/offline";
 import { useSteamAchievements } from "../state/useSteamAchievements";
+import { useTranslation } from "../lib/useTranslation";
+import { getTranslationLocale } from "../lib/translationLocale";
 import { readSteamConfig, sortSteamAchievements, steamPercent, writeSteamConfig, type SteamAchievement } from "../lib/steamAchievements";
 
 const PREVIEW = 8;
-const dateText = (seconds: number) => new Date(seconds * 1000).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+const dateText = (seconds: number) => new Date(seconds * 1000).toLocaleDateString(getTranslationLocale(), { day: "numeric", month: "short", year: "numeric" });
 
 function Row({ item }: { item: SteamAchievement }) {
+  const t = useTranslation();
   const masked = item.hidden && !item.unlocked;
   const art = item.unlocked ? item.icon : item.iconGray || item.icon;
   const fallback = <span className="steam-ach-fallback" aria-hidden="true">{masked || !item.unlocked ? <Lock size={16} /> : <Trophy size={16} />}</span>;
@@ -16,10 +19,10 @@ function Row({ item }: { item: SteamAchievement }) {
     <li className={`steam-ach-row ${item.unlocked ? "unlocked" : "locked"}${masked ? " masked" : ""}`}>
       {masked || !art ? fallback : <RemoteImage className="steam-ach-icon" src={art} alt="" loading="lazy" referrerPolicy="no-referrer" fallback={fallback} />}
       <div className="steam-ach-text">
-        <strong>{masked ? "Hidden achievement" : item.name}</strong>
-        <p>{masked ? "Details stay hidden until you unlock it." : item.description || "No description."}</p>
+        <strong>{masked ? t("Hidden achievement") : item.name}</strong>
+        <p>{masked ? t("Details stay hidden until you unlock it.") : item.description || t("No description.")}</p>
       </div>
-      <small className="steam-ach-date">{item.unlocked ? (item.unlockedAt ? <>Unlocked <time dateTime={new Date(item.unlockedAt * 1000).toISOString()}>{dateText(item.unlockedAt)}</time></> : "Unlocked") : "Locked"}</small>
+      <small className="steam-ach-date">{item.unlocked ? (item.unlockedAt ? <>{t("Unlocked")} <time dateTime={new Date(item.unlockedAt * 1000).toISOString()}>{dateText(item.unlockedAt)}</time></> : t("Unlocked")) : t("Locked")}</small>
     </li>
   );
 }
