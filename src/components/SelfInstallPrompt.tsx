@@ -26,7 +26,7 @@ export function SelfInstallPrompt() {
   const apply = useCallback(async () => {
     setPhase((current) => current.kind === "busy" ? current : { kind: "busy", text: t("Installing…") });
     try { await selfInstallApply(); } catch (error) { setPhase({ kind: "error", message: String(error) }); }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (started.current) return;
