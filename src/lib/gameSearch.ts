@@ -1,3 +1,4 @@
+import { getTranslationLocale } from "./translationLocale";
 import { invoke } from "@tauri-apps/api/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { lookupIgdbGames, type IgdbGame } from "./igdb";
@@ -161,7 +162,7 @@ export function buildChart(points: ChartPoint[], ever: number | null, width = 32
   return { width, height, line: dots.map((d, i) => `${i ? "L" : "M"}${round(d.x)} ${round(d.y)}`).join(" "), dots, everY: ever === null ? null : y(ever), min, max };
 }
 
-const day = (t: number) => new Date(t).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+const day = (t: number) => new Date(t).toLocaleDateString(getTranslationLocale(), { year: "numeric", month: "short", day: "numeric" });
 /** The graph's caption: always says where the data comes from and how far back it goes. */
 export function historyCaption(observations: PriceObservation[], everDate: number | null, t: (message: string) => string): string {
   const usd = observations.filter((o) => o.currency === "USD");
