@@ -33,6 +33,7 @@ type Props = {
 const fileLabel = (file: ModFile) => [file.name, file.channel && file.channel !== "release" ? file.channel : "", file.size ? formatBytes(file.size) : ""].filter(Boolean).join(" · ");
 
 export function ModDetailsModal({ source, item, filter, installLabel, busy, notice, onDismissNotice, onInstall, onClose }: Props) {
+  const t = useTranslation();
   const [details, setDetails] = useState<ModDetails | null>(null);
   const [files, setFiles] = useState<ModFile[] | null>(null);
   const [error, setError] = useState("");
