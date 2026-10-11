@@ -29,10 +29,10 @@ function ActionButton({ item, actionLabel, busy, state, onAction, onUpdate }: Pi
       style={percent != null ? { ["--mod-progress" as string]: `${percent}%` } : undefined}><RefreshCw size={13} className="spin" /> Downloading{percent != null ? ` ${percent}%` : "…"}</button>;
   }
   if (state?.kind === "installed") {
-    return <button type="button" className="secondary-button mod-action is-installed" disabled aria-label={state.version ? t("{name} is downloaded, version {version}").replace("{name}", item.name).replace("{version}", state.version) : t("{name} is downloaded").replace("{name}", item.name)} title={state.enabled ? undefined : t("Downloaded, currently disabled")}><Check size={13} /> Downloaded</button>;
+    return <button type="button" className="secondary-button mod-action is-installed" disabled aria-label={state.version ? t("{name} is downloaded, version {version}").replace("{name}", item.name).replace("{version}", state.version) : t("{name} is downloaded").replace("{name}", item.name)} title={state.enabled ? undefined : t("Downloaded, currently disabled")}><Check size={13} /> {t("Downloaded")}</button>;
   }
   if (state?.kind === "update" && onUpdate) {
-    return <button type="button" className="secondary-button mod-action is-update" onClick={() => onUpdate(item)} disabled={busy} aria-label={t("Update {name} to {version}").replace("{name}", item.name).replace("{version}", state.update.newVersion)} title={t("{current} to {version}").replace("{current}", state.version ?? state.update.currentVersion).replace("{version}", state.update.newVersion)}><ArrowUpCircle size={13} /> Update available</button>;
+    return <button type="button" className="secondary-button mod-action is-update" onClick={() => onUpdate(item)} disabled={busy} aria-label={t("Update {name} to {version}").replace("{name}", item.name).replace("{version}", state.update.newVersion)} title={t("{current} to {version}").replace("{current}", state.version ?? state.update.currentVersion).replace("{version}", state.update.newVersion)}><ArrowUpCircle size={13} /> {t("Update available")}</button>;
   }
   return <button type="button" className="secondary-button mod-action" onClick={() => onAction(item)} disabled={busy} aria-label={t("{action}: {name}").replace("{action}", actionLabel).replace("{name}", item.name)}><Download size={13} /> {actionLabel}</button>;
 }
@@ -49,7 +49,7 @@ export const ModCard = memo(function ModCard({ item, actionLabel, busy, showSour
       <small>{item.author || t("{site} creator").replace("{site}", site)}{item.downloads != null ? ` · ${t("{count} downloads").replace("{count}", item.downloads.toLocaleString())}` : ""}</small>
       <p>{item.summary || t("No summary was provided.")}</p>
       <div className="discover-card-actions">
-        <button type="button" className="secondary-button" onClick={() => onView(item)} aria-label={t("View {name}").replace("{name}", item.name)}><Eye size={13} /> View</button>
+        <button type="button" className="secondary-button" onClick={() => onView(item)} aria-label={t("View {name}").replace("{name}", item.name)}><Eye size={13} /> {t("View")}</button>
         <ActionButton item={item} actionLabel={actionLabel} busy={busy} state={state} onAction={onAction} onUpdate={onUpdate} />
         <button type="button" className="icon-button" onClick={() => void openExternalUrl(item.pageUrl).catch(() => undefined)} aria-label={t("View {name} on {site}").replace("{name}", item.name).replace("{site}", site)} title={t("View on {site}").replace("{site}", site)}><ExternalLink size={13} /></button>
       </div>

@@ -84,14 +84,14 @@ export function InstalledModsPanel({ piko, tofu, folder, withUpdates, files: all
   const allVisibleSelected = visible.length > 0 && visible.every((file) => selected.has(file.path));
 
   return <div className="imp">
-    <div className="workspace-section-title"><strong>Installed</strong><span>{files.length} · {enabledCount} on{files.length - enabledCount ? ` · ${files.length - enabledCount} off` : ""}</span></div>
+    <div className="workspace-section-title"><strong>{t("Installed")}</strong><span>{files.length} · {enabledCount} {t("on")}{files.length - enabledCount ? ` · ${files.length - enabledCount} ${t("off")}` : ""}</span></div>
     {files.length > 0 && <div className="imp-toolbar">
       <label className="search-box"><Search size={14} /><input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder={t("Filter installed")} aria-label={t("Filter installed files")} /></label>
-      <Checkbox checked={allVisibleSelected} indeterminate={!allVisibleSelected && visible.some((file) => selected.has(file.path))} onChange={() => setSelected(allVisibleSelected ? new Set() : new Set(visible.map((file) => file.path)))} label="Select all" />
+      <Checkbox checked={allVisibleSelected} indeterminate={!allVisibleSelected && visible.some((file) => selected.has(file.path))} onChange={() => setSelected(allVisibleSelected ? new Set() : new Set(visible.map((file) => file.path)))} label={t("Select all")} />
       {chosen.length > 0
         ? <><button type="button" className="secondary-button" disabled={busy} onClick={() => void setEnabled(chosen, true)}>Enable {chosen.length}</button><button type="button" className="secondary-button" disabled={busy} onClick={() => void setEnabled(chosen, false)}>Disable {chosen.length}</button></>
-        : <><button type="button" className="secondary-button" disabled={busy || own.every((file) => file.enabled)} onClick={() => void setEnabled(own, true)}>Enable all</button><button type="button" className="secondary-button" disabled={busy || !own.some((file) => file.enabled)} onClick={() => void setEnabled(own, false)}>Disable all</button></>}
-      {unknown > 0 && withUpdates && <button type="button" className="secondary-button" disabled={scanning} onClick={() => void identify()} title={t("Look the unknown files up on Modrinth, CurseForge and Nexus Mods")}><ScanSearch size={13} className={scanning ? "spin" : ""} /> Identify {unknown}</button>}
+        : <><button type="button" className="secondary-button" disabled={busy || own.every((file) => file.enabled)} onClick={() => void setEnabled(own, true)}>{t("Enable all")}</button><button type="button" className="secondary-button" disabled={busy || !own.some((file) => file.enabled)} onClick={() => void setEnabled(own, false)}>{t("Disable all")}</button></>}
+      {unknown > 0 && withUpdates && <button type="button" className="secondary-button" disabled={scanning} onClick={() => void identify()} title={t("Look the unknown files up on Modrinth, CurseForge and Nexus Mods")}><ScanSearch size={13} className={scanning ? "spin" : ""} /> {t("Identify")} {unknown}</button>}
     </div>}
     <ul className="imp-list">
       {visible.map((file) => {
@@ -107,12 +107,12 @@ export function InstalledModsPanel({ piko, tofu, folder, withUpdates, files: all
               {record && record.source !== "manual" ? ` · ${sourceLabels[record.source]}` : ""}{file.enabled ? "" : " · disabled"}{file.foreign ? " · another Tofu's mod" : ""}
             </small>
           </span>
-          {!file.foreign && needsIdentification(file) && <button type="button" className="secondary-button imp-link" aria-label={`Identify ${title}`} title={t("Not identified yet: pick the mod on CurseForge, Modrinth or Nexus Mods")} onClick={() => setLinking(file)}><Link2 size={13} /> Identify</button>}
+          {!file.foreign && needsIdentification(file) && <button type="button" className="secondary-button imp-link" aria-label={`Identify ${title}`} title={t("Not identified yet: pick the mod on CurseForge, Modrinth or Nexus Mods")} onClick={() => setLinking(file)}><Link2 size={13} /> {t("Identify")}</button>}
           {update && <span className="imp-badge" role="status">Update available: {update.newVersion}</span>}
-          {update && update.apply.kind === "download" && <button type="button" className="secondary-button" disabled={busy || updates.updating.includes(update.path)} aria-label={`Update ${title}`} onClick={() => void run(() => applyUpdates(tofu, [update]), "Update failed.")}><ArrowUpCircle size={13} /> Update</button>}
-          {update && update.apply.kind === "manual" && <button type="button" className="secondary-button" aria-label={`Open ${title} on its site`} title={update.apply.reason} onClick={() => void openExternalUrl((update.apply as { pageUrl: string }).pageUrl).catch(() => undefined)}><ExternalLink size={13} /> Get update</button>}
+          {update && update.apply.kind === "download" && <button type="button" className="secondary-button" disabled={busy || updates.updating.includes(update.path)} aria-label={`Update ${title}`} onClick={() => void run(() => applyUpdates(tofu, [update]), "Update failed.")}><ArrowUpCircle size={13} /> {t("Update")}</button>}
+          {update && update.apply.kind === "manual" && <button type="button" className="secondary-button" aria-label={`Open ${title} on its site`} title={update.apply.reason} onClick={() => void openExternalUrl((update.apply as { pageUrl: string }).pageUrl).catch(() => undefined)}><ExternalLink size={13} /> {t("Get update")}</button>}
           {record?.rollback && <button type="button" className="icon-button" aria-label={`Roll ${title} back to ${record.rollback.version || "the previous version"}`} title={`Roll back to ${record.rollback.version || "the previous version"}`} disabled={busy} onClick={() => void run(async () => { await rollbackModUpdate(tofu.id, folder.path, record.file, folder.subdir); onMessage(`Restored the earlier version of ${title}.`); }, "Unable to roll back.")}><RotateCcw size={14} /></button>}
-          <button type="button" role="switch" aria-checked={file.enabled} className={`imp-switch ${file.enabled ? "on" : ""}`} aria-label={`${file.enabled ? "Disable" : "Enable"} ${title}`} title={file.enabled ? "Disable (kept, just not loaded)" : "Enable"} disabled={busy} onClick={() => void setEnabled([file], !file.enabled)}><Power size={14} /></button>
+          <button type="button" role="switch" aria-checked={file.enabled} className={`imp-switch ${file.enabled ? "on" : ""}`} aria-label={`${file.enabled ? "Disable" : "Enable"} ${title}`} title={file.enabled ? t("Disable (kept, just not loaded)") : t("Enable")} disabled={busy} onClick={() => void setEnabled([file], !file.enabled)}><Power size={14} /></button>
           <button type="button" className="icon-button" aria-label={`Delete ${title}`} title={t("Delete")} disabled={busy} onClick={() => void confirmAction({ title: "Delete mod?", message: `${file.filename.replace(/\.disabled$/, "")} will be removed from this game's mods folder.`, confirmLabel: t("Delete"), danger: true }).then((ok) => { if (ok) void run(() => deleteModFile(file.path, tofu.id), "Unable to delete the file."); })}><Trash2 size={14} /></button>
         </li>;
       })}
@@ -120,6 +120,6 @@ export function InstalledModsPanel({ piko, tofu, folder, withUpdates, files: all
     {foreignCount > 0 && <Checkbox className="imp-foreign" checked={showForeign} onChange={setShowForeign} label={`Show ${foreignCount} mod${foreignCount === 1 ? "" : "s"} of other Tofus`} description="They stay off while this Tofu is active. Turning one on adds it to this Tofu." />}
     {linking && <LinkModModal piko={piko} tofu={tofu} file={linking} subdir={folder.subdir ?? ""} onLinked={(text) => { onMessage(text); void refresh(); }} onClose={() => setLinking(null)} />}
     {!files.length && <p className="muted">{loading ? "Reading the folder..." : "Nothing installed in this folder yet."}</p>}
-    {files.length > 0 && !visible.length && <p className="muted">No installed file matches that filter.</p>}
+    {files.length > 0 && !visible.length && <p className="muted">{t("No installed file matches that filter.")}</p>}
   </div>;
 }
