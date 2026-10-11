@@ -59,12 +59,12 @@ export function LibraryFilterBar({ lib, collections, tags, onManageCollections, 
       {collections.map((collection) => chip({ kind: "collection", id: collection.id }, `${collection.icon ? collection.icon + " " : ""}${collection.name}`, filterCounts.collections.get(collection.id) ?? 0, `col-${collection.id}`))}
     </div>}
     <div className="filter-row filter-actions">
-      {wishlist && <button type="button" className={`filter-chip ${wishlist.active ? "active" : ""}`} aria-pressed={wishlist.active} onClick={wishlist.onToggle}><Gift size={13} /><span>Wishlist</span><span className="filter-count">{wishlist.count}</span></button>}
-      <button type="button" className="text-button" onClick={() => setEditing({ initial: currentRule() })}><Save size={13} /> Save filter</button>
+      {wishlist && <button type="button" className={`filter-chip ${wishlist.active ? "active" : ""}`} aria-pressed={wishlist.active} onClick={wishlist.onToggle}><Gift size={13} /><span>{t("Wishlist")}</span><span className="filter-count">{wishlist.count}</span></button>}
+      <button type="button" className="text-button" onClick={() => setEditing({ initial: currentRule() })}><Save size={13} /> {t("Save filter")}</button>
       {activeSaved && <button type="button" className="text-button" onClick={() => setEditing({ existing: activeSaved, initial: activeSaved.rule })}><Pencil size={13} /> {t("Edit “{name}”").replace("{name}", activeSaved.name)}</button>}
-      <button type="button" className="text-button" onClick={onManageCollections}><Settings2 size={13} /> Collections</button>
-      {tags.length > 0 && <button type="button" className={`text-button ${tagFilters.length ? "has-active" : ""}`} aria-expanded={showTags} onClick={() => setShowTags(!showTags)}><Tag size={13} /> Tags{tagFilters.length ? ` (${tagFilters.length})` : ""}</button>}
-      {tagFilters.length > 0 && <button type="button" className="text-button" onClick={() => setTagFilters([])}>Clear tags</button>}
+      <button type="button" className="text-button" onClick={onManageCollections}><Settings2 size={13} /> {t("Collections")}</button>
+      {tags.length > 0 && <button type="button" className={`text-button ${tagFilters.length ? "has-active" : ""}`} aria-expanded={showTags} onClick={() => setShowTags(!showTags)}><Tag size={13} /> {t("Tags")}{tagFilters.length ? ` (${tagFilters.length})` : ""}</button>}
+      {tagFilters.length > 0 && <button type="button" className="text-button" onClick={() => setTagFilters([])}>{t("Clear tags")}</button>}
     </div>
     {showTags && tags.length > 0 && <div className="filter-row tag-filter-row" role="group" aria-label={t("Filter by tag (all selected tags must match)")}>
       {tags.map(([tag, count]) => <button type="button" key={tag} className={`filter-chip tag ${tagFilters.includes(tag) ? "active" : ""}`} aria-pressed={tagFilters.includes(tag)} onClick={() => toggleTagFilter(tag)}><span>#{tag}</span><span className="filter-count">{count}</span></button>)}

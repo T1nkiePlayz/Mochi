@@ -21,13 +21,13 @@ export function CollectionManager({ state, counts, onClose }: Props) {
   const submit = (event: FormEvent) => { event.preventDefault(); if (createCollection(name, icon)) { setName(""); setIcon(""); } };
 
   return <div className="modal-backdrop" onClick={onClose}>
-    <div className="modal collection-manager" role="dialog" aria-modal="true" aria-label="Manage collections" onClick={(event) => event.stopPropagation()}
+    <div className="modal collection-manager" role="dialog" aria-modal="true" aria-label={t("Manage collections")} onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => { if (event.key === "Escape" && !deleting) onClose(); }}>
-      <div className="modal-header"><div><p className="eyebrow">Library</p><h2>Collections</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button></div>
+      <div className="modal-header"><div><p className="eyebrow">{t("Library")}</p><h2>{t("Collections")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
       <form className="collection-create" onSubmit={submit}>
         <EmojiField value={icon} onChange={setIcon} label={t("New collection emoji")} />
         <input value={name} onChange={(event) => setName(event.target.value)} placeholder={t("New collection name")} aria-label={t("New collection name")} maxLength={40} autoFocus />
-        <button type="submit" className="play-button" disabled={!name.trim()}>Create</button>
+        <button type="submit" className="play-button" disabled={!name.trim()}>{t("Create")}</button>
       </form>
       <ul className="collection-list">
         {collections.map((collection, index) => <li key={collection.id} className="collection-row">
@@ -38,7 +38,7 @@ export function CollectionManager({ state, counts, onClose }: Props) {
           <button type="button" className="icon-button" aria-label={t("Move {name} down").replace("{name}", collection.name)} disabled={index === collections.length - 1} onClick={() => moveCollection(collection.id, 1)}><ArrowDown size={14} /></button>
           <button type="button" className="icon-button" aria-label={t("Delete {name}").replace("{name}", collection.name)} onClick={() => setDeleting(collection)}><Trash2 size={14} /></button>
         </li>)}
-        {!collections.length && <li className="metadata-note">No collections yet. Collections group games however you like, such as "Co-op" or "Finish this year".</li>}
+        {!collections.length && <li className="metadata-note">{t("No collections yet. Collections group games however you like, such as \"Co-op\" or \"Finish this year\".")}</li>}
       </ul>
     </div>
     {deleting && <ConfirmDialog title={t("Delete “{name}”?").replace("{name}", deleting.name)} message="Only the collection is removed. The games in it stay in your library." items={[deleting.name]} confirmLabel="Delete collection" danger
