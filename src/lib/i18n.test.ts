@@ -246,7 +246,7 @@ describe("shared UI translations", () => {
       for (const message of messages) {
         expect(hasTranslation(message, code), `${code}: ${message}`).toBe(true);
         expect(translate(message, code), `${code}: ${message}`).not.toBe(message);
-        for (const token of message.match(/\\{[^}]+\\}/g) ?? []) {
+        for (const token of message.match(/\{[^}]+\}/g) ?? []) {
           expect(translate(message, code), `${code}: ${message}`).toContain(token);
         }
       }
