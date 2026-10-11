@@ -39,7 +39,7 @@ export function TofuShareSection({ piko, tofu, onCreateTofu }: { piko: Piko; tof
     setBusy(kind);
     try {
       const { pack, omitted } = await build();
-      if (!pack.mods.length && !pack.unknown.length) { setStatus(""); notify("Nothing to share", "This Tofu has no mods yet."); return; }
+      if (!pack.mods.length && !pack.unknown.length) { setStatus(""); notify(t("Nothing to share"), t("This Tofu has no mods yet.")); return; }
       if (kind === "file") {
         const path = await savePackFile(serializeMochipack(pack), tofu.name);
         setStatus(path ? `Saved. ${describe(pack.mods.length, pack.unknown.length, omitted)}` : "");
