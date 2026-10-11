@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { keepIfEqual } from "../lib/equal";
 import { getDownloads, type DownloadEntry } from "../lib/modrinth";
 import { subscribeNative } from "../lib/nativeEvents";
+import { useTranslation } from "../lib/useTranslation";
 
 /** The native side owns download state; poll it while the Downloads page is open or anything is in flight. */
 export function useDownloads(active: boolean, notify: (title: string, message: string, opts?: { group?: string; item?: string }) => void) {
+  const t = useTranslation();
   const [downloads, setDownloads] = useState<DownloadEntry[]>([]);
   const statuses = useRef(new Map<string, string>());
   const notifyRef = useRef(notify);
@@ -22,8 +24,10 @@ export function useDownloads(active: boolean, notify: (title: string, message: s
         for (const download of next) {
           if (statuses.current.get(download.id) === "downloading" && download.status !== "downloading" && download.status !== "cancelled") {
             notifyRef.current(
-              download.status === "completed" ? "Download finished" : "Download failed",
-              download.status === "completed" ? `${download.itemName} was added to ${download.tofuName}.` : `${download.itemName}: ${download.error ?? "unknown error"}`,
+              download.status === "completed" ? t("Download finished") : t("Download failed"),
+              download.status === "completed"
+                ? t("{name} was added to {tofu}.").replace("{name}", download.itemName).replace("{tofu}", download.tofuName)
+                : `${download.itemName}: ${t("Failed")}. ${download.error ?? t("Unknown error")}`,
               download.status === "completed" ? { group: "downloads", item: download.itemName } : undefined);
           }
           statuses.current.set(download.id, download.status);
