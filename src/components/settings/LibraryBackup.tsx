@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "../../lib/useTranslation";
+import { getTranslationLocale } from "../../lib/translationLocale";
 import { getVersion } from "@tauri-apps/api/app";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Download, FolderOpen, Upload } from "lucide-react";
@@ -28,7 +29,7 @@ export function LibraryBackup() {
       const picked = await pickBackupFile();
       if (!picked) return;
       const { file, summary } = picked;
-      const made = summary.createdAt ? t(" made on {date}").replace("{date}", new Date(summary.createdAt).toLocaleDateString()) : "";
+      const made = summary.createdAt ? t(" made on {date}").replace("{date}", new Date(summary.createdAt).toLocaleDateString(getTranslationLocale())) : "";
       const ok = await confirmAction({ title: t("Restore this backup?"), message: `${t("The backup{made} has {games} games, {collections} collections, {wishlist} wishlist items and {savedFilters} saved filters.").replace("{made}", made).replace("{games}", String(summary.games)).replace("{collections}", String(summary.collections)).replace("{wishlist}", String(summary.wishlist)).replace("{savedFilters}", String(summary.savedFilters))} ${t("It replaces your current library, collections, wishlist and saved filters, and Mochi restarts its window.")} ${t("Playtime history and settings are not changed.")} ${t("Save a backup of the current library first if you may want it back.")}`, confirmLabel: t("Restore") });
       if (!ok) return;
       writeBackupData(file);
