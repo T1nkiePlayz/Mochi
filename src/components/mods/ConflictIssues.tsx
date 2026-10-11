@@ -59,7 +59,9 @@ export function ConflictIssues({ issues, tofu, onFixed }: { issues: Issue[]; tof
   };
   const run = async (issue: Issue, action: IssueAction) => {
     setBusy(`${issue.id}:${action.label}`);
-    setMessage(await applyIssueAction(action, tofu));
+    const result = await applyIssueAction(action, tofu);
+    const failedFiles = result.match(/^Could not change (\d+) files?\.$/);
+    setMessage(failedFiles ? t("{count} files could not be changed.").replace("{count}", failedFiles[1]) : t(result));
     setBusy("");
     if (action.kind !== "open-page") await onFixed();
   };
