@@ -28,6 +28,7 @@ const tabs = [["general", "General"], ["launch", "Launch"], ["artwork", "Artwork
 type TabId = (typeof tabs)[number][0];
 
 export function GameEditor({ game, capabilities, onSave, onClose }: Props) {
+  const t = useTranslation();
   const app = useApp();
   const [tab, setTab] = useState<TabId>("general");
   const [draft, setDraft] = useState<Piko>(game);
@@ -101,10 +102,10 @@ export function GameEditor({ game, capabilities, onSave, onClose }: Props) {
   return <div className="modal-backdrop" onClick={onClose}>
     <div className="modal game-editor" role="dialog" aria-modal="true" aria-label={`Edit ${game.name}`} onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => { if (event.key === "Escape" && !event.defaultPrevented) onClose(); }}>
-      <div className="modal-header"><div><p className="eyebrow">Library</p><h2>Edit game</h2></div><button type="button" className="icon-button" aria-label="Close" onClick={onClose}><X size={17} /></button></div>
+      <div className="modal-header"><div><p className="eyebrow">{t("Library")}</p><h2>Edit game</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
       <div className="editor-tabs" role="tablist" aria-label="Game settings">
         {tabs.map(([id, label], index) => <button type="button" key={id} role="tab" id={`editor-tab-${id}`} aria-selected={tab === id} aria-controls={`editor-panel-${id}`} tabIndex={tab === id ? 0 : -1}
-          ref={(node) => { tabRefs.current[index] = node; }} className={tab === id ? "active" : ""} onClick={() => setTab(id)} onKeyDown={(event) => onTabKey(event, index)}>{label}</button>)}
+          ref={(node) => { tabRefs.current[index] = node; }} className={tab === id ? "active" : ""} onClick={() => setTab(id)} onKeyDown={(event) => onTabKey(event, index)}>{label === "General" ? t("General") : label === "Notes" ? t("Notes") : label}</button>)}
       </div>
       <div className="editor-panel" role="tabpanel" id={`editor-panel-${tab}`} aria-labelledby={`editor-tab-${tab}`}>
         {tab === "general" && <GeneralTab ctx={ctx} />}

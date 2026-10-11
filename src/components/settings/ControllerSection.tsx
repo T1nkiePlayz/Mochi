@@ -30,7 +30,7 @@ export function ControllerSection() {
   // A live readout makes dead-zone and layout choices easy to check.
   useEffect(() => subscribeActions((event) => { if (event.source === "controller" && !event.repeat) setLast(event.action); return false; }, 1000), []);
   const enabled = settings.enabled === true;
-  return <SettingsGroup title="Controller" subtitle="Xbox, PlayStation, Switch Pro, Steam Deck and Steam Controller" id="settings-controller">
+  return <SettingsGroup title={t("Controller")} subtitle={t("Xbox, PlayStation, Switch Pro, Steam Deck and Steam Controller")} id="settings-controller">
     <ToggleRow title="Controller navigation" description="Move around Mochi with a controller. Turns on automatically the first time you use one." checked={enabled} onChange={(value) => update({ enabled: value })} />
     <ToggleRow title="Swap confirm and back" description="Use the other face button to confirm. Nintendo layouts are detected automatically." checked={settings.swapConfirmBack} onChange={(swapConfirmBack) => update({ swapConfirmBack })} />
     <label className="setting-row">
@@ -39,7 +39,7 @@ export function ControllerSection() {
     </label>
     <div className="setting-row"><span><strong>Repeat speed</strong><small>How quickly movement repeats while you hold a direction.</small></span>
       <Select<RepeatSpeed> label="Repeat speed" value={settings.repeatSpeed} options={SPEEDS.map((option) => ({ ...option, label: t(option.label) }))} onChange={(repeatSpeed) => update({ repeatSpeed })} align="end" /></div>
-    <div className="setting-row"><span><strong>Button prompts</strong><small>Which button icons Mochi shows.</small></span>
+    <div className="setting-row"><span><strong>{t("Button prompts")}</strong><small>Which button icons Mochi shows.</small></span>
       <Select<PromptStyle> label="Button prompts" value={settings.promptStyle} options={PROMPT_STYLES.map((option) => ({ ...option, label: t(option.label), description: option.description ? t(option.description) : undefined }))} onChange={(promptStyle) => update({ promptStyle })} align="end" /></div>
     <ToggleRow title={t("On-screen keyboard")} description={t("Open a built-in keyboard when you confirm a text field with a controller.")} checked={settings.onScreenKeyboard} onChange={(onScreenKeyboard) => update({ onScreenKeyboard })} />
     <div className="setting-row controller-list-row"><span><strong>Connected controllers</strong>

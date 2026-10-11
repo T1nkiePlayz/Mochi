@@ -51,7 +51,7 @@ export function SteamAchievements({ appid, gameName }: { appid: number; gameName
     <section className="game-details-section steam-ach" aria-labelledby={headingId} aria-busy={loading}>
       <div className="discover-section-heading">
         <div><h3 id={headingId}>{t("Steam achievements")}</h3><p>{data ? `${data.unlocked} ${t("of")} ${data.total} ${t("unlocked")}` : "Your progress in this game, read from your Steam profile."}</p></div>
-        <button type="button" className="text-button" onClick={() => void refresh()} disabled={loading || !online} aria-label={`${t("Refresh achievements")}: ${gameName}`}><RefreshCw size={13} className={loading ? "spin" : undefined} /> {loading ? "Loading…" : "Refresh"}</button>
+        <button type="button" className="text-button" onClick={() => void refresh()} disabled={loading || !online} aria-label={`${t("Refresh achievements")}: ${gameName}`}><RefreshCw size={13} className={loading ? "spin" : undefined} /> {loading ? t("Loading…") : t("Refresh")}</button>
       </div>
       {data && (
         <div className="steam-ach-summary">

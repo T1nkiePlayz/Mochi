@@ -40,7 +40,7 @@ function CurseforgeCard({ enabled }: { enabled: boolean }) {
   }, [enabled]);
   return <div className="provider-credential-card">
     <div className="provider-credential-heading"><div><strong>CurseForge</strong><small>No key or account needed. Mochi provides access to CurseForge for you, so mods for most games work out of the box.</small></div>
-      <span className={enabled && state === "reachable" ? "credential-status saved" : "credential-status"} role="status">{enabled ? cfStateText[state] : "Turned off"}</span></div>
+      <span className={enabled && state === "reachable" ? "credential-status saved" : "credential-status"} role="status">{enabled ? t(cfStateText[state]) : "Turned off"}</span></div>
     <small className="metadata-note">Powered by CurseForge. Some authors disable downloads outside CurseForge; Mochi then opens the mod's CurseForge page instead. You can turn CurseForge off under Mod sources.</small>
     <button type="button" className="secondary-button" onClick={() => void openExternalUrl(CF_SITE).catch(() => undefined)}>Open curseforge.com</button>
   </div>;
@@ -73,7 +73,7 @@ export function ProvidersSection() {
   const removeButton = (provider: "igdb" | "nexus" | "steamgriddb", saved: boolean) => saved && <button className="secondary-button danger-outline" onClick={() => void c.remove(provider)} disabled={c.busy !== null}>Remove</button>;
   return <SettingsGroup title={t("Mod & metadata providers")} subtitle={t("Credentials are encrypted with Supabase Vault")} id="settings-providers">
     <div className="setting-row">
-      <span><strong>Metadata source</strong><small>Choose where Mochi gets descriptions and artwork. Automatic combines every provider you have set up.</small></span>
+      <span><strong>{t("Metadata source")}</strong><small>Choose where Mochi gets descriptions and artwork. Automatic combines every provider you have set up.</small></span>
       <Select label="Metadata source" value={behavior.metadataProvider} options={sourceOptions} onChange={(metadataProvider) => setBehavior((current) => ({ ...current, metadataProvider }))} />
     </div>
     <small className="metadata-note settings-note" role="status">

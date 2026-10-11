@@ -90,14 +90,14 @@ function PaletteDialog({ getApp, platform, onClose }: { getApp: ReturnType<typeo
   };
 
   return <div className="modal-backdrop palette-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <div className="modal palette-modal" role="dialog" aria-modal="true" aria-label="Command palette" onKeyDown={onKeyDown}>
+    <div className="modal palette-modal" role="dialog" aria-modal="true" aria-label={t("Command palette")} onKeyDown={onKeyDown}>
       <div className="palette-search">
         <Search size={16} aria-hidden="true" />
-        <input ref={input} data-autofocus value={raw} onChange={(event) => setRaw(event.target.value)} placeholder={mode === "actions" ? t("Run an action…") : t("Search games and actions, or type > for actions")} aria-label="Search games and actions" role="combobox" aria-expanded="true" aria-controls="palette-list" autoComplete="off" spellCheck={false} />
+        <input ref={input} data-autofocus value={raw} onChange={(event) => setRaw(event.target.value)} placeholder={mode === "actions" ? t("Run an action…") : t("Search games and actions, or type > for actions")} aria-label={t("Search games and actions")} role="combobox" aria-expanded="true" aria-controls="palette-list" autoComplete="off" spellCheck={false} />
         <kbd>{paletteShortcutLabel(platform)}</kbd>
-        <button type="button" className="icon-button" aria-label="Close command palette" onClick={onClose}><X size={15} aria-hidden="true" /></button>
+        <button type="button" className="icon-button" aria-label={t("Close command palette")} onClick={onClose}><X size={15} aria-hidden="true" /></button>
       </div>
-      <div className="palette-list" id="palette-list" role="listbox" aria-label="Results" ref={list}>
+      <div className="palette-list" id="palette-list" role="listbox" aria-label={t("Results")} ref={list}>
         {items.map((item) => <button type="button" role="option" aria-selected="false" className="palette-item" data-kind={item.kind} key={item.key} onClick={() => run(item)}><span className="palette-title">{item.kind === "command" ? translateCommandTitle(item.title, t) : item.title}</span><small>{item.kind === "command" ? t(item.subtitle) : item.subtitle}</small></button>)}
         {!items.length && <div className="palette-empty" role="status">{raw.trim() ? t("Nothing matches. Try a different word.") : t("No actions available.")}</div>}
       </div>

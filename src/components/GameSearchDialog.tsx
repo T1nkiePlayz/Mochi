@@ -99,7 +99,7 @@ function Details({ game, onSearch }: { game: GameDetails; onSearch: (name: strin
     <Gallery title="Covers" urls={game.art.covers.map((a) => ({ thumb: a.thumb, url: a.url }))} />
     <Gallery title="Heroes" urls={game.art.heroes.map((a) => ({ thumb: a.thumb, url: a.url }))} wide />
     <Gallery title="Logos" urls={game.art.logos.map((a) => ({ thumb: a.thumb, url: a.url }))} />
-    {game.similar.length > 0 && <section aria-label="Similar games"><h4>Similar games</h4><div className="game-search-similar">
+    {game.similar.length > 0 && <section aria-label={t("Similar games")}><h4>{t("Similar games")}</h4><div className="game-search-similar">
       {game.similar.map((item) => <button key={item.name} type="button" className="secondary-button" onClick={() => onSearch(item.name)}>{item.name}</button>)}
     </div></section>}
     {game.links.length > 0 && <section aria-label="Links"><h4>Links</h4><p className="game-search-links">{game.links.map((link) => <Link key={link.url} href={link.url}>{link.label}</Link>)}</p></section>}
@@ -148,11 +148,11 @@ export function GameSearchDialog({ onClose }: { onClose: () => void }) {
 
   return <div className="modal-backdrop" onClick={onClose}>
     <div className="modal game-search-dialog" role="dialog" aria-modal="true" aria-labelledby="game-search-title" onClick={(event) => event.stopPropagation()}>
-      <div className="modal-header"><div><p className="eyebrow">Experimental</p><h2 id="game-search-title">Search all games</h2></div><button type="button" className="icon-button" aria-label="Close game search" onClick={onClose}><X size={16} aria-hidden="true" /></button></div>
+      <div className="modal-header"><div><p className="eyebrow">Experimental</p><h2 id="game-search-title">{t("Search all games")}</h2></div><button type="button" className="icon-button" aria-label={t("Close game search")} onClick={onClose}><X size={16} aria-hidden="true" /></button></div>
       <div className="game-search-body">
         <div className="game-search-side">
           <label className="search-box game-search-input"><Search size={15} aria-hidden="true" /><input ref={input} value={query} onChange={(event) => type(event.target.value)} placeholder="Search any game" aria-label="Search any game" autoComplete="off" spellCheck={false} /></label>
-          <div className="game-search-status" role="status" aria-live="polite">{status === "searching" ? "Searching…" : status === "done" && !hits.length ? "No games found." : message}</div>
+          <div className="game-search-status" role="status" aria-live="polite">{status === "searching" ? t("Searching…") : status === "done" && !hits.length ? t("No games found.") : message}</div>
           <ul className="game-search-hits" aria-label="Search results">
             {hits.map((hit) => <li key={hit.key}><button type="button" className={`game-search-hit${game?.key === hit.key ? " active" : ""}`} onClick={() => pick(hit)} aria-current={game?.key === hit.key ? "true" : undefined}>
               {hit.coverUrl ? <RemoteImage src={hit.coverUrl} alt="" referrerPolicy="no-referrer" fallback={<span className="game-search-nocover" />} /> : <span className="game-search-nocover" />}
