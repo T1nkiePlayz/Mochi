@@ -6,7 +6,7 @@ import { defaultLaunchConfig } from "../lib/launch";
 import type { RuntimeInfo } from "../lib/platform";
 import { copyInstanceRecords } from "../lib/mods/instances";
 import { checkTofuMods } from "../lib/mods/conflictService";
-import { summarizeIssues, type Issue } from "../lib/mods/conflicts";
+import type { Issue } from "../lib/mods/conflicts";
 import { ConflictIssues } from "./mods/ConflictIssues";
 import type { Piko, Tofu } from "../models";
 import { Select } from "./ui/Select";
