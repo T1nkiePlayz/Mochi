@@ -245,7 +245,7 @@ export function LibraryView() {
         <span className="library-view-announce" role="status" aria-live="polite">{`${t(viewModeLabel(view))} view`}</span>
         <button type="button" className="secondary-button" onClick={() => setShowPicker(true)}><Dices size={14} /> {t("What should I play?")}</button>
         <button type="button" className={`secondary-button ${selecting ? "active" : ""}`} aria-pressed={selecting} onClick={() => (selecting ? endSelecting() : setSelecting(true))}><CheckSquare size={14} /> {selecting ? t("Done selecting") : t("Select")}</button>
-        <div className="library-sort"><span>{t("Sort by")}</span><Select<LibrarySort> label={t("Sort by")} value={lib.librarySort} onChange={lib.setLibrarySort} align="end" options={[{ value: "category", label: "Category" }, { value: "name", label: "Name" }, { value: "recent", label: "Recently played" }, { value: "playtime", label: "Most played" }]} /></div>
+        <div className="library-sort"><span>{t("Sort by")}</span><Select<LibrarySort> label={t("Sort by")} value={lib.librarySort} onChange={lib.setLibrarySort} align="end" options={[{ value: "category", label: "Category" }, { value: "name", label: t("Name") }, { value: "recent", label: t("Recently played") }, { value: "playtime", label: t("Most played") }]} /></div>
       </div>
     </section>
     {selecting && <BulkActionBar games={checkedGames} collections={collections.collections}

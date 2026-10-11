@@ -37,7 +37,7 @@ export function PlayLimitsSection() {
         <input type="time" aria-label="Bedtime ends" value={formatClock(limits.bedtimeEnd)} disabled={off} onChange={(event) => { const next = parseClock(event.target.value); if (next !== null) set({ bedtimeEnd: next }); }} />
       </span></div>}
     <div className="setting-row"><span><strong>When a limit is reached</strong><small>"Only remind me" shows a notice. "Ask before launching" also asks for confirmation when you start a game over a limit; you can always continue.</small></span>
-      <Select value={limits.enforce} disabled={off} label="When a limit is reached" onChange={(enforce) => set({ enforce })} options={[{ value: "remind", label: "Only remind me" }, { value: "confirm", label: "Ask before launching" }]} /></div>
+      <Select value={limits.enforce} disabled={off} label="When a limit is reached" onChange={(enforce) => set({ enforce })} options={[{ value: "remind", label: t("Only remind me") }, { value: "confirm", label: t("Ask before launching") }]} /></div>
     <div className="setting-row"><span><strong>Limit for one game</strong><small>A daily limit for a single game, on top of the overall one.</small></span>
       <span className="settings-number-wrap"><Select value={gameId} disabled={off} searchable placeholder="Choose a game" label="Game" onChange={setGameId} options={games} />
         <input className="settings-number" type="number" min={5} max={1440} value={minutes} disabled={off} aria-label="Minutes per day for this game" onChange={(event) => { const next = Number(event.target.value); if (Number.isFinite(next)) setMinutes(Math.min(1440, Math.max(5, Math.round(next)))); }} /> min
