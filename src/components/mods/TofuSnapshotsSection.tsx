@@ -59,7 +59,7 @@ export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
     {error && <p className="metadata-note" role="alert">{error}</p>}
     {snapshots === null ? <p className="muted" role="status">{t("Loading snapshots…")}</p>
       : !snapshots.length ? <p className="muted">{t("No snapshots yet. One is saved automatically before mods are updated.")}</p>
-      : <ul className="tofu-snapshot-list" aria-label="Snapshots">{snapshots.map((snapshot) => <li key={snapshot.id} className="tofu-snapshot">
+      : <ul className="tofu-snapshot-list" aria-label={t("Snapshots")}>{snapshots.map((snapshot) => <li key={snapshot.id} className="tofu-snapshot">
         <div className="tofu-snapshot-text"><strong>{snapshot.reason || t("Snapshot")}</strong><small>{when(snapshot.createdAt)} · {snapshot.files} mod{snapshot.files === 1 ? "" : "s"} · {formatBytes(snapshot.size)}{snapshot.isRestore ? " · safety copy" : ""}</small></div>
         <div className="tofu-snapshot-buttons">
           <button type="button" className="secondary-button" disabled={busy} aria-label={`Restore the snapshot from ${when(snapshot.createdAt)}`} onClick={() => void restore(snapshot)}><RotateCcw size={14}/> Restore</button>
