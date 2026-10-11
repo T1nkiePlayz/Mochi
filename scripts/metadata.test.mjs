@@ -13,8 +13,8 @@ test("steamAppIdOf reads imported Steam ids and rungameid targets", () => {
   assert.equal(steamAppIdOf({ id: "steam:abc", sourceId: "steam" }), null);
 });
 
-test("auto plan prefers SteamGridDB art, then IGDB, then Steam", () => {
-  assert.deepEqual(planProviders("auto", ready, 220), { text: ["igdb", "steam"], art: ["steamgriddb", "igdb", "steam"] });
+test("auto plan prefers Steam art, then SteamGridDB, then IGDB", () => {
+  assert.deepEqual(planProviders("auto", ready, 220), { text: ["igdb", "steam"], art: ["steam", "steamgriddb", "igdb"] });
   assert.deepEqual(planProviders("auto", { igdb: false, steamgriddb: false }, 220), { text: ["steam"], art: ["steam"] });
   assert.deepEqual(planProviders("auto", { igdb: false, steamgriddb: false }, null), { text: [], art: [] });
 });
