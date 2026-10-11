@@ -7,7 +7,7 @@ import { useApp } from "../../state/AppContext";
 import { confirmAction } from "../../lib/confirm";
 import { formatBytes } from "../../lib/format";
 import { useStorageScan } from "../../lib/useStorageScan";
-import { ageLabel, ageOptions, buildRows, categoryLabels, clearActions, clearAllUnused, clearStorageLocation, formatShare, openFolder, sortRows, summarise, visibleRows, type SortKey, type SortState, type StorageRow } from "../../lib/diskUsage";
+import { ageOptions, buildRows, categoryLabels, clearActions, clearAllUnused, clearStorageLocation, formatShare, openFolder, sortRows, summarise, visibleRows, type SortKey, type SortState, type StorageRow } from "../../lib/diskUsage";
 import { SettingsGroup } from "./Section";
 
 const PAGE = 200;
@@ -39,33 +39,34 @@ export function StorageSection() {
   const sorted = useMemo(() => sortRows(rows, sort), [rows, sort]);
   const { shown, hidden } = visibleRows(sorted, limit);
   const max = useMemo(() => rows.reduce((best, row) => (row.measurement && !row.measurement.error ? Math.max(best, row.measurement.bytes) : best), 0), [rows]);
-  const ageOption = useMemo<Array<SelectOption<string>>>(() => ageOptions.map((days) => ({ value: String(days), label: `Older than ${ageLabel(days)}` })), []);
+  const localizedAge = (days: number) => days === 365 ? t("1 year") : t("{count} days").replace("{count}", String(days));
+  const ageOption = useMemo<Array<SelectOption<string>>>(() => ageOptions.map((days) => ({ value: String(days), label: t("Older than {age}").replace("{age}", localizedAge(days)) })), [t]);
   const sortBy = (key: SortKey) => setSort((current) => (current.key === key ? { key, dir: current.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "bytes" ? "desc" : "asc" }));
   const sizeOf = (category: string) => totals.categories.find((item) => item.category === category)?.bytes ?? 0;
 
   const clear = async (action: (typeof clearActions)[number]) => {
     const present = formatBytes(sizeOf(action.category));
-    const scope = action.needsAge ? ` older than ${ageLabel(age)}` : "";
+    const scope = action.needsAge ? ` ${t("older than")} ${localizedAge(age)}` : "";
     const ok = await confirmAction({ title: t("{label}?").replace("{label}", t(action.label)), danger: action.danger, confirmLabel: t("Remove"), message: t("{detail} This cannot be undone. Game installs and your own mod folders are never touched here.").replace("{detail}", t(action.detail)),
       items: [`${categoryLabels[action.category]}${scope}${started && totals.measured ? ` (up to ${present} now)` : ""}`] });
     if (!ok) return;
     setBusy(action.kind); setNote("");
     try {
       const result = await clearStorageLocation(action.kind, action.needsAge ? age : undefined);
-      setNote(result.files ? `Removed ${result.files.toLocaleString(getTranslationLocale())} file${result.files === 1 ? "" : "s"} and freed ${formatBytes(result.bytes)}.` : "There was nothing to remove.");
+      setNote(result.files ? t("Removed {count} files and freed {size}.").replace("{count}", result.files.toLocaleString(getTranslationLocale())).replace("{size}", formatBytes(result.bytes)) : t("There was nothing to remove."));
       void scan();
     } catch (cause) { setNote(errorText(cause)); }
     finally { setBusy(null); }
   };
   const clearAll = async () => {
-    const ok = await confirmAction({ title: t("Clear all unused data?"), danger: true, confirmLabel: t("Clear everything"), message: `Removes every cache and leftover Mochi keeps: artwork cache, unfinished downloads, game logs, and rollback copies and snapshots older than ${ageLabel(age)}. This cannot be undone. Game installs, your own mod folders, covers you picked yourself and anything in use are never touched.`,
-      items: clearActions.map((action) => action.needsAge ? `${action.label} (older than ${ageLabel(age)})` : action.label) });
+    const ok = await confirmAction({ title: t("Clear all unused data?"), danger: true, confirmLabel: t("Clear everything"), message: t("Removes every cache and leftover Mochi keeps: artwork cache, unfinished downloads, game logs, and rollback copies and snapshots older than {age}. This cannot be undone. Game installs, your own mod folders, covers you picked yourself and anything in use are never touched.").replace("{age}", localizedAge(age)),
+      items: clearActions.map((action) => action.needsAge ? `${t(action.label)} (${t("older than")} ${localizedAge(age)})` : t(action.label)) });
     if (!ok) return;
     setBusy("all"); setNote("");
     try {
       const result = await clearAllUnused(age);
-      const done = result.files ? `Removed ${result.files.toLocaleString()} file${result.files === 1 ? "" : "s"} and freed ${formatBytes(result.bytes)}.` : "There was nothing to remove.";
-      setNote(result.failed.length ? `${done} Could not clear: ${result.failed.join(", ")}.` : done);
+      const done = result.files ? t("Removed {count} files and freed {size}.").replace("{count}", result.files.toLocaleString(getTranslationLocale())).replace("{size}", formatBytes(result.bytes)) : t("There was nothing to remove.");
+      setNote(result.failed.length ? t("{done} Could not clear: {items}.").replace("{done}", done).replace("{items}", result.failed.join(", ")) : done);
       void scan();
     } finally { setBusy(null); }
   };
@@ -74,8 +75,8 @@ export function StorageSection() {
   return <SettingsGroup title={t("Storage")} subtitle={t("Where disk space goes")} id="settings-storage" className="storage-group">
     <div className="storage-summary">
       <span>
-        <strong className="storage-total">{started ? formatBytes(totals.total) : "Not measured yet"}</strong>
-        <small role="status">{!started ? "Measuring reads folder sizes only and can take a while for big libraries, so it runs when you ask." : scanning ? `Measuring… ${(totals.measured + totals.failed).toLocaleString(getTranslationLocale())} of ${locations.length || "?"} locations done.` : `${totals.measured.toLocaleString(getTranslationLocale())} location${totals.measured === 1 ? "" : "s"} measured${totals.failed ? `, ${totals.failed.toLocaleString(getTranslationLocale())} unavailable` : ""}.`}</small>
+        <strong className="storage-total">{started ? formatBytes(totals.total) : t("Not measured yet")}</strong>
+        <small role="status">{!started ? t("Measuring reads folder sizes only and can take a while for big libraries, so it runs when you ask.") : scanning ? t("Measuring… {done} of {total} locations done.").replace("{done}", (totals.measured + totals.failed).toLocaleString(getTranslationLocale())).replace("{total}", String(locations.length || "?")) : t("{count} locations measured{failed}.").replace("{count}", totals.measured.toLocaleString(getTranslationLocale())).replace("{failed}", totals.failed ? `, ${totals.failed.toLocaleString(getTranslationLocale())} ${t("unavailable")}` : "")}</small>
       </span>
       <span className="storage-summary-actions">
         {scanning && <button type="button" className="secondary-button" onClick={cancel}>{t("Stop")}</button>}
@@ -85,10 +86,10 @@ export function StorageSection() {
     {error && <p className="metadata-note settings-note" role="alert">{error}</p>}
     {started && <>
       <div className="storage-bar" role="img" aria-label={t("Storage by kind: {items}").replace("{items}", totals.categories.map((item) => `${t(categoryLabels[item.category])} ${formatBytes(item.bytes)}`).join(", ") || t("nothing measured yet"))}>
-        {totals.categories.map((item) => <span key={item.category} className={`storage-segment storage-cat-${item.category}`} style={{ flexGrow: item.bytes }} title={`${categoryLabels[item.category]}: ${formatBytes(item.bytes)}`} />)}
+        {totals.categories.map((item) => <span key={item.category} className={`storage-segment storage-cat-${item.category}`} style={{ flexGrow: item.bytes }} title={`${t(categoryLabels[item.category])}: ${formatBytes(item.bytes)}`} />)}
       </div>
       <ul className="storage-legend" aria-label={t("Kinds")}>
-        {totals.categories.map((item) => <li key={item.category}><span className={`storage-dot storage-cat-${item.category}`} aria-hidden="true" />{categoryLabels[item.category]}<small>{formatBytes(item.bytes)}</small></li>)}
+        {totals.categories.map((item) => <li key={item.category}><span className={`storage-dot storage-cat-${item.category}`} aria-hidden="true" />{t(categoryLabels[item.category])}<small>{formatBytes(item.bytes)}</small></li>)}
       </ul>
       <div className="storage-table-wrap">
         <table className="storage-table">
@@ -103,7 +104,7 @@ export function StorageSection() {
             {locations.length === 0 && [0, 1, 2, 3].map((index) => <tr key={index}><td colSpan={5}><span className="storage-skeleton storage-skeleton-row" /></td></tr>)}
             {shown.map((row) => <tr key={row.key}>
               <td className="storage-name"><strong>{row.name}</strong>{row.inside && <small>{t("Included in {category}").replace("{category}", t(categoryLabels[row.inside]))}</small>}</td>
-              <td>{categoryLabels[row.category]}</td>
+              <td>{t(categoryLabels[row.category])}</td>
               <td><SizeCell row={row} max={max} t={t} /></td>
               <td className="storage-share-col">{row.inside ? "" : formatShare(row.measurement && !row.measurement.error ? row.measurement.bytes : null, totals.total)}</td>
               <td className="storage-row-actions">{row.path && <button type="button" className="secondary-button storage-open" onClick={() => open(row.path!)} aria-label={t("Open folder of {name}").replace("{name}", row.name)}><FolderOpen size={14} aria-hidden="true" />{t("Open")}</button>}</td>
@@ -118,7 +119,7 @@ export function StorageSection() {
     <div className="setting-row"><span><strong>{t("Clear all unused data")}</strong><small>{t("Runs every action below at once, using the age chosen above.")}</small></span>
       <button type="button" className="secondary-button danger-outline" disabled={busy !== null || scanning} onClick={() => void clearAll()}>{busy === "all" ? t("Clearing…") : t("Clear all")}</button></div>
     {clearActions.map((action) => <div className="setting-row" key={action.kind}>
-      <span><strong>{t(action.label)}{action.needsAge ? ` (${t("older than")} ${ageLabel(age)})` : ""}</strong><small>{t(action.detail)}</small></span>
+      <span><strong>{t(action.label)}{action.needsAge ? ` (${t("older than")} ${localizedAge(age)})` : ""}</strong><small>{t(action.detail)}</small></span>
       <button type="button" className="secondary-button danger-outline" disabled={busy !== null || scanning} onClick={() => void clear(action)}>{busy === action.kind ? t("Removing…") : t("Remove")}</button>
     </div>)}
     {note && <p className="metadata-note settings-note" role="status">{note}</p>}

@@ -78,11 +78,18 @@ export type DealAlert = { key: string; title: string; message: string; item: str
 
 const money = (value: number) => `$${value.toFixed(2)}`;
 
-/** Alerts not announced before: free Epic games right now, and deep sales. Marks them seen in `seen` (a copy is returned). */
+/** Alerts not announced before: free Epic games right now, and deep sales.
+ * Only alerts returned to the caller are marked seen, so the per-check cap cannot discard notifications.
+ */
 export function newAlerts(input: { epic: EpicFreeGame[]; deals: Deal[]; stores: StoreId[]; seen: Record<string, number>; now: number }): { alerts: DealAlert[]; seen: Record<string, number> } {
   const seen = { ...input.seen };
-  const alerts: DealAlert[] = [];
-  const add = (alert: DealAlert) => { if (alert.key in seen) return; seen[alert.key] = input.now; alerts.push(alert); };
+  const candidates: DealAlert[] = [];
+  const pendingKeys = new Set<string>();
+  const add = (alert: DealAlert) => {
+    if (alert.key in seen || pendingKeys.has(alert.key)) return;
+    pendingKeys.add(alert.key);
+    candidates.push(alert);
+  };
   if (input.stores.includes("epic")) {
     for (const game of input.epic) if (game.state === "free-now") add({ key: epicAlertKey(game), title: "Free on Epic", message: `${game.title} is free to keep on the Epic Games Store${game.end ? ` until ${new Date(game.end).toLocaleDateString()}` : ""}.`, item: game.title });
   }
@@ -90,7 +97,9 @@ export function newAlerts(input: { epic: EpicFreeGame[]; deals: Deal[]; stores: 
     if (deal.savings < ALERT_MIN_SAVINGS) continue;
     add({ key: dealAlertKey(deal), title: "Game on sale", message: `${deal.title} is ${Math.round(deal.savings)}% off on ${storeLabel(deal.storeId)}: ${money(deal.salePrice)} (was ${money(deal.normalPrice)}).`, item: deal.title });
   }
-  return { alerts: alerts.slice(0, MAX_ALERTS_PER_CHECK), seen };
+  const alerts = candidates.slice(0, MAX_ALERTS_PER_CHECK);
+  for (const alert of alerts) seen[alert.key] = input.now;
+  return { alerts, seen };
 }
 
 /** Whether a watched game's current price should notify: at or under the target, and not already announced at this price or lower. */
@@ -110,7 +119,19 @@ export function applyPrice(watch: NonNullable<WishlistItem["priceWatch"]>, price
 const call = async <T>(command: string, args?: Record<string, unknown>): Promise<DealsResult<T>> => {
   try { return await invoke<DealsResult<T>>(command, args); } catch (error) { return { status: "error", data: null, message: error instanceof Error ? error.message : String(error) }; }
 };
-export const fetchEpicFreeGames = () => call<EpicFreeGame[]>("get_epic_free_games");
+/** Derive Epic's region from the system locale, without confusing launcher display language with store region. */
+export function epicRequestRegion(systemLocale: string): { locale: string; country: string } {
+  const parts = systemLocale.replace(/_/g, "-").split("-");
+  const language = /^[a-z]{2,3}$/i.test(parts[0] ?? "") ? parts[0].toLowerCase() : "en";
+  const country = parts.slice(1).find((part) => /^[a-z]{2}$/i.test(part))?.toUpperCase() ?? "US";
+  return { locale: `${language}-${country}`, country };
+}
+
+export const fetchEpicFreeGames = () => {
+  const systemLocale = typeof navigator === "undefined" ? "en-US" : navigator.language;
+  const { locale, country } = epicRequestRegion(systemLocale);
+  return call<EpicFreeGame[]>("get_epic_free_games", { locale, country });
+};
 export const fetchDeals = (stores: StoreId[]) => call<Deal[]>("get_cheapshark_deals", { storeIds: sharkIds(stores) });
 
 /** Current and cheapest-ever prices of a game (CheapShark; in USD). Cached natively for an hour. */

@@ -24,10 +24,10 @@ export function DataSection() {
   const saved = { igdb: credentials.status.igdb, steamgriddb: credentials.status.steamgriddb };
   // Each source says precisely what it needs, so a disabled button is never a mystery.
   const needs = (id: ProviderId): { ready: boolean; text: string } => {
-    if (id === "steam") return { ready: true, text: "Works without an account or a key, for games that launch through Steam." };
+    if (id === "steam") return { ready: true, text: t("Works without an account or a key, for games that launch through Steam.") };
     if (!user) return { ready: false, text: `${providerLabels[id]} needs a free key that is saved on your Mochi account, so sign in first. Other sources keep working without it.` };
-    if (!saved[id]) return { ready: false, text: `Save your ${providerLabels[id]} key under Mod & metadata providers to use it. Other sources keep working without it.` };
-    return { ready: true, text: "Ready." };
+    if (!saved[id]) return { ready: false, text: t("Save your {provider} key under Mod & metadata providers to use it. Other sources keep working without it.").replace("{provider}", providerLabels[id]) };
+    return { ready: true, text: t("Ready.") };
   };
   const copyDiagnostics = async () => {
     try {
@@ -36,31 +36,31 @@ export function DataSection() {
       for (const piko of lib.library) { const kind = piko.kind ?? "game"; bySource[kind] = (bySource[kind] ?? 0) + 1; }
       const report = buildDiagnostics({ version: await getVersion().catch(() => "unknown"), platform: caps, userAgent: navigator.userAgent, online: navigator.onLine, gameCount: lib.library.length, gamesBySource: bySource, experimental: behavior.experimental, signedIn: Boolean(user) });
       await navigator.clipboard.writeText(report);
-      setNote("Debug info copied. It contains no passwords, keys or email addresses, and your home folder name is hidden.");
-    } catch { setNote("Could not copy debug info."); }
+      setNote(t("Debug info copied. It contains no passwords, keys or email addresses, and your home folder name is hidden."));
+    } catch { setNote(t("Could not copy debug info.")); }
   };
   const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
   // Names exactly what goes: the source's saved lookups plus how many covers on this device came from it.
   const ask = (id: DataSourceId | "all") => {
     if (id === "all") {
       const covers = dataSources.filter((source) => source.id !== "custom-artwork").reduce((sum, source) => sum + gamesWithArtworkFrom(lib.library, source.id).length, 0);
-      return confirmAction({ title: "Clear all cached data?", danger: true, confirmLabel: "Clear all",
-        message: "Games stay in your library and show generated covers until you refresh. Artwork you chose yourself is kept.",
-        items: [...dataSources.filter((source) => source.id !== "custom-artwork").map((source) => `Saved ${source.label} data`), plural(covers, "downloaded cover")] });
+      return confirmAction({ title: t("Clear all cached data?"), danger: true, confirmLabel: t("Clear all"),
+        message: t("Games stay in your library and show generated covers until you refresh. Artwork you chose yourself is kept."),
+        items: [...dataSources.filter((source) => source.id !== "custom-artwork").map((source) => t("Saved {source} data").replace("{source}", t(source.label))), plural(covers, "downloaded cover")] });
     }
     const source = dataSources.find((item) => item.id === id)!;
     const covers = gamesWithArtworkFrom(lib.library, id).length;
-    if (id === "custom-artwork") return confirmAction({ title: "Delete your own artwork?", danger: true, confirmLabel: "Delete artwork", message: "Every cover you picked yourself is deleted from this device. This cannot be undone and they are not fetched again.", items: [plural(covers, "custom cover")] });
-    return confirmAction({ title: `Clear ${source.label} data?`, danger: true, confirmLabel: "Clear", message: `${source.detail} Games stay in your library; refresh to fetch it again.`,
-      items: [`Saved ${source.label} data on this device`, ...(covers ? [plural(covers, `cover from ${source.label}`)] : [])] });
+    if (id === "custom-artwork") return confirmAction({ title: t("Delete your own artwork?"), danger: true, confirmLabel: t("Delete artwork"), message: t("Every cover you picked yourself is deleted from this device. This cannot be undone and they are not fetched again."), items: [plural(covers, "custom cover")] });
+    return confirmAction({ title: t("Clear {source} data?").replace("{source}", t(source.label)), danger: true, confirmLabel: t("Clear"), message: t("{detail} Games stay in your library; refresh to fetch it again.").replace("{detail}", t(source.detail)),
+      items: [t("Saved {source} data on this device").replace("{source}", t(source.label)), ...(covers ? [plural(covers, `cover from ${source.label}`)] : [])] });
   };
   const run = async (id: DataSourceId | "all") => {
     if (!await ask(id)) return;
     setBusy(id); setNote("");
     try {
       const removed = id === "all" ? await clearAllDataSources(lib.library, lib.setLibrary, user?.id) : await clearDataSource(id, lib.library, lib.setLibrary, user?.id);
-      setNote(id === "all" ? "Cleared saved data for every source. Your own artwork was kept." : `Cleared ${dataSources.find((source) => source.id === id)?.label} data${removed ? ` and ${removed} cover${removed === 1 ? "" : "s"}` : ""}.`);
-    } catch (error) { setNote(error instanceof Error ? error.message : "Could not clear that data."); }
+      setNote(id === "all" ? t("Cleared saved data for every source. Your own artwork was kept.") : t("Cleared {source} data{covers}.").replace("{source}", t(dataSources.find((source) => source.id === id)?.label ?? "data source")).replace("{covers}", removed ? ` ${t("and {count} covers").replace("{count}", String(removed))}` : ""));
+    } catch (error) { setNote(error instanceof Error ? error.message : t("Could not clear that data.")); }
     finally { setBusy(null); }
   };
   return <SettingsGroup title={t("Data & privacy")} subtitle={t("Local-first storage")} id="settings-data">
@@ -77,7 +77,7 @@ export function DataSection() {
             {provider && <button type="button" className="secondary-button" disabled={!need?.ready || count === 0 || metadata.refreshBusy} title={!need?.ready ? t(need?.text ?? "") : count === 0 ? t("No game in your library can use this source.") : undefined} onClick={() => void metadata.refreshProvider(lib.library, provider)}>{metadata.refreshingProvider === provider ? t("Refreshing…") : t("Refresh") + (count ? ` (${count})` : "")}</button>}
             <button type="button" className="secondary-button danger-outline" disabled={busy !== null || (source.id === "custom-artwork" && covers === 0)} onClick={() => void run(source.id)}>{busy === source.id ? t("Clearing…") : t("Clear {source} data").replace("{source}", t(source.label))}</button>
           </span>
-          {need && <p className={`data-source-state${need.ready ? " ready" : ""}`}>{need.ready && count === 0 ? "No game in your library can use this source yet." : need.text}</p>}
+          {need && <p className={`data-source-state${need.ready ? " ready" : ""}`}>{need.ready && count === 0 ? t("No game in your library can use this source yet.") : t(need.text)}</p>}
         </div>;
       })}
     </div>

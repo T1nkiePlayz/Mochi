@@ -27,6 +27,6 @@ export function AppearanceSection() {
       <button className="secondary-button" onClick={() => void importThemeFolder().then((result) => { if (result) void reloadThemes(); }).catch(report)}><MochiIcon name="folder" fallback={FolderOpen} size={14} /> {t("Import theme folder")}</button>
     </div>
     {configInfo && <div className="theme-config-path"><span>{t("Theme directory")}</span><code>{configInfo.themesPath}</code></div>}
-    <ToggleRow title={t("Game themes")} description="While a game's page is open, use that game's own colour (taken from its cover) as the accent. Works with every theme; nothing to set up per game." checked={behavior.gameThemes} onChange={(gameThemes) => setBehavior((current) => ({ ...current, gameThemes }))} />
+    <ToggleRow title={t("Game themes")} description={t("While a game's page is open, use that game's own colour (taken from its cover) as the accent. Works with every theme; nothing to set up per game.")} checked={behavior.gameThemes} onChange={(gameThemes) => setBehavior((current) => ({ ...current, gameThemes }))} />
   </SettingsGroup>;
 }

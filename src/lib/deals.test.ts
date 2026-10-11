@@ -1,10 +1,20 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { activeStores, applyPrice, dealAlertKey, detectStores, filterDeals, newAlerts, priceWatchTriggered, pruneSeen, runDealsCheck, unwatchPrice, watchPrice, type Deal, type EpicFreeGame } from "./deals";
+import { activeStores, applyPrice, dealAlertKey, detectStores, epicRequestRegion, filterDeals, MAX_ALERTS_PER_CHECK, newAlerts, priceWatchTriggered, pruneSeen, runDealsCheck, unwatchPrice, watchPrice, type Deal, type EpicFreeGame } from "./deals";
 import { readWishlist } from "./wishlist";
 
 const deal = (over: Partial<Deal> = {}): Deal => ({ dealId: "d", storeId: "1", gameId: "g1", title: "Game", salePrice: 5, normalPrice: 20, savings: 75, steamAppId: null, link: "https://www.cheapshark.com/redirect?dealID=d", lastChange: 1, ...over });
 const epic = (over: Partial<EpicFreeGame> = {}): EpicFreeGame => ({ id: "e1", title: "Free One", url: "https://store.epicgames.com/en-US/p/x", state: "free-now", start: "2026-10-09T15:00:00.000Z", end: null, originalPrice: null, ...over });
+
+describe("Epic region selection", () => {
+  it("uses the system locale region when available and safely falls back to US", () => {
+    expect(epicRequestRegion("en-AU")).toEqual({ locale: "en-AU", country: "AU" });
+    expect(epicRequestRegion("fr_FR")).toEqual({ locale: "fr-FR", country: "FR" });
+    expect(epicRequestRegion("zh-Hans-CN")).toEqual({ locale: "zh-CN", country: "CN" });
+    expect(epicRequestRegion("en")).toEqual({ locale: "en-US", country: "US" });
+    expect(epicRequestRegion("!bad-locale")).toEqual({ locale: "en-US", country: "US" });
+  });
+});
 
 describe("store detection and filtering", () => {
   it("maps library sources to stores, heroic to Epic and GOG", () => {
@@ -39,6 +49,19 @@ describe("alert dedupe", () => {
   });
   it("ignores stores the user turned off and Epic when disabled", () => {
     expect(newAlerts({ ...base, stores: ["gog"], epic: [epic()], deals: [deal()], seen: {} }).alerts).toEqual([]);
+  });
+  it("does not mark alerts beyond the per-check cap as seen", () => {
+    const deals = Array.from({ length: MAX_ALERTS_PER_CHECK + 3 }, (_, index) => deal({
+      dealId: `deal-${index}`, gameId: `game-${index}`, title: `Game ${index}`, savings: 90 - index,
+    }));
+    const first = newAlerts({ ...base, stores: ["steam"], epic: [], deals, seen: {} });
+    expect(first.alerts).toHaveLength(MAX_ALERTS_PER_CHECK);
+    expect(Object.keys(first.seen)).toHaveLength(MAX_ALERTS_PER_CHECK);
+
+    const next = newAlerts({ ...base, stores: ["steam"], epic: [], deals, seen: first.seen });
+    expect(next.alerts).toHaveLength(3);
+    expect(next.alerts.every((alert) => !first.seen[alert.key])).toBe(true);
+    expect(Object.keys(next.seen)).toHaveLength(MAX_ALERTS_PER_CHECK + 3);
   });
   it("prunes old entries", () => {
     const day = 24 * 3600 * 1000;

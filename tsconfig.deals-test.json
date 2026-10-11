@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vitest/globals"]
+  },
+  "include": ["src/lib/deals.test.ts"],
+  "exclude": []
+}

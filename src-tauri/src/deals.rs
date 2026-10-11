@@ -104,7 +104,7 @@ fn deal_link(deal_id: &str) -> String { format!("{SHARK_REDIRECT}{deal_id}") }
 /// Deal ids are opaque, already URL-encoded tokens; anything else is dropped rather than put in a link.
 fn valid_deal_id(id: &str) -> bool { !id.is_empty() && id.len() < 200 && id.chars().all(|c| c.is_ascii_alphanumeric() || "%-_.~".contains(c)) }
 
-pub fn parse_epic_free_games(body: &str) -> Result<Vec<EpicFreeGame>, String> {
+fn parse_epic_free_games_for_locale(body: &str, locale: &str) -> Result<Vec<EpicFreeGame>, String> {
     let root: Value = serde_json::from_str(body).map_err(|error| format!("Epic returned unreadable data: {error}"))?;
     let elements = root.pointer("/data/Catalog/searchStore/elements").and_then(Value::as_array).ok_or("Epic response had no games.")?;
     let mut out = Vec::new();
@@ -126,7 +126,7 @@ pub fn parse_epic_free_games(body: &str) -> Result<Vec<EpicFreeGame>, String> {
         if slug.is_empty() || !slug.chars().all(|c| c.is_ascii_alphanumeric() || "-_/".contains(c)) { continue; }
         let slug = slug.strip_suffix("/home").unwrap_or(slug);
         out.push(EpicFreeGame {
-            id, title, url: format!("https://store.epicgames.com/en-US/p/{slug}"), state,
+            id, title, url: format!("https://store.epicgames.com/{locale}/p/{slug}"), state,
             start: Some(start).filter(|s| !s.is_empty()), end: Some(end).filter(|s| !s.is_empty()),
             original_price: Some(text(element.pointer("/price/totalPrice/fmtPrice/originalPrice"))).filter(|s| !s.is_empty()),
         });
@@ -248,11 +248,28 @@ fn finish<T>(result: Result<Option<T>, FetchError>) -> DealsResult<T> {
     }
 }
 
-/// Games currently (or soon) free on the Epic Games Store.
+/// Select an Epic region from the system locale. Invalid input falls back to the US region.
+fn epic_request_region(locale: Option<&str>, country: Option<&str>) -> (String, String) {
+    let locale_parts: Vec<&str> = locale.unwrap_or("").split(['-', '_']).collect();
+    let locale_country = locale_parts.iter().skip(1).find(|part| part.len() == 2 && part.chars().all(|c| c.is_ascii_alphabetic()));
+    let country = country
+        .filter(|value| value.len() == 2 && value.chars().all(|c| c.is_ascii_alphabetic()))
+        .or(locale_country.copied())
+        .unwrap_or("US")
+        .to_ascii_uppercase();
+    let language = locale_parts.first().copied()
+        .filter(|value| (2..=3).contains(&value.len()) && value.chars().all(|c| c.is_ascii_alphabetic()))
+        .unwrap_or("en")
+        .to_ascii_lowercase();
+    (format!("{language}-{country}"), country)
+}
+
+/// Games currently (or soon) free on the Epic Games Store. Locale and country are derived from the system locale.
 #[tauri::command]
-pub async fn get_epic_free_games() -> DealsResult<Vec<EpicFreeGame>> {
-    let url = format!("{EPIC_URL}?locale=en-US&country=US");
-    finish(async { parse_epic_free_games(&fetch(&url).await?).map(Some).map_err(FetchError::Other) }.await)
+pub async fn get_epic_free_games(locale: Option<String>, country: Option<String>) -> DealsResult<Vec<EpicFreeGame>> {
+    let (locale, country) = epic_request_region(locale.as_deref(), country.as_deref());
+    let url = format!("{EPIC_URL}?locale={locale}&country={country}");
+    finish(async { parse_epic_free_games_for_locale(&fetch(&url).await?, &locale).map(Some).map_err(FetchError::Other) }.await)
 }
 
 /// Current CheapShark sales for the given store ids (numeric strings such as "1" for Steam).
@@ -301,7 +318,7 @@ mod tests {
 
     #[test]
     fn epic_keeps_only_free_windows() {
-        let games = parse_epic_free_games(EPIC).unwrap();
+        let games = parse_epic_free_games_for_locale(EPIC, "en-US").unwrap();
         let ids: Vec<_> = games.iter().map(|g| (g.title.as_str(), g.state)).collect();
         assert_eq!(ids, vec![("Free Now Game", "free-now"), ("Next Week Game", "upcoming")]);
         assert_eq!(games[0].url, "https://store.epicgames.com/en-US/p/free-now-game");
@@ -310,9 +327,24 @@ mod tests {
     }
 
     #[test]
+    fn epic_region_uses_valid_locale_and_rejects_malformed_input() {
+        assert_eq!(epic_request_region(Some("en-AU"), Some("AU")), ("en-AU".into(), "AU".into()));
+        assert_eq!(epic_request_region(Some("fr_FR"), None), ("fr-FR".into(), "FR".into()));
+        assert_eq!(epic_request_region(Some("zh-Hans-CN"), None), ("zh-CN".into(), "CN".into()));
+        assert_eq!(epic_request_region(Some("!bad-locale"), Some("not-a-country")), ("en-US".into(), "US".into()));
+        assert_eq!(epic_request_region(None, None), ("en-US".into(), "US".into()));
+    }
+
+    #[test]
+    fn epic_links_use_the_requested_locale() {
+        let games = parse_epic_free_games_for_locale(EPIC, "fr-FR").unwrap();
+        assert_eq!(games[0].url, "https://store.epicgames.com/fr-FR/p/free-now-game");
+    }
+
+    #[test]
     fn epic_rejects_garbage() {
-        assert!(parse_epic_free_games("not json").is_err());
-        assert!(parse_epic_free_games("{}").is_err());
+        assert!(parse_epic_free_games_for_locale("not json", "en-US").is_err());
+        assert!(parse_epic_free_games_for_locale("{}", "en-US").is_err());
     }
 
     #[test]

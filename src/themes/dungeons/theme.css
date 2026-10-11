@@ -39,7 +39,7 @@
 
 .game-card { overflow: visible; }
 .game-card .game-card-art { border: 2px solid #000; box-shadow: 0 0 0 1px #6b4a1e; }
-.game-card:hover { transform: translateY(-3px); box-shadow: 0 0 0 1px #ffc857, 0 12px 28px rgba(0, 0, 0, .6), 0 0 24px rgba(240, 168, 48, .22); }
+.game-card:hover { box-shadow: 0 0 0 1px #ffc857, 0 12px 28px rgba(0, 0, 0, .6), 0 0 24px rgba(240, 168, 48, .22); }
 .game-card-copy { background: transparent; }
 .game-card-copy strong { font-family: var(--mochi-font-display); letter-spacing: .04em; }
 .game-card-play { border-radius: 2px; }
