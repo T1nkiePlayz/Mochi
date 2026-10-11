@@ -42,7 +42,7 @@ export function TofuSnapshotsSection({ tofu }: { tofu: Tofu }) {
     }, "Restore failed");
   };
   const remove = async (snapshot: SnapshotInfo) => {
-    if (!await confirmAction({ title: "Delete this snapshot?", danger: true, confirmLabel: "Delete snapshot", message: "Only the saved copy is removed. The Tofu's current files are not touched.", items: [`${when(snapshot.createdAt)} · ${snapshot.reason}`] })) return;
+    if (!await confirmAction({ title: t("Delete this snapshot?"), danger: true, confirmLabel: "Delete snapshot", message: "Only the saved copy is removed. The Tofu's current files are not touched.", items: [`${when(snapshot.createdAt)} · ${snapshot.reason}`] })) return;
     await run(() => deleteTofuSnapshot(tofu.id, snapshot.id), "Could not delete the snapshot");
   };
   const take = () => run(async () => {
