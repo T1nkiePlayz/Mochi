@@ -6,6 +6,7 @@ const invoke = vi.fn();
 const confirmAction = vi.fn();
 vi.mock("@tauri-apps/api/core", () => ({ invoke: (...args: unknown[]) => invoke(...args) }));
 vi.mock("../lib/confirm", () => ({ confirmAction: (...args: unknown[]) => confirmAction(...args) }));
+vi.mock("../lib/useTranslation", () => ({ useTranslation: () => (message: string) => message }));
 
 import { SelfInstallPrompt } from "./SelfInstallPrompt";
 
