@@ -22,7 +22,12 @@ export function DownloadsView() {
     .filter((entry) => entry.state.updating.length || updateCount(entry.state));
   const [error, setError] = useState("");
   const groups = groupDownloads(downloads);
-  const report = (reason: unknown) => setError(t(reason instanceof Error ? reason.message : typeof reason === "string" ? reason : "That did not work."));
+  const report = (reason: unknown) => {
+    const detail = reason instanceof Error ? reason.message : typeof reason === "string" ? reason : "";
+    if (!detail) { setError(t("That did not work.")); return; }
+    const translated = t(detail);
+    setError(translated !== detail ? translated : `${t("That did not work.")} ${detail}`);
+  };
   const clearFinished = async () => {
     const count = downloads.filter((entry) => entry.status !== "downloading").length;
     if (!count || !await confirmAction({ title: t("Clear finished downloads?"), message: t(count === 1 ? "Removes {count} finished download from the list. Downloaded files stay on disk." : "Removes {count} finished downloads from the list. Downloaded files stay on disk.").replace("{count}", String(count)), confirmLabel: t("Clear") })) return;
