@@ -20,7 +20,7 @@ export type CardPalette = { background: string; surface: string; border: string;
 /** Cover images as data URLs, keyed by game id. A game without one is drawn with its initials. */
 export type CardCovers = Record<string, string | undefined>;
 export type CardLabels = { ariaLabel: string; playStats: string; accountStats: string; timePlayed: string; achievements: string; topGames: string; noGamesPlayed: string; generatedLocally: string; saveDialogTitle: string; pngImage: string };
-const defaultCardLabels: CardLabels = { ariaLabel: "Mochi stats card", playStats: "Play stats", accountStats: "Stats for {account}", timePlayed: "TIME PLAYED", achievements: "ACHIEVEMENTS", topGames: "TOP GAMES", noGamesPlayed: "No games played in this period.", generatedLocally: "Generated locally by Mochi", saveDialogTitle: "Save share card", pngImage: "PNG image" };
+const defaultCardLabels: CardLabels = { ariaLabel: "Mochi stats card", playStats: "Play stats", accountStats: "{account}'s stats", timePlayed: "TIME PLAYED", achievements: "ACHIEVEMENTS", topGames: "TOP GAMES", noGamesPlayed: "No games played in this period.", generatedLocally: "Generated locally by Mochi", saveDialogTitle: "Save share card", pngImage: "PNG image" };
 
 export const CARD_WIDTH = 1080;
 export const CARD_HEIGHT = 1080;
