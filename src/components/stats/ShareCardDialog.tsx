@@ -19,7 +19,7 @@ export function ShareCardDialog({ records, library, unlocked, totalAchievements,
   const [busy, setBusy] = useState(false);
   const tried = useRef(new Set<string>());
   const palette = useMemo(() => readPalette(), []);
-  const data = useMemo(() => buildCardData({ records, library, unlocked, totalAchievements, username, options }), [records, library, unlocked, totalAchievements, username, options]);
+  const data = useMemo(() => buildCardData({ records, library, unlocked, totalAchievements, username, options }, t), [records, library, unlocked, totalAchievements, username, options, t]);
   const cardLabels = useMemo(() => ({ ariaLabel: t("Mochi stats card"), playStats: t("Play stats"), accountStats: t("Stats for {account}"), timePlayed: t("Time played"), achievements: t("Achievements"), topGames: t("Top games"), noGamesPlayed: t("No games played in this period."), generatedLocally: t("Generated locally by Mochi"), saveDialogTitle: t("Save share card"), pngImage: t("PNG image") }), [t]);
   const svg = useMemo(() => buildCardSvg(data, palette, covers, cardLabels), [data, palette, covers, cardLabels]);
 

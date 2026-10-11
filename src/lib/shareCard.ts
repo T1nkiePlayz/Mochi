@@ -43,10 +43,10 @@ export function topGamesOf(records: SessionRecord[], period: SharePeriod, now = 
   return { games: [...byGame.values()].sort((a, b) => b.seconds - a.seconds), totalSeconds };
 }
 
-export function buildCardData(input: { records: SessionRecord[]; library: Piko[]; unlocked: number; totalAchievements: number; username: string; options: ShareOptions; now?: number }): CardData {
+export function buildCardData(input: { records: SessionRecord[]; library: Piko[]; unlocked: number; totalAchievements: number; username: string; options: ShareOptions; now?: number }, t: (message: string) => string = (message) => message): CardData {
   const { records, library, options } = input;
   const { games, totalSeconds } = topGamesOf(records, options.period, input.now);
-  const data: CardData = { periodLabel: options.period === "30" ? "Last 30 days" : "All time" };
+  const data: CardData = { periodLabel: t(options.period === "30" ? "Last 30 days" : "All time") };
   if (options.account && input.username.trim()) data.account = input.username.trim();
   if (options.playtime) data.totalSeconds = totalSeconds;
   if (options.achievements) data.achievements = { unlocked: input.unlocked, total: input.totalAchievements };
