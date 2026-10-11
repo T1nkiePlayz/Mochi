@@ -98,7 +98,7 @@ function jsxLocalizationPlugin() {
         if (ts.isJsxText(node) && !skipText) {
           const normalized = decodeEntities(normalizeText(node.text));
           const message = normalized.trim();
-          if (!message || !/[\\p{L}\\p{N}]/u.test(message) || /^(?:--?[\\w-]+)(?:\\s+--?[\\w-]+)*$/.test(message) || /^https?:\\/\\//i.test(message)) return node;
+          if (!message || !/[\\p{L}\\p{N}]/u.test(message) || /^(?:--?[\\w-]+)(?:\\s+--?[\\w-]+)*$/.test(message) || /^https?:\/\//i.test(message)) return node;
           // Preserve significant spaces even when JSX formatting introduces a newline.
           // Checking the raw node only works for single-line text and joins adjacent
           // dynamic expressions together in multiline JSX.
