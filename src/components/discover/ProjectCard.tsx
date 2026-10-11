@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { useTranslation } from "../../lib/useTranslation";
+import { getTranslationLocale } from "../../lib/translationLocale";
 import { Download, Eye, PackageOpen } from "lucide-react";
 import type { ModrinthProject } from "../../lib/modrinth";
 import { DiscoveryImage } from "./DiscoveryImage";
@@ -22,7 +23,7 @@ export const ProjectCard = memo(function ProjectCard({ project, index, badge, ch
     {project.icon_url ? <DiscoveryImage src={project.icon_url} className="discover-card-icon" alt="" label={project.title} /> : <div className="discover-card-icon fallback"><PackageOpen size={20} /></div>}
     <div className="discover-card-copy">
       <div className="discover-card-title"><strong>{index === undefined ? "" : `${index + 1}. `}{project.title}</strong><span>{badge ?? projectTypeLabel(project.project_type)}</span></div>
-      <small>{project.author || "Modrinth creator"} · {(project.downloads ?? 0).toLocaleString()} downloads</small>
+      <small>{project.author || "Modrinth creator"} · {(project.downloads ?? 0).toLocaleString(getTranslationLocale())} downloads</small>
       <p>{project.description}</p>
       <div className="discover-card-actions">
         <button type="button" className="secondary-button" onClick={() => onView(project)}><Eye size={13} /> {t("View")}</button>
