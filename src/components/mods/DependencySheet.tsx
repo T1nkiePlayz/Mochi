@@ -14,7 +14,7 @@ function PageLink({ url, label }: { url: string; label: string }) {
   return <button type="button" className="secondary-button dep-link" onClick={() => open(url)}><ExternalLink size={13} /> {label}</button>;
 }
 
-function Row({ entry, checked, onChange }: { entry: DependencyEntry; checked: boolean; onChange: (checked: boolean) => void }) {
+function Row({ entry, checked, onChange, t }: { entry: DependencyEntry; checked: boolean; onChange: (checked: boolean) => void; t: (message: string) => string }) {
   const description = [entry.version, entry.status === "install" ? `needed by ${entry.requiredBy}` : entry.reason].filter(Boolean).join(" · ");
   const Icon = entry.status === "install" ? CheckCircle2 : entry.status === "already-installed" ? CheckCircle2 : entry.status === "unavailable" ? AlertTriangle : HelpCircle;
   return <li className="dep-row" data-status={entry.status}>
@@ -41,22 +41,22 @@ export function DependencySheet({ prompt }: { prompt: DependencyPrompt }) {
     <div className="modal-header"><div><p className="eyebrow">Install {item.name}</p><h2>Dependencies</h2></div><button type="button" className="icon-button" aria-label={t("Cancel")} onClick={() => answer(null)}><X size={17} /></button></div>
     <div className="dep-body">
     <p className="modal-description">{item.name} needs {plan.entries.length === 1 ? "another mod" : `${plan.entries.length || "no other"} mods`} to work. Checked ones are downloaded first, with the same checks as any download.</p>
-    {plan.warnings.map((warning) => <p key={`${warning.declaredBy}>${warning.name}`} className="metadata-note dep-warning" role="alert"><AlertTriangle size={13} aria-hidden="true" /> {warning.declaredBy} is marked incompatible with {warning.installedTitle}, which is installed. <button type="button" className="secondary-button dep-link" onClick={() => open(warning.pageUrl)}>View</button></p>)}
+    {plan.warnings.map((warning) => <p key={`${warning.declaredBy}>${warning.name}`} className="metadata-note dep-warning" role="alert"><AlertTriangle size={13} aria-hidden="true" /> {warning.declaredBy} is marked incompatible with {warning.installedTitle}, which is installed. <button type="button" className="secondary-button dep-link" onClick={() => open(warning.pageUrl)}>{t("View")}</button></p>)}
     <ul className="dep-list" aria-label={t("Mod and dependencies")}>
-      <li className="dep-row"><Checkbox checked disabled onChange={() => undefined} label={item.name} description={t("The mod you chose")} /><span className="compat-badge dep-badge dep-install"><CheckCircle2 size={12} aria-hidden="true" />Will install</span></li>
-      {installable.map((entry) => <Row key={entry.key} entry={entry} checked={!skipped.has(entry.key)} onChange={(on) => toggle(entry.key, on)} />)}
-      {done.map((entry) => <Row key={entry.key} entry={entry} checked={false} onChange={() => undefined} />)}
+      <li className="dep-row"><Checkbox checked disabled onChange={() => undefined} label={item.name} description={t("The mod you chose")} /><span className="compat-badge dep-badge dep-install"><CheckCircle2 size={12} aria-hidden="true" />{t("Will install")}</span></li>
+      {installable.map((entry) => <Row key={entry.key} entry={entry} checked={!skipped.has(entry.key)} onChange={(on) => toggle(entry.key, on)} t={t} />)}
+      {done.map((entry) => <Row key={entry.key} entry={entry} checked={false} onChange={() => undefined} t={t} />)}
     </ul>
     {manual.length > 0 && <>
-      <h3 className="tofu-picker-heading dep-heading">Needs you</h3>
-      <ul className="dep-list" aria-label="Requirements Mochi cannot install">{manual.map((entry) => <Row key={entry.key} entry={entry} checked={false} onChange={() => undefined} />)}</ul>
+      <h3 className="tofu-picker-heading dep-heading">{t("Needs you")}</h3>
+      <ul className="dep-list" aria-label={t("Requirements Mochi cannot install")}>{manual.map((entry) => <Row key={entry.key} entry={entry} checked={false} onChange={() => undefined} />)}</ul>
     </>}
     {plan.truncated && <p className="metadata-note" role="note">The dependency chain is very long, so Mochi stopped looking. Check the mod's page for the rest.</p>}
     {plan.notes.map((note) => <p key={note} className="metadata-note" role="note">{note}</p>)}
     </div>
     <div className="mod-download-actions dep-actions">
-      <button type="button" className="play-button" onClick={() => answer(chosen)} data-autofocus>Install {total}</button>
-      <button type="button" className="secondary-button" onClick={() => answer([])}>Install without dependencies</button>
+      <button type="button" className="play-button" onClick={() => answer(chosen)} data-autofocus>{t("Install")} {total}</button>
+      <button type="button" className="secondary-button" onClick={() => answer([])}>{t("Install without dependencies")}</button>
       <button type="button" className="secondary-button" onClick={() => answer(null)}>Cancel</button>
     </div>
   </ModalShell>;

@@ -86,23 +86,23 @@ export function ImportModpackModal({ piko, tofu, onCreateTofu, onClose }: Props)
         {report.failed.length > 0 && <ReportList title={t("Could not start")} rows={report.failed.map((entry) => `${titleFromFile(entry.item.mod.fileName)}: ${entry.error}`)} />}
         {report.changed.length > 0 && <ReportList title={t("Changed since the pack was made (skipped)")} rows={report.changed.map((item) => item.mod.fileName)} />}
         {report.manual.length > 0 && <ReportList title={t("Download these by hand")} rows={report.manual.map((item) => item.mod.fileName)} />}
-        {report.unavailable.length > 0 && <ReportList title="Not available" rows={report.unavailable.map((item) => `${item.mod.fileName}: ${item.availability.status === "unavailable" ? item.availability.reason : ""}`)} />}
+        {report.unavailable.length > 0 && <ReportList title={t("Not available")} rows={report.unavailable.map((item) => `${item.mod.fileName}: ${item.availability.status === "unavailable" ? item.availability.reason : ""}`)} />}
         {report.unknownFiles > 0 && <p className="muted">{report.unknownFiles} file{report.unknownFiles === 1 ? " was" : "s were"} not matched to any site when the pack was made. They are not installed.</p>}
       </div> : <>
-        <fieldset className="import-pack-target"><legend>Install into</legend>
-          <label><input type="radio" name="pack-target" checked={intoNew} disabled={!tofu.gameDir || Boolean(plan) || progress !== null} onChange={() => setIntoNew(true)} /> A new Tofu{!tofu.gameDir && " (choose a game folder first)"}</label>
-          <label><input type="radio" name="pack-target" checked={!intoNew} disabled={Boolean(plan) || progress !== null} onChange={() => setIntoNew(false)} /> “{tofu.name}” (a snapshot is saved first)</label>
+        <fieldset className="import-pack-target"><legend>{t("Install into")}</legend>
+          <label><input type="radio" name="pack-target" checked={intoNew} disabled={!tofu.gameDir || Boolean(plan) || progress !== null} onChange={() => setIntoNew(true)} /> {t("A new Tofu")}{!tofu.gameDir && ` (${t("choose a game folder first")})`}</label>
+          <label><input type="radio" name="pack-target" checked={!intoNew} disabled={Boolean(plan) || progress !== null} onChange={() => setIntoNew(false)} /> “{tofu.name}” ({t("a snapshot is saved first")})</label>
         </fieldset>
         {!pack && <div className="import-pack-input">
-          <button type="button" className="secondary-button" onClick={() => void chooseFile()}><FileUp size={14}/> Choose .mochipack file…</button>
-          <label className="mochi-field"><span className="mochi-field-label">Or paste a code</span><textarea rows={3} value={text} placeholder="mochipack:…" spellCheck={false} onChange={(event) => setText(event.target.value)} /></label>
-          <button type="button" className="play-button" disabled={!text.trim()} onClick={() => void load(text)}>Preview</button>
+          <button type="button" className="secondary-button" onClick={() => void chooseFile()}><FileUp size={14}/> {t("Choose .mochipack file…")}</button>
+          <label className="mochi-field"><span className="mochi-field-label">{t("Or paste a code")}</span><textarea rows={3} value={text} placeholder="mochipack:…" spellCheck={false} onChange={(event) => setText(event.target.value)} /></label>
+          <button type="button" className="play-button" disabled={!text.trim()} onClick={() => void load(text)}>{t("Preview")}</button>
         </div>}
         {error && <p className="metadata-note import-pack-error" role="alert">{error}</p>}
         {pack && <>
           <div className="import-pack-head"><strong>{pack.name || pack.game.name}</strong><small>{pack.game.name}{pack.loader ? ` · ${pack.loader}` : ""}{pack.gameVersion ? ` · ${pack.gameVersion}` : ""} · {pack.mods.length} mod{pack.mods.length === 1 ? "" : "s"}</small></div>
           {notes.map((note) => <p key={note} className="metadata-note">{note}</p>)}
-          {progress && <p className="muted" role="status">Checking availability… {progress[0]} / {progress[1]}</p>}
+          {progress && <p className="muted" role="status">{t("Checking availability…")} {progress[0]} / {progress[1]}</p>}
           {plan && summary && <>
             <p className="import-pack-summary" role="status">{summary.ready} ready · {summary.manual} manual · {summary.unavailable} unavailable{summary.changed ? ` · ${summary.changed} changed` : ""}{plan.alreadyInstalled.length ? ` · ${plan.alreadyInstalled.length} already installed` : ""}{pack.unknown.length ? ` · ${pack.unknown.length} unidentified in pack` : ""}</p>
             {pack.mods.some((mod) => !mod.enabled) && <Checkbox checked={includeDisabled} onChange={setIncludeDisabled} label={t("Also install mods that were switched off in the pack")} description="They are installed switched on." />}
