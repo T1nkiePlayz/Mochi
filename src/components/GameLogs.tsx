@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "../lib/useTranslation";
+import { getTranslationLocale } from "../lib/translationLocale";
 import { Copy, FolderOpen, RefreshCw, ScrollText, Search, Trash2, X } from "lucide-react";
 import { appendLog, clearGameLogs, handoffHelp, listGameLogs, readGameLog, type LogList } from "../lib/gameLogs";
 import { formatBytes } from "../lib/format";
@@ -12,7 +13,7 @@ import { findCrashSuspects } from "../lib/mods/conflictService";
 import type { Issue } from "../lib/mods/conflicts";
 import { confirmAction } from "../lib/confirm";
 
-const when = (ms: number) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+const when = (ms: number) => new Date(ms).toLocaleString(getTranslationLocale(), { dateStyle: "medium", timeStyle: "short" });
 const errorText = (error: unknown) => (error instanceof Error ? error.message : typeof error === "string" ? error : "That did not work.");
 
 /** "Logs" button for a game page and the viewer it opens: per-session output of the game, tail/follow, copy, clear, open folder. */
@@ -60,7 +61,7 @@ function GameLogsModal({ game, onClose }: { game: Piko; onClose: () => void }) {
       const next = await listGameLogs(game.id);
       setList(next);
       setSessionId((previous) => (next.sessions.some((item) => item.id === previous) ? previous : next.sessions.find((item) => item.direct)?.id ?? next.sessions[0]?.id ?? ""));
-    } catch (error) { setMessage(errorText(error)); setList({ dir: "", sessions: [] }); }
+    } catch (error) { setMessage(t(errorText(error))); setList({ dir: "", sessions: [] }); }
   }, [game.id]);
   useEffect(() => { void loadList(); }, [loadList]);
 
@@ -88,13 +89,13 @@ function GameLogsModal({ game, onClose }: { game: Piko; onClose: () => void }) {
   }, [game, modTofu, text]);
 
   const copy = async () => {
-    try { await navigator.clipboard.writeText(text); setMessage("Copied to the clipboard."); }
-    catch { setMessage("Could not copy. Select the text and copy it by hand."); }
+    try { await navigator.clipboard.writeText(text); setMessage(t("Copied to the clipboard.")); }
+    catch { setMessage(t("Could not copy. Select the text and copy it by hand.")); }
   };
   const clear = async () => {
     const count = list?.sessions.length ?? 0;
     if (!await confirmAction({ title: `Clear logs for ${game.name}?`, danger: true, confirmLabel: "Clear logs", message: "Captured output is deleted from this computer. This cannot be undone.", items: [`${count} saved log session${count === 1 ? "" : "s"}`] })) return;
-    try { const count = await clearGameLogs(game.id); setMessage(`Removed ${count} log${count === 1 ? "" : "s"}.`); setText(""); offset.current = undefined; await loadList(); }
+    try { const count = await clearGameLogs(game.id); setMessage(t("Removed {count} logs.").replace("{count}", String(count))); setText(""); offset.current = undefined; await loadList(); }
     catch (error) { setMessage(errorText(error)); }
   };
 

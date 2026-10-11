@@ -13,8 +13,8 @@ export function SoundFallbacks({ fallbacks, packs, loaded, onChange }: { fallbac
   const nameOf = (id: string) => BUILTIN_PACKS.find((pack) => pack.id === id)?.name ?? packs.find((pack) => pack.id === id)?.name ?? id;
   const isKnown = (id: string) => BUILTIN_PACKS.some((pack) => pack.id === id) || packs.some((pack) => pack.id === id);
   const addable: Array<SelectOption<string>> = [
-    ...BUILTIN_PACKS.map((pack) => ({ value: pack.id, label: pack.name, group: "Built in" })),
-    ...packs.map((pack) => ({ value: pack.id, label: pack.name, group: "Installed" })),
+    ...BUILTIN_PACKS.map((pack) => ({ value: pack.id, label: pack.name, group: t("Built in") })),
+    ...packs.map((pack) => ({ value: pack.id, label: pack.name, group: t("Installed") })),
   ].filter((option) => !fallbacks.includes(option.value));
   const move = (index: number, by: -1 | 1) => {
     const next = [...fallbacks];
@@ -32,9 +32,9 @@ export function SoundFallbacks({ fallbacks, packs, loaded, onChange }: { fallbac
           return <li key={id} className={`sound-fallback ${missing ? "is-missing" : ""}`}>
             <span className="sound-fallback-name">{index + 1}. {name}{missing && <small> ({t("not installed, skipped")})</small>}</span>
             <span className="sound-pack-actions">
-              <button type="button" className="secondary-button sound-fallback-button" aria-label={`Move ${name} up`} disabled={index === 0} onClick={() => move(index, -1)}><ArrowUp size={14} aria-hidden="true" /></button>
-              <button type="button" className="secondary-button sound-fallback-button" aria-label={`Move ${name} down`} disabled={index === fallbacks.length - 1} onClick={() => move(index, 1)}><ArrowDown size={14} aria-hidden="true" /></button>
-              <button type="button" className="secondary-button sound-fallback-button" aria-label={`Remove ${name} from fallbacks`} onClick={() => onChange(fallbacks.filter((item) => item !== id))}><X size={14} aria-hidden="true" /></button>
+              <button type="button" className="secondary-button sound-fallback-button" aria-label={t("Move {name} up").replace("{name}", name)} disabled={index === 0} onClick={() => move(index, -1)}><ArrowUp size={14} aria-hidden="true" /></button>
+              <button type="button" className="secondary-button sound-fallback-button" aria-label={t("Move {name} down").replace("{name}", name)} disabled={index === fallbacks.length - 1} onClick={() => move(index, 1)}><ArrowDown size={14} aria-hidden="true" /></button>
+              <button type="button" className="secondary-button sound-fallback-button" aria-label={t("Remove {name} from fallbacks").replace("{name}", name)} onClick={() => onChange(fallbacks.filter((item) => item !== id))}><X size={14} aria-hidden="true" /></button>
             </span>
           </li>;
         })}

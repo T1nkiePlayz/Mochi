@@ -101,7 +101,7 @@ function PaletteDialog({ getApp, platform, onClose }: { getApp: ReturnType<typeo
         {items.map((item) => <button type="button" role="option" aria-selected="false" className="palette-item" data-kind={item.kind} key={item.key} onClick={() => run(item)}><span className="palette-title">{item.kind === "command" ? translateCommandTitle(item.title, t) : item.title}</span><small>{item.kind === "command" ? t(item.subtitle) : item.subtitle}</small></button>)}
         {!items.length && <div className="palette-empty" role="status">{raw.trim() ? t("Nothing matches. Try a different word.") : t("No actions available.")}</div>}
       </div>
-      <div className="palette-hint" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Enter</kbd> run</span><span><kbd>Esc</kbd> close</span><span><kbd>&gt;</kbd> actions only</span></div>
+      <div className="palette-hint" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd> {t("move")}</span><span><kbd>Enter</kbd> {t("run")}</span><span><kbd>Esc</kbd> {t("close")}</span><span><kbd>&gt;</kbd> {t("actions only")}</span></div>
     </div>
   </div>;
 }

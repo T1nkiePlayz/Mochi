@@ -97,7 +97,7 @@ export function SoundSection() {
       {audioProblem && <p className="sound-pack-status is-error" role="alert">{AUDIO_UNAVAILABLE_MESSAGE}</p>}
       <div className="setting-row sound-preview-row"><span><strong>{t("Preview")}</strong><small>{t("Hear each sound of {name}.").replace("{name}", resolvedName)}</small></span>
         <div className="sound-preview" role="group" aria-label={t("Preview sounds")} data-sound="none">
-          {SOUND_EVENTS.map((event) => <button type="button" key={event} className="secondary-button sound-preview-button" onClick={() => void preview(event)}><Play size={13} aria-hidden="true" /> {SOUND_LABELS[event]}</button>)}
+          {SOUND_EVENTS.map((event) => <button type="button" key={event} className="secondary-button sound-preview-button" onClick={() => void preview(event)}><Play size={13} aria-hidden="true" /> {t(SOUND_LABELS[event])}</button>)}
         </div>
       </div>
     </SettingsGroup>
