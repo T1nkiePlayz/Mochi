@@ -27,9 +27,14 @@
 .game-card-heart {
   position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 30px; height: 30px; padding: 0;
   border: 0; border-radius: 50%; background: color-mix(in srgb, var(--mochi-background) 70%, transparent); color: var(--mochi-text);
-  opacity: 0; transition: opacity var(--mochi-transition), color var(--mochi-transition);
+  opacity: 0; pointer-events: none; transition: opacity 90ms ease-out, color var(--mochi-transition);
 }
-.game-card:hover .game-card-heart, .game-card:focus-within .game-card-heart, .game-card-heart.on { opacity: 1; }
+/* Keep invisible controls out of hit-testing. :focus-within made the heart stay visible on a card
+   after the pointer had moved away because the nested main button retained focus. */
+.game-card:hover .game-card-heart,
+.game-card-main:focus-visible ~ .game-card-heart,
+.game-card-heart:focus-visible,
+.game-card-heart.on { opacity: 1; pointer-events: auto; }
 .game-card-heart.on, .details-heart.on { color: var(--mochi-danger, var(--mochi-accent-strong)); }
 .game-card-check {
   position: absolute; top: 8px; left: 8px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: var(--mochi-radius-sm);
