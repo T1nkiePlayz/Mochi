@@ -99,7 +99,15 @@ describe("shared UI translations", () => {
     }).filter(Boolean).join(" ").trim();
     const found = new Map<string, string>();
     const untranslatedByDesign = new Set(["Mochi", "Mochi v", "Mochi Cloud", "GitHub", "Google", "CheapShark", "Epic Games Store", "Steam", "Heroic", "Prism", "Flatpak", "IGDB", "macOS", "USD", "Steam (US)", "/home/you/Games", "U", "you@example.com", "org.company.game", "--fullscreen -windowed", "https://example.com/cover.png", "obs --startreplaybuffer", "/home/me/scripts/sync-saves.sh", "GameMode", "MangoHud", "gamescope", "-W 1920 -H 1080 -f", "/path/to/game", "DXVK_HUD=fps\nMANGOHUD=1", "-windowed --name \"My Player\"", "CurseForge", "mochipack:…", "Nexus Mods", "Tofu", "Steam Deck", "Modrinth", "SteamGridDB"]);
+    const uiMessageSetters = new Set(["setMessage", "setError", "setLaunchError", "setAuthNotice", "setNote", "setNotice", "setFeedback", "setSuccess", "setWarning", "setProblem", "setStatusMessage", "setErrorMessage"]);
     const collect = (node: ts.Node, skipText = false) => {
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && uiMessageSetters.has(node.expression.text) && node.arguments.length > 0) {
+        const argument = node.arguments[0];
+        if (ts.isStringLiteralLike(argument)) {
+          const message = decode(argument.text).trim();
+          if (message && /[A-Za-z\p{L}]/u.test(message)) found.set(message, path.relative(root, argument.getSourceFile().fileName));
+        }
+      }
       if (ts.isJsxElement(node)) {
         const tag = node.openingElement.tagName.getText();
         const skipChildren = skipText || skippedTags.has(tag);
