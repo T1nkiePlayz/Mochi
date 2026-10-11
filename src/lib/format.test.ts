@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { formatBytes, formatPlaytime, formatRelativeTime } from "./format";
 
 describe("format", () => {
-  it("handles bad byte counts", () => { expect(formatBytes(NaN)).toBe("0 KiB"); expect(formatBytes(-5)).toBe("0 KiB"); expect(formatBytes(2 * 1024 * 1024)).toBe("2.0 MiB"); });
+  it("handles bad byte counts", () => { expect(formatBytes(NaN, "en")).toBe("0 KiB"); expect(formatBytes(-5, "en")).toBe("0 KiB"); expect(formatBytes(2 * 1024 * 1024, "en")).toBe("2.0 MiB"); });
+  it("formats byte quantities using the selected locale", () => {
+    expect(formatBytes(1.5 * 1024 * 1024, "fr")).toContain("1,5");
+    expect(formatBytes(1.5 * 1024 * 1024, "de")).toContain("1,5");
+    expect(formatBytes(1.5 * 1024 * 1024, "en")).toBe("1.5 MiB");
+  });
   it("pluralises relative times", () => {
     const ago = (s: number) => formatRelativeTime(Date.now() / 1000 - s);
     expect(ago(3700)).toBe("1 hour ago");
