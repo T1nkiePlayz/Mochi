@@ -69,7 +69,7 @@ export function DownloadsView() {
               return <article className={`download-row is-${row.state}`} key={download.id}>
                 <div className="download-row-copy"><strong>{download.itemName}</strong><small>{download.filename} · {downloadKind(download)} · {providerLabels[download.provider]}</small></div>
                 <div className="download-progress-wrap">
-                  <div className={"download-progress " + (row.state === "active" && row.percent === null ? "indeterminate" : row.state === "failed" || row.state === "cancelled" ? "failed" : "")} role="progressbar" aria-label={`${download.itemName} download`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={row.percent ?? undefined} aria-valuetext={row.detail}>
+                  <div className={"download-progress " + (row.state === "active" && row.percent === null ? "indeterminate" : row.state === "failed" || row.state === "cancelled" ? "failed" : "")} role="progressbar" aria-label={t("Download {name}").replace("{name}", download.itemName)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={row.percent ?? undefined} aria-valuetext={row.detail}>
                     <span style={{ width: row.percent !== null && row.state !== "failed" && row.state !== "cancelled" ? `${row.percent}%` : undefined }} />
                   </div>
                   <small role={row.state === "failed" ? "alert" : undefined}>{row.detail}</small>
