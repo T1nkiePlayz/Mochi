@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { launcherLanguages } from "./languages";
-import { getTranslationMessages, hasTranslation, translate } from "./i18n";
+import { getTranslationMessages, hasTranslation, referenceTranslate as translate } from "./i18nCatalogues";
 
 describe("shared UI translations", () => {
   it("translates core setup and shell messages for every supported non-English language", () => {

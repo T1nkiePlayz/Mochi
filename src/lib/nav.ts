@@ -37,3 +37,6 @@ const translations: Record<string, Record<string, string>> = {
 
 export const navLabel = (id: string, language = "en"): string =>
   translations[language]?.[id] ?? translations[language.split("-")[0]]?.[id] ?? english[id] ?? id;
+
+/** The navigation ids above, so per-locale folds can bake navLabel's special case into their maps. */
+export const navIds: readonly string[] = Object.keys(english);
