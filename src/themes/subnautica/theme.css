@@ -1,19 +1,23 @@
 /* Subnautica — a pressurised-hull HUD. Floating glass rail, chamfered scanner panels, drifting
  * bubbles and shafts of surface light. Corners are cut, never rounded. */
 
-@keyframes sub-bubbles { from { background-position: 0 0, 0 0, 0 0; } to { background-position: 40px -900px, -30px -700px, 20px -1200px; } }
+/* No @keyframes sub-bubbles: animating a fixed full-viewport layer was a permanent repaint loop.
+ * The static bubble field below keeps the underwater read. */
 @keyframes sub-pulse { 50% { opacity: .55; } }
 
+/* Static bubble field — no animation, no backdrop-filter: without GPU compositing in the
+ * WebKitGTK webview, blurring large always-visible surfaces that repaint constantly stalls
+ * the launcher. Only genuinely transient overlays below keep backdrop-filter. */
 .app-shell::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .5;
   background-image:
     radial-gradient(circle, rgba(190, 245, 255, .55) 0 1.5px, transparent 2.5px),
     radial-gradient(circle, rgba(190, 245, 255, .4) 0 1px, transparent 2px),
     radial-gradient(circle, rgba(190, 245, 255, .3) 0 2.5px, transparent 3.5px);
-  background-size: 190px 260px, 130px 210px, 310px 380px; animation: sub-bubbles 90s linear infinite; }
+  background-size: 190px 260px, 130px 210px, 310px 380px; }
 .sidebar, .main-content { position: relative; z-index: 1; }
 
 /* Floating rail */
-.sidebar { margin: 14px 0 14px 14px; height: calc(100vh - 28px); border: 1px solid rgba(94, 224, 255, .5); backdrop-filter: blur(var(--mochi-blur));
+.sidebar { margin: 14px 0 14px 14px; height: calc(100vh - 28px); border: 1px solid rgba(94, 224, 255, .5);
   border-radius: 10px; box-shadow: inset 0 0 40px rgba(77, 232, 255, .1), 0 0 30px rgba(0, 20, 30, .5); }
 .brand-mark { border-radius: 4px; background: rgba(77, 232, 255, .12); border: 1px solid rgba(127, 240, 255, .6); box-shadow: 0 0 18px rgba(77, 232, 255, .35); }
 .nav-item { border-radius: 4px; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
@@ -21,7 +25,7 @@
 .sidebar-account { border-radius: 4px; }
 .account-avatar { border-radius: 4px; border-color: rgba(127, 240, 255, .6); box-shadow: 0 0 12px rgba(77, 232, 255, .3); }
 
-.topbar { backdrop-filter: blur(8px); background: linear-gradient(180deg, rgba(2, 23, 34, .6), transparent); }
+.topbar { background: linear-gradient(180deg, rgba(2, 23, 34, .6), transparent); }
 .breadcrumb strong { text-transform: uppercase; letter-spacing: .14em; color: #7ff0ff; font-weight: 600; }
 .page-heading h1 { font-size: 36px; }
 .eyebrow { color: #4de8ff; }
@@ -31,7 +35,7 @@
 /* Chamfered HUD surfaces */
 .game-card, .tofu-card, .new-tofu-card, .continue-card, .theme-card, .provider-credential-card, .settings-group, .modrinth-manager,
 .game-details-hero, .game-details-section, .download-group, .download-row, .security-card, .profile-row, .import-source-row, .setup-source, .setup-choice, .discover-card, .modrinth-result, .installed-content-row {
-  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); backdrop-filter: blur(6px); }
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); }
 .modal, .setup-panel, .notification-popover, .account-menu { clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px); }
 .secondary-button, .play-button, .setup-nav, .icon-button, .search-box { clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
 .game-card:hover { filter: drop-shadow(0 0 14px rgba(77, 232, 255, .45)); }
@@ -61,6 +65,7 @@
 .danger-outline:hover:not(:disabled), .stop-button:hover:not(:disabled) { background: rgba(255, 159, 67, .16); border-color: #ff9f43; }
 
 /* Form select and component dressing (moved from the launcher stylesheets so the launcher carries no per-theme rules). */
+/* backdrop-filter stays only on transient overlays (popover/trigger list exist only while open);
+ * persistent surfaces above deliberately have none — see the note at the top of the file. */
 [data-mochi-theme="subnautica"] .mochi-select-popover { backdrop-filter: blur(10px); clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
-[data-mochi-theme="subnautica"] .mochi-select-trigger { backdrop-filter: blur(4px); }
 [data-mochi-theme="subnautica"] .mochi-select-option.active { background: rgba(77, 232, 255, .16); }

@@ -7,6 +7,7 @@ import {
   sendEmailCode, signInWithProvider, verifyEmailCode, verifyMfaCode,
 } from "../lib/auth";
 import { openExternalUrl } from "../lib/platform";
+import { passwordIsBreached } from "../lib/password";
 import { readJson, storageKeys, writeJson } from "../lib/storage";
 
 export type SavedAccount = { id: string; username: string; email: string; refreshToken: string; avatarUrl?: string };
@@ -45,6 +46,7 @@ export function useAccount(notify: (title: string, message: string) => void, req
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [authError, setAuthError] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
+  const [passwordChecking, setPasswordChecking] = useState(false);
   const [authNotice, setAuthNotice] = useState("");
   const [mfaRequired, setMfaRequired] = useState(false);
   const [mfaCode, setMfaCode] = useState("");
@@ -205,6 +207,17 @@ export function useAccount(notify: (title: string, message: string) => void, req
     const email = String(form.get("email") || "").trim();
     const password = String(form.get("password") || "");
     try {
+      if (authMode === "sign-up") {
+        // k-anonymity breach check: only the first five SHA-1 characters leave the launcher.
+        // true blocks sign-up; false and null (offline / API blocked) both continue, so the
+        // offline requirement never locks a user out of creating an account.
+        setPasswordChecking(true);
+        const breached = await passwordIsBreached(password);
+        if (breached === true) {
+          setAuthError("That password has appeared in a public data breach. Please choose a different one.");
+          return; // the finally below clears authBusy, so the form is not stuck on the busy label.
+        }
+      }
       const result = authMode === "sign-in"
         ? await supabase.auth.signInWithPassword({ email, password })
         : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: "mochi://auth/verify" } });
@@ -218,7 +231,7 @@ export function useAccount(notify: (title: string, message: string) => void, req
     } catch (error) {
       // A network failure must not leave the form stuck on "Connecting...".
       setAuthError(error instanceof Error ? error.message : "Unable to reach Mochi. Check your connection and try again.");
-    } finally { setAuthBusy(false); }
+    } finally { setPasswordChecking(false); setAuthBusy(false); }
   };
 
   const securityAction = async (run: () => Promise<void>, failure: string) => {
@@ -300,7 +313,7 @@ export function useAccount(notify: (title: string, message: string) => void, req
 
   return {
     user, setUser, showAuth, setShowAuth, showAccountMenu, setShowAccountMenu, savedAccounts, openSignIn,
-    authMode, setAuthMode, authError, setAuthError, authBusy, setAuthBusy, authNotice, setAuthNotice,
+    authMode, setAuthMode, authError, setAuthError, authBusy, setAuthBusy, passwordChecking, authNotice, setAuthNotice,
     mfaRequired, setMfaRequired, mfaCode, setMfaCode, mfaMessage, setMfaMessage, completeMfa,
     emailCodeStep, setEmailCodeStep, emailCode, setEmailCode, emailCodeEmail, requestEmailCode, submitEmailCode,
     openWebsiteSignIn, signInWith, authenticate, switchAccount, signOut, saveAccountSession,

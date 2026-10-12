@@ -9,11 +9,11 @@
 /* Hotbar */
 .sidebar { justify-content: center; gap: 10px; padding: 8px 20px; min-height: 84px; box-shadow: inset 0 3px 0 #c98a3c, inset 0 5px 0 #4a2306; }
 .primary-nav { gap: 8px; padding: 8px 10px; background: #5c2c0c; box-shadow: inset 0 0 0 3px #3a1a05; }
-.nav-item { flex-direction: column; justify-content: center; gap: 3px; width: 82px; height: 60px; min-height: 0; padding: 4px; background: #e8b868; border: 3px solid #3a1a05; box-shadow: inset 0 0 0 2px #f6d7a1, inset -2px -2px 0 2px #b97a2e; color: #4b2a10; font-size: 11px; }
+.nav-item { flex-direction: column; justify-content: center; gap: 3px; width: auto; min-width: 82px; height: 60px; min-height: 0; padding: 4px 10px; background: #e8b868; border: 3px solid #3a1a05; box-shadow: inset 0 0 0 2px #f6d7a1, inset -2px -2px 0 2px #b97a2e; color: #4b2a10; font-size: 11px; }
 .nav-item:hover { background: #ffd58a; color: #2e1706; }
 .nav-item.active { border-color: #b3261e; box-shadow: inset 0 0 0 2px #f6d7a1, 0 0 0 2px #b3261e; background: #fbe5b8; color: #2e1706; }
 .nav-item svg, .nav-item .mochi-icon-wrap { width: 22px; height: 22px; font-size: 22px; }
-.sidebar-bottom .nav-item { width: 82px; }
+.sidebar-bottom .nav-item { width: auto; min-width: 82px; }
 .sidebar-account-wrap { margin: 0; }
 .sidebar-account { background: #e8b868; border: 3px solid #3a1a05; border-radius: 0; box-shadow: inset 0 0 0 2px #f6d7a1; color: #2e1706; }
 .sidebar-account small { color: #5e3513; }

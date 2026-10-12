@@ -100,13 +100,90 @@ fn supported_language(language: Option<&str>) -> &str {
     language.filter(|value| SUPPORTED_LANGUAGES.contains(value)).unwrap_or("english")
 }
 
+/// Writing system inferred from a news item's text. Steam's `language` parameter is ignored by
+/// the API, so this is the only way to keep clearly-unrelated posts (e.g. Russian ones) away from
+/// a reader who asked for another language.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Script {
+    Latin,
+    Cyrillic,
+    Greek,
+    Arabic,
+    Hebrew,
+    Cjk,
+    Thai,
+    Devanagari,
+}
+
+/// Script of a single character, or `None` when it is not alphabetic (digits, punctuation, emoji).
+/// Anything not covered by a dedicated range counts as Latin.
+fn char_script(c: char) -> Option<Script> {
+    if !c.is_alphabetic() { return None; }
+    Some(match c as u32 {
+        0x0400..=0x04FF => Script::Cyrillic,
+        0x0370..=0x03FF | 0x1F00..=0x1FFF => Script::Greek,
+        0x0600..=0x06FF | 0x0750..=0x077F | 0xFB50..=0xFDFF | 0xFE70..=0xFEFF => Script::Arabic,
+        0x0590..=0x05FF => Script::Hebrew,
+        0x3000..=0x30FF | 0x3400..=0x4DBF | 0x4E00..=0x9FFF | 0xAC00..=0xD7AF | 0xF900..=0xFAFF => Script::Cjk,
+        0x0E00..=0x0E7F => Script::Thai,
+        0x0900..=0x097F => Script::Devanagari,
+        _ => Script::Latin,
+    })
+}
+
+/// Dominant script of `text`: the script with the most alphabetic characters (exact ties are
+/// broken deterministically but arbitrarily; real posts do not tie). `None` when the text has no
+/// alphabetic characters at all — emoji/punctuation-only posts count as matching every language.
+fn dominant_script(text: &str) -> Option<Script> {
+    let mut counts: Vec<(Script, usize)> = Vec::new();
+    for c in text.chars() {
+        if let Some(script) = char_script(c) {
+            match counts.iter_mut().find(|(s, _)| *s == script) {
+                Some((_, count)) => *count += 1,
+                None => counts.push((script, 1)),
+            }
+        }
+    }
+    counts.iter().max_by_key(|(_, count)| *count).map(|(script, _)| *script)
+}
+
+/// Script each supported Steam language is expected to be written in. Latin-script languages are
+/// mutually indistinguishable without a real language detector, so a French post may still pass an
+/// `english` filter — that is acceptable; the goal is only to stop clearly-unrelated scripts (the
+/// Russian posts the live feed mixes in) reaching an English user. Hebrew and Devanagari are
+/// classified but no supported language maps to them, so such posts are dropped everywhere.
+fn expected_script(language: &str) -> Script {
+    match language {
+        "bulgarian" | "russian" | "ukrainian" => Script::Cyrillic,
+        "greek" => Script::Greek,
+        "arabic" => Script::Arabic,
+        "schinese" | "tchinese" | "japanese" | "koreana" => Script::Cjk,
+        "thai" => Script::Thai,
+        _ => Script::Latin,
+    }
+}
+
+/// Whether an item's title + summary is written in the script expected for `language`.
+fn item_matches_language(item: &SteamNewsItem, language: &str) -> bool {
+    match dominant_script(&format!("{} {}", item.title, item.summary)) {
+        Some(script) => script == expected_script(language),
+        None => true,
+    }
+}
+
+/// Drops items whose dominant script does not match `language`, keeping the "never rejects"
+/// contract of the command: an empty list is still a successful result.
+fn filter_by_script(items: Vec<SteamNewsItem>, language: &str) -> Vec<SteamNewsItem> {
+    items.into_iter().filter(|item| item_matches_language(item, language)).collect()
+}
+
 /// Latest news posts for a Steam app. Never rejects; problems come back as `status`/`message`.
 #[tauri::command]
 pub async fn get_steam_news(appid: u32, language: Option<String>) -> SteamNewsResult {
     if appid == 0 { return SteamNewsResult { status: "error", items: vec![], message: Some("Invalid Steam app id.".into()) }; }
     let language = supported_language(language.as_deref());
     match fetch(appid, language).await.and_then(|body| parse_news(&body).map_err(|m| (false, m))) {
-        Ok(items) => SteamNewsResult { status: "ok", items, message: None },
+        Ok(items) => SteamNewsResult { status: "ok", items: filter_by_script(items, language), message: None },
         Err((offline, message)) => SteamNewsResult { status: if offline { "offline" } else { "error" }, items: vec![], message: Some(message) },
     }
 }
@@ -121,6 +198,66 @@ mod tests {
         assert_eq!(supported_language(Some("french")), "french");
         assert_eq!(supported_language(Some("fr-FR")), "english");
         assert_eq!(supported_language(None), "english");
+    }
+
+    /// Minimal item for the script-filter tests: gid/url/feed are irrelevant to classification.
+    fn news_item(title: &str, summary: &str) -> SteamNewsItem {
+        SteamNewsItem { gid: "1".into(), title: title.into(), url: "https://x/".into(), feed_label: "feed".into(), date: 0, summary: summary.into() }
+    }
+
+    #[test]
+    fn maps_supported_languages_to_expected_scripts() {
+        for language in ["bulgarian", "russian", "ukrainian"] { assert_eq!(expected_script(language), Script::Cyrillic, "{language}"); }
+        assert_eq!(expected_script("greek"), Script::Greek);
+        assert_eq!(expected_script("arabic"), Script::Arabic);
+        for language in ["schinese", "tchinese", "japanese", "koreana"] { assert_eq!(expected_script(language), Script::Cjk, "{language}"); }
+        assert_eq!(expected_script("thai"), Script::Thai);
+        for language in ["english", "brazilian", "portuguese", "french", "german", "spanish", "italian", "dutch", "polish", "turkish", "vietnamese", "indonesian"] {
+            assert_eq!(expected_script(language), Script::Latin, "{language}");
+        }
+    }
+
+    #[test]
+    fn drops_russian_posts_for_english_and_keeps_them_for_russian() {
+        let item = news_item("Большое обновление игры", "Fixed a crash");
+        assert!(!item_matches_language(&item, "english"));
+        assert!(item_matches_language(&item, "russian"));
+        assert_eq!(filter_by_script(vec![item.clone()], "english").len(), 0);
+        assert_eq!(filter_by_script(vec![item], "russian").len(), 1);
+    }
+
+    #[test]
+    fn drops_english_posts_for_russian() {
+        let item = news_item("Patch notes for the new update", "Исправления");
+        assert!(!item_matches_language(&item, "russian"));
+        assert!(item_matches_language(&item, "english"));
+    }
+
+    #[test]
+    fn keeps_japanese_posts_for_cjk_languages() {
+        let item = news_item("テスト更新", "パッチノート");
+        assert!(item_matches_language(&item, "japanese"));
+        assert!(item_matches_language(&item, "schinese"));
+        assert!(item_matches_language(&item, "tchinese"));
+        assert!(item_matches_language(&item, "koreana"));
+        assert!(!item_matches_language(&item, "english"));
+        assert!(!item_matches_language(&item, "russian"));
+    }
+
+    #[test]
+    fn keeps_posts_without_alphabetic_text() {
+        let item = news_item("🔥🚀", "🎉 ... !!!");
+        for language in SUPPORTED_LANGUAGES {
+            assert!(item_matches_language(&item, language), "{language}");
+        }
+    }
+
+    #[test]
+    fn classifies_mixed_script_posts_by_dominant_script() {
+        let mostly_russian = news_item("Большое обновление игры", "Fixed a crash");
+        assert_eq!(dominant_script(&format!("{} {}", mostly_russian.title, mostly_russian.summary)), Some(Script::Cyrillic));
+        let mostly_english = news_item("Patch notes for the new update", "Исправления");
+        assert_eq!(dominant_script(&format!("{} {}", mostly_english.title, mostly_english.summary)), Some(Script::Latin));
     }
 
     #[test]

@@ -1,8 +1,13 @@
 /* RuneScape — Gielinor stone. Every panel is carved: light edge top-left, dark edge bottom-right.
  * Text carries the game's hard black drop shadow; titles are orange, highlights yellow. */
 
-.app-shell::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .35; mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .6  0 0 0 0 .5  0 0 0 0 .35  0 0 0 .5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+/* Subtle carved-stone grain. Pure CSS repeating gradients in the theme's own browns so it
+ * rasterises identically on every engine — the previous feTurbulence data-URI overlay rendered
+ * as sparse bright specks/lines in the WebKitGTK webview. */
+.app-shell::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .35;
+  background-image:
+    repeating-linear-gradient(115deg, rgba(125, 111, 86, .07) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(0deg, rgba(42, 34, 24, .06) 0 1px, transparent 1px 6px); }
 .sidebar, .main-content { position: relative; z-index: 1; }
 
 /* Side-stone column on the right */
