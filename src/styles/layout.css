@@ -54,6 +54,7 @@
      caused persistent scroll flashes in WebKit; leave layer promotion to the browser. */
   /* Hover transforms and filters can toggle repeatedly as cards pass beneath the pointer during scrolling.
      Temporarily remove pointer hover from Library cards and stop their transitions/animations until scrolling settles. */
+  .main-content-library.is-scrolling .game-card-slot,
   .main-content-library.is-scrolling .game-card,
   .main-content-library.is-scrolling .game-card * {
     pointer-events: none !important;
