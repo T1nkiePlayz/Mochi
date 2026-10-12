@@ -124,13 +124,13 @@ code, .mfa-setup-card code, .theme-config-path code, .setting-location-value cod
 .toggle:checked { background: var(--mochi-accent-strong); }
 
 /* ---- Cards ----------------------------------------------------------------- */
-.game-card, .tofu-card, .new-tofu-card, .theme-card, .provider-credential-card, .security-card, .security-provider, .passkey-row, .profile-row, .installed-content-row, .modrinth-result, .setup-choice, .setup-theme-card, .flatpak-item, .igdb-candidate, .add-options button, .discover-card, .suggested-game-card, .download-row, .tofu-manager-item, .nexus-game-picker-row, .tofu-picker-row, .mfa-setup-card, .notification-item {
+.game-card, .tofu-card, .new-tofu-card, .theme-card, .provider-credential-card, .security-card, .security-provider, .passkey-row, .profile-row, .installed-content-row, .modrinth-result, .setup-choice, .setup-theme-card, .flatpak-item, .igdb-candidate, .add-options button, .discover-card, .download-row, .tofu-manager-item, .nexus-game-picker-row, .tofu-picker-row, .mfa-setup-card, .notification-item {
   background: var(--mochi-card-background); border: var(--mochi-border-width) solid var(--mochi-card-border);
   border-radius: var(--mochi-card-radius); color: var(--mochi-text);
   transition: background var(--mochi-transition), border-color var(--mochi-transition), transform var(--mochi-transition), box-shadow var(--mochi-transition);
 }
-.game-card, .tofu-card, .new-tofu-card, .theme-card, .discover-card, .suggested-game-card { box-shadow: var(--mochi-card-shadow); }
-.game-card:hover, .tofu-card:hover, .new-tofu-card:hover, .theme-card:hover, .setup-theme-card:hover, .flatpak-item:hover, .igdb-candidate:hover, .add-options button:hover, .discover-card:hover, .suggested-game-card:hover, .tofu-manager-item:hover, .nexus-game-picker-row:hover, .tofu-picker-row:hover {
+.game-card, .tofu-card, .new-tofu-card, .theme-card, .discover-card { box-shadow: var(--mochi-card-shadow); }
+.game-card:hover, .tofu-card:hover, .new-tofu-card:hover, .theme-card:hover, .setup-theme-card:hover, .flatpak-item:hover, .igdb-candidate:hover, .add-options button:hover, .discover-card:hover, .tofu-manager-item:hover, .nexus-game-picker-row:hover, .tofu-picker-row:hover {
   background: var(--mochi-card-hover-background); border-color: var(--mochi-card-hover-border);
 }
 .game-card.selected, .tofu-card.active, .theme-card.selected, .setup-theme-card.selected, .tofu-manager-item.active, .profile-row.active {
@@ -169,11 +169,6 @@ code, .mfa-setup-card code, .theme-config-path code, .setting-location-value cod
   border-radius: var(--mochi-card-radius); box-shadow: var(--mochi-modal-shadow);
 }
 .notification-item { border-radius: 0; border-width: 0 0 var(--mochi-border-width); background: transparent; }
-.notification-tabs { padding: 4px 8px 0; border-bottom: var(--mochi-border-width) solid var(--mochi-border); }
-.notification-news { max-height: 340px; overflow-y: auto; }
-.notification-news-item { width: 100%; text-align: left; cursor: pointer; color: inherit; }
-.notification-news-item:hover { background: var(--mochi-nav-hover-background); }
-.notification-news-item small { color: var(--mochi-text-muted); font-size: 10px; }
 .notification-heading { background: transparent; border-bottom: var(--mochi-border-width) solid var(--mochi-border); }
 .account-menu button { border-radius: var(--mochi-button-radius); }
 .account-menu button:hover, .account-menu button.selected { background: var(--mochi-nav-hover-background); }
