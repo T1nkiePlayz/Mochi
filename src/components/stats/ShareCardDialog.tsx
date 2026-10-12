@@ -47,7 +47,7 @@ export function ShareCardDialog({ records, library, unlocked, totalAchievements,
 
   return (
     <ModalShell label={t("Share card")} className="modal share-card-modal" onClose={onClose}>
-      <div className="modal-header"><div><p className="eyebrow">{t("Experimental")}</p><h2>{t("Share card")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
+      <div className="modal-header"><div><h2>{t("Share card")}</h2></div><button type="button" className="icon-button" aria-label={t("Close")} onClick={onClose}><X size={17} /></button></div>
       <div className="share-card-body">
         <img className="share-card-preview" src={svgDataUrl(svg)} alt={t("Preview of the share card")} />
         <div className="share-card-controls">

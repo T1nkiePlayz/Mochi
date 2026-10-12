@@ -14,7 +14,7 @@ Do **not** use issues for piracy help, and never post secrets.
 
 ## Setup
 
-Requirements: Node 20+, a stable Rust toolchain, and the
+Requirements: Node 22.18+ (the test scripts import TypeScript directly via Node type stripping), a stable Rust toolchain, and the
 [Tauri 2 prerequisites](https://tauri.app/start/prerequisites/) for your OS.
 
 ```bash

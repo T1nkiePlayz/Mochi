@@ -13,7 +13,7 @@ keeps the local value (`...mine, ...remote`), so a sync never erases it. No SQL 
 ## Wishlist (games you do not own)
 `src/lib/wishlist.ts`, stored in localStorage key `mochi:wishlist` (max 500 items). Open it with the **Wishlist** chip in the library filter bar;
 add games by name with an optional note. Items: `{ id, name, source?: "igdb"|"steam"|"manual", externalId?, coverUrl?, note?, addedAt, priceWatch? }`
-(`priceWatch` is reserved for a later feature).
+(`priceWatch` holds the target set by **Watch price** in game search; the deal checker alerts when the price reaches it, see [deals.md](deals.md)).
 
 Programmatic API for other features (e.g. game search): `addToWishlist(item)` (de-duplicates by source + externalId, else by name; returns the stored
 item, or `null` for an empty name / full list), `removeFromWishlist(id)`, `updateWishlistItem(id, changes)`, `isWishlisted(items, probe)` and the

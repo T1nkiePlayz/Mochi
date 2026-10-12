@@ -1,6 +1,6 @@
 # Game news (experimental, id `game-news`)
 
-Off by default; enable it in Settings > Experimental. It adds a **News** tab to the notification popover (the bell in the top bar).
+Off by default; enable **Game news** in **Settings > Deals & news**. It adds a **News** tab to the notification popover (the bell in the top bar).
 
 ## What it shows
 - **Steam news** for every Steam game in the library (games that launch through Steam; launchers are skipped): the latest posts from the keyless `ISteamNews/GetNewsForApp` endpoint (3 posts per game, plain-text excerpt of at most 300 characters). Clicking a post opens it in the browser.

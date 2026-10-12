@@ -1,6 +1,6 @@
 # Deal alerts (experimental)
 
-Free games and sales for the stores you use, plus price-watch alerts. Off by default: turn on **Settings > Experimental > Deal alerts**. The panel is the **Free & deals** section at the bottom of the notification popover.
+Free games and sales for the stores you use, plus price-watch alerts. Off by default: turn on **Show the Deals tab** in **Settings > Deals & news**. The panel is the **Free & deals** section at the bottom of the notification popover.
 
 ## What it does
 - **Free on Epic**: games that are free right now or announced as free next (a 100% promotion).

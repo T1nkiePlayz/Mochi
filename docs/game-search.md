@@ -1,6 +1,6 @@
 # Game search (experimental)
 
-Search any game, owned or not, from the command palette ("Search all games"). Off by default: turn on **Game search** in Settings > Experimental. It is offered only when an IGDB or SteamGridDB key is saved in Settings > Mod & metadata providers; without one the command is hidden.
+Search any game, owned or not, from the command palette ("Search all games"). The command is offered only when an IGDB or SteamGridDB key is saved in Settings > Mod & metadata providers; without one the command is hidden (the browser dev mock installs its own backend and skips that check).
 
 ## What a result shows
 
