@@ -113,7 +113,9 @@ export async function checkForUpdate(currentVersion: string): Promise<CheckResul
     const update = await check({ timeout: CHECK_TIMEOUT_MS });
     if (!update) return { kind: "current" };
     if (!isNewerVersion(update.version, currentVersion)) return { kind: "current" };
-    pendingNative = update as unknown as NativeUpdate;
+    // The plugin's Update carries a richer downloadAndInstall signature; keep only the shape installUpdate needs.
+    if (typeof update.downloadAndInstall !== "function") return checkGithub(currentVersion);
+    pendingNative = { version: update.version, body: update.body, downloadAndInstall: (onEvent) => update.downloadAndInstall(onEvent) };
     return { kind: "available", info: { version: update.version, notes: update.body ?? "", releaseUrl: RELEASES_PAGE, installable: true } };
   } catch {
     // Not an AppImage/.app install, no signed manifest yet, or no network: use the public release feed.

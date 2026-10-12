@@ -1,4 +1,4 @@
-import { Suspense, lazy, memo, useEffect } from "react";
+import { Suspense, lazy, memo, useCallback, useEffect } from "react";
 import { Gamepad2 } from "lucide-react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { MochiIcon } from "./components/MochiIcon";
@@ -7,6 +7,7 @@ import { Sidebar } from "./components/layout/Sidebar";
 import { Topbar } from "./components/layout/Topbar";
 import { LibraryView } from "./views/LibraryView";
 import { AppProvider, shallowEqual, useApp, useAppSelector } from "./state/AppContext";
+import type { Piko, Tofu } from "./models";
 import { BigPictureGate } from "./bigpicture/BigPictureGate";
 import { ControllerRuntime } from "./controller/ControllerRuntime";
 import { ShortcutsHelp } from "./components/ShortcutsHelp";
@@ -18,6 +19,8 @@ import { installTruncationTitles } from "./lib/truncationTitles";
 import { Cloud } from "lucide-react";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { useTranslation } from "./lib/useTranslation";
+import { commitWhenLocaleReady } from "./lib/i18n";
+import { applyLauncherLanguage } from "./lib/languages";
 
 // Dialogs only mount when opened, so their code (and the pickers/editors behind them) stays out of the entry chunk.
 const AddGameModals = lazy(() => import("./components/AddGameModals").then((m) => ({ default: m.AddGameModals })));
@@ -69,25 +72,27 @@ function SkipLink() {
 
 function Shell() {
   const app = useApp();
-  const { lib, credentials, account, themeEngine } = app;
+  const { lib, account } = app;
+  // Hoisted so TofuManager/GameEditor see stable handler identities: `updateGame`, `setShowTofuManager`
+  // and `setEditingGameId` are stable, so only the ids participate in the dependency lists.
+  const { setEditingGameId, setShowTofuManager } = app;
+  const updateGame = lib.updateGame;
+  const selectedPikoId = lib.selectedPiko.id;
+  const onTofusChange = useCallback((tofus: Tofu[]) => { updateGame(selectedPikoId, { tofus }); }, [updateGame, selectedPikoId]);
+  const closeTofuManager = useCallback(() => setShowTofuManager(false), [setShowTofuManager]);
+  const editingGameId = app.editingGameId;
+  const saveGameChanges = useCallback((changes: Partial<Piko>) => { updateGame(editingGameId, changes); setEditingGameId(""); }, [updateGame, editingGameId, setEditingGameId]);
+  const closeGameEditor = useCallback(() => setEditingGameId(""), [setEditingGameId]);
 
   if (app.showFirstLaunchSetup) {
     return <Suspense fallback={<ViewFallback />}>
       <FirstLaunchSetup
-        igdbClientId={credentials.igdbClientId} setIgdbClientId={credentials.setIgdbClientId}
-        igdbClientSecret={credentials.igdbClientSecret} setIgdbClientSecret={credentials.setIgdbClientSecret}
-        onSignIn={account.openSignIn} user={account.user}
-        language={app.behavior.language} setLanguage={(language) => app.setBehavior((current) => ({ ...current, language }))}
+        setLanguage={(language) => commitWhenLocaleReady(language, () => {
+          // Locale map is loaded now: apply + persist in one batch so the next frame renders translated.
+          applyLauncherLanguage(language);
+          app.setBehavior((current) => ({ ...current, language }));
+        })}
         onAddUser={() => { app.storage.setMultipleAccountProfiles(true); account.openSignIn(); }}
-        credentialStatus={credentials.status} credentialStatusLoaded={credentials.loaded}
-        themes={themeEngine.themes} theme={themeEngine.theme} setTheme={themeEngine.setTheme}
-        nexusApiKey={credentials.nexusApiKey} setNexusApiKey={credentials.setNexusApiKey}
-        steamGridDbKey={credentials.steamGridDbKey} setSteamGridDbKey={credentials.setSteamGridDbKey}
-        saveCredential={credentials.save} credentialBusy={credentials.busy}
-        cloudSyncEnabled={app.cloud.cloudSyncEnabled} cloudDataAccessAllowed={app.cloud.cloudDataAccessAllowed} cloudSettingsReady={app.cloud.cloudSettingsReady} cloudSyncState={app.cloud.syncState}
-        cloudImportBusy={app.cloud.cloudDataBusy} cloudImportReady={app.storage.ready} cloudImportMessage={app.cloud.cloudDataMessage}
-        onImportCloudData={app.cloud.importCloudLibrary}
-        onFinish={app.finishFirstLaunchSetup}
       />
       {account.showAuth && <AuthModal />}
     </Suspense>;
@@ -113,8 +118,8 @@ function Shell() {
     <Suspense fallback={null}>
       <ModBackground />
       {addOpen && <AddGameModals />}
-      {app.showTofuManager && lib.library.some((piko) => piko.id === lib.selectedPiko.id) && <TofuManager piko={lib.selectedPiko} selectedTofuId={lib.selectedTofu.id} runtimes={app.runtimes} onSelect={lib.setSelectedTofuId} onChange={(tofus) => lib.updateGame(lib.selectedPiko.id, { tofus })} onClose={() => app.setShowTofuManager(false)} />}
-      {editing && <GameEditor game={editing} capabilities={app.platformCapabilities} onSave={(changes) => { lib.updateGame(editing.id, changes); app.setEditingGameId(""); }} onClose={() => app.setEditingGameId("")} />}
+      {app.showTofuManager && lib.library.some((piko) => piko.id === lib.selectedPiko.id) && <TofuManager piko={lib.selectedPiko} selectedTofuId={lib.selectedTofu.id} runtimes={app.runtimes} onSelect={lib.setSelectedTofuId} onChange={onTofusChange} onClose={closeTofuManager} />}
+      {editing && <GameEditor game={editing} capabilities={app.platformCapabilities} onSave={saveGameChanges} onClose={closeGameEditor} />}
       {account.showAuth && <AuthModal />}
     </Suspense>
   </div>;

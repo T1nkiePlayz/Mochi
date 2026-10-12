@@ -1,6 +1,6 @@
 import { confirmAction } from "../lib/confirm";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import type { User } from "@supabase/supabase-js";
+import type { Factor, PasskeyListItem, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import {
   deletePasskey, enrollTotp, getVerifiedTotpFactor, linkAuthIdentity, listPasskeys, registerPasskey, removeTotp,
@@ -53,8 +53,8 @@ export function useAccount(notify: (title: string, message: string) => void, req
   const [emailCodeStep, setEmailCodeStep] = useState(false);
   const [emailCode, setEmailCode] = useState("");
   const [emailCodeEmail, setEmailCodeEmail] = useState("");
-  const [securityFactors, setSecurityFactors] = useState<any[]>([]);
-  const [passkeys, setPasskeys] = useState<any[]>([]);
+  const [securityFactors, setSecurityFactors] = useState<Factor[]>([]);
+  const [passkeys, setPasskeys] = useState<PasskeyListItem[]>([]);
   const [securityBusy, setSecurityBusy] = useState(false);
   const [mfaSetup, setMfaSetup] = useState<{ id: string; qr: string; secret: string } | null>(null);
 

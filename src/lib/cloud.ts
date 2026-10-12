@@ -46,7 +46,8 @@ export async function pullLibrary(client: SupabaseClient, userId: string): Promi
     .order("created_at", { referencedTable: "tofus" });
   if (error) throw error;
 
-  return ((data ?? []) as unknown as PikoRow[]).map((piko) => ({
+  const rows = (Array.isArray(data) ? data : []) as unknown as PikoRow[];
+  return rows.map((piko) => ({
     id: piko.local_id,
     name: piko.name,
     description: piko.description,
