@@ -90,7 +90,7 @@ html[data-reduce-motion="true"] *, html[data-reduce-motion="true"] *::before, ht
   transition-duration: .001ms !important; transition-delay: 0ms !important; scroll-behavior: auto !important;
 }
 html[data-reduce-motion="true"] [class*="parallax"], html[data-reduce-motion="true"] [class*="floating"], html[data-reduce-motion="true"] [class*="drift"] { transform: none !important; }
-html[data-reduce-motion="true"] .game-card:hover, html[data-reduce-motion="true"] .game-card:hover * { transform: none; }
+html[data-reduce-motion="true"] .game-card:hover, html[data-reduce-motion="true"] .game-card-slot:hover .game-card, html[data-reduce-motion="true"] .game-card:hover * { transform: none; }
 
 /* ---- Reduced transparency & simplified backgrounds -------------------------- */
 html[data-reduce-transparency="true"] { --mochi-blur: 0px; --mochi-overlay-background: var(--mochi-background); --mochi-card-background: var(--mochi-surface); --mochi-panel-background: var(--mochi-surface); --mochi-sidebar-background: var(--mochi-background-elevated); --mochi-modal-background: var(--mochi-background-elevated); }

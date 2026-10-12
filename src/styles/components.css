@@ -137,7 +137,8 @@ code, .mfa-setup-card code, .theme-config-path code, .setting-location-value cod
   border-color: var(--mochi-card-hover-border); background: var(--mochi-card-hover-background);
   box-shadow: inset 0 0 0 1px var(--mochi-card-hover-border), var(--mochi-card-shadow);
 }
-/* Keep the card hitbox stationary on hover. Moving the card itself can make pointer hover enter/leave repeatedly near its edges. */
+/* Hover geometry: the lift lives on `.game-card-slot` (see the Library section), never on the card
+   itself — a transform on the hovered element moves its own hit box out from under the pointer. */
 .game-card-art, .game-details-cover, .game-trailer-poster { background-color: var(--mochi-surface-raised); }
 .game-card { overflow: hidden; }
 
@@ -197,6 +198,12 @@ progress { accent-color: var(--mochi-accent-strong); }
 .library-extras { display: grid; gap: 14px; margin-top: 26px; }
 .library-extras-toggle { justify-self: start; display: inline-flex; align-items: center; gap: 6px; }
 .game-card-grid { grid-template-columns: repeat(auto-fill, minmax(var(--mochi-cover-min, 168px), 1fr)) !important; gap: var(--mochi-card-gap); }
+/* The slot wraps every card as a stationary hit box (GameCard.tsx) and is the grid/flex item.
+   Hovering it raises the card through a descendant selector: :hover then keys off a box that never
+   moves, so entering the last couple of pixels above a card edge can no longer toggle :hover and
+   flash the heart/play overlays while the cursor moves from one card to the next. */
+.game-card-slot { display: grid; min-width: 0; }
+.game-card-slot:hover .game-card, .game-card.selected { transform: translateY(-2px); }
 .game-card { position: relative; padding: 0; text-align: left; cursor: pointer; }
 .game-card-art { aspect-ratio: var(--mochi-cover-aspect, 3 / 4); transition: transform .35s ease; }
 .game-card:hover .game-card-art { transform: scale(1.04); }

@@ -38,6 +38,7 @@
 /* Library */
 .game-card { box-shadow: inset 0 0 0 2px #39393B; padding: 6px; background: #2A2B2C; }
 .game-card:hover { background: #39393B; box-shadow: inset 0 0 0 2px #47484A; transform: none; }
+.game-card-slot:hover .game-card { transform: none; }
 .game-card.selected { box-shadow: inset 0 0 0 2px #2E6BE6; }
 .game-card .game-card-art { border: 2px solid #0E0E0F; image-rendering: pixelated; }
 .game-card:hover .game-card-art { transform: none; }

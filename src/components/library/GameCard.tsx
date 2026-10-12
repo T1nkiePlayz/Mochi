@@ -48,21 +48,26 @@ export const GameCard = memo(function GameCard({ piko, selected, running, cloudS
 
   // Hidden from Tab but still reachable by arrow keys and the controller (data-nav).
   const roving = tabStop ? {} : { tabIndex: -1, "data-nav": "" };
-  return <article data-game-id={piko.id} className={`game-card ${hasArtwork(piko) ? "" : "no-art"} ${selected ? "selected" : ""} ${checked ? "multi-selected" : ""} ${running ? "is-running" : ""}`}
-    onContextMenu={(event) => { event.preventDefault(); onMenu(piko.id, event.clientX, event.clientY); }}
-    onPointerDown={onPointerDown} onPointerUp={cancel} onPointerLeave={cancel} onPointerCancel={cancel} onKeyDown={onKeyDown}>
-    <button type="button" className="game-card-main" {...roving} aria-pressed={selecting ? checked : undefined}
-      onClick={() => { if (fired.current) { fired.current = false; return; } if (selecting) onToggleChecked(piko.id); else onOpen(piko); }}>
-      <GameArtwork className="game-card-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} name={piko.name} kind={piko.kind} sourceId={piko.sourceId} />
-      <div className="game-card-copy">
-        <strong><span className="game-card-name" title={piko.name}>{piko.name}</span><CloudBadge status={cloudStatus} /></strong>
-        <small>{running ? t("Running now") : piko.categories?.map((category) => t(category)).join(" · ") || t(piko.platformCategory || "Other")}</small>
-        {piko.tags?.length ? <span className="game-card-tags">{piko.tags.slice(0, 3).map((tag) => <span key={tag}>#{tag}</span>)}</span> : null}
-      </div>
-      {!selecting && <span className="game-card-play"><MochiIcon name="play" fallback={Play} size={15} fill="currentColor" /></span>}
-    </button>
-    {selecting
-      ? <span className={`game-card-check ${checked ? "on" : ""}`} aria-hidden="true">{checked && <Check size={13} />}</span>
-      : <button type="button" className={`game-card-heart ${piko.favorite ? "on" : ""}`} tabIndex={-1} data-nav="" aria-pressed={Boolean(piko.favorite)} aria-label={piko.favorite ? t("Remove {name} from favourites").replace("{name}", piko.name) : t("Add {name} to favourites").replace("{name}", piko.name)} onClick={() => onToggleFavorite(piko.id)}><Heart size={15} fill={piko.favorite ? "currentColor" : "none"} /></button>}
-  </article>;
+  // The slot is a hit box that never moves: it drives the hover lift (see components.css), so the
+  // card can raise itself without translating its own :hover boundary out from under the pointer —
+  // that toggle flashed the heart/play overlays whenever the cursor crossed a card edge.
+  return <div className="game-card-slot">
+    <article data-game-id={piko.id} className={`game-card ${hasArtwork(piko) ? "" : "no-art"} ${selected ? "selected" : ""} ${checked ? "multi-selected" : ""} ${running ? "is-running" : ""}`}
+      onContextMenu={(event) => { event.preventDefault(); onMenu(piko.id, event.clientX, event.clientY); }}
+      onPointerDown={onPointerDown} onPointerUp={cancel} onPointerLeave={cancel} onPointerCancel={cancel} onKeyDown={onKeyDown}>
+      <button type="button" className="game-card-main" {...roving} aria-pressed={selecting ? checked : undefined}
+        onClick={() => { if (fired.current) { fired.current = false; return; } if (selecting) onToggleChecked(piko.id); else onOpen(piko); }}>
+        <GameArtwork className="game-card-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} name={piko.name} kind={piko.kind} sourceId={piko.sourceId} />
+        <div className="game-card-copy">
+          <strong><span className="game-card-name" title={piko.name}>{piko.name}</span><CloudBadge status={cloudStatus} /></strong>
+          <small>{running ? t("Running now") : piko.categories?.map((category) => t(category)).join(" · ") || t(piko.platformCategory || "Other")}</small>
+          {piko.tags?.length ? <span className="game-card-tags">{piko.tags.slice(0, 3).map((tag) => <span key={tag}>#{tag}</span>)}</span> : null}
+        </div>
+        {!selecting && <span className="game-card-play"><MochiIcon name="play" fallback={Play} size={15} fill="currentColor" /></span>}
+      </button>
+      {selecting
+        ? <span className={`game-card-check ${checked ? "on" : ""}`} aria-hidden="true">{checked && <Check size={13} />}</span>
+        : <button type="button" className={`game-card-heart ${piko.favorite ? "on" : ""}`} tabIndex={-1} data-nav="" aria-pressed={Boolean(piko.favorite)} aria-label={piko.favorite ? t("Remove {name} from favourites").replace("{name}", piko.name) : t("Add {name} to favourites").replace("{name}", piko.name)} onClick={() => onToggleFavorite(piko.id)}><Heart size={15} fill={piko.favorite ? "currentColor" : "none"} /></button>}
+    </article>
+  </div>;
 });

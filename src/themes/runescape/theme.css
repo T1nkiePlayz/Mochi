@@ -34,6 +34,7 @@
 .game-card { padding: 4px; }
 .game-card .game-card-art { border: 2px solid #1c1812; box-shadow: 0 0 0 1px #6b5f4a; }
 .game-card:hover { transform: none; box-shadow: inset 1px 1px 0 #6b5f4a, inset -1px -1px 0 #261f16, 0 0 0 2px #ff981f; }
+.game-card-slot:hover .game-card { transform: none; }
 .game-card:hover .game-card-art { transform: none; }
 .game-card-copy { background: transparent; padding: 8px 4px 4px; }
 .game-card-copy strong { color: #ffff00; text-shadow: 1px 1px 0 #000; font-size: 15px; }
