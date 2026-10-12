@@ -317,7 +317,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 
 ### Build dependencies
 
-You need Node 20+, a stable Rust toolchain ([rustup](https://rustup.rs)) and the system libraries below.
+You need Node 22.18+ (the test scripts import TypeScript directly via Node type stripping), a stable Rust toolchain ([rustup](https://rustup.rs)) and the system libraries below.
 
 **Arch / Manjaro**
 

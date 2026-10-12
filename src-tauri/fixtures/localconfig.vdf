@@ -1,0 +1,53 @@
+// A trimmed copy of the shape Steam writes to userdata/<accountid>/config/localconfig.vdf.
+"UserLocalConfigStore"
+{
+	"friends"
+	{
+		"MarqueeSeparatorWidth"		"5"
+		"ShowNameTag"		"1"
+	}
+	"Sound"
+	{
+		"SteamNotificationSounds"		"1"
+	}
+	"Software"
+	{
+		"Valve"
+		{
+			"Steam"
+			{
+				"apps"
+				{
+					"220"
+					{
+						"LastPlayed"		"1700000000"
+						"Playtime"		"1500"
+						"LaunchOptions"		"-console"
+						"InstallConfig"
+						{
+							"language"		"english"
+						}
+					}
+					"400"
+					{
+						"Playtime"		"10"
+					}
+					"620"
+					{
+						"Playtime"		"240"
+						"LastPlayed"		"1650000000"
+					}
+					"999999"
+					{
+						"Playtime"		"42"
+						"LastPlayed"		"1600000000"
+					}
+				}
+				"StartupRecap"
+				{
+					"LaunchTime"		"1700000100"
+				}
+			}
+		}
+	}
+}

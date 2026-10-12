@@ -36,10 +36,11 @@ export function useDownloads(active: boolean, notify: (title: string, message: s
       } catch { /* browser/development mode */ }
     };
     void poll();
-    // The in-memory list is cheap to read; poll faster while the user is watching it.
+    // The in-memory list is cheap to read; poll faster while the user is watching it and back off to 30s
+    // when nothing is in flight (starts and finishes still arrive at once via the native event below).
     // Nobody is looking while the window is hidden (minimised, tray), so skip those ticks and catch up on return.
     const tick = () => { if (!document.hidden) void poll(); };
-    const timer = window.setInterval(tick, active || hasActive ? 1500 : 4000);
+    const timer = window.setInterval(tick, active || hasActive ? 1500 : 30000);
     document.addEventListener("visibilitychange", tick);
     // The native side announces every start, finish and cancel, so the list reacts at once instead of on the next tick.
     const unsubscribe = subscribeNative("mod-download-changed", () => void poll());

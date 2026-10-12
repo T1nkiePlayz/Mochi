@@ -1,6 +1,6 @@
 # Share card (experimental)
 
-Enable **Settings > Experimental > Share card**, then open **Stats > Overview > Share card**.
+Open **Stats > Overview > Share card** (shown once you have playtime). No setting gates it.
 
 It builds a 1080x1080 PNG of your stats that you can save or copy. Everything happens on this device: the card is
 generated as an SVG (`src/lib/shareCard.ts`), drawn to a canvas and encoded as PNG. There is no network access.

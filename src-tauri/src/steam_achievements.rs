@@ -213,6 +213,13 @@ pub fn find_steam_id(roots: &[PathBuf]) -> Option<String> {
     roots.iter().find_map(|root| id_from_userdata(root))
 }
 
+/// The `userdata/<accountid>` folder number of a SteamID64 — where this account's local files
+/// (`config/localconfig.vdf`, screenshots, …) live.
+pub fn account_id(steam_id: &str) -> Option<u32> {
+    let id64: u64 = steam_id.parse().ok()?;
+    id64.checked_sub(ID64_BASE).and_then(|id| u32::try_from(id).ok()).filter(|id| *id > 0)
+}
+
 // ---------------------------------------------------------------------------
 // Parsing
 // ---------------------------------------------------------------------------
@@ -691,6 +698,15 @@ mod tests {
         fs::write(root.join("config/loginusers.vdf"), LOGIN).unwrap();
         assert_eq!(find_steam_id(std::slice::from_ref(&root)).as_deref(), Some("76561198000000001"));
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn account_ids_come_from_steam_id64s() {
+        assert_eq!(account_id(&(22_002 + ID64_BASE).to_string()), Some(22_002));
+        assert_eq!(account_id("76561197960265728"), None); // the ID64 base itself: no folder
+        for bad in ["", "7656119796028793", "76561197960287930x", "not-a-number"] {
+            assert_eq!(account_id(bad), None, "{bad}");
+        }
     }
 
     #[test]

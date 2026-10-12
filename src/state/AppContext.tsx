@@ -16,6 +16,7 @@ import type { MinecraftMode } from "../lib/minecraftCopy";
 import { discardPendingWrites, readJson, readString, storageKeys, writeJson, writeString } from "../lib/storage";
 import { normalizeBehavior, type Behavior } from "./settings";
 import { applyLauncherLanguage } from "../lib/languages";
+import { commitWhenLocaleReady } from "../lib/i18n";
 import { useNotifications } from "./useNotifications";
 import { useAccount } from "./useAccount";
 import { useCredentials } from "./useCredentials";
@@ -97,7 +98,11 @@ function useAppController() {
       notifications.setShowNotifications(false);
     },
   });
-  useEffect(() => { applyLauncherLanguage(behavior.language); }, [behavior.language]);
+  // Applies the display language (document lang/dir + translation locale). Settings and setup go
+  // through commitWhenLocaleReady before persisting, so their map is cached by the time this runs;
+  // the helper also covers language changes from other sources (e.g. profile loads) and always
+  // applies only after the map arrived.
+  useEffect(() => { commitWhenLocaleReady(behavior.language, () => applyLauncherLanguage(behavior.language)); }, [behavior.language]);
   useGameNewsPoller(behavior.gameNews, lib.library, notify, behavior.language);
   useScheduledBackup(storage.ready, notify);
   useLibraryWatcher(behavior.watchFolders, storage.ready, lib.library, notify);

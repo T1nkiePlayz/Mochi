@@ -29,29 +29,30 @@ export type NexusModPage = {
   offset: number;
 };
 
-function normalizeNexusGame(value: any): NexusGame | null {
+function normalizeNexusGame(value: unknown): NexusGame | null {
   if (!value || typeof value !== "object") return null;
-  const id = value.id == null ? "" : String(value.id);
-  const name = typeof value.name === "string" ? value.name.trim() : "";
-  const domainName = typeof value.domainName === "string"
-    ? value.domainName.trim()
-    : typeof value.domain_name === "string"
-      ? value.domain_name.trim()
+  const record = value as Record<string, unknown>;
+  const id = record.id == null ? "" : String(record.id);
+  const name = typeof record.name === "string" ? record.name.trim() : "";
+  const domainName = typeof record.domainName === "string"
+    ? record.domainName.trim()
+    : typeof record.domain_name === "string"
+      ? record.domain_name.trim()
       : "";
   if (!name || !domainName) return null;
 
   const iconUrl = [
-    value.iconUrl,
-    value.icon_url,
-    value.pictureUrl,
-    value.picture_url,
-    value.imageUrl,
-    value.image_url,
-    value.thumbnailUrl,
-    value.thumbnail_url,
+    record.iconUrl,
+    record.icon_url,
+    record.pictureUrl,
+    record.picture_url,
+    record.imageUrl,
+    record.image_url,
+    record.thumbnailUrl,
+    record.thumbnail_url,
   ].find((candidate) => typeof candidate === "string" && candidate.trim());
 
-  const modCount = Number(value.modCount ?? value.mod_count ?? value.file_count ?? 0);
+  const modCount = Number(record.modCount ?? record.mod_count ?? record.file_count ?? 0);
   // Do not invent a cover URL from the GraphQL id: Nexus game ids are not guaranteed to be the
   // numeric filename used by its static image CDN. Missing icon data is handled by the configured IGDB fallback.
 
@@ -61,7 +62,7 @@ function normalizeNexusGame(value: any): NexusGame | null {
     domainName,
     ...(iconUrl ? { iconUrl: String(iconUrl) } : {}),
     ...(Number.isFinite(modCount) && modCount > 0 ? { modCount } : {}),
-    ...(typeof value.genre === "string" && value.genre.trim() ? { genre: value.genre.trim() } : {}),
+    ...(typeof record.genre === "string" && record.genre.trim() ? { genre: record.genre.trim() } : {}),
   };
 }
 

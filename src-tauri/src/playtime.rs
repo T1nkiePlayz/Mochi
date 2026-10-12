@@ -413,6 +413,39 @@ pub fn list() -> Result<Vec<PlaytimeEntry>, String> {
     })
 }
 
+/// One block of playtime imported from elsewhere (Steam's own totals), ready to be recorded.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HistoricCredit {
+    pub game_id: String,
+    pub name: String,
+    pub seconds: u64,
+    /// When it was played (e.g. Steam's `LastPlayed`); dates the row and the game's `last_played`.
+    pub at: u64,
+}
+
+/// Records imported playtime: each credit becomes one `Historic` history row plus the same
+/// seconds in the game's stored total, so the total converges on the imported number. All
+/// credits land under one lock; zero-second credits are ignored.
+pub fn record_historics(credits: &[HistoricCredit]) -> Result<(), String> {
+    lock(&state(), |guard| {
+        for credit in credits {
+            if credit.seconds == 0 { continue; }
+            let entry = guard.games.entry(credit.game_id.clone()).or_insert_with(|| PlaytimeEntry {
+                game_id: credit.game_id.clone(), name: credit.name.clone(), seconds: 0, last_played: 0,
+            });
+            entry.name = credit.name.clone();
+            entry.seconds = entry.seconds.saturating_add(credit.seconds);
+            entry.last_played = entry.last_played.max(credit.at);
+            let record = Session { game_id: credit.game_id.clone(), name: credit.name.clone(), start: credit.at, seconds: credit.seconds, kind: SessionKind::Historic, count: 0 };
+            if let Some(path) = &guard.history_path {
+                if let Err(error) = append_history(path, &record) { eprintln!("{error}"); }
+            }
+            guard.history.push(record);
+        }
+        persist(guard)
+    })?
+}
+
 pub fn active() -> Result<Vec<ActiveSessionInfo>, String> {
     lock(&state(), |guard| {
         guard.active.iter().map(|(game_id, session)| ActiveSessionInfo {

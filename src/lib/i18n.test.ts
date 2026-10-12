@@ -3,7 +3,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { launcherLanguages } from "./languages";
-import { getTranslationMessages, hasTranslation, translate, translateUiMessage } from "./i18n";
+import { getTranslationMessages, hasTranslation, referenceTranslate as translate } from "./i18nCatalogues";
+import { ensureLocale, translateUiMessage } from "./i18n";
 
 describe("shared UI translations", () => {
   it("translates core setup and shell messages for every supported non-English language", () => {
@@ -192,13 +193,15 @@ describe("shared UI translations", () => {
     expect(missingMessages, `Missing literal UI translations (${missingMessages.length} strings):\n${missingMessages.slice(0, 200).join("\n")}`).toEqual([]);
   });
 
-  it("resolves translations from every supplemental catalogue", () => {
+  it("resolves translations from every supplemental catalogue", async () => {
     expect(translate("Playtime", "fr")).toBe("Temps de jeu");
     expect(translate("Search games", "ja")).toBe("ゲームを検索");
     expect(translate("Add a Piko", "de")).toBe("Piko hinzufügen");
     expect(translate("Local-first by design", "es")).toBe("Diseñado para priorizar el uso local");
     expect(translate("Cloud sync active", "de")).toBe("Cloud-Synchronisierung aktiv");
     expect(translate("No games match “{query}”.", "fr")).toBe("Aucun jeu ne correspond à « {query} ».");
+    // translateUiMessage reads the lazily loaded active-locale map, so fetch fr first.
+    await ensureLocale("fr");
     expect(translateUiMessage("No games match “Hytale”.", "fr")).toBe("Aucun jeu ne correspond à « Hytale ».");
   });
 

@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import { readFileSync } from "node:fs";
 import * as path from "node:path";
 import * as ts from "typescript";
+import { i18nLocalePlugin } from "./src/lib/i18nLocalePlugin";
 
 const { version } = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string };
 
@@ -162,7 +163,9 @@ export function jsxLocalizationPlugin() {
 
 
 export default defineConfig({
-  plugins: [jsxLocalizationPlugin(), react()],
+  // i18nLocalePlugin serves virtual:mochi-i18n/<locale> — one folded map per locale, which
+  // Rollup code-splits into its own dynamic chunk because i18n.ts imports it dynamically.
+  plugins: [i18nLocalePlugin(), jsxLocalizationPlugin(), react()],
   css: { postcss: { plugins: [layerPlugin()] } },
   test: { include: ["src/**/*.test.{ts,tsx}"] },
   define: { __APP_VERSION__: JSON.stringify(version) },
@@ -173,35 +176,8 @@ export default defineConfig({
           if (id.includes("/node_modules/@supabase/")) return "supabase";
           if (id.includes("/node_modules/lucide-react/")) return "icons";
           if (id.includes("/node_modules/react-dom/") || id.includes("/node_modules/react/")) return "react";
-          // Keep translation catalogues out of the app entry. The lookup is synchronous,
-          // so they are all needed at startup; isolate the largest catalogues and group smaller
-          // ones by feature. This avoids dozens of tiny eager chunks without creating oversized bundles.
-          if (id.includes("/src/lib/i18n") && !id.includes(".test.")) {
-            const fileName = path.basename(id, path.extname(id));
-            const standaloneChunks: Record<string, string> = {
-              i18nCommonPart2: "translations-common-part2",
-              i18nAudit: "translations-audit",
-              i18nRecentUi: "translations-recent-ui",
-              i18nMetadataPart2: "translations-metadata-part2",
-              i18nMetadataPart1: "translations-metadata-part1",
-              i18nUiExtra: "translations-ui-extra",
-              i18nCommonPart1: "translations-common-part1",
-              i18nSettingsRecent: "translations-settings-recent",
-              i18nSettings: "translations-settings-core",
-              i18nInstalled: "translations-installed",
-              i18nStats: "translations-stats",
-              i18nLongHelp: "translations-long-help",
-              i18nAccessibilitySettings: "translations-accessibility-settings",
-            };
-            const standaloneChunk = standaloneChunks[fileName];
-            if (standaloneChunk) return standaloneChunk;
-            if (fileName === "i18n") return "translations-core";
-            if (/^i18n(?:Setup|CloudSetup|AccountSetup|ServiceSetup|Chrome|AccountHardware|Accessibility)/.test(fileName)) return "translations-setup";
-            if (/^i18n(?:Settings|Controls|Navigation|Keyboard|Launch|UpdateArtwork|ArtworkSources|ExportShare|PickerGuidance|EditFilter|SavedFilter)/.test(fileName)) return "translations-settings";
-            if (/^i18n(?:Library|Downloads|Mod|Tofu|Save|Saves|Duplicates)/.test(fileName)) return "translations-content";
-            if (/^i18n(?:Discover|Discovery|Project|Deals|Metadata|Stats)/.test(fileName)) return "translations-discovery";
-            return "translations-common";
-          }
+          // Translation catalogues are no longer in the browser graph: each locale ships as its
+          // own virtual-module chunk (i18nLocalePlugin), so no translations-* mapping is needed.
           // App code that is large and only needed once a game or mod is involved: keeps the entry chunk under the 500 kB limit.
           if (id.includes("/src/assets/launchers")) return "launcher-art";
           if (id.includes("/src/lib/mods/") || id.includes("/src/lib/nexus") || id.includes("/src/lib/modrinth") || id.includes("/src/lib/curseforge")) return "mods-core";

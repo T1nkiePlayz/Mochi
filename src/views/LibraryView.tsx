@@ -32,7 +32,7 @@ import { GameMods } from "../components/mods/GameMods";
 import { supabase } from "../lib/supabase";
 import { lookupTimeToBeat } from "../lib/igdb";
 import { formatPlaytime, formatRelativeTime } from "../lib/format";
-import { useApp } from "../state/AppContext";
+import { useAppSelector } from "../state/AppContext";
 import { usernameOf } from "../state/useAccount";
 import { useTranslation } from "../lib/useTranslation";
 
@@ -83,8 +83,17 @@ async function loadPickerHours(pikos: Piko[]): Promise<Map<string, number>> {
 
 export function LibraryView() {
   const t = useTranslation();
-  const app = useApp();
-  const { lib, actions, sessions, cloud, add, account, credentials, platformCapabilities, collections } = app;
+  const lib = useAppSelector((app) => app.lib);
+  const actions = useAppSelector((app) => app.actions);
+  const sessions = useAppSelector((app) => app.sessions);
+  const cloud = useAppSelector((app) => app.cloud);
+  const add = useAppSelector((app) => app.add);
+  const account = useAppSelector((app) => app.account);
+  const credentials = useAppSelector((app) => app.credentials);
+  const platformCapabilities = useAppSelector((app) => app.platformCapabilities);
+  const collections = useAppSelector((app) => app.collections);
+  const setEditingGameId = useAppSelector((app) => app.setEditingGameId);
+  const setShowTofuManager = useAppSelector((app) => app.setShowTofuManager);
   const { selectedPiko, selectedTofu, gameDetailsId, search } = lib;
   const cloudCtx = { enabled: cloud.cloudSyncEnabled, confirmed: cloud.confirmedIds, syncState: cloud.syncState };
   const details = useMemo(() => lib.library.find((piko) => piko.id === gameDetailsId), [lib.library, gameDetailsId]);
@@ -171,7 +180,7 @@ export function LibraryView() {
       onBack={() => lib.setGameDetailsId("")}
       onPlay={() => { const tofuId = selectedPiko.id === details.id ? selectedTofu.id : undefined; lib.selectPiko(details, tofuId); void actions.launchGame(details, { tofuId }); }}
       onStop={() => void actions.stopRunningGame(details)}
-      onEdit={() => app.setEditingGameId(details.id)}
+      onEdit={() => setEditingGameId(details.id)}
       onRemove={() => actions.removeGame(details)}
       collections={collections.collections}
       tagSuggestions={allTags.map(([tag]) => tag)}
@@ -188,7 +197,7 @@ export function LibraryView() {
       onShortcutSteam={(userId) => void actions.addToSteam(details, userId)}
       workspace={<>
         <section className="tofu-section">
-          <div className="section-heading"><div><p className="eyebrow">{t("Environments")}</p><h3>{t("Your Tofus")}</h3></div><button className="text-button" onClick={() => app.setShowTofuManager(true)}><MochiIcon name="manage" fallback={SlidersHorizontal} size={15} /> {t("Manage")}</button></div>
+          <div className="section-heading"><div><p className="eyebrow">{t("Environments")}</p><h3>{t("Your Tofus")}</h3></div><button className="text-button" onClick={() => setShowTofuManager(true)}><MochiIcon name="manage" fallback={SlidersHorizontal} size={15} /> {t("Manage")}</button></div>
           <div className="tofu-grid">
             {selectedPiko.tofus.map((tofu) => (
               <button className={`tofu-card ${selectedTofu.id === tofu.id ? "active" : ""}`} key={tofu.id} onClick={() => lib.setSelectedTofuId(tofu.id)}>
@@ -198,14 +207,14 @@ export function LibraryView() {
                 <span className="tofu-mods">{tofu.mods ? t("{count} mods installed").replace("{count}", String(tofu.mods)) : t("No mods installed")}</span>
               </button>
             ))}
-            <button className="new-tofu-card" onClick={() => { lib.createTofu(); app.setShowTofuManager(true); }}><MochiIcon name="plus" fallback={Plus} size={17} /><span>{t("New Tofu")}</span><small>{t("Set up another environment")}</small></button>
+            <button className="new-tofu-card" onClick={() => { lib.createTofu(); setShowTofuManager(true); }}><MochiIcon name="plus" fallback={Plus} size={17} /><span>{t("New Tofu")}</span><small>{t("Set up another environment")}</small></button>
           </div>
         </section>
         <section className="details-strip">
           <div><span className="detail-label">{t("Selected Tofu")}</span><strong>🧊 {selectedTofu.name}</strong></div>
           <div><span className="detail-label">{t("Runtime")}</span><strong>{t(selectedTofu.runtime)} <span className="muted">· {selectedTofu.version}</span></strong></div>
           <div><span className="detail-label">{t("Install location")}</span><strong className="path-text">{selectedTofu.path || t("No folder chosen yet")}</strong></div>
-          <button className="icon-button" aria-label={t("Tofu settings")} onClick={() => app.setShowTofuManager(true)}><MochiIcon name="settings" fallback={Settings} size={16} /></button>
+          <button className="icon-button" aria-label={t("Tofu settings")} onClick={() => setShowTofuManager(true)}><MochiIcon name="settings" fallback={Settings} size={16} /></button>
         </section>
       </>}
       mods={<GameMods key={`${details.id}:${selectedTofu.id}`} piko={details} tofu={selectedTofu} onUpdate={lib.updateSelectedTofu} />}
@@ -289,7 +298,7 @@ export function LibraryView() {
       onToggleCollection={(collectionId, on) => lib.setCollectionMembership([menuGame.id], collectionId, on)}
       onCreateCollection={(name) => collections.createCollection(name)}
       onBacklog={(backlog) => lib.updateGame(menuGame.id, { backlog })}
-      onEdit={() => app.setEditingGameId(menuGame.id)}
+      onEdit={() => setEditingGameId(menuGame.id)}
       onOpenFolder={() => actions.openGameFolder(menuGame)}
       onRemove={() => setRemoval([menuGame])} />}
     {showPicker && <PickerDialog library={lib.library} loadHours={credentials.status.igdb && supabase ? loadPickerHours : undefined} context={{ playtime: lib.playtimeById, isInstalled: (piko) => Boolean(piko.executablePath) && lib.installed.get(piko.executablePath ?? "") !== false }}

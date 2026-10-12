@@ -1,11 +1,6 @@
 import { useState } from "react";
-import type { User } from "@supabase/supabase-js";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import type { ThemeDescriptor } from "../lib/theme";
-import type { ProviderCredential } from "../lib/providerCredentials";
-import type { ImportSourceId, ImportedGame } from "../lib/sources";
 import type { PickerSelection } from "./import/SourceGamePicker";
-import type { MinecraftMode } from "../lib/minecraftCopy";
 import { WelcomeStep } from "./setup/WelcomeStep";
 import { LanguageStep } from "./setup/LanguageStep";
 import type { LauncherLanguage } from "../lib/languages";
@@ -16,37 +11,11 @@ import { ServicesStep } from "./setup/ServicesStep";
 import { ImportStep } from "./setup/ImportStep";
 import { CloudImportStep } from "./setup/CloudImportStep";
 import { useTranslation } from "../lib/useTranslation";
+import { useApp } from "../state/AppContext";
 
 type SetupProps = {
-  igdbClientId: string;
-  setIgdbClientId: (value: string) => void;
-  igdbClientSecret: string;
-  setIgdbClientSecret: (value: string) => void;
-  onSignIn: () => void;
-  user: User | null;
-  language: string;
   setLanguage: (language: LauncherLanguage) => void;
   onAddUser?: () => void;
-  credentialStatus: Record<ProviderCredential, boolean>;
-  credentialStatusLoaded: boolean;
-  themes: ThemeDescriptor[];
-  theme: string;
-  setTheme: (themeId: string) => Promise<void>;
-  nexusApiKey: string;
-  setNexusApiKey: (value: string) => void;
-  steamGridDbKey: string;
-  setSteamGridDbKey: (value: string) => void;
-  saveCredential: (provider: ProviderCredential) => Promise<void>;
-  credentialBusy: ProviderCredential | null;
-  onFinish: (games: ImportedGame[], sources: ImportSourceId[], minecraftMode: MinecraftMode) => void;
-  cloudSyncEnabled: boolean;
-  cloudDataAccessAllowed: boolean;
-  cloudSettingsReady: boolean;
-  cloudSyncState: string;
-  cloudImportBusy: boolean;
-  cloudImportReady: boolean;
-  cloudImportMessage: string;
-  onImportCloudData: () => Promise<void>;
 };
 
 const steps = ["welcome", "language", "theme", "accessibility", "account", "cloud", "services", "imports"] as const;
@@ -55,6 +24,7 @@ const stepLabels: Record<Step, string> = { welcome: "Welcome", language: "Langua
 
 export function FirstLaunchSetup(props: SetupProps) {
   const t = useTranslation();
+  const { account, behavior, cloud, credentials, finishFirstLaunchSetup, storage, themeEngine } = useApp();
   const [step, setStep] = useState<Step>("welcome");
   const [selection, setSelection] = useState<PickerSelection>({ games: [], sources: [], minecraftMode: "copy" });
   const index = steps.indexOf(step);
@@ -63,11 +33,11 @@ export function FirstLaunchSetup(props: SetupProps) {
   // The services step is only useful when signed in, so signed-out users skip straight past it.
   const hop = (direction: 1 | -1) => {
     let next = index + direction;
-    while (steps[next] && !props.user && (steps[next] === "cloud" || steps[next] === "services")) next += direction;
+    while (steps[next] && !account.user && (steps[next] === "cloud" || steps[next] === "services")) next += direction;
     if (next >= 0 && next < steps.length) setStep(steps[next]);
   };
 
-  const finish = () => props.onFinish(selection.games, selection.sources, selection.minecraftMode);
+  const finish = () => finishFirstLaunchSetup(selection.games, selection.sources, selection.minecraftMode);
   const nextLabel = step === "welcome" ? t("Get started") : last ? (selection.games.length ? t("Import {count} and finish").replace("{count}", String(selection.games.length)) : t("Finish")) : t("Next");
 
   return (
@@ -80,20 +50,22 @@ export function FirstLaunchSetup(props: SetupProps) {
         </div>
         <div className="setup-body" key={step}>
           {step === "welcome" && <WelcomeStep />}
-          {step === "language" && <LanguageStep language={props.language} setLanguage={props.setLanguage} />}
-          {step === "theme" && <ThemeStep themes={props.themes} theme={props.theme} setTheme={props.setTheme} />}
+          {step === "language" && <LanguageStep language={behavior.language} setLanguage={props.setLanguage} />}
+          {step === "theme" && <ThemeStep themes={themeEngine.themes} theme={themeEngine.theme} setTheme={themeEngine.setTheme} />}
           {step === "accessibility" && <AccessibilityStep />}
-          {step === "account" && <AccountStep user={props.user} onSignIn={props.onSignIn} onAddUser={props.onAddUser} />}
-          {step === "cloud" && <CloudImportStep busy={props.cloudImportBusy} ready={props.cloudImportReady} settingsReady={props.cloudSettingsReady} accessAllowed={props.cloudDataAccessAllowed} message={props.cloudImportMessage} syncEnabled={props.cloudSyncEnabled} syncState={props.cloudSyncState} onImport={props.onImportCloudData} />}
-          {step === "services" && <ServicesStep {...props} signedIn={Boolean(props.user)} />}
+          {step === "account" && <AccountStep user={account.user} onSignIn={account.openSignIn} onAddUser={props.onAddUser} />}
+          {step === "cloud" && <CloudImportStep busy={cloud.cloudDataBusy} ready={storage.ready} settingsReady={cloud.cloudSettingsReady} accessAllowed={cloud.cloudDataAccessAllowed} message={cloud.cloudDataMessage} syncEnabled={cloud.cloudSyncEnabled} syncState={cloud.syncState} onImport={cloud.importCloudLibrary} />}
+          {step === "services" && <ServicesStep signedIn={Boolean(account.user)} credentialStatus={credentials.status} credentialStatusLoaded={credentials.loaded} credentialBusy={credentials.busy} saveCredential={credentials.save}
+            igdbClientId={credentials.igdbClientId} setIgdbClientId={credentials.setIgdbClientId} igdbClientSecret={credentials.igdbClientSecret} setIgdbClientSecret={credentials.setIgdbClientSecret}
+            nexusApiKey={credentials.nexusApiKey} setNexusApiKey={credentials.setNexusApiKey} steamGridDbKey={credentials.steamGridDbKey} setSteamGridDbKey={credentials.setSteamGridDbKey} />}
           {step === "imports" && <ImportStep onSelectionChange={setSelection} />}
         </div>
         <div className="setup-footer">
           <button type="button" className="setup-nav setup-prev" onClick={() => hop(-1)} disabled={step === "welcome"}><ArrowLeft size={16} /> {t("Back")}</button>
           <span className="setup-step-label">{t(stepLabels[step])} · {index + 1}/{steps.length}</span>
           <div className="setup-footer-actions">
-            {step !== "welcome" && step !== "account" && !last && <button type="button" className="setup-skip text-button" onClick={() => hop(1)} disabled={props.credentialBusy !== null}>{t("Skip")}</button>}
-            <button type="button" className="setup-nav setup-next" onClick={last ? finish : () => hop(1)} disabled={props.credentialBusy !== null}>{nextLabel} <ArrowRight size={16} /></button>
+            {step !== "welcome" && step !== "account" && !last && <button type="button" className="setup-skip text-button" onClick={() => hop(1)} disabled={credentials.busy !== null}>{t("Skip")}</button>}
+            <button type="button" className="setup-nav setup-next" onClick={last ? finish : () => hop(1)} disabled={credentials.busy !== null}>{nextLabel} <ArrowRight size={16} /></button>
           </div>
         </div>
       </div>

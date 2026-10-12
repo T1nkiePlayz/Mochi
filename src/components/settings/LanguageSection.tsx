@@ -1,6 +1,7 @@
 import { Check, Languages, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { applyLauncherLanguage, launcherLanguages, normalizeLanguage } from "../../lib/languages";
+import { commitWhenLocaleReady } from "../../lib/i18n";
 import { useApp } from "../../state/AppContext";
 import { useTranslation } from "../../lib/useTranslation";
 import { SettingsGroup } from "./Section";
@@ -20,9 +21,13 @@ export function LanguageSection() {
 
   const changeLanguage = (value: string) => {
     const nextLanguage = normalizeLanguage(value);
-    // Apply immediately so document language and direction update with the persisted app preference.
-    applyLauncherLanguage(nextLanguage);
-    setBehavior((current) => current.language === nextLanguage ? current : { ...current, language: nextLanguage });
+    // Load the locale's catalogue first: applying and persisting happen in one commit afterwards,
+    // so no frame renders English fallbacks mid-switch (rapid clicks supersede slower loads).
+    commitWhenLocaleReady(nextLanguage, () => {
+      // Apply immediately so document language and direction update with the persisted app preference.
+      applyLauncherLanguage(nextLanguage);
+      setBehavior((current) => current.language === nextLanguage ? current : { ...current, language: nextLanguage });
+    });
   };
 
   return <SettingsGroup title={t("Language")} subtitle={t("Launcher-wide language preference")} id="settings-language">

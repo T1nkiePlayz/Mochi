@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "../../lib/useTranslation";
 import { getVersion } from "@tauri-apps/api/app";
 import { getPlatformCapabilities } from "../../lib/platform";
@@ -13,14 +13,18 @@ import type { ProviderId } from "../../lib/metadata/types";
 import { SettingsGroup, ToggleRow } from "./Section";
 import { SettingsTransfer } from "./SettingsTransfer";
 import { LibraryBackup } from "./LibraryBackup";
+import { steamPlaytimeTargets } from "../../lib/steamPlaytime";
+import { useSteamPlaytimeImport } from "../../state/useSteamPlaytimeImport";
 
 export function DataSection() {
   const t = useTranslation();
-  const { behavior, setBehavior, account, credentials, lib, metadata, cloud, themeEngine, chooseConfigLocation } = useApp();
+  const { behavior, setBehavior, account, credentials, lib, metadata, cloud, themeEngine, chooseConfigLocation, refreshPlaytime } = useApp();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const user = account.user;
   const [busy, setBusy] = useState<DataSourceId | "all" | null>(null);
   const [note, setNote] = useState("");
+  const playtimeTargets = useMemo(() => steamPlaytimeTargets(lib.library), [lib.library]);
+  const { state: steamPlaytime, run: runSteamPlaytime } = useSteamPlaytimeImport();
   const saved = { igdb: credentials.status.igdb, steamgriddb: credentials.status.steamgriddb };
   // Each source says precisely what it needs, so a disabled button is never a mystery.
   const needs = (id: ProviderId): { ready: boolean; text: string } => {
@@ -63,6 +67,11 @@ export function DataSection() {
     } catch (error) { setNote(error instanceof Error ? error.message : t("Could not clear that data.")); }
     finally { setBusy(null); }
   };
+  const importPlaytime = async () => {
+    const result = await runSteamPlaytime(playtimeTargets);
+    // The stats view reloads as soon as the playtime totals change.
+    if (result) void refreshPlaytime();
+  };
   return <SettingsGroup title={t("Data & privacy")} subtitle={t("Local-first storage")} id="settings-data">
     <div className="setting-row"><span><strong>{t("Refresh all metadata")}</strong><small>{t("Refresh every available provider for games in your library. Manually locked fields and artwork you chose yourself are preserved.")}</small></span><button type="button" className="secondary-button" disabled={metadata.refreshBusy || lib.library.length === 0} onClick={() => void metadata.refreshAll(lib.library)}>{metadata.refreshingAll ? t("Refreshing all…") : t("Refresh all metadata")}</button></div>
     <div className="data-source-list" role="list" aria-label={t("Metadata sources")}>
@@ -82,6 +91,9 @@ export function DataSection() {
       })}
     </div>
     <div className="setting-row"><span><strong>{t("Find missing covers")}</strong><small>{(() => { const missing = metadata.missingCovers(lib.library).length; return missing ? t("{count} games show a generated cover. Mochi looks each one up once (Steam games need no keys).").replace("{count}", String(missing)) : t("Every game that can have a cover already has one."); })()}</small></span><button type="button" className="secondary-button" disabled={metadata.refreshBusy || metadata.missingCovers(lib.library).length === 0} onClick={() => void metadata.findMissingCovers(lib.library)}>{metadata.refreshBusy ? t("Working…") : t("Find covers")}</button></div>
+    <div className="setting-row"><span><strong>{t("Import Steam playtime")}</strong><small>{t("Adds the playtime Steam saved for your games to Mochi's stats, as one earlier session per game. Importing twice adds nothing.")}</small></span><button type="button" className="secondary-button" disabled={playtimeTargets.length === 0 || steamPlaytime.status === "importing"} onClick={() => void importPlaytime()}>{steamPlaytime.status === "importing" ? t("Importing…") : t("Import")}</button></div>
+    {steamPlaytime.status === "done" && <p className="metadata-note settings-note" role="status">{t("Steam playtime: {imported} games updated, {unchanged} already matched, {unmapped} not in your library.").replace("{imported}", String(steamPlaytime.result.imported)).replace("{unchanged}", String(steamPlaytime.result.unchanged)).replace("{unmapped}", String(steamPlaytime.result.unmapped))}</p>}
+    {steamPlaytime.status === "error" && <p className="metadata-note settings-note" role="alert">{steamPlaytime.message}</p>}
     <div className="data-source-footer">
       <small className="metadata-note">{t("Clearing removes saved lookups and downloaded covers from this device only. Games stay in your library and Mochi shows generated covers until you refresh.")}</small>
       <button type="button" className="secondary-button danger-outline" disabled={busy !== null} onClick={() => void run("all")}>{busy === "all" ? t("Clearing…") : t("Clear all cached data")}</button>

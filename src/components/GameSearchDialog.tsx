@@ -149,7 +149,7 @@ export function GameSearchDialog({ onClose }: { onClose: () => void }) {
 
   return <div className="modal-backdrop" onClick={onClose}>
     <div className="modal game-search-dialog" role="dialog" aria-modal="true" aria-labelledby="game-search-title" onClick={(event) => event.stopPropagation()}>
-      <div className="modal-header"><div><p className="eyebrow">{t("Experimental")}</p><h2 id="game-search-title">{t("Search all games")}</h2></div><button type="button" className="icon-button" aria-label={t("Close game search")} onClick={onClose}><X size={16} aria-hidden="true" /></button></div>
+      <div className="modal-header"><div><h2 id="game-search-title">{t("Search all games")}</h2></div><button type="button" className="icon-button" aria-label={t("Close game search")} onClick={onClose}><X size={16} aria-hidden="true" /></button></div>
       <div className="game-search-body">
         <div className="game-search-side">
           <label className="search-box game-search-input"><Search size={15} aria-hidden="true" /><input ref={input} value={query} onChange={(event) => type(event.target.value)} placeholder={t("Search any game")} aria-label={t("Search any game")} autoComplete="off" spellCheck={false} /></label>

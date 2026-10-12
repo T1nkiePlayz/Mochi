@@ -27,7 +27,7 @@ calls `markNetworkFailure()` and the next success calls `markNetworkOk()`.
 | Installed mod management (enable/disable/delete, launch sync, rollback, game logs) | Works | Local files. |
 | Mod update checks | Needs internet | Shows "You are offline"; nothing is cached on disk. |
 | Mod downloads | Needs network | Fail with a message in the Downloads list. |
-| First-launch setup | Mostly works | Launcher icons load remotely until bundled separately. |
+| First-launch setup | Mostly works | Launcher art and icons are bundled (`src/assets/launchers/`); nothing loads remotely. |
 | Opening external links (GitHub, Modrinth, YouTube) | Needs network | Opens the system browser. |
 
 ## How fonts are bundled

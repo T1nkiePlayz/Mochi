@@ -118,7 +118,7 @@ fn sort_games(mut games: Vec<ImportedGame>) -> Vec<ImportedGame> {
 const MAX_METADATA_BYTES: u64 = 16 * 1024 * 1024;
 
 /// Reads a text file, tolerating invalid UTF-8 (launchers write names in whatever encoding the game used).
-fn read(path: &Path) -> Option<String> {
+pub(crate) fn read(path: &Path) -> Option<String> {
     use std::io::Read;
     let mut bytes = Vec::new();
     fs::File::open(path).ok()?.take(MAX_METADATA_BYTES).read_to_end(&mut bytes).ok()?;
