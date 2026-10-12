@@ -41,8 +41,15 @@ const MAX_COUNTED: usize = 2000;
 fn dir_stats(dir: &Path, fallback: &Path) -> (usize, u64) {
     let modified = |path: &Path| fs::metadata(path).ok().and_then(|m| m.modified().ok()).and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_millis() as u64);
     let count = fs::read_dir(dir).map(|read| read.flatten().take(MAX_COUNTED * 4).filter(|entry| {
-        let name = entry.file_name().to_string_lossy().into_owned();
-        !name.starts_with('.') && crate::modrinth::CONTENT_EXTENSIONS.contains(&crate::modrinth::content_extension(&name).as_str())
+        // The same check as `modrinth::content_extension` (strip `.disabled`, take the path extension) without the two
+        // allocations: the lossy name is borrowed and `eq_ignore_ascii_case` against the lower-case list entries matches
+        // exactly when the ASCII-lowercased extension would be in `CONTENT_EXTENSIONS`.
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if name.starts_with('.') { return false; }
+        let base = name.strip_suffix(".disabled").unwrap_or(&name);
+        let extension = Path::new(base).extension().and_then(|ext| ext.to_str()).unwrap_or("");
+        crate::modrinth::CONTENT_EXTENSIONS.iter().any(|candidate| extension.eq_ignore_ascii_case(candidate))
     }).take(MAX_COUNTED).count()).unwrap_or(0);
     (count, modified(dir).or_else(|| modified(fallback)).unwrap_or(0))
 }

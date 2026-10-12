@@ -93,6 +93,12 @@ pub(crate) fn record_many_in(root: &Path, tofu_id: &str, entries: Vec<RecordEntr
     if !valid_id(tofu_id, 120) { return Err("Invalid Tofu id.".into()); }
     let _guard = lock();
     let mut records = load_records(root, tofu_id);
+    // First record per (folder, file) — the same record `find` returned — so each entry costs one lookup, not a scan.
+    // Nested maps keyed by a single `String` look up through `Borrow<str>`, so lookups never allocate.
+    let mut index: HashMap<String, HashMap<String, usize>> = HashMap::new();
+    for (position, record) in records.iter().enumerate() {
+        index.entry(record.subdir.clone()).or_default().entry(record.file.clone()).or_insert(position);
+    }
     let mut changed = 0;
     for entry in entries.into_iter().take(MAX_FILES) {
         let file = base_name(entry.file.trim()).to_string();
@@ -101,10 +107,11 @@ pub(crate) fn record_many_in(root: &Path, tofu_id: &str, entries: Vec<RecordEntr
         let mut next = entry.record.into_record(&file, &entry.subdir, entry.sha1.filter(|h| h.len() == 40 && h.chars().all(|c| c.is_ascii_hexdigit())));
         next.enabled = entry.enabled;
         if next.title.is_empty() { next.title = file.clone(); }
-        match records.iter_mut().find(|r| r.subdir == next.subdir && r.file == next.file) {
-            Some(existing) if next.source == "manual" && existing.source != "manual" => continue,
-            Some(existing) => { next.rollback = existing.rollback.take(); next.installed_at = existing.installed_at.max(1); *existing = next; changed += 1; }
-            None => { records.push(next); changed += 1; }
+        let position = index.get(next.subdir.as_str()).and_then(|files| files.get(next.file.as_str())).copied();
+        match position {
+            Some(position) if next.source == "manual" && records[position].source != "manual" => continue,
+            Some(position) => { let existing = &mut records[position]; next.rollback = existing.rollback.take(); next.installed_at = existing.installed_at.max(1); *existing = next; changed += 1; }
+            None => { index.entry(next.subdir.clone()).or_default().entry(next.file.clone()).or_insert(records.len()); records.push(next); changed += 1; }
         }
     }
     if changed > 0 { save_records(root, tofu_id, records)?; }

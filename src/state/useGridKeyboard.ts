@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
+import { useCallback, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 import { createTypeAhead, gridKeyAction, pageRows, prefixMatch } from "../lib/gridKeys";
 import { focusElement, pickNeighbor, scrollParent } from "../controller/spatial";
 
@@ -22,7 +22,8 @@ const idOf = (element: Element | null): string => element?.closest<HTMLElement>(
 export function useGridKeyboard({ ids, names, play, toggleFavorite }: Options) {
   const [focusId, setFocusId] = useState("");
   const typeAhead = useRef(createTypeAhead());
-  const tabId = focusId && ids.includes(focusId) ? focusId : ids[0] ?? "";
+  const idSet = useMemo(() => new Set(ids), [ids]);
+  const tabId = focusId && idSet.has(focusId) ? focusId : ids[0] ?? "";
 
   const onFocus = useCallback((event: FocusEvent) => {
     const id = idOf(event.target as Element);
@@ -52,9 +53,12 @@ export function useGridKeyboard({ ids, names, play, toggleFavorite }: Options) {
         const direction = action.direction;
         const rect = from.getBoundingClientRect();
         const rows = action.type === "page" ? pageRows(scrollParent(from).clientHeight, rect.height + 12) : 1;
+        // Rects are read once per keydown: the loop below is pure reads (focus/scroll happen after it), so the
+        // values cannot change between steps — only the per-step exclusion of the card we moved from.
+        const measured = cards.map((item) => ({ item, rect: item.getBoundingClientRect() }));
         let at = from;
         for (let step = 0; step < rows; step += 1) {
-          const neighbor = pickNeighbor(at.getBoundingClientRect(), cards.filter((card) => card !== at).map((item) => ({ item, rect: item.getBoundingClientRect() })), direction);
+          const neighbor = pickNeighbor(at.getBoundingClientRect(), measured.filter((entry) => entry.item !== at), direction);
           if (!neighbor) break;
           at = neighbor;
         }

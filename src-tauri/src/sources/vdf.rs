@@ -4,8 +4,8 @@ use std::collections::HashMap;
 
 /// Reads `"key"  "value"` from one line of a text VDF/ACF file.
 pub fn quoted_value(line: &str, key: &str) -> Option<String> {
-    let marker = format!("\"{key}\"");
-    let rest = line.trim().strip_prefix(&marker)?.trim().strip_prefix('"')?;
+    // The marker `"<key>"` stripped from the trimmed line byte by byte, without formatting it first.
+    let rest = line.trim().strip_prefix('"')?.strip_prefix(key)?.strip_prefix('"')?.trim().strip_prefix('"')?;
     let mut value = String::new();
     let mut chars = rest.chars();
     while let Some(c) = chars.next() {

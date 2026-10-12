@@ -268,7 +268,7 @@ pub fn list(packs: &Path) -> Vec<SoundPackInfo> {
             (staged.manifest.id == name).then(|| SoundPackInfo::from_manifest(&staged.manifest, staged.files.iter().map(|(_, bytes)| bytes.len() as u64).sum()))
         })
         .collect();
-    out.sort_by_key(|a| a.name.to_lowercase());
+    out.sort_by_cached_key(|a| a.name.to_lowercase());
     out
 }
 

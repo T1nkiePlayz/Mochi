@@ -1,6 +1,6 @@
 use base64::{engine::general_purpose::STANDARD, Engine as _};
-use crate::util::{fsio, http, valid_id};
-use std::{fs, path::{Path, PathBuf}};
+use crate::util::{fsio, http, valid_id, MutexExt};
+use std::{collections::HashSet, fs, path::{Path, PathBuf}, sync::Mutex};
 use image::{imageops::FilterType, metadata::Orientation, DynamicImage, ImageDecoder, ImageFormat, ImageReader, Limits};
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
@@ -23,11 +23,15 @@ fn valid_cache_key(key: &str) -> bool {
     valid_id(key, 120)
 }
 
+/// The key checked exactly as `cache_path` checks it, for callers that resolve the folder themselves.
+fn checked_cache_key(key: &str) -> Result<&str, String> {
+    if !valid_cache_key(key) { return Err("Invalid game artwork cache key.".into()); }
+    Ok(key)
+}
+
 /// The key is used verbatim (no trimming): every lookup below compares against the same exact string.
 pub(crate) fn cache_path(app: &AppHandle, key: &str) -> Result<PathBuf, String> {
-    if !valid_cache_key(key) {
-        return Err("Invalid game artwork cache key.".into());
-    }
+    let key = checked_cache_key(key)?;
     Ok(crate::themes::game_artwork_cache_dir(app)?.join(key))
 }
 
@@ -132,27 +136,45 @@ pub struct ArtworkFile {
     pub version: u64,
 }
 
-/// Resolves the cached cover for `base` to a canonical path that is verified to live inside `cache_dir`.
-fn cached_file_in(cache_dir: &Path, base: &Path) -> Result<Option<(PathBuf, u64)>, String> {
+/// Resolves the cached cover for `base` to a canonical path that is verified to live inside `cache_dir`, together with
+/// the canonical `cache_dir` itself (the folder the caller grants to the asset protocol).
+fn cached_file_in_root(cache_dir: &Path, base: &Path) -> Result<Option<(PathBuf, u64, PathBuf)>, String> {
     let Some(found) = find_cached(base) else { return Ok(None) };
     let root = cache_dir.canonicalize().map_err(|error| format!("Unable to resolve the artwork cache: {error}"))?;
     let path = found.canonicalize().map_err(|error| format!("Unable to resolve cached artwork: {error}"))?;
     if !path.starts_with(&root) { return Err("Cached artwork is outside the artwork cache.".into()); }
     let version = fs::metadata(&path).and_then(|meta| meta.modified()).ok()
         .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok()).map_or(0, |age| age.as_millis() as u64);
-    Ok(Some((path, version)))
+    Ok(Some((path, version, root)))
+}
+
+/// Like `cached_file_in_root`, without the folder it resolved (the containment test below).
+#[cfg(test)]
+fn cached_file_in(cache_dir: &Path, base: &Path) -> Result<Option<(PathBuf, u64)>, String> {
+    Ok(cached_file_in_root(cache_dir, base)?.map(|(path, version, _root)| (path, version)))
+}
+
+/// Grants one canonical artwork folder to the asset protocol. The scope rebuilds its rules on every grant, so each
+/// folder is granted only the first time it is seen (a relocated config folder canonicalises differently and is granted again).
+fn allow_artwork_scope(app: &AppHandle, root: &Path) {
+    static GRANTED: Mutex<Option<HashSet<PathBuf>>> = Mutex::new(None);
+    let mut guard = GRANTED.lock_recover();
+    let granted = guard.get_or_insert_with(HashSet::new);
+    if !granted.insert(root.to_path_buf()) { return; }
+    let _ = app.asset_protocol_scope().allow_directory(root, true);
 }
 
 /// Like `get_cached_game_artwork`, but returns the file path so the webview can load it through the asset protocol
 /// instead of receiving the bytes base64-encoded over IPC.
 #[tauri::command(async)]
 pub fn get_cached_game_artwork_path(app: AppHandle, cache_key: String) -> Result<Option<ArtworkFile>, String> {
-    let base = cache_path(&app, &cache_key)?;
+    // Key first, then the folder exactly once: the key is validated before any folder work, as `cache_path` does.
+    let key = checked_cache_key(&cache_key)?;
     let dir = crate::themes::game_artwork_cache_dir(&app)?;
-    let Some((path, version)) = cached_file_in(&dir, &base)? else { return Ok(None) };
+    let Some((path, version, root)) = cached_file_in_root(&dir, &dir.join(key))? else { return Ok(None) };
     // The artwork folder can be relocated with the config folder, so the static scope in tauri.conf.json may not cover it.
     // Allow exactly this folder (nothing else) before handing out a path in it.
-    if let Ok(root) = dir.canonicalize() { let _ = app.asset_protocol_scope().allow_directory(root, true); }
+    allow_artwork_scope(&app, &root);
     Ok(Some(ArtworkFile { path: path.to_string_lossy().into_owned(), version }))
 }
 

@@ -76,7 +76,7 @@ pub fn list_flatpaks() -> Result<Vec<FlatpakApp>, String> {
             Some(FlatpakApp { id: id.into(), name: name.into(), category: if flatpak_is_game(id) { "Games" } else { "Other" }.into() })
         })
         .collect();
-    apps.sort_by_key(|app| (app.category != "Games", app.name.to_lowercase()));
+    apps.sort_by_cached_key(|app| (app.category != "Games", app.name.to_lowercase()));
     Ok(apps)
 }
 

@@ -280,7 +280,7 @@ pub fn list_mod_files(path: String) -> Result<Vec<InstalledModFile>, String> {
         if !meta.is_file() || !CONTENT_EXTENSIONS.contains(&content_extension(&name).as_str()) { continue; }
         files.push(InstalledModFile { enabled: !name.ends_with(".disabled"), filename: name, path: entry.path().to_string_lossy().into_owned(), size: meta.len() });
     }
-    files.sort_by_key(|file| file.filename.to_lowercase());
+    files.sort_by_cached_key(|file| file.filename.to_lowercase());
     Ok(files)
 }
 
