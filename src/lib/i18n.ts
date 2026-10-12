@@ -116,3 +116,61 @@ export function translate(message: string, language: unknown = getTranslationLoc
   if (normalized === "en") return message;
   return loadedLocales.get(normalized)?.[message] ?? message;
 }
+
+
+/**
+ * Translates a fully rendered UI message, including strings whose placeholders were already
+ * interpolated by the caller. Exact matches in the active locale's flat map stay fast; dynamic
+ * messages are matched against the placeholder templates the locale has actually translated.
+ * Templates are cached per locale because the flat map only ships the active locale.
+ */
+type UiTemplate = { source: string; pattern: RegExp; placeholders: number; staticLength: number };
+const uiTemplatesByLocale = new Map<string, UiTemplate[]>();
+const uiMessageCache = new Map<string, string>();
+
+function escapeUiPattern(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getUiTemplates(locale: string, flat: FlatMessages): UiTemplate[] {
+  const cached = uiTemplatesByLocale.get(locale);
+  if (cached) return cached;
+  const placeholder = /\{[^}]+\}/g;
+  const templates = Object.keys(flat)
+    .filter((source) => /\{[^}]+\}/.test(source) && source.replace(placeholder, "").trim().length > 0)
+    .map((source) => {
+      const count = (source.match(placeholder) ?? []).length;
+      const parts = source.split(placeholder);
+      return { source, pattern: new RegExp("^" + parts.map(escapeUiPattern).join("([\\s\\S]+?)") + "$"), placeholders: count, staticLength: parts.join("").length };
+    })
+    .sort((a, b) => b.staticLength - a.staticLength || a.placeholders - b.placeholders);
+  uiTemplatesByLocale.set(locale, templates);
+  return templates;
+}
+
+export function translateUiMessage(message: string, language: unknown = getTranslationLocale()): string {
+  const normalized = normalizeLanguage(language);
+  if (normalized === "en") return message;
+  const navigation = navLabel(message, normalized);
+  if (navigation !== message) return navigation;
+  const flat = loadedLocales.get(normalized);
+  // Locale not loaded yet: fall back to source text, matching translate()'s documented behaviour.
+  if (flat === undefined) return message;
+  const exact = flat[message];
+  if (exact) return exact;
+  const cacheKey = `${normalized} ${message}`;
+  const cached = uiMessageCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+  for (const template of getUiTemplates(normalized, flat)) {
+    const match = template.pattern.exec(message);
+    if (!match) continue;
+    const translatedTemplate = flat[template.source];
+    if (!translatedTemplate) continue;
+    let index = 1;
+    const localized = translatedTemplate.replace(/\{[^}]+\}/g, () => match[index++] ?? "");
+    uiMessageCache.set(cacheKey, localized);
+    return localized;
+  }
+  uiMessageCache.set(cacheKey, message);
+  return message;
+}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Behavior } from "./settings";
 import { createNotifyBatcher, type NotifyBatcher } from "../lib/notifyBatch";
+import { translateUiMessage } from "../lib/i18n";
 
 export type AppNotification = { id: string; title: string; message: string; createdAt: number; progress?: { value: number; total: number } };
 
@@ -14,8 +15,10 @@ export function useNotifications(behavior: Behavior) {
   const deliver = useCallback((title: string, message: string) => {
     const current = behaviorRef.current;
     if (!current.notificationsEnabled) return;
-    if (current.inAppNotifications) setNotifications((list) => [{ id: crypto.randomUUID(), title, message, createdAt: Date.now() }, ...list].slice(0, 20));
-    if (current.systemNotifications) void invoke("send_system_notification", { title, body: message }).catch(() => {});
+    const localizedTitle = translateUiMessage(title);
+    const localizedMessage = translateUiMessage(message);
+    if (current.inAppNotifications) setNotifications((list) => [{ id: crypto.randomUUID(), title: localizedTitle, message: localizedMessage, createdAt: Date.now() }, ...list].slice(0, 20));
+    if (current.systemNotifications) void invoke("send_system_notification", { title: localizedTitle, body: localizedMessage }).catch(() => {});
   }, []);
 
   const batcher = useRef<NotifyBatcher | null>(null);
@@ -33,13 +36,13 @@ export function useNotifications(behavior: Behavior) {
     const id = crypto.randomUUID();
     const current = behaviorRef.current;
     if (current.notificationsEnabled && current.inAppNotifications) {
-      setNotifications((list) => [{ id, title, message, createdAt: Date.now(), progress: { value: 0, total } }, ...list].slice(0, 20));
+      setNotifications((list) => [{ id, title: translateUiMessage(title), message: translateUiMessage(message), createdAt: Date.now(), progress: { value: 0, total } }, ...list].slice(0, 20));
     }
     return id;
   }, []);
 
   const updateProgress = useCallback((id: string, progress: { value: number; total: number }, message: string) => {
-    setNotifications((list) => list.map((item) => (item.id === id ? { ...item, message, progress } : item)));
+    setNotifications((list) => list.map((item) => (item.id === id ? { ...item, message: translateUiMessage(message), progress } : item)));
   }, []);
 
   return { notifications, setNotifications, showNotifications, setShowNotifications, notify, startProgress, updateProgress };

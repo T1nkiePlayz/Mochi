@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { translateUiMessage } from "./i18n";
 import { readString, writeString } from "./storage";
 import { layerThemeCss } from "./themeLayers";
 import { lintManifest, lintThemeCss, type ThemeLintFinding } from "../../scripts/lib/themeLint.mjs";
@@ -244,7 +245,7 @@ export function applyTheme(theme: LoadedTheme): () => void {
 
 export async function importThemeFile(): Promise<ThemeDescriptor | null> {
   const selected = await open({
-    title: "Import Mochi theme",
+    title: translateUiMessage("Import Mochi theme"),
     multiple: false,
     directory: false,
     filters: [{ name: "Mochi theme manifest", extensions: ["json"] }],
@@ -255,7 +256,7 @@ export async function importThemeFile(): Promise<ThemeDescriptor | null> {
 
 export async function importThemeFolder(): Promise<ThemeDescriptor | null> {
   const selected = await open({
-    title: "Import Mochi theme folder",
+    title: translateUiMessage("Import Mochi theme folder"),
     multiple: false,
     directory: true,
   });

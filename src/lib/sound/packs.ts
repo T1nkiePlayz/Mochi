@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
+import { translateUiMessage } from "../i18n";
 import type { SoundEvent } from "./events";
 
 /** An installed (user) sound pack, as listed by the native side. */
@@ -21,15 +22,15 @@ export const readSoundPackFile = (id: string, event: SoundEvent) => invoke<Array
 /** Asks for a .zip (or a manifest.json inside a pack folder) and installs it. Resolves to null when cancelled. */
 export async function importSoundPack(kind: "zip" | "folder"): Promise<SoundPackInfo | null> {
   const selected = kind === "folder"
-    ? await open({ directory: true, multiple: false, title: "Choose a sound pack folder" })
-    : await open({ multiple: false, title: "Choose a sound pack", filters: [{ name: "Sound pack", extensions: ["zip"] }] });
+    ? await open({ directory: true, multiple: false, title: translateUiMessage("Choose a sound pack folder") })
+    : await open({ multiple: false, title: translateUiMessage("Choose a sound pack"), filters: [{ name: "Sound pack", extensions: ["zip"] }] });
   if (!selected || Array.isArray(selected)) return null;
   return invoke<SoundPackInfo>("import_sound_pack", { sourcePath: selected });
 }
 
 /** Saves an installed pack as a zip. Resolves to false when cancelled. */
 export async function exportSoundPack(pack: Pick<SoundPackInfo, "id">): Promise<boolean> {
-  const destination = await save({ title: "Export sound pack", defaultPath: `${pack.id}.zip`, filters: [{ name: "Sound pack", extensions: ["zip"] }] });
+  const destination = await save({ title: translateUiMessage("Export sound pack"), defaultPath: `${pack.id}.zip`, filters: [{ name: "Sound pack", extensions: ["zip"] }] });
   if (!destination) return false;
   await invoke<void>("export_sound_pack", { id: pack.id, destination });
   return true;

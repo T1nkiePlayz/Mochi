@@ -11,6 +11,7 @@
  */
 import { navLabel } from "./nav";
 import { getTranslationLocale } from "./translationLocale";
+import { auditMessages } from "./i18nAudit";
 import { setupMessages } from "./i18nSetup";
 import { setupCopyMessages } from "./i18nSetupCopy";
 import { setupCopyExtraMessages } from "./i18nSetupCopyExtra";
@@ -165,7 +166,7 @@ export type Catalogue = Record<string, Record<string, string>>;
  * exactly like the old per-call `catalogue[message]?.[locale] ?? …` chain; the merged index below
  * evaluates that chain once instead of on every translate() call. New catalogues go here, first.
  */
-export const catalogues: Catalogue[] = [settingsRecentMessages, recentUiMessages, messages, setupMessages, setupCopyMessages,
+export const catalogues: Catalogue[] = [auditMessages, settingsRecentMessages, recentUiMessages, messages, setupMessages, setupCopyMessages,
     setupCopyExtraMessages, cloudSetupMessages, accountSetupMessages, serviceSetupMessages,
     chromeMessages, settingsMessages, downloadMessages, dealMessages, dealExtraMessages,
     libraryMessages, systemMessages, libraryExtraMessages, commonMessages, settingsTitleMessages,
