@@ -68,6 +68,9 @@ import type { LibrarySort } from "../state/useLibrary";
 
 const viewIcons: Record<LibraryViewMode, typeof LayoutGrid> = { grid: LayoutGrid, compact: Grid3x3, list: List, shelves: Rows3, large: Maximize2 };
 
+/** Placeholder for the bulk-selection list while nothing is being selected (never rendered). */
+const EMPTY_GAMES: Piko[] = [];
+
 const greeting = (t: (message: string) => string) => { const hour = new Date().getHours(); return hour < 5 || hour >= 18 ? t("Good evening") : hour < 12 ? t("Good morning") : t("Good afternoon"); };
 
 /** IGDB time-to-beat (hours) keyed by Piko id, for pikos that have an IGDB id. */
@@ -84,7 +87,7 @@ export function LibraryView() {
   const { lib, actions, sessions, cloud, add, account, credentials, platformCapabilities, collections } = app;
   const { selectedPiko, selectedTofu, gameDetailsId, search } = lib;
   const cloudCtx = { enabled: cloud.cloudSyncEnabled, confirmed: cloud.confirmedIds, syncState: cloud.syncState };
-  const details = lib.library.find((piko) => piko.id === gameDetailsId);
+  const details = useMemo(() => lib.library.find((piko) => piko.id === gameDetailsId), [lib.library, gameDetailsId]);
   const [menu, setMenu] = useState<{ gameId: string; x: number; y: number } | null>(null);
   const [selecting, setSelecting] = useState(false);
   const [checked, setChecked] = useState<Set<string>>(new Set());
@@ -115,7 +118,7 @@ export function LibraryView() {
   const [removal, setRemoval] = useState<Piko[] | null>(null);
   const allTags = useMemo(() => tagCounts(lib.library), [lib.library]);
   const menuGame = menu ? lib.library.find((piko) => piko.id === menu.gameId) : undefined;
-  const checkedGames = lib.library.filter((piko) => checked.has(piko.id));
+  const checkedGames = selecting ? lib.library.filter((piko) => checked.has(piko.id)) : EMPTY_GAMES;
   const endSelecting = () => { setSelecting(false); setChecked(new Set()); };
   const hasFolder = (game: Piko) => Boolean(game.installPath || game.executablePath?.startsWith("/"));
   const collectionCounts = useMemo(() => {
@@ -123,6 +126,11 @@ export function LibraryView() {
     lib.library.forEach((piko) => piko.collectionIds?.forEach((id) => counts.set(id, (counts.get(id) ?? 0) + 1)));
     return counts;
   }, [lib.library]);
+  // null unless a backlog/next-up filter is active; recomputed only when the filter, visible games or hours change.
+  const hoursToBeat = useMemo(() => {
+    if (lib.filter.kind !== "smart" || (lib.filter.id !== "backlog" && lib.filter.id !== "next-up")) return null;
+    return remainingHours(lib.visiblePikos.map((piko) => piko.id), lib.hours);
+  }, [lib.filter, lib.visiblePikos, lib.hours]);
 
   const { selectPiko, setGameDetailsId, toggleFavorite } = lib;
   const openGame = useCallback((piko: Piko) => { selectPiko(piko); setGameDetailsId(piko.id); }, [selectPiko, setGameDetailsId]);
@@ -234,7 +242,7 @@ export function LibraryView() {
       wishlist={{ active: showWishlist, count: wishlist.items.length, onToggle: () => setShowWishlist((on) => !on) }} />
     {showWishlist ? <WishlistPanel /> : <>
     <section className="library-toolbar">
-      <span className="library-count">{t(lib.visiblePikos.length === 1 ? "{count} game" : "{count} games").replace("{count}", String(lib.visiblePikos.length))}{search.trim() ? ` · ${t("matching “{query}”").replace("{query}", search.trim())}` : ""}{(() => { if (lib.filter.kind !== "smart" || (lib.filter.id !== "backlog" && lib.filter.id !== "next-up")) return ""; const left = remainingHours(lib.visiblePikos.map((piko) => piko.id), lib.hours); return left.known ? ` · ${t("about {hours} h to beat ({count} with data)").replace("{hours}", String(left.total)).replace("{count}", String(left.known))}` : ""; })()}</span>
+      <span className="library-count">{t(lib.visiblePikos.length === 1 ? "{count} game" : "{count} games").replace("{count}", String(lib.visiblePikos.length))}{search.trim() ? ` · ${t("matching “{query}”").replace("{query}", search.trim())}` : ""}{(() => { const left = hoursToBeat; if (!left) return ""; return left.known ? ` · ${t("about {hours} h to beat ({count} with data)").replace("{hours}", String(left.total)).replace("{count}", String(left.known))}` : ""; })()}</span>
       <div className="library-toolbar-actions">
         <button type="button" className="secondary-button view-switcher" title={t("View: {view}. Click for the next view, Shift+click for the previous.").replace("{view}", t(viewModeLabel(view)))}
           aria-label={t("Library view: {view}. Activate to switch to {nextView}.").replace("{view}", t(viewModeLabel(view))).replace("{nextView}", t(viewModeLabel(cycleViewMode(view))))}

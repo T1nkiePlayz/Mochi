@@ -483,7 +483,7 @@ fn minecraft_worlds(content_root: &Path) -> Vec<(String, PathBuf)> {
             }
         }
     }
-    out.sort_by_key(|world| world.0.to_lowercase());
+    out.sort_by_cached_key(|world| world.0.to_lowercase());
     out
 }
 

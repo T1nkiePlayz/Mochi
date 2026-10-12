@@ -147,11 +147,57 @@ Object.assign(messages, {
   "Welcome to Mochi setup": { ar: "مرحبًا بك في إعداد Mochi", bg: "Добре дошли в настройката на Mochi", "zh-Hans": "欢迎使用 Mochi 设置", "zh-Hant": "歡迎使用 Mochi 設定", cs: "Vítejte v nastavení Mochi", da: "Velkommen til opsætning af Mochi", nl: "Welkom bij de installatie van Mochi", fi: "Tervetuloa Mochin käyttöönottoon", fr: "Bienvenue dans la configuration de Mochi", de: "Willkommen bei der Mochi-Einrichtung", el: "Καλώς ορίσατε στη ρύθμιση του Mochi", hu: "Üdvözlünk a Mochi beállításában", id: "Selamat datang di penyiapan Mochi", it: "Benvenuto nella configurazione di Mochi", ja: "Mochi のセットアップへようこそ", ko: "Mochi 설정에 오신 것을 환영합니다", no: "Velkommen til oppsettet av Mochi", pl: "Witamy w konfiguracji Mochi", pt: "Bem-vindo à configuração do Mochi", "pt-BR": "Boas-vindas à configuração do Mochi", ro: "Bun venit la configurarea Mochi", ru: "Добро пожаловать в настройку Mochi", es: "Te damos la bienvenida a la configuración de Mochi", sv: "Välkommen till Mochis konfiguration", th: "ยินดีต้อนรับสู่การตั้งค่า Mochi", tr: "Mochi kurulumuna hoş geldiniz", uk: "Ласкаво просимо до налаштування Mochi", vi: "Chào mừng bạn đến với thiết lập Mochi" },
 });
 
+type Catalogue = Record<string, Record<string, string>>;
+
+/**
+ * Every catalogue in lookup order. The first catalogue defining a (message, locale) pair wins,
+ * exactly like the old per-call `catalogue[message]?.[locale] ?? …` chain; the merged index below
+ * evaluates that chain once instead of on every translate() call. New catalogues go here, first.
+ */
+const catalogues: Catalogue[] = [settingsRecentMessages, recentUiMessages, messages, setupMessages, setupCopyMessages,
+    setupCopyExtraMessages, cloudSetupMessages, accountSetupMessages, serviceSetupMessages,
+    chromeMessages, settingsMessages, downloadMessages, dealMessages, dealExtraMessages,
+    libraryMessages, systemMessages, libraryExtraMessages, commonMessages, settingsTitleMessages,
+    settingsTitleExtraMessages, accessibilitySettingsCopy, settingsSubtitleMessages,
+    settingsSubtitleExtraMessages, accessibilityMessages, bigPictureMessages, commonExtraMessages,
+    uiExtraMessages, extendedUiMessages, modWorkflowMessages, modSaveMessages, saveBackupMessages,
+    accountHardwareMessages, savesProtonMessages, sharedTermMessages, longHelpMessages,
+    keyboardAndSafetyMessages, tofuManagementMessages, launchOptionsMessages, exportShareMessages,
+    updateArtworkMessages, artworkAndSourcesMessages, discoveryMessages, discoverStatusMessages,
+    discoverMoreMessages, projectDetailMessages, projectDependencyMessages, projectDetailExtraMessages,
+    footerMessages, controlsMessages, discoverExtraMessages, importMessages, libraryDialogsMessages,
+    libraryFilterMessages, uiSmallMessages, duplicateMessages, libraryStatusMessages,
+    completePhraseMessages, navigationActionMessages, launchProfileMessages, savedFilterMessages,
+    editFilterMessages, launchHelpMessages, longUiHelpMessages, pickerGuidanceMessages,
+    smartFilterMessages, installedMessages, statsMessages, metadataMessages];
+
+let mergedIndex: Map<string, Record<string, string>> | null = null;
+
+/** message -> locale -> translation, first catalogue in `catalogues` order wins per locale. */
+function translationIndex(): Map<string, Record<string, string>> {
+  if (mergedIndex) return mergedIndex;
+  const index = new Map<string, Record<string, string>>();
+  for (const catalogue of catalogues) {
+    for (const [message, translations] of Object.entries(catalogue)) {
+      const merged = index.get(message);
+      if (!merged) {
+        index.set(message, { ...translations });
+        continue;
+      }
+      for (const [locale, value] of Object.entries(translations)) {
+        if (!(locale in merged)) merged[locale] = value;
+      }
+    }
+  }
+  mergedIndex = index;
+  return index;
+}
+
 export function translate(message: string, language: unknown = getTranslationLocale()): string {
   const normalized = normalizeLanguage(language);
   const navigation = navLabel(message, normalized);
   if (navigation !== message) return navigation;
-  return settingsRecentMessages[message]?.[normalized] ?? recentUiMessages[message]?.[normalized] ?? messages[message]?.[normalized] ?? setupMessages[message]?.[normalized] ?? setupCopyMessages[message]?.[normalized] ?? setupCopyExtraMessages[message]?.[normalized] ?? cloudSetupMessages[message]?.[normalized] ?? accountSetupMessages[message]?.[normalized] ?? serviceSetupMessages[message]?.[normalized] ?? chromeMessages[message]?.[normalized] ?? settingsMessages[message]?.[normalized] ?? downloadMessages[message]?.[normalized] ?? dealMessages[message]?.[normalized] ?? dealExtraMessages[message]?.[normalized] ?? libraryMessages[message]?.[normalized] ?? systemMessages[message]?.[normalized] ?? libraryExtraMessages[message]?.[normalized] ?? commonMessages[message]?.[normalized] ?? settingsTitleMessages[message]?.[normalized] ?? settingsTitleExtraMessages[message]?.[normalized] ?? accessibilitySettingsCopy[message]?.[normalized] ?? settingsSubtitleMessages[message]?.[normalized] ?? settingsSubtitleExtraMessages[message]?.[normalized] ?? accessibilityMessages[message]?.[normalized] ?? bigPictureMessages[message]?.[normalized] ?? commonExtraMessages[message]?.[normalized] ?? uiExtraMessages[message]?.[normalized] ?? extendedUiMessages[message]?.[normalized] ?? modWorkflowMessages[message]?.[normalized] ?? modSaveMessages[message]?.[normalized] ?? saveBackupMessages[message]?.[normalized] ?? accountHardwareMessages[message]?.[normalized] ?? savesProtonMessages[message]?.[normalized] ?? sharedTermMessages[message]?.[normalized] ?? longHelpMessages[message]?.[normalized] ?? keyboardAndSafetyMessages[message]?.[normalized] ?? tofuManagementMessages[message]?.[normalized] ?? launchOptionsMessages[message]?.[normalized] ?? exportShareMessages[message]?.[normalized] ?? updateArtworkMessages[message]?.[normalized] ?? artworkAndSourcesMessages[message]?.[normalized] ?? discoveryMessages[message]?.[normalized] ?? discoverStatusMessages[message]?.[normalized] ?? discoverMoreMessages[message]?.[normalized] ?? projectDetailMessages[message]?.[normalized] ?? projectDependencyMessages[message]?.[normalized] ?? projectDetailExtraMessages[message]?.[normalized] ?? footerMessages[message]?.[normalized] ?? controlsMessages[message]?.[normalized] ?? discoverExtraMessages[message]?.[normalized] ?? importMessages[message]?.[normalized] ?? libraryDialogsMessages[message]?.[normalized] ?? libraryFilterMessages[message]?.[normalized] ?? uiSmallMessages[message]?.[normalized] ?? duplicateMessages[message]?.[normalized] ?? libraryStatusMessages[message]?.[normalized] ?? completePhraseMessages[message]?.[normalized] ?? navigationActionMessages[message]?.[normalized] ?? launchProfileMessages[message]?.[normalized] ?? savedFilterMessages[message]?.[normalized] ?? editFilterMessages[message]?.[normalized] ?? launchHelpMessages[message]?.[normalized] ?? longUiHelpMessages[message]?.[normalized] ?? pickerGuidanceMessages[message]?.[normalized] ?? smartFilterMessages[message]?.[normalized] ?? installedMessages[message]?.[normalized] ?? statsMessages[message]?.[normalized] ?? metadataMessages[message]?.[normalized] ?? message;
+  return translationIndex().get(message)?.[normalized] ?? message;
 }
 
 
@@ -159,11 +205,10 @@ export function translate(message: string, language: unknown = getTranslationLoc
 export function hasTranslation(message: string, language: unknown): boolean {
   const normalized = normalizeLanguage(language);
   if (navLabel(message, normalized) !== message) return true;
-  return Boolean(settingsRecentMessages[message]?.[normalized] || recentUiMessages[message]?.[normalized] || smartFilterMessages[message]?.[normalized] || pickerGuidanceMessages[message]?.[normalized] || longUiHelpMessages[message]?.[normalized] || launchHelpMessages[message]?.[normalized] || editFilterMessages[message]?.[normalized] || savedFilterMessages[message]?.[normalized] || launchProfileMessages[message]?.[normalized] || navigationActionMessages[message]?.[normalized] || completePhraseMessages[message]?.[normalized] || libraryStatusMessages[message]?.[normalized] || duplicateMessages[message]?.[normalized] || uiSmallMessages[message]?.[normalized] || libraryFilterMessages[message]?.[normalized] || libraryDialogsMessages[message]?.[normalized] || importMessages[message]?.[normalized] || discoverExtraMessages[message]?.[normalized] || controlsMessages[message]?.[normalized] || messages[message]?.[normalized] || setupMessages[message]?.[normalized] || setupCopyMessages[message]?.[normalized] || setupCopyExtraMessages[message]?.[normalized] || cloudSetupMessages[message]?.[normalized] || accountSetupMessages[message]?.[normalized] || serviceSetupMessages[message]?.[normalized] || chromeMessages[message]?.[normalized] || settingsMessages[message]?.[normalized] || downloadMessages[message]?.[normalized] || dealMessages[message]?.[normalized] || dealExtraMessages[message]?.[normalized] || libraryMessages[message]?.[normalized] || systemMessages[message]?.[normalized] || libraryExtraMessages[message]?.[normalized] || commonMessages[message]?.[normalized] || settingsTitleMessages[message]?.[normalized] || settingsTitleExtraMessages[message]?.[normalized] || accessibilitySettingsCopy[message]?.[normalized] || settingsSubtitleMessages[message]?.[normalized] || settingsSubtitleExtraMessages[message]?.[normalized] || accessibilityMessages[message]?.[normalized] || bigPictureMessages[message]?.[normalized] || commonExtraMessages[message]?.[normalized] || uiExtraMessages[message]?.[normalized] || extendedUiMessages[message]?.[normalized] || modWorkflowMessages[message]?.[normalized] || modSaveMessages[message]?.[normalized] || saveBackupMessages[message]?.[normalized] || accountHardwareMessages[message]?.[normalized] || savesProtonMessages[message]?.[normalized] || sharedTermMessages[message]?.[normalized] || longHelpMessages[message]?.[normalized] || keyboardAndSafetyMessages[message]?.[normalized] || tofuManagementMessages[message]?.[normalized] || launchOptionsMessages[message]?.[normalized] || exportShareMessages[message]?.[normalized] || updateArtworkMessages[message]?.[normalized] || artworkAndSourcesMessages[message]?.[normalized] || discoveryMessages[message]?.[normalized] || discoverStatusMessages[message]?.[normalized] || discoverMoreMessages[message]?.[normalized] || projectDetailMessages[message]?.[normalized] || projectDependencyMessages[message]?.[normalized] || projectDetailExtraMessages[message]?.[normalized] || footerMessages[message]?.[normalized] || installedMessages[message]?.[normalized] || statsMessages[message]?.[normalized] || metadataMessages[message]?.[normalized]);
+  return Boolean(translationIndex().get(message)?.[normalized]);
 }
 
 /** All explicitly catalogued messages, useful for coverage checks and tooling. */
 export function getTranslationMessages(): string[] {
-  const catalogs = [settingsRecentMessages, recentUiMessages, messages, setupMessages, setupCopyMessages, setupCopyExtraMessages, cloudSetupMessages, accountSetupMessages, serviceSetupMessages, chromeMessages, settingsMessages, downloadMessages, dealMessages, dealExtraMessages, libraryMessages, systemMessages, libraryExtraMessages, commonMessages, settingsTitleMessages, settingsTitleExtraMessages, accessibilitySettingsCopy, settingsSubtitleMessages, settingsSubtitleExtraMessages, accessibilityMessages, bigPictureMessages, commonExtraMessages, uiExtraMessages, extendedUiMessages, modWorkflowMessages, modSaveMessages, saveBackupMessages, accountHardwareMessages, savesProtonMessages, sharedTermMessages, longHelpMessages, keyboardAndSafetyMessages, tofuManagementMessages, launchOptionsMessages, exportShareMessages, updateArtworkMessages, artworkAndSourcesMessages, discoveryMessages, discoverStatusMessages, discoverMoreMessages, projectDetailMessages, projectDependencyMessages, projectDetailExtraMessages, footerMessages, controlsMessages, discoverExtraMessages, importMessages, libraryDialogsMessages, libraryFilterMessages, uiSmallMessages, duplicateMessages, libraryStatusMessages, completePhraseMessages, navigationActionMessages, launchProfileMessages, savedFilterMessages, editFilterMessages, launchHelpMessages, longUiHelpMessages, pickerGuidanceMessages, smartFilterMessages, installedMessages, statsMessages, metadataMessages];
-  return [...new Set(catalogs.flatMap((catalog) => Object.keys(catalog)))];
+  return [...translationIndex().keys()];
 }

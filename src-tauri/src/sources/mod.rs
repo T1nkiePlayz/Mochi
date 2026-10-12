@@ -110,7 +110,7 @@ pub fn content_type_from_name(name: &str) -> Option<&'static str> {
 }
 
 fn sort_games(mut games: Vec<ImportedGame>) -> Vec<ImportedGame> {
-    games.sort_by_key(|game| (game.kind == ImportKind::Launcher, game.name.to_lowercase()));
+    games.sort_by_cached_key(|game| (game.kind == ImportKind::Launcher, game.name.to_lowercase()));
     games
 }
 

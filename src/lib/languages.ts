@@ -38,9 +38,10 @@ export const DEFAULT_LANGUAGE: LauncherLanguage = "en";
 
 export function normalizeLanguage(value: unknown): LauncherLanguage {
   if (typeof value !== "string") return DEFAULT_LANGUAGE;
-  const exact = launcherLanguages.find((language) => language.code.toLowerCase() === value.toLowerCase().replace(/_/g, "-"));
+  const lowered = value.toLowerCase().replace(/_/g, "-");
+  const exact = launcherLanguages.find((language) => language.code.toLowerCase() === lowered);
   if (exact) return exact.code;
-  const base = value.toLowerCase().split(/[-_]/, 1)[0];
+  const base = lowered.split(/[-_]/, 1)[0];
   return launcherLanguages.find((language) => language.code.toLowerCase() === base)?.code ?? DEFAULT_LANGUAGE;
 }
 
