@@ -32,6 +32,7 @@ mod sharecard;
 mod sources;
 mod soundpacks;
 mod steam_achievements;
+mod steam_playtime;
 mod hooks;
 mod plugins;
 mod protondb;
@@ -172,6 +173,10 @@ fn get_playtime() -> Result<Vec<playtime::PlaytimeEntry>, String> { playtime::li
 
 #[tauri::command(async)]
 fn get_playtime_history(since_epoch: Option<u64>) -> Result<Vec<playtime::Session>, String> { playtime::history(since_epoch) }
+
+/// Imports Steam's own playtime totals for the given library games (Settings > Data & privacy).
+#[tauri::command(async)]
+fn import_steam_playtime(targets: Vec<steam_playtime::Target>) -> Result<steam_playtime::ImportResult, String> { steam_playtime::import(&targets) }
 
 #[tauri::command(async)]
 fn get_dir_size(path: String) -> Result<dirsize::DirSize, String> { dirsize::dir_size_cached(&path) }
@@ -344,7 +349,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             write_library_index, youtube_embed_url, send_system_notification, open_external_url, open_path_in_file_manager, set_launch_on_startup,
-            launch_game_tracked, stop_game, get_active_sessions, get_playtime, get_playtime_history, get_dir_size, get_downloads,
+            launch_game_tracked, stop_game, get_active_sessions, get_playtime, get_playtime_history, import_steam_playtime, get_dir_size, get_downloads,
             list_flatpaks, list_runtimes, list_launch_runtimes, preview_launch_command, get_platform_capabilities, create_game_shortcut, remove_game_shortcut, shortcuts::get_shortcut_targets, shortcuts::create_piko_shortcut, shortcuts::add_piko_to_steam,
             detect_import_sources, scan_import_games, copy_minecraft_instance, read_minecraft_pack,
             bigpicture::get_system_status, bigpicture::suspend_system, bigpicture::power_action, bigpicture::get_power_capabilities, soundpacks::list_sound_packs, soundpacks::import_sound_pack, soundpacks::remove_sound_pack, soundpacks::export_sound_pack, sharecard::write_share_card, soundpacks::read_sound_pack_file, bigpicture::quit_mochi, gamepad::get_gamepads, gamepad::gamepad_rumble,

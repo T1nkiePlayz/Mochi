@@ -37,6 +37,8 @@ const mockScan = (() => {
   return { mochi, games };
 })();
 let storageJob = 0;
+/** Whether the dev mock's Steam playtime import has already "added" its data (idempotency demo). */
+let steamPlaytimeImported = false;
 const storageHandlers: Record<string, Handler> = {
   "plugin:event|listen": (args) => { const list = eventListeners.get(String(args.event)) ?? []; const callback = callbacks.get(Number(args.handler)); if (callback) list.push(callback as never); eventListeners.set(String(args.event), list); return list.length; },
   "plugin:event|unlisten": () => undefined,
@@ -204,6 +206,14 @@ const handlers: Record<string, Handler> = {
     { gameId: "b", name: "Stardew Valley", seconds: 41_000, lastPlayed: now - 86_400 },
     { gameId: "c", name: "Subnautica", seconds: 12_300, lastPlayed: now - 5 * 86_400 },
   ],
+  import_steam_playtime: (args) => {
+    const targets = Array.isArray(args.targets) ? args.targets as unknown[] : [];
+    const result = steamPlaytimeImported
+      ? { imported: 0, unchanged: targets.length, unmapped: 1 }
+      : { imported: targets.length, unchanged: 0, unmapped: 1 };
+    steamPlaytimeImported = true;
+    return result;
+  },
   get_active_sessions: () => [],
   list_runtimes: () => [
     { id: "wine", name: "Wine", kind: "compat", path: "/usr/bin/wine" },
