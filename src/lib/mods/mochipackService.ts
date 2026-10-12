@@ -2,6 +2,7 @@
 // and queue the downloads through the normal verified pipeline (`startModDownload`: allow-listed hosts, SHA-1 check).
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
+import { translateUiMessage } from "../i18n";
 import { cfFiles, cfMod, CF_MINECRAFT_ID, CF_SITE } from "../curseforge";
 import { startModDownload } from "../downloads";
 import { getModrinthVersions } from "../modrinth";
@@ -66,14 +67,14 @@ const safeName = (name: string) => name.replace(/[^A-Za-z0-9._ -]+/g, "").trim()
 
 /** Asks where to save and writes the pack. Resolves to the saved path, or null when cancelled. */
 export async function savePackFile(text: string, name: string): Promise<string | null> {
-  const destination = await save({ title: "Export modpack", defaultPath: `${safeName(name)}.mochipack`, filters: [{ name: "Mochi modpack", extensions: ["mochipack"] }] });
+  const destination = await save({ title: translateUiMessage("Export modpack"), defaultPath: `${safeName(name)}.mochipack`, filters: [{ name: "Mochi modpack", extensions: ["mochipack"] }] });
   if (!destination) return null;
   return invoke<string>("write_mochipack_file", { path: destination, content: text });
 }
 
 /** Asks for a pack file and returns its text, or null when cancelled. */
 export async function pickPackFile(): Promise<string | null> {
-  const selected = await open({ multiple: false, title: "Import modpack", filters: [{ name: "Mochi modpack", extensions: ["mochipack", "json"] }] });
+  const selected = await open({ multiple: false, title: translateUiMessage("Import modpack"), filters: [{ name: "Mochi modpack", extensions: ["mochipack", "json"] }] });
   if (!selected || Array.isArray(selected)) return null;
   return invoke<string>("read_mochipack_file", { path: selected });
 }

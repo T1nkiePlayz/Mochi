@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { launcherLanguages } from "./languages";
-import { getTranslationMessages, hasTranslation, translate } from "./i18n";
+import { getTranslationMessages, hasTranslation, translate, translateUiMessage } from "./i18n";
 
 describe("shared UI translations", () => {
   it("translates core setup and shell messages for every supported non-English language", () => {
@@ -87,7 +87,9 @@ describe("shared UI translations", () => {
       for (const entry of readdirSync(directory, { withFileTypes: true })) {
         const fullPath = path.join(directory, entry.name);
         if (entry.isDirectory()) walk(fullPath);
-        else if (entry.isFile() && entry.name.endsWith(".tsx") && !/\.test\.tsx$/.test(entry.name) && entry.name !== "LocalizedText.tsx") files.push(fullPath);
+        // `.ts` files are included too: native dialog titles, notify() and state setters live in plain
+        // modules, and skipping them let untranslated UI feedback slip through (PR #166 review).
+        else if (entry.isFile() && /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) && entry.name !== "LocalizedText.tsx") files.push(fullPath);
       }
     };
     const decode = (value: string) => value.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ");
@@ -98,14 +100,42 @@ describe("shared UI translations", () => {
       return part;
     }).filter(Boolean).join(" ").trim();
     const found = new Map<string, string>();
-    const untranslatedByDesign = new Set(["Mochi", "Mochi v", "Mochi Cloud", "GitHub", "Google", "CheapShark", "Epic Games Store", "Steam", "Heroic", "Prism", "Flatpak", "IGDB", "macOS", "USD", "Steam (US)", "/home/you/Games", "U", "you@example.com", "org.company.game", "--fullscreen -windowed", "https://example.com/cover.png", "obs --startreplaybuffer", "/home/me/scripts/sync-saves.sh", "GameMode", "MangoHud", "gamescope", "-W 1920 -H 1080 -f", "/path/to/game", "CurseForge", "mochipack:…", "Nexus Mods", "Tofu", "Steam Deck", "Modrinth", "SteamGridDB"]);
+    const untranslatedByDesign = new Set(["Mochi", "Mochi v", "Mochi Cloud", "GitHub", "Google", "CheapShark", "Epic Games Store", "Steam", "Heroic", "Prism", "Flatpak", "IGDB", "macOS", "USD", "Steam (US)", "/home/you/Games", "U", "you@example.com", "org.company.game", "--fullscreen -windowed", "https://example.com/cover.png", "obs --startreplaybuffer", "/home/me/scripts/sync-saves.sh", "GameMode", "MangoHud", "gamescope", "-W 1920 -H 1080 -f", "/path/to/game", "DXVK_HUD=fps\nMANGOHUD=1", "-windowed --name \"My Player\"", "CurseForge", "mochipack:…", "Nexus Mods", "Tofu", "Steam Deck", "Modrinth", "SteamGridDB"]);
+    const uiMessageSetters = new Set(["setMessage", "setError", "setLaunchError", "setAuthNotice", "setNote", "setNotice", "setFeedback", "setSuccess", "setWarning", "setProblem", "setStatusMessage", "setErrorMessage"]);
     const collect = (node: ts.Node, skipText = false) => {
+      if (ts.isCallExpression(node) && node.arguments.length > 0) {
+        const callName = ts.isIdentifier(node.expression) ? node.expression.text : ts.isPropertyAccessExpression(node.expression) ? node.expression.name.text : "";
+        const collectLiteral = (argument: ts.Expression | undefined) => {
+          if (!argument || !ts.isStringLiteralLike(argument)) return;
+          const message = decode(argument.text).trim();
+          if (message && /[A-Za-z\p{L}]/u.test(message)) found.set(message, path.relative(root, argument.getSourceFile().fileName));
+        };
+        if (uiMessageSetters.has(callName)) collectLiteral(node.arguments[0]);
+        if (callName === "notify") { collectLiteral(node.arguments[0]); collectLiteral(node.arguments[1]); }
+        if (callName === "confirmAction" && ts.isObjectLiteralExpression(node.arguments[0])) {
+          for (const property of node.arguments[0].properties) {
+            if (ts.isPropertyAssignment(property) && ts.isIdentifier(property.name) && ["title", "message", "confirmLabel"].includes(property.name.text)) collectLiteral(property.initializer);
+          }
+        }
+        if (["open", "openDialog", "save", "saveDialog"].includes(callName) && ts.isObjectLiteralExpression(node.arguments[0])) {
+          for (const property of node.arguments[0].properties) {
+            if (ts.isPropertyAssignment(property) && ts.isIdentifier(property.name) && property.name.text === "title") collectLiteral(property.initializer);
+          }
+        }
+      }
       if (ts.isJsxElement(node)) {
         const tag = node.openingElement.tagName.getText();
         const skipChildren = skipText || skippedTags.has(tag);
         for (const attribute of node.openingElement.attributes.properties) {
-          if (ts.isJsxAttribute(attribute) && visibleAttributes.has(attribute.name.getText()) && attribute.initializer && ts.isStringLiteral(attribute.initializer)) {
-            const message = decode(attribute.initializer.text).trim();
+          if (ts.isJsxAttribute(attribute) && visibleAttributes.has(attribute.name.getText()) && attribute.initializer) {
+            const initializer = attribute.initializer;
+            const literal = ts.isStringLiteral(initializer)
+              ? initializer.text
+              : ts.isJsxExpression(initializer) && initializer.expression && ts.isStringLiteralLike(initializer.expression)
+                ? initializer.expression.text
+                : null;
+            if (literal === null) continue;
+            const message = decode(literal).trim();
             if (message && /\p{L}/u.test(message)) found.set(message, path.relative(root, attribute.getSourceFile().fileName));
           }
         }
@@ -114,8 +144,15 @@ describe("shared UI translations", () => {
       }
       if (ts.isJsxSelfClosingElement(node)) {
         for (const attribute of node.attributes.properties) {
-          if (ts.isJsxAttribute(attribute) && visibleAttributes.has(attribute.name.getText()) && attribute.initializer && ts.isStringLiteral(attribute.initializer)) {
-            const message = decode(attribute.initializer.text).trim();
+          if (ts.isJsxAttribute(attribute) && visibleAttributes.has(attribute.name.getText()) && attribute.initializer) {
+            const initializer = attribute.initializer;
+            const literal = ts.isStringLiteral(initializer)
+              ? initializer.text
+              : ts.isJsxExpression(initializer) && initializer.expression && ts.isStringLiteralLike(initializer.expression)
+                ? initializer.expression.text
+                : null;
+            if (literal === null) continue;
+            const message = decode(literal).trim();
             if (message && /\p{L}/u.test(message)) found.set(message, path.relative(root, attribute.getSourceFile().fileName));
           }
         }
@@ -139,7 +176,10 @@ describe("shared UI translations", () => {
     };
     walk(root);
     for (const file of files) {
-      const source = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+      // Parse each file with its real kind: `.ts` files use generics like `<StoreId[]>` that TSX would
+      // misread as JSX elements, producing phantom "strings".
+      const kind = file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+      const source = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, kind);
       collect(source);
     }
     const missing = new Map<string, { file: string; languages: string[] }>();
@@ -159,6 +199,7 @@ describe("shared UI translations", () => {
     expect(translate("Local-first by design", "es")).toBe("Diseñado para priorizar el uso local");
     expect(translate("Cloud sync active", "de")).toBe("Cloud-Synchronisierung aktiv");
     expect(translate("No games match “{query}”.", "fr")).toBe("Aucun jeu ne correspond à « {query} ».");
+    expect(translateUiMessage("No games match “Hytale”.", "fr")).toBe("Aucun jeu ne correspond à « Hytale ».");
   });
 
   it("falls back to the original text for unknown messages and unsupported locales", () => {

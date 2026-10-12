@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { translateUiMessage } from "./i18n";
 import { invalidateArtwork } from "./artworkCache";
 
 /** Normalised crop rectangle: fractions (0..1) of the source image. */
@@ -22,7 +23,7 @@ export async function saveCustomArtwork(cacheKey: string, source: string, crop: 
 }
 
 export async function chooseImageFile(): Promise<string | null> {
-  const selected = await open({ multiple: false, directory: false, title: "Choose cover image", filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "gif"] }] });
+  const selected = await open({ multiple: false, directory: false, title: translateUiMessage("Choose cover image"), filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "gif"] }] });
   return typeof selected === "string" ? selected : null;
 }
 

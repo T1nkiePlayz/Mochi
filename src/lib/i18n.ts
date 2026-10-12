@@ -1,4 +1,5 @@
 import { navLabel } from "./nav";
+import { auditMessages } from "./i18nAudit";
 import { getTranslationLocale } from "./translationLocale";
 import { setupMessages } from "./i18nSetup";
 import { setupCopyMessages } from "./i18nSetupCopy";
@@ -154,7 +155,7 @@ type Catalogue = Record<string, Record<string, string>>;
  * exactly like the old per-call `catalogue[message]?.[locale] ?? …` chain; the merged index below
  * evaluates that chain once instead of on every translate() call. New catalogues go here, first.
  */
-const catalogues: Catalogue[] = [settingsRecentMessages, recentUiMessages, messages, setupMessages, setupCopyMessages,
+const catalogues: Catalogue[] = [auditMessages, settingsRecentMessages, recentUiMessages, messages, setupMessages, setupCopyMessages,
     setupCopyExtraMessages, cloudSetupMessages, accountSetupMessages, serviceSetupMessages,
     chromeMessages, settingsMessages, downloadMessages, dealMessages, dealExtraMessages,
     libraryMessages, systemMessages, libraryExtraMessages, commonMessages, settingsTitleMessages,
@@ -211,4 +212,50 @@ export function hasTranslation(message: string, language: unknown): boolean {
 /** All explicitly catalogued messages, useful for coverage checks and tooling. */
 export function getTranslationMessages(): string[] {
   return [...translationIndex().keys()];
+}
+
+
+/**
+ * Translates a fully rendered UI message, including strings whose placeholders were already interpolated by the caller.
+ * Exact catalogue matches stay fast; dynamic messages are matched against the existing placeholder templates.
+ */
+let uiMessageTemplates: Array<{ source: string; pattern: RegExp; placeholders: number; staticLength: number }> | null = null;
+const uiMessageCache = new Map<string, string>();
+
+function escapeUiPattern(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getUiMessageTemplates() {
+  if (uiMessageTemplates) return uiMessageTemplates;
+  const placeholder = /\{[^}]+\}/g;
+  uiMessageTemplates = getTranslationMessages()
+    .filter((source) => /\{[^}]+\}/.test(source) && source.replace(placeholder, "").trim().length > 0)
+    .map((source) => {
+      placeholder.lastIndex = 0;
+      const count = (source.match(placeholder) ?? []).length;
+      const parts = source.split(placeholder);
+      return { source, pattern: new RegExp("^" + parts.map(escapeUiPattern).join("([\\s\\S]+?)") + "$"), placeholders: count, staticLength: parts.join("").length };
+    })
+    .sort((a, b) => b.staticLength - a.staticLength || a.placeholders - b.placeholders);
+  return uiMessageTemplates;
+}
+
+export function translateUiMessage(message: string, language: unknown = getTranslationLocale()): string {
+  const normalized = normalizeLanguage(language);
+  if (normalized === "en") return message;
+  if (hasTranslation(message, normalized)) return translate(message, normalized);
+  const cacheKey = `${normalized}\\u0000${message}`;
+  const cached = uiMessageCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+  for (const template of getUiMessageTemplates()) {
+    const match = template.pattern.exec(message);
+    if (!match || !hasTranslation(template.source, normalized)) continue;
+    let index = 1;
+    const localized = translate(template.source, normalized).replace(/\{[^}]+\}/g, () => match[index++] ?? "");
+    uiMessageCache.set(cacheKey, localized);
+    return localized;
+  }
+  uiMessageCache.set(cacheKey, message);
+  return message;
 }

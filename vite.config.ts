@@ -35,6 +35,8 @@ layerPlugin.postcss = true;
 export function jsxLocalizationPlugin() {
   const skippedTextTags = new Set(["CodeBlock", "WritingBlock", "AppBlock", "pre", "code", "textarea", "script", "style", "kbd"]);
   const visibleAttributes = new Set(["aria-label", "aria-description", "aria-valuetext", "title", "placeholder", "alt", "label", "description", "emptyLabel", "confirmLabel", "cancelLabel", "submitLabel", "buttonLabel", "heading", "caption", "tooltip", "helpText"]);
+  // State setters below feed visible feedback, not JSX literal text.
+  const uiMessageSetters = new Set(["setMessage", "setError", "setLaunchError", "setAuthNotice", "setNote", "setNotice", "setFeedback", "setSuccess", "setWarning", "setProblem", "setStatusMessage", "setErrorMessage"]);
 
   function normalizeText(value: string): string {
     const lines = value.split(/\r?\n/);
@@ -60,6 +62,7 @@ export function jsxLocalizationPlugin() {
 
       const source = ts.createSourceFile(filename, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
       let changed = false;
+      let changedSetter = false;
       const factory = ts.factory;
 
       const localizedText = (message: string, before: boolean, after: boolean) => {
@@ -73,8 +76,17 @@ export function jsxLocalizationPlugin() {
       };
 
       const visitAttributes = (attributes: ts.JsxAttributes): ts.JsxAttributes => factory.updateJsxAttributes(attributes, attributes.properties.map((attribute) => {
-        if (!ts.isJsxAttribute(attribute) || !visibleAttributes.has(attribute.name.getText(source)) || !attribute.initializer || !ts.isStringLiteral(attribute.initializer)) return attribute;
-        const value = decodeEntities(attribute.initializer.text);
+        if (!ts.isJsxAttribute(attribute) || !visibleAttributes.has(attribute.name.getText(source)) || !attribute.initializer) return attribute;
+        // JSX allows visible attribute strings as either plain literals or literal expressions.
+        // Leave dynamic expressions (IDs, state and interpolation) untouched.
+        const initializer = attribute.initializer;
+        const literalValue = ts.isStringLiteral(initializer)
+          ? initializer.text
+          : ts.isJsxExpression(initializer) && initializer.expression && ts.isStringLiteralLike(initializer.expression)
+            ? initializer.expression.text
+            : null;
+        if (literalValue === null) return attribute;
+        const value = decodeEntities(literalValue);
         changed = true;
         return factory.updateJsxAttribute(attribute, attribute.name, factory.createJsxExpression(undefined, factory.createCallExpression(factory.createIdentifier("translate"), undefined, [factory.createStringLiteral(value)])));
       }));
@@ -107,6 +119,15 @@ export function jsxLocalizationPlugin() {
         if (ts.isJsxExpression(node) && node.expression && ts.isStringLiteralLike(node.expression) && !skipText) {
           return localizedText(decodeEntities(node.expression.text), false, false);
         }
+        if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && uiMessageSetters.has(node.expression.text) && node.arguments.length > 0) {
+          const first = node.arguments[0];
+          const alreadyTranslated = ts.isCallExpression(first) && ts.isIdentifier(first.expression) && first.expression.text === "translateUiMessage";
+          if (alreadyTranslated || ts.isArrowFunction(first) || ts.isFunctionExpression(first) || first.kind === ts.SyntaxKind.NullKeyword || first.kind === ts.SyntaxKind.TrueKeyword || first.kind === ts.SyntaxKind.FalseKeyword || (ts.isStringLiteralLike(first) && !first.text.trim())) return node;
+          changed = true;
+          changedSetter = true;
+          const translated = factory.createCallExpression(factory.createIdentifier("translateUiMessage"), undefined, [first]);
+          return factory.updateCallExpression(node, node.expression, node.typeArguments, [translated, ...node.arguments.slice(1)]);
+        }
         return ts.visitEachChild(node, (child) => visitNode(child, skipText), context);
       };
 
@@ -127,7 +148,13 @@ export function jsxLocalizationPlugin() {
         factory.createStringLiteral(path.relative(path.dirname(filename), path.resolve("src/lib/i18n")).replace(/\\/g, "/").replace(/^([^.]|$)/, "./$1")),
         undefined,
       );
-      const transformed = factory.updateSourceFile(source, [localizedImport, translateImport, ...statements]);
+      const messageImport = factory.createImportDeclaration(
+        undefined,
+        factory.createImportClause(false, undefined, factory.createNamedImports([factory.createImportSpecifier(false, undefined, factory.createIdentifier("translateUiMessage"))])),
+        factory.createStringLiteral(path.relative(path.dirname(filename), path.resolve("src/lib/i18n")).replace(/\\/g, "/").replace(/^([^.]|$)/, "./$1")),
+        undefined,
+      );
+      const transformed = factory.updateSourceFile(source, [localizedImport, translateImport, ...(changedSetter ? [messageImport] : []), ...statements]);
       return { code: ts.createPrinter({ newLine: ts.NewLineKind.LineFeed }).printFile(transformed), map: null };
     },
   };
@@ -153,6 +180,7 @@ export default defineConfig({
             const fileName = path.basename(id, path.extname(id));
             const standaloneChunks: Record<string, string> = {
               i18nCommonPart2: "translations-common-part2",
+              i18nAudit: "translations-audit",
               i18nRecentUi: "translations-recent-ui",
               i18nMetadataPart2: "translations-metadata-part2",
               i18nMetadataPart1: "translations-metadata-part1",

@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
+import { translateUiMessage } from "./i18n";
 import { readJson, removeKey, writeJson, writeString } from "./storage";
 import { sanitizeLibrary } from "./library";
 
@@ -67,13 +68,13 @@ export function writeBackupData(file: BackupFile, storage: Pick<Storage, "length
 export const backupFileName = (now = new Date()) => `mochi-backup-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
 export async function exportBackupToFile(appVersion: string): Promise<string | null> {
-  const picked = await save({ title: "Save library backup", defaultPath: `${backupFileName()}.mochibackup`, filters: [{ name: "Mochi backup", extensions: ["mochibackup"] }] });
+  const picked = await save({ title: translateUiMessage("Save library backup"), defaultPath: `${backupFileName()}.mochibackup`, filters: [{ name: "Mochi backup", extensions: ["mochibackup"] }] });
   if (!picked) return null;
   return invoke<string>("write_library_backup", { path: picked, content: JSON.stringify(buildBackup(collectBackupData(), appVersion)) });
 }
 
 export async function pickBackupFile(): Promise<{ file: BackupFile; summary: BackupSummary } | null> {
-  const picked = await open({ title: "Restore library backup", multiple: false, directory: false, filters: [{ name: "Mochi backup", extensions: ["mochibackup"] }] });
+  const picked = await open({ title: translateUiMessage("Restore library backup"), multiple: false, directory: false, filters: [{ name: "Mochi backup", extensions: ["mochibackup"] }] });
   if (typeof picked !== "string") return null;
   return parseBackup(await invoke<string>("read_library_backup", { path: picked }));
 }

@@ -1,4 +1,5 @@
 import { confirmAction } from "../lib/confirm";
+import { translateUiMessage } from "../lib/i18n";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
@@ -43,9 +44,9 @@ export function useCredentials(user: User | null, requireSignIn: () => void) {
     try {
       await deleteProviderCredential(supabase, provider);
       setStatus((current) => ({ ...current, [provider]: false }));
-      setMessage("Credentials removed.");
+      setMessage(translateUiMessage("Credentials removed."));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to remove the credentials.");
+      setMessage(translateUiMessage(error instanceof Error ? error.message : "Unable to remove the credentials."));
     } finally { setBusy(null); }
   };
 
@@ -53,11 +54,11 @@ export function useCredentials(user: User | null, requireSignIn: () => void) {
     if (!supabase || !user) { requireSignIn(); return; }
     let secret: string;
     if (provider === "igdb") {
-      if (!igdbClientId.trim() || !igdbClientSecret.trim()) { setMessage("Enter your IGDB Client ID and Client Secret first."); return; }
+      if (!igdbClientId.trim() || !igdbClientSecret.trim()) { setMessage(translateUiMessage("Enter your IGDB Client ID and Client Secret first.")); return; }
       secret = JSON.stringify({ clientId: igdbClientId.trim(), clientSecret: igdbClientSecret.trim() });
     } else if (provider === "nexus") {
       const problem = validateNexusApiKey(nexusApiKey);
-      if (problem) { setMessage(problem); return; }
+      if (problem) { setMessage(translateUiMessage(problem)); return; }
       secret = nexusApiKey.trim();
     } else {
       const problem = validateSteamGridDbKey(steamGridDbKey);
@@ -70,9 +71,9 @@ export function useCredentials(user: User | null, requireSignIn: () => void) {
       setStatus((current) => ({ ...current, [provider]: true }));
       if (provider === "nexus") setNexusApiKey("");
       if (provider === "steamgriddb") setSteamGridDbKey("");
-      setMessage(`${providerLabels[provider]} saved securely to Mochi Vault.`);
+      setMessage(translateUiMessage(`${providerLabels[provider]} saved securely to Mochi Vault.`));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to save provider credentials.");
+      setMessage(translateUiMessage(error instanceof Error ? error.message : "Unable to save provider credentials."));
     } finally { setBusy(null); }
   };
 
