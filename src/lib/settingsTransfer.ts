@@ -1,6 +1,7 @@
 /** Connects the settings export/import logic to the app: reads the current state, talks to the native zip commands, commits an import. */
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
+import { translateUiMessage } from "./i18n";
 import type { Collection, Piko } from "../models";
 import type { Behavior } from "../state/settings";
 import type { Accessibility } from "../state/accessibility";
@@ -37,7 +38,7 @@ const stamp = () => new Date().toISOString().slice(0, 10);
 
 /** Asks where to save, then writes the zip. Resolves to false when the dialog was cancelled. */
 export async function exportSettings(snapshot: Snapshot, includeThemes: boolean, sections: readonly SectionId[] = SECTION_IDS): Promise<boolean> {
-  const path = await save({ title: "Export Mochi settings", defaultPath: `mochi-settings-${stamp()}.zip`, filters: zipFilter });
+  const path = await save({ title: translateUiMessage("Export Mochi settings"), defaultPath: `mochi-settings-${stamp()}.zip`, filters: zipFilter });
   if (!path) return false;
   const target = /\.zip$/i.test(path) ? path : `${path}.zip`;
   await invoke<void>("export_settings_zip", { path: target, sectionsJson: JSON.stringify(buildExportSections(snapshot, sections)), includeThemes });
@@ -46,7 +47,7 @@ export async function exportSettings(snapshot: Snapshot, includeThemes: boolean,
 
 /** Asks for a settings zip and reads it (never applies anything). Resolves to null when cancelled. Throws a readable message for an invalid file. */
 export async function pickSettingsFile(): Promise<SettingsFile | null> {
-  const selected = await open({ title: "Import Mochi settings", multiple: false, directory: false, filters: zipFilter });
+  const selected = await open({ title: translateUiMessage("Import Mochi settings"), multiple: false, directory: false, filters: zipFilter });
   if (typeof selected !== "string") return null;
   const file = await invoke<Omit<SettingsFile, "path">>("read_settings_zip", { path: selected });
   const check = checkManifest(file.manifest);

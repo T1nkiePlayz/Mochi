@@ -180,6 +180,7 @@ export default defineConfig({
             const fileName = path.basename(id, path.extname(id));
             const standaloneChunks: Record<string, string> = {
               i18nCommonPart2: "translations-common-part2",
+              i18nAudit: "translations-audit",
               i18nRecentUi: "translations-recent-ui",
               i18nMetadataPart2: "translations-metadata-part2",
               i18nMetadataPart1: "translations-metadata-part1",

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { translateUiMessage } from "../lib/i18n";
 import { supabase } from "../lib/supabase";
 import { useGameSessions } from "../hooks";
 import { useSaveBackupOnExit } from "./useSaveBackupOnExit";
@@ -135,7 +136,7 @@ function useAppController() {
 
   const chooseConfigLocation = async () => {
     try {
-      const selected = await openDialog({ title: "Choose Mochi data folder", directory: true, multiple: false });
+      const selected = await openDialog({ title: translateUiMessage("Choose Mochi data folder"), directory: true, multiple: false });
       if (typeof selected !== "string" || !selected) return;
       await invoke("move_mochi_config", { destination: selected });
       actions.setLaunchError("");

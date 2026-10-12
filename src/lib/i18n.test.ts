@@ -87,7 +87,9 @@ describe("shared UI translations", () => {
       for (const entry of readdirSync(directory, { withFileTypes: true })) {
         const fullPath = path.join(directory, entry.name);
         if (entry.isDirectory()) walk(fullPath);
-        else if (entry.isFile() && entry.name.endsWith(".tsx") && !/\.test\.tsx$/.test(entry.name) && entry.name !== "LocalizedText.tsx") files.push(fullPath);
+        // `.ts` files are included too: native dialog titles, notify() and state setters live in plain
+        // modules, and skipping them let untranslated UI feedback slip through (PR #166 review).
+        else if (entry.isFile() && /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) && entry.name !== "LocalizedText.tsx") files.push(fullPath);
       }
     };
     const decode = (value: string) => value.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ");
@@ -174,7 +176,10 @@ describe("shared UI translations", () => {
     };
     walk(root);
     for (const file of files) {
-      const source = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+      // Parse each file with its real kind: `.ts` files use generics like `<StoreId[]>` that TSX would
+      // misread as JSX elements, producing phantom "strings".
+      const kind = file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+      const source = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, kind);
       collect(source);
     }
     const missing = new Map<string, { file: string; languages: string[] }>();

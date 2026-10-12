@@ -38,7 +38,7 @@ export function GameScreenshots({ game }: { game: Piko }) {
     const chosen = await openDialog({ title: t("Add folder"), directory: true, multiple: false }).catch(() => null);
     if (typeof chosen !== "string" || !chosen) return;
     lib.updateGame(game.id, { screenshotFolders: [...new Set([...(game.screenshotFolders ?? []), chosen])].slice(0, 10) });
-  }, [game.id, game.screenshotFolders, lib]);
+  }, [game.id, game.screenshotFolders, lib, t]);
   const removeFolder = (folder: string) => lib.updateGame(game.id, { screenshotFolders: (game.screenshotFolders ?? []).filter((item) => item !== folder) });
 
   const fresh = new Set(newSince(files, seenAtOpen).map((file) => file.path));
