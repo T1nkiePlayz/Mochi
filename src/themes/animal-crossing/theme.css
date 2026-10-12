@@ -37,8 +37,8 @@ html:not([data-nav-mode="drawer"])[data-mochi-shell="top"] .sidebar .sidebar-acc
 .game-card, .continue-card, .tofu-card, .new-tofu-card, .settings-group, .modrinth-manager, .game-details-hero, .game-details-section, .theme-card, .provider-credential-card, .download-row, .download-group { border-width: 3px; }
 .game-card { padding: 8px; }
 .game-card .game-card-art { border-radius: 18px; }
-.game-card:hover { transform: translateY(-5px) rotate(-1.2deg); }
-.game-card:nth-child(even):hover { transform: translateY(-5px) rotate(1.2deg); }
+/* Keep game-card hover geometry stable to prevent pointer-triggered flicker. */
+
 .game-card:hover .game-card-art { transform: none; }
 .game-card-copy { background: transparent; padding: 10px 6px 6px; }
 .game-card-copy strong { color: #4a3b2b; font-size: 15px; }

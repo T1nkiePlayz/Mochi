@@ -306,15 +306,22 @@ fn is_minecraft_loader_runtime(name: &str) -> bool {
 pub(crate) fn list_with_owners(dir: &Path, records: &[ModRecord], others: &HashSet<String>, subdir: &str) -> Result<Vec<InstanceMod>, String> {
     let mut out = Vec::new();
     if !dir.is_dir() { return Ok(out); }
+    // First record per (folder, file) — the same record `find` returned — so each file costs one lookup, not a scan of every record.
+    // Nested maps keyed by a single `&str` look up through `Borrow<str>`, so a short-lived file name matches borrowed records.
+    let mut index: HashMap<&str, HashMap<&str, usize>> = HashMap::new();
+    for (position, record) in records.iter().enumerate() {
+        index.entry(record.subdir.as_str()).or_default().entry(record.file.as_str()).or_insert(position);
+    }
     for entry in fs::read_dir(dir).map_err(|e| e.to_string())?.flatten() {
         let Ok(meta) = entry.metadata() else { continue };
         let name = entry.file_name().to_string_lossy().into_owned();
         if !meta.is_file() || name.starts_with('.') || is_minecraft_loader_runtime(&name) || !CONTENT_EXTENSIONS.contains(&content_extension(&name).as_str()) { continue; }
-        let record = records.iter().find(|record| record.subdir == subdir && record.file == base_name(&name)).cloned();
-        let foreign = record.is_none() && others.contains(base_name(&name));
+        let base = base_name(&name);
+        let record = index.get(subdir).and_then(|files| files.get(base)).map(|&position| records[position].clone());
+        let foreign = record.is_none() && others.contains(base);
         out.push(InstanceMod { enabled: !name.ends_with(".disabled"), path: entry.path().to_string_lossy().into_owned(), size: meta.len(), modified_ms: mtime_ms(&meta), filename: name, record, foreign });
     }
-    out.sort_by_key(|item| item.filename.to_lowercase());
+    out.sort_by_cached_key(|item| item.filename.to_lowercase());
     Ok(out)
 }
 
@@ -378,11 +385,19 @@ pub(crate) fn set_enabled_many(root: &Path, tofu_id: &str, paths: &[String], ena
     if !tofu_id.is_empty() && valid_id(tofu_id, 120) && !changed_files.is_empty() {
         let _guard = lock();
         let mut records = load_records(root, tofu_id);
+        // First record per (folder, file) — the same record `find` returned — so each toggled path costs one lookup, not a scan.
+        // Nested maps keyed by a single `String` look up through `Borrow<str>`, so lookups never allocate.
+        let mut index: HashMap<String, HashMap<String, usize>> = HashMap::new();
+        for (position, record) in records.iter().enumerate() {
+            index.entry(record.subdir.clone()).or_default().entry(record.file.clone()).or_insert(position);
+        }
         let mut dirty = false;
         for (subdir, base) in &changed_files {
-            if let Some(record) = records.iter_mut().find(|record| record.subdir == *subdir && record.file == *base) {
-                if record.enabled != enabled { record.enabled = enabled; dirty = true; }
+            let position = index.get(subdir.as_str()).and_then(|files| files.get(base.as_str())).copied();
+            if let Some(position) = position {
+                if records[position].enabled != enabled { records[position].enabled = enabled; dirty = true; }
             } else {
+                index.entry(subdir.clone()).or_default().entry(base.clone()).or_insert(records.len());
                 // Toggling a file in a Tofu makes it one of that Tofu's mods (it then follows Tofu switches).
                 records.push(ModRecord { file: base.clone(), subdir: subdir.clone(), enabled, title: base.clone(), installed_at: now_ms(), ..ModRecord::default() });
                 dirty = true;

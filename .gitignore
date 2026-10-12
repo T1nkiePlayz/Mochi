@@ -12,3 +12,7 @@ src-tauri/target/
 .DS_Store
 Thumbs.db
 node_modules
+
+# AI
+AGENTS.md
+.opencode/

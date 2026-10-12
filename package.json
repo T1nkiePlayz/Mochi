@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/check-themes.mjs && node scripts/check-token-usage.mjs && tsc --noEmit && vite build",
+    "build": "node scripts/build.mjs",
     "preview": "vite preview",
     "tauri": "tauri",
     "check:themes": "node scripts/check-themes.mjs",

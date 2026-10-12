@@ -31,6 +31,7 @@
 .game-card-copy strong { color: #2e1706; font-size: 15px; }
 .game-card-copy small { color: #7a4a22; }
 .game-card:hover { transform: none; background: #ffedc9; box-shadow: inset 0 0 0 2px #e8b868, 0 0 0 3px #b3261e; }
+.game-card-slot:hover .game-card { transform: none; }
 .game-card:hover .game-card-art { transform: none; }
 .game-card-play { border-radius: 0; background: #5fae3a; box-shadow: inset 0 0 0 2px #9be06c; color: #10300a; border: 2px solid #2a4a12; }
 .continue-card { background: #fbe5b8; }

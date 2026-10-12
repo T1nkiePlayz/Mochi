@@ -19,7 +19,7 @@
 
 /* List: art thumbnail, name and category on one row. */
 .library-grid-view[data-view="list"] .game-card-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 8px; }
-.library-grid-view[data-view="list"] .game-card { align-self: stretch; }
+.library-grid-view[data-view="list"] .game-card-slot { align-self: stretch; }
 .library-grid-view[data-view="list"] .game-card-main { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 6px 54px 6px 6px; }
 .library-grid-view[data-view="list"] .game-card-art,
 .library-grid-view[data-view="list"] .game-card.no-art .game-card-art { width: 56px; height: 56px; aspect-ratio: 1 / 1; border-radius: var(--mochi-radius-sm); --art-mark-size: 40cqw; }
@@ -32,7 +32,7 @@
 
 /* Shelves: each category is one horizontally scrolling row (wraps when there is only one group). */
 .library-grid-view[data-view="shelves"] .game-card-grid { display: flex; gap: var(--mochi-card-gap, 16px); overflow-x: auto; padding: 4px 4px 14px; scroll-snap-type: x proximity; scrollbar-width: thin; }
-.library-grid-view[data-view="shelves"] .game-card { flex: 0 0 var(--mochi-cover-min, 168px); width: var(--mochi-cover-min, 168px); scroll-snap-align: start; }
+.library-grid-view[data-view="shelves"] .game-card-slot { flex: 0 0 var(--mochi-cover-min, 168px); width: var(--mochi-cover-min, 168px); scroll-snap-align: start; }
 .library-grid-view[data-view="shelves"][data-groups="1"] .game-card-grid { flex-wrap: wrap; overflow-x: visible; }
 
 @keyframes library-view-in { from { opacity: 0; transform: translateY(8px) scale(.992); } to { opacity: 1; transform: none; } }

@@ -46,6 +46,7 @@ body { font-size: 1.15rem; }
   filter: grayscale(1) sepia(1) hue-rotate(70deg) saturate(3.5) brightness(.85) contrast(1.1); }
 .game-card { padding: 0; background: transparent; }
 .game-card:hover { transform: none; background: #2bff7a; }
+.game-card-slot:hover .game-card { transform: none; }
 .game-card:hover .game-card-copy strong, .game-card:hover .game-card-copy small { color: #021006; text-shadow: none; }
 .game-card:hover .game-card-art { transform: none; }
 .game-card-copy { background: transparent; }

@@ -24,7 +24,8 @@ export function CommandPalette() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => registerThemeCommands(themes, (id) => void getApp().themeEngine.setTheme(id)), [themeKey, getApp]);
 
-  const profileGames = useAppSelector((app) => app.lib.library.filter((piko) => piko.launchProfiles?.length).map((piko) => `${piko.id}\u0001${piko.name}\u0001${piko.activeLaunchProfile ?? ""}\u0001${piko.launchProfiles!.map((profile) => `${profile.id}\u0002${profile.name}`).join("\u0003")}`).join("\u0004"));
+  const profileLibrary = useAppSelector((app) => app.lib.library);
+  const profileGames = useMemo(() => profileLibrary.filter((piko) => piko.launchProfiles?.length).map((piko) => `${piko.id}\u0001${piko.name}\u0001${piko.activeLaunchProfile ?? ""}\u0001${piko.launchProfiles!.map((profile) => `${profile.id}\u0002${profile.name}`).join("\u0003")}`).join("\u0004"), [profileLibrary]);
   useEffect(() => registerLaunchProfileCommands(getApp().lib.library.filter((piko) => piko.launchProfiles?.length), (gameId, profileId) => getApp().lib.updateGame(gameId, { activeLaunchProfile: profileId })), [profileGames, getApp]);
 
   const disabled = setupOpen || bigPicture;

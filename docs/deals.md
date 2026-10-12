@@ -8,11 +8,15 @@ Free games and sales for the stores you use, plus price-watch alerts. Off by def
 - **Price watches**: `watchPrice(item, targetPrice)` (src/lib/deals.ts) stores a target in the wishlist item's `priceWatch`; the same check compares the game's cheapest current price and alerts once when it reaches the target (and again only for a lower price). `getPriceInfo({ title | steamAppId })` returns current and cheapest-ever prices for the Game search feature.
 - Alerts go through `notify(..., { group: "deals" })`, so a burst becomes one "N new deals" notification. Each alert is remembered (`mochi:deals-state`, 30 days) so it is only shown once.
 
-## Which stores
-Detected from your library sources (Steam, GOG, Epic; Heroic counts as Epic and GOG). You can switch any store on or off in the panel; the choice is kept in `mochi:deals-stores`.
+## Which stores and regions
+
+Stores are detected from your library sources (Steam, GOG, Epic; Heroic counts as Epic and GOG). You can switch any store on or off in the panel; the choice is kept in `mochi:deals-stores`.
+
+Epic free-promotion requests and Epic store links use the system's locale/country where it can be normalized (for example, an English-Australian locale uses the corresponding Epic region). Missing or invalid locale data falls back safely to US English. There is no separate manual Epic country selector. CheapShark prices and the price-history graph use USD, so their price comparisons are not localized to your store's currency.
 
 ## Schedule and limits
 - First check about 8 seconds after start-up when the last one is older than 6 hours, then every 6 hours. Nothing runs when the feature is off or Mochi is offline; a failed check retries after 30 minutes. "Check now" runs one immediately.
+- At most 8 deal alerts are emitted per check. Candidates are deduplicated first, and only alerts actually returned are marked as seen; extra eligible alerts can be picked up by a later check rather than being silently discarded.
 - Natively (src-tauri/src/deals.rs): one shared HTTP client, one request at a time with at least 1.1 s between requests, in-memory cache for 1 hour (64 entries, never written to disk), 2 MB response cap, a 15 minute pause after HTTP 429. At most 20 price watches are checked per run (2 requests each).
 - Prices are in USD (CheapShark). Only metadata is fetched; no images are loaded or stored, so the content security policy is unchanged.
 

@@ -32,6 +32,7 @@
 .play-button:hover:not(:disabled) { animation: cp-glitch .5s steps(2) 1; }
 .game-card { border-left: 3px solid #262b3d; }
 .game-card:hover { transform: none; border-left-color: #fcee09; box-shadow: 0 0 0 1px rgba(252, 238, 9, .4); }
+.game-card-slot:hover .game-card { transform: none; }
 .game-card:hover .game-card-art { transform: none; }
 .game-card .game-card-art { filter: contrast(1.1) saturate(1.2); }
 .game-card-copy { background: #0f121b; }
