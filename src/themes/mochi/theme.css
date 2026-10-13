@@ -1,7 +1,9 @@
 /* Mochi — soft glass, calm mint highlights, a deliberately quiet launcher surface. */
-.sidebar { backdrop-filter: blur(var(--mochi-blur)); }
+/* No backdrop-filter on persistent surfaces (.sidebar, the card/panel group): the WebKitGTK
+ * webview has no GPU compositing, so blurring large always-visible surfaces that repaint
+ * constantly stalls the launcher. Only genuinely transient overlays below keep it — they
+ * exist only while open, are small, and the soft-focus sheen reads best there. */
 .brand-mark, .account-avatar, .empty-icon { box-shadow: var(--mochi-shadow-soft); border: 1px solid var(--mochi-border-strong); }
-.game-card, .continue-card, .tofu-card, .new-tofu-card, .settings-group, .theme-card { backdrop-filter: blur(10px); }
 .game-card-art { filter: saturate(.94) contrast(.98); }
 .hero-card { box-shadow: var(--mochi-shadow-card); }
 .modal, .notification-popover, .account-menu { backdrop-filter: blur(var(--mochi-blur)); }

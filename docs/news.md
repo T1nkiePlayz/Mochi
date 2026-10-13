@@ -6,7 +6,7 @@ Off by default; enable **Game news** in **Settings > Deals & news**. It adds a *
 - **Steam news** for every Steam game in the library (games that launch through Steam; launchers are skipped): the latest posts from the keyless `ISteamNews/GetNewsForApp` endpoint (3 posts per game, plain-text excerpt of at most 300 characters). Clicking a post opens it in the browser.
 - **Mod updates**: updates already found by the mod update checks (see [mods.md](mods.md)). Nothing extra is requested; the list is read from the in-memory results.
 
-The News tab's labels, empty states, accessibility text and mod-update status prefixes follow the launcher language selected in Settings. This localizes Mochi's interface, not the original Steam article titles or excerpts; those remain in the language supplied by Steam.
+The News tab's labels, empty states, accessibility text and mod-update status prefixes follow the launcher language selected in Settings. This localizes Mochi's interface, not the original Steam article titles or excerpts: Steam's API ignores the requested news language, so posts whose dominant writing script does not match the selected launcher language are dropped instead (e.g. Russian posts never reach an English reader). Caveat: Latin-script languages are mutually indistinguishable without a real language detector, so a post in another Latin-script language (say French on an English feed) can still pass.
 
 ## How it works
 - The request runs in Rust (`src-tauri/src/steam_news.rs`, command `get_steam_news`) so the web view's CSP is not widened. Responses are size-capped, only `https` links are kept.
