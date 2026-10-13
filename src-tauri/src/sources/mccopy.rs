@@ -89,6 +89,16 @@ fn reserve(parent: &Path, base: &str) -> Result<(PathBuf, String), String> {
     Err("Too many copies of this instance already exist.".into())
 }
 
+/// The `<base>` a ` (Mochi)` / ` (Mochi <n>)` suffix marks as one of Mochi's own copies (the exact naming
+/// `reserve` writes), or `None` for anything else. The import scanner uses it to never offer a copy for import.
+pub(super) fn mochi_copy_base(name: &str) -> Option<&str> {
+    if let Some(base) = name.strip_suffix(" (Mochi)") { return (!base.is_empty()).then_some(base); }
+    let (base, count) = name.strip_suffix(')')?.rsplit_once(" (Mochi ")?;
+    let n: u32 = count.parse().ok()?;
+    // Plain decimal `2..=MAX_COPY_NAMES`, exactly as `format!("(Mochi {n})")` writes it.
+    (!base.is_empty() && (2..=MAX_COPY_NAMES).contains(&n) && n.to_string() == count).then_some(base)
+}
+
 /// `instance.cfg` text with `name=` replaced (or added), leaving every other line as it was.
 fn renamed_config(text: &str, name: &str) -> String {
     let mut done = false;

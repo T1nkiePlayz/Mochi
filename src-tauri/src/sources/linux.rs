@@ -168,6 +168,9 @@ fn parse_desktop_app(file: &Path, text: &str, own_exe: Option<&Path>, icon_dirs:
     let exec_path = exec.split_whitespace().next().map(|t| t.trim_matches('"'));
     let hidden = ["NoDisplay", "Hidden"].iter().any(|key| entry.get(key) == Some(&"true"));
     if entry.get("Type") != Some(&"Application") || hidden || classify::is_mochi(&ids, name, None, own_exe, exec_path) { return None; }
+    // Shortcuts Mochi itself wrote (marked, or recognisable by their mochi://launch Exec) are
+    // already-known games, not new desktop games to import.
+    if classify::is_mochi_shortcut(exec, entry.contains_key(crate::shortcuts::DESKTOP_MARKER_KEY)) { return None; }
 
     let icon = entry.get("Icon").and_then(|value| icons::resolve_icon(value, icon_dirs)).and_then(|path| path.to_str().map(str::to_owned));
     let launcher = classify::classify_launcher(&ids, name, None);
@@ -318,6 +321,15 @@ mod tests {
         let renamed = "[Desktop Entry]\nType=Application\nName=Games\nExec=/opt/mochi/mochi\nCategories=Game;\n";
         let own = Path::new("/opt/mochi/mochi");
         assert!(parse_desktop_app(Path::new("/x/games.desktop"), renamed, Some(own), &[]).is_none());
+        // Shortcuts Mochi created: marked by current versions...
+        let marked = "[Desktop Entry]\nType=Application\nX-Mochi=shortcut\nName=Hades\nExec=xdg-open mochi://launch/hades\nCategories=Game;\n";
+        assert!(parse("/home/u/.local/share/applications/mochi-hades.desktop", marked).is_none());
+        // ...and by the mochi://launch Exec signature older, unmarked versions always wrote.
+        let legacy = "[Desktop Entry]\nType=Application\nName=Hades\nComment=Launch Hades with Mochi\nExec=xdg-open mochi://launch/hades\nCategories=Game;\n";
+        assert!(parse("/home/u/.local/share/applications/mochi-hades.desktop", legacy).is_none());
+        // A genuine third-party entry whose name merely starts with "mochi-" stays listed.
+        let other = "[Desktop Entry]\nType=Application\nName=Mochi Tower\nExec=mochangea\nCategories=Game;\n";
+        assert!(parse("/usr/share/applications/mochi-tower.desktop", other).expect("third-party game").name == "Mochi Tower");
     }
 
     #[test]
@@ -354,6 +366,9 @@ mod tests {
     fn steam_hidden_tools_and_non_games_are_dropped() {
         let steam = "[Desktop Entry]\nType=Application\nName=Steam\nExec=/usr/bin/steam %U\nCategories=Game;\n";
         assert!(parse("/usr/share/applications/steam.desktop", steam).is_none());
+        // Desktop files for individual Steam games belong to the Steam source.
+        let steam_game = "[Desktop Entry]\nType=Application\nName=Half-Life 2\nExec=steam steam://rungameid/220\nCategories=Game;\n";
+        assert!(parse("/usr/share/applications/hl2.desktop", steam_game).is_none());
         let hidden = "[Desktop Entry]\nType=Application\nName=Hidden Game\nExec=g\nCategories=Game;\nNoDisplay=true\n";
         assert!(parse("/x/hidden.desktop", hidden).is_none());
         let tool = "[Desktop Entry]\nType=Application\nName=Protontricks\nExec=protontricks --gui\nCategories=Game;Utility;\n";

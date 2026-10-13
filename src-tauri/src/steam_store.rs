@@ -9,7 +9,8 @@ use tauri::{AppHandle, Manager};
 const TTL_SECS: u64 = 7 * 24 * 60 * 60;
 const NOT_FOUND_TTL_SECS: u64 = 24 * 60 * 60;
 const MAX_BYTES: usize = 8 * 1024 * 1024;
-const CDN: &str = "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps";
+/// Keyless store art base URL; also used to name the same art found in Steam's local cache (`steam_artwork.rs`).
+pub(crate) const CDN: &str = "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps";
 const USER_AGENT: &str = concat!("Mochi/", env!("CARGO_PKG_VERSION"), " (game launcher)");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

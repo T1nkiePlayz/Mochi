@@ -113,6 +113,17 @@ pub fn is_mochi(ids: &[&str], name: &str, bundle_id: Option<&str>, own_exe: Opti
     ids_hit || name_hit || bundle_hit || exe_hit
 }
 
+/// True for a `.desktop` shortcut Mochi itself created — never a new game to import. Current
+/// versions mark the entry with the `X-Mochi` key (see `shortcuts::DESKTOP_MARKER_KEY`); files
+/// written by older versions are recognised by the signature those writers always had: an
+/// `Exec` line that opens Mochi's own `mochi://launch/` scheme (both writers used it, with the
+/// percent doubling the Desktop Entry spec requires). No genuine third-party game entry launches
+/// that scheme, so real applications stay listed.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub fn is_mochi_shortcut(exec: &str, marked: bool) -> bool {
+    marked || exec.contains("mochi://launch/")
+}
+
 /// Helpers and compatibility tools that carry the Game category but are not games.
 const NON_GAME_IDS: &[&str] = &[
     "protontricks", "protonup-qt", "net.davidotek.pupgui2", "com.github.matoking.protontricks", "goverlay", "io.github.benjamimgois.goverlay",

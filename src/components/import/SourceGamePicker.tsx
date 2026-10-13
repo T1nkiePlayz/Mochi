@@ -320,7 +320,7 @@ export function SourceGamePicker({ onSelectionChange, renderAction, sources: fix
       <section className="sgp-detail" aria-label={activeSource ? `${activeSource.name} games` : "Games"}>
         {activeSource && (
           <>
-            {activeSource.id === "prism" && <MinecraftModeChooser value={minecraftMode} onChange={setMinecraftMode} />}
+            {activeSource.id === "prism" && <MinecraftModeChooser value={minecraftMode} onChange={setMinecraftMode} copiesExist={selection.games.some((game) => Boolean(game.minecraft?.copyExists))} />}
             <div className="sgp-toolbar">
               <label className="sgp-search">
                 <Search size={14} aria-hidden="true" />

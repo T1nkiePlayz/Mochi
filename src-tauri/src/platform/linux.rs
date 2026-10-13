@@ -277,7 +277,8 @@ pub fn create_game_shortcut(game_id: &str, name: &str) -> Result<String, String>
     let exec = desktop_exec_argument(&executable);
     let url = format!("mochi://launch/{}", percent_encode(game_id)).replace('%', "%%");
     let name: String = name.chars().filter(|c| !c.is_control()).collect();
-    let content = format!("[Desktop Entry]\nType=Application\nName={name}\nComment=Launch {name} with Mochi\nExec={exec} {url}\nIcon=mochi\nTerminal=false\nStartupNotify=true\nCategories=Game;\n");
+    let marker = crate::shortcuts::DESKTOP_MARKER_KEY;
+    let content = format!("[Desktop Entry]\nType=Application\n{marker}=shortcut\nName={name}\nComment=Launch {name} with Mochi\nExec={exec} {url}\nIcon=mochi\nTerminal=false\nStartupNotify=true\nCategories=Game;\n");
     fs::create_dir_all(path.parent().ok_or("Invalid shortcut location.")?).map_err(|e| format!("Unable to create the applications directory: {e}"))?;
     fs::write(&path, content).map_err(|e| format!("Unable to write the shortcut: {e}"))?;
     let _ = fs::set_permissions(&path, fs::Permissions::from_mode(0o755));
