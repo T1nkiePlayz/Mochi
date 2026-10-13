@@ -224,7 +224,8 @@ jobs:
         id: updater
         run: |
           if [[ -n "$TAURI_SIGNING_PRIVATE_KEY" ]]; then
-            echo "args=--target universal-apple-darwin" >> "$GITHUB_OUTPUT"; echo "json=true" >> "$GITHUB_OUTPUT"
+            echo '{"bundle":{"createUpdaterArtifacts":true}}' > "$RUNNER_TEMP/with-updater.json"
+            echo "args=--target universal-apple-darwin --config $RUNNER_TEMP/with-updater.json" >> "$GITHUB_OUTPUT"; echo "json=true" >> "$GITHUB_OUTPUT"
           else
             echo "::warning::TAURI_SIGNING_PRIVATE_KEY is not set: building without updater artifacts."
             echo '{"bundle":{"createUpdaterArtifacts":false}}' > "$RUNNER_TEMP/no-updater.json"

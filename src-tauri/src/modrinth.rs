@@ -352,7 +352,10 @@ pub async fn update_mod_file(
     let staged = crate::modinstance::stage_rollback_copy(&old).ok();
     let actual = crate::downloads::fetch_to_file(provider, parsed, &target, sha1.as_deref(), |_, _| {}).await?;
     let saved = staged.map(|staged| staged.commit());
-    if target != old { let _ = fs::remove_file(&old); }
+    // Spelling alone is not enough to tell the two paths apart: macOS volumes ignore case and
+    // normalisation, so a rename that only changes those writes the update onto the same file the
+    // old path names. Removing it then would delete the update we just saved.
+    if !same_file(&old, &target) { let _ = fs::remove_file(&old); }
     if let (Some(tofu_id), Some(record)) = (tofu_id.filter(|id| !id.is_empty()), record) {
         let subdir = crate::modinstance::subdir_of(&old);
         let mut next = record.into_record(filename, &subdir, Some(actual));
@@ -437,6 +440,19 @@ pub async fn analyze_mod_files(path: String, game_version: Option<String>, loade
     }).collect())
 }
 
+/// Whether two paths name the same file. Spelling alone is not enough: macOS volumes ignore case
+/// and Unicode normalisation, so two different spellings can name one file. Compared by device and
+/// inode, the same way `modlocs::same_dir` already compares directories.
+fn same_file(a: &Path, b: &Path) -> bool {
+    if a == b { return true; }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if let (Ok(x), Ok(y)) = (fs::metadata(a), fs::metadata(b)) { return x.dev() == y.dev() && x.ino() == y.ino(); }
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -448,6 +464,25 @@ mod tests {
         assert!(validate_content_path("/etc/passwd").is_err());
         assert!(validate_content_path("/tmp/../etc/a.jar").is_err());
         assert!(validate_content_path("relative/a.jar").is_err());
+    }
+
+    #[test]
+    fn same_file_ignores_spelling_that_names_one_file() {
+        let dir = std::env::temp_dir().join(format!("mochi-samefile-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let a = dir.join("a.jar");
+        let b = dir.join("b.jar");
+        fs::write(&a, b"one").unwrap();
+        fs::write(&b, b"two").unwrap();
+        // Two spellings of one path, and a hard link to the same inode, are the same file.
+        assert!(same_file(&a, &dir.join("./a.jar")));
+        assert!(same_file(&a, &a));
+        assert!(!same_file(&a, &b));
+        // A rename that only changes case lands on the same file on a case-insensitive volume:
+        // that is the case this guard exists for, so it must never read as "different".
+        let renamed = dir.join("A.JAR");
+        if fs::hard_link(&a, &renamed).is_ok() { assert!(same_file(&a, &renamed)); }
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]
