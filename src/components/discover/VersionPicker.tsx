@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "../../lib/useTranslation";
+import { scrollBehavior } from "../../lib/scroll";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { groupVersions, latestRelease, pinnedVersions, type GameVersion } from "../../lib/gameVersions";
 import { usePopoverPlacement } from "../ui/usePopoverPlacement";
@@ -56,7 +57,7 @@ export function VersionPicker({ value, onChange, versions, loading, label, class
 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- re-centre on the chosen row only when the menu opens or the filter changes, not on every keystroke of the highlight
   useEffect(() => { if (open) setActive(Math.max(0, rows.findIndex((row) => row.value === value && row.id !== "latest"))); }, [open, query, snapshots]);
-  useEffect(() => { if (open) list.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" }); }, [active, open]);
+  useEffect(() => { if (open) list.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest", behavior: scrollBehavior() }); }, [active, open]);
 
   const choose = (row: Row | undefined) => {
     if (!row) return;

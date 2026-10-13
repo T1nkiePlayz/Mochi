@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { usePopoverPlacement } from "./usePopoverPlacement";
+import { scrollBehavior } from "../../lib/scroll";
 import { useDismiss } from "./useDismiss";
 import { useTranslation } from "../../lib/useTranslation";
 
@@ -59,7 +60,7 @@ export function Select<T extends string>({ value, onChange, options, label, plac
   }, [open, query]);
 
   useEffect(() => {
-    if (open && active >= 0) listRef.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });
+    if (open && active >= 0) listRef.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest", behavior: scrollBehavior() });
   }, [active, open]);
 
   const choose = (option: SelectOption<T> | undefined) => {

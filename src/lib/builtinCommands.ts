@@ -1,5 +1,6 @@
 import { ensureChecked } from "../state/modUpdates";
 import { register } from "./commands";
+import { scrollBehavior } from "./scroll";
 import type { NavId } from "../state/AppContext";
 import { toggleBigPicture } from "../bigpicture/mode";
 import { openShortcuts } from "../components/ShortcutsHelp";
@@ -37,7 +38,7 @@ export const SETTINGS_SECTIONS: Array<[string, string, string[]]> = [
 /** Scrolls to a Settings section once the (lazy) page has rendered it. */
 export function scrollToSettingsSection(id: string, tries = 40) {
   const target = document.getElementById(`settings-${id}`);
-  if (target) { target.scrollIntoView({ block: "start" }); return; }
+  if (target) { target.scrollIntoView({ block: "start", behavior: scrollBehavior() }); return; }
   if (tries > 0) window.setTimeout(() => scrollToSettingsSection(id, tries - 1), 50);
 }
 
