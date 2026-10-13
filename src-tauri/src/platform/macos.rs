@@ -4,7 +4,9 @@ use std::{ffi::OsString, fs, path::{Path, PathBuf}, process::Command};
 const APP_ID: &str = "dev.sidequestgames.Mochilauncher";
 const STARTUP_PLIST: &str = "dev.sidequestgames.Mochilauncher.plist";
 /// Schemes handed to `open` unchanged: other launchers register them with LaunchServices.
-const OPEN_SCHEMES: [&str; 6] = ["heroic://", "mochi://", "com.epicgames.launcher://", "battlenet://", "bottles:run/", "goggalaxy://"];
+/// `itch://` covers `itch://games/<id>`, the target the itch importer stores on macOS for a game
+/// whose folder has no single `.app` bundle to launch directly.
+const OPEN_SCHEMES: [&str; 7] = ["heroic://", "itch://", "mochi://", "com.epicgames.launcher://", "battlenet://", "bottles:run/", "goggalaxy://"];
 const COMPAT_APPS: [(&str, &str); 2] = [("/Applications/CrossOver.app", "CrossOver"), ("/Applications/Whisky.app", "Whisky")];
 
 pub fn capabilities() -> PlatformCapabilities {
@@ -232,11 +234,21 @@ mod tests {
 
     #[test]
     fn url_targets_go_through_open() {
-        for target in ["steam://rungameid/220", "heroic://launch?appName=a&runner=gog", "com.epicgames.launcher://apps/x?action=launch"] {
+        for target in ["steam://rungameid/220", "heroic://launch?appName=a&runner=gog", "com.epicgames.launcher://apps/x?action=launch", "itch://games/2"] {
             let prepared = prepare_launch(target, &LaunchConfig::default()).expect(target);
             assert_eq!(prepared.command.get_program(), "/usr/bin/open");
             assert!(!prepared.direct);
         }
         assert!(prepare_launch("steam://rungameid/1 2", &LaunchConfig::default()).is_err());
+    }
+
+    /// The itch importer stores `itch://games/<id>` on macOS when a game folder has no unique
+    /// `.app` (see `sources::scan_itch_with`): that must reach `open`, not a raw spawn.
+    #[test]
+    fn itch_game_pages_open_the_itch_app() {
+        let prepared = prepare_launch("itch://games/3", &LaunchConfig::default()).expect("itch target");
+        assert_eq!(prepared.command.get_program(), "/usr/bin/open");
+        assert_eq!(prepared.command.get_args().collect::<Vec<_>>(), ["itch://games/3"]);
+        assert!(!prepared.direct);
     }
 }
