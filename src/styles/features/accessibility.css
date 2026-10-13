@@ -83,6 +83,12 @@ html[data-keep-controls="true"] .game-card .game-card-play, .game-card:focus-wit
 html[data-keep-controls="true"] .discover-game-name { max-width: 180px !important; opacity: 1 !important; }
 html[data-keep-controls="true"] :is([class*="hover-actions"], [class*="-reveal"], [class*="card-actions"]) { opacity: 1 !important; visibility: visible !important; transform: none !important; }
 
+@media (prefers-reduced-motion: no-preference) {
+  /* Programmatic scrolls glide to their target instead of jumping; wheel scrolling stays
+     engine-driven. The reduced-motion rules below switch this back off (OS preference and app toggle). */
+  html, .main-content, .mochi-select-list { scroll-behavior: smooth; }
+}
+
 /* ---- Reduced motion -------------------------------------------------------- */
 html[data-reduce-motion="true"] { --mochi-transition: 0ms linear; scroll-behavior: auto; }
 html[data-reduce-motion="true"] *, html[data-reduce-motion="true"] *::before, html[data-reduce-motion="true"] *::after {
