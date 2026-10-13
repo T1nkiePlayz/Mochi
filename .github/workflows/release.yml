@@ -146,7 +146,7 @@ jobs:
         with:
           tagName: ${{ env.TAG }}
           releaseDraft: true
-          includeUpdaterJson: ${{ steps.updater.outputs.json == 'true' }}
+          uploadUpdaterJson: ${{ steps.updater.outputs.json == 'true' }}
           args: ${{ steps.updater.outputs.args }}
 
   macos:
@@ -239,7 +239,7 @@ jobs:
         with:
           tagName: ${{ env.TAG }}
           releaseDraft: true
-          includeUpdaterJson: ${{ steps.updater.outputs.json == 'true' }}
+          uploadUpdaterJson: ${{ steps.updater.outputs.json == 'true' }}
           args: ${{ steps.updater.outputs.args }}
 
       - name: Verify the built app bundle
@@ -424,7 +424,10 @@ jobs:
         run: |
           cd assets
           shopt -s nullglob
-          gh release upload "$TAG" SHA256SUMS.txt *.asc install-hashes.json* --clobber
+          # Every file exactly once: `*.asc` already covers install-hashes.json.asc (the GPG step
+          # signs everything), so the old `install-hashes.json*` glob uploaded it twice in one
+          # call and gh rejected the duplicate with HTTP 422.
+          gh release upload "$TAG" SHA256SUMS.txt *.asc install-hashes.json install-hashes.json.sig --clobber
 
       - name: Add copy-and-paste verification commands to the release notes
         run: |
