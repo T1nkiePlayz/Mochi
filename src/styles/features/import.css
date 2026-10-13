@@ -31,7 +31,20 @@
 .sgp-source-copy strong, .sgp-game-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .sgp-source-copy small, .sgp-game-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--mochi-text-muted); font-size: 11px; }
 .sgp-badge { flex: 0 0 auto; padding: 2px 7px; border-radius: 999px; color: var(--mochi-text-muted); background: var(--mochi-background); font-size: 10px; font-variant-numeric: tabular-nums; }
-.sgp-check { flex: 0 0 auto; width: 18px; height: 18px; margin: 0; accent-color: var(--mochi-accent-strong); cursor: pointer; }
+/* Both checkbox kinds (the source rows' TriCheckbox input and the per-game boxes below) share one
+   look, themed entirely through tokens so every theme restyles them. The tick uses
+   `--mochi-accent-text`, the token defined for text on the accent fill — never the theme background,
+   which was invisible when a theme's accent was dark. */
+.sgp-check {
+  flex: 0 0 auto; display: inline-grid; place-items: center; width: 18px; height: 18px; margin: 0; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  border: 1.5px solid var(--mochi-text-muted); border-radius: 5px; background: var(--mochi-input-background, var(--mochi-background));
+  transition: background var(--mochi-transition, .15s ease), border-color var(--mochi-transition, .15s ease);
+}
+.sgp-check:checked, .sgp-check:indeterminate { border-color: var(--mochi-accent-strong); background: var(--mochi-accent-strong); }
+.sgp-check:checked::after { content: "✓"; color: var(--mochi-accent-text, var(--mochi-text-strong)); font-size: 12px; font-weight: 800; line-height: 1; }
+.sgp-check:indeterminate::after { content: ""; width: 10px; height: 2px; border-radius: 1px; background: var(--mochi-accent-text, var(--mochi-text-strong)); }
+.sgp-check:hover { border-color: var(--mochi-accent); }
 .sgp-extra { margin-top: auto; padding-top: 8px; }
 
 .sgp-toolbar { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; flex-wrap: wrap; }
@@ -68,10 +81,14 @@
 .sgp-game:focus-visible, .sgp-kind:focus-visible, .sgp-source-main:focus-visible, .sgp-check:focus-visible { outline: 2px solid var(--mochi-accent-strong); outline-offset: -2px; }
 .sgp-box {
   display: grid; place-items: center; flex: 0 0 auto; width: 18px; height: 18px; border: 1.5px solid var(--mochi-text-muted);
-  border-radius: 5px; color: var(--mochi-background); font-size: 12px; font-weight: 800; line-height: 1;
+  border-radius: 5px; color: transparent; font-size: 12px; font-weight: 800; line-height: 1;
   background: var(--mochi-input-background, var(--mochi-background));
+  transition: background var(--mochi-transition, .15s ease), border-color var(--mochi-transition, .15s ease), color var(--mochi-transition, .15s ease);
 }
-.sgp-game.selected .sgp-box { border-color: var(--mochi-accent-strong); background: var(--mochi-accent-strong); }
+.sgp-game:hover .sgp-box { border-color: var(--mochi-accent); }
+/* `.selected` is carried by the ROW (see SourceGamePicker), not the game button — styling it on
+   `.sgp-game.selected` left this rule dead: selected rows showed an empty box with a black tick. */
+.sgp-row.selected .sgp-box { border-color: var(--mochi-accent-strong); background: var(--mochi-accent-strong); color: var(--mochi-accent-text, var(--mochi-text-strong)); }
 .sgp-thumb {
   display: grid; place-items: center; flex: 0 0 auto; position: relative; width: 72px; height: 34px; overflow: hidden;
   border-radius: 6px; color: var(--mochi-text-muted); background: var(--mochi-surface);

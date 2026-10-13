@@ -366,11 +366,13 @@ fn contains_gstreamer_plugin(directory: &Path) -> bool {
         })
 }
 
-/// WebKitGTK renders a blank window with some NVIDIA drivers unless DMA-BUF rendering is off.
-/// Respect an explicit setting from the user.
+/// WebKitGTK's DMA-BUF renderer is a known defect source: some NVIDIA drivers render a blank window
+/// with it, and on Hyprland/wlroots compositors it strobes hover overlays — the fade re-syncs for
+/// seconds instead of running once (confirmed against 2.4.4 with the renderer on/off). The fallback
+/// GL compositor path is stable on both. Respect an explicit setting from the user.
 #[cfg(target_os = "linux")]
 pub fn prepare_linux_webview_environment() {
-    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() && Path::new("/proc/driver/nvidia").exists() {
+    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
     }
 
