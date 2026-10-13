@@ -37,7 +37,7 @@ export type MinecraftPackHint = {
   pack?: { source: "modrinth" | "curseforge"; projectId: string; versionId?: string | null; name?: string | null; versionName?: string | null } | null;
   index?: { source: "modrinth" | "curseforge"; name: string; version?: string | null } | null;
 };
-export type MinecraftScan = { version?: string | null; loader: string; gameDir: string } & MinecraftPackHint;
+export type MinecraftScan = { version?: string | null; loader: string; gameDir: string; /** A Mochi copy of this instance already exists next to it. */ copyExists?: boolean } & MinecraftPackHint;
 
 export const detectImportSources = () => invoke<DetectedImportSource[]>("detect_import_sources");
 

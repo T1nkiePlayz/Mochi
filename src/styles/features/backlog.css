@@ -27,7 +27,7 @@
 .picker-group { display: grid; gap: 6px; }
 .picker-result { min-height: 92px; display: grid; align-content: center; }
 .picker-card { display: grid; grid-template-columns: 64px 1fr; gap: 14px; align-items: center; padding: 10px; border: var(--mochi-border-width) solid var(--mochi-border-strong); border-radius: var(--mochi-radius); background: var(--mochi-surface-hover); }
-.picker-art { width: 64px; height: 84px; border-radius: var(--mochi-radius-sm); overflow: hidden; }
+.picker-art { width: 64px; height: 84px; border-radius: var(--mochi-radius-sm); overflow: hidden; background-size: cover; background-position: center; background-repeat: no-repeat; background-color: var(--mochi-surface-raised); }
 .picker-copy { display: grid; gap: 3px; min-width: 0; }
 .picker-copy strong { font-size: 16px; }
 .picker-note { font-style: italic; }

@@ -271,6 +271,8 @@ const handlers: Record<string, Handler> = {
   // Browser mock: no files on disk, so the "path" is the stored data URL (artworkCache passes data URLs through).
   get_cached_game_artwork_path: (args) => { const url = mockArtwork()[String(args.cacheKey)]; return url ? { path: url, version: 0 } : null; },
   cache_game_artwork: () => null,
+  // Browser mock: there is no local Steam cache to import from.
+  import_steam_artwork: () => null,
   "plugin:dialog|save": () => "/home/dev/sound-pack.zip",
   // Paths answer with SVG markup (as real .svg icons do); the PNG the page rasterised becomes a 600x800 cover.
   cache_icon_cover: async (args) => {

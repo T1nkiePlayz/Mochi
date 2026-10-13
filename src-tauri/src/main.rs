@@ -37,6 +37,7 @@ mod hooks;
 mod plugins;
 mod protondb;
 mod screenshots;
+mod steam_artwork;
 mod steam_news;
 mod steam_store;
 mod settings_zip;
@@ -358,6 +359,7 @@ fn main() {
             storage::scan_storage, storage::cancel_storage_scan, storage::clear_storage_location,
             game_artwork::cache_game_artwork, game_artwork::get_cached_game_artwork, game_artwork::get_cached_game_artwork_path, game_artwork::clear_game_artwork_cache,
             game_artwork::prepare_artwork_preview, game_artwork::save_custom_artwork, game_artwork::delete_game_artwork, icon_cover::cache_icon_cover, platform::check_launch_targets,
+            steam_artwork::import_steam_artwork,
             modrinth::get_public_api, modrinth::list_mod_files, modrinth::set_mod_file_enabled, modrinth::apply_mod_profile,
             deals::get_epic_free_games, deals::get_cheapshark_deals, deals::get_price_info, deals::get_steam_price,
             steam_store::get_steam_store_details, steam_news::get_steam_news, protondb::get_protondb_summary, plugins::list_plugins, plugins::plugins_folder, screenshots::scan_screenshots, screenshots::make_screenshot_thumbs, steam_achievements::get_steam_achievements, steam_achievements::get_steam_achievement_totals,

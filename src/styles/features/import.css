@@ -67,8 +67,9 @@
 .sgp-kind:hover { color: var(--mochi-text-strong); background: var(--mochi-surface); }
 .sgp-game:focus-visible, .sgp-kind:focus-visible, .sgp-source-main:focus-visible, .sgp-check:focus-visible { outline: 2px solid var(--mochi-accent-strong); outline-offset: -2px; }
 .sgp-box {
-  display: grid; place-items: center; flex: 0 0 auto; width: 18px; height: 18px; border: 1.5px solid var(--mochi-border-strong);
+  display: grid; place-items: center; flex: 0 0 auto; width: 18px; height: 18px; border: 1.5px solid var(--mochi-text-muted);
   border-radius: 5px; color: var(--mochi-background); font-size: 12px; font-weight: 800; line-height: 1;
+  background: var(--mochi-input-background, var(--mochi-background));
 }
 .sgp-game.selected .sgp-box { border-color: var(--mochi-accent-strong); background: var(--mochi-accent-strong); }
 .sgp-thumb {

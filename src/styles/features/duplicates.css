@@ -7,7 +7,7 @@
 .duplicates-group fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; min-width: 0; }
 .duplicates-group legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
 .duplicates-member { display: grid; grid-template-columns: auto 36px minmax(0, 1fr); gap: 10px; align-items: center; cursor: pointer; }
-.duplicates-art { width: 36px; height: 48px; border-radius: var(--mochi-radius-sm); overflow: hidden; }
+.duplicates-art { width: 36px; height: 48px; border-radius: var(--mochi-radius-sm); overflow: hidden; background-size: cover; background-position: center; background-repeat: no-repeat; background-color: var(--mochi-surface-raised); }
 .duplicates-member-copy { display: grid; gap: 2px; min-width: 0; }
 .duplicates-member-copy small { color: var(--mochi-text-muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .duplicates-actions { display: flex; gap: 8px; justify-content: flex-end; }

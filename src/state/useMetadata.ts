@@ -1,6 +1,7 @@
 import { useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { notifyArtworkChanged } from "../lib/artwork";
+import { peekArtwork } from "../lib/artworkCache";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { removeKey, igdbCacheKey } from "../lib/storage";
@@ -37,7 +38,19 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Caches the artwork file on disk. Resolves true on success; offline or blocked hosts resolve false. */
 export async function cacheArtworkUrl(url: string, cacheKey: string, force = false): Promise<boolean> {
-  try { await invoke("cache_game_artwork", { url, cacheKey, force }); notifyArtworkChanged(cacheKey); return true; } catch { return false; }
+  try {
+    const image = await invoke<string>("cache_game_artwork", { url, cacheKey, force });
+    // Announce only a real change. A cache hit returns the very image the cards already show, and
+    // announcing it blanked every visible card for a frame (the artwork "flash" on page switches).
+    if (image && image !== peekArtwork(cacheKey)) notifyArtworkChanged(cacheKey);
+    return true;
+  } catch { return false; }
+}
+
+/** Copies a Steam game's own artwork from the local Steam cache into the artwork cache (no network).
+ * Resolves to the Steam URL of the imported art, or null when nothing was imported. */
+export async function importSteamArtwork(appid: number, cacheKey: string): Promise<string | null> {
+  try { const url = await invoke<string | null>("import_steam_artwork", { appid, cacheKey }); if (url) notifyArtworkChanged(cacheKey); return url; } catch { return null; }
 }
 
 export async function cacheArtwork(piko: Piko): Promise<void> {
@@ -125,6 +138,13 @@ export function useMetadata({ user, igdbConfigured, steamGridDbConfigured = fals
             if (await cacheArtworkUrl(candidate.url, cacheKey, candidate.url !== piko.artworkUrl)) { art = candidate; break artSearch; }
           }
         }
+      }
+      // Steam keeps every game's own art on disk: import it when nothing could be downloaded
+      // (offline, rate limits, art the CDN lacks), so those games are not left with blank cards.
+      if (!art && plan.art.includes("steam")) {
+        const appid = steamAppIdOf(piko);
+        const imported = appid === null ? null : await importSteamArtwork(appid, cacheKey);
+        if (imported) firstCandidate = { source: "steam", url: imported };
       }
       // Nothing could be downloaded (offline?): keep the best remote URL so artwork appears once online.
       art ??= firstCandidate;

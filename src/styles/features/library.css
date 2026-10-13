@@ -27,7 +27,7 @@
 .game-card-heart {
   position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 30px; height: 30px; padding: 0;
   border: 0; border-radius: 50%; background: color-mix(in srgb, var(--mochi-background) 70%, transparent); color: var(--mochi-text);
-  opacity: 0; transition: opacity var(--mochi-transition), color var(--mochi-transition);
+  opacity: 0; transition: opacity var(--mochi-transition), color var(--mochi-transition); will-change: opacity;
 }
 .game-card:hover .game-card-heart, .game-card:focus-within .game-card-heart, .game-card-heart.on { opacity: 1; }
 .game-card-heart.on, .details-heart.on { color: var(--mochi-danger, var(--mochi-accent-strong)); }

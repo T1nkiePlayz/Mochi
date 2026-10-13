@@ -22,6 +22,9 @@ use tauri::AppHandle;
 const MOCHI_ICON: &[u8] = include_bytes!("../icons/icon.png");
 /// SteamID64 of account number 0; `id64 - BASE` is the folder name under `userdata/`.
 const STEAM_ID64_BASE: u64 = 76_561_197_960_265_728;
+/// Vendor key every `.desktop` shortcut Mochi writes carries, so the import scan can tell its
+/// own shortcuts apart from real applications (see `sources::classify::is_mochi_shortcut`).
+pub const DESKTOP_MARKER_KEY: &str = "X-Mochi";
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -114,7 +117,7 @@ pub fn desktop_entry(name: &str, url: &str, icon: Option<&Path>) -> String {
     // In Exec a literal percent sign is written `%%`; the url only contains percent-encoded bytes.
     let exec_url = url.replace('%', "%%");
     let icon_line = icon.map(|path| format!("Icon={}\n", escape_value(&path.to_string_lossy()))).unwrap_or_default();
-    format!("[Desktop Entry]\nType=Application\nName={name}\nComment=Launch {name} with Mochi\nExec=xdg-open {exec_url}\n{icon_line}Terminal=false\nStartupNotify=false\nCategories=Game;\n")
+    format!("[Desktop Entry]\nType=Application\n{DESKTOP_MARKER_KEY}=shortcut\nName={name}\nComment=Launch {name} with Mochi\nExec=xdg-open {exec_url}\n{icon_line}Terminal=false\nStartupNotify=false\nCategories=Game;\n")
 }
 
 fn desktop_file_name(id: &str) -> String { format!("mochi-{}.desktop", safe_stem(id)) }
@@ -507,6 +510,8 @@ mod tests {
         assert_eq!(escape_value("a\\b\nc\td\re"), "a\\\\b\\nc\\td\\re");
         assert!(text.contains("Exec=xdg-open mochi://launch/a%%20b\n"));
         assert!(text.contains("Icon=/i/a b.png\n"));
+        // The marker that keeps the import scan from offering this shortcut as a new game.
+        assert!(text.contains("X-Mochi=shortcut\n"));
         assert!(text.starts_with("[Desktop Entry]\nType=Application\n"));
         // A name can never start a new key.
         assert_eq!(text.lines().filter(|line| line.starts_with("Exec=")).count(), 1);

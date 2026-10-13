@@ -59,7 +59,7 @@ pub(crate) fn remove_cached(base: &Path) {
 }
 
 /// Image type from the file's magic bytes. The server's Content-Type is not trusted on its own.
-fn sniff_image_extension(bytes: &[u8]) -> Option<&'static str> {
+pub(crate) fn sniff_image_extension(bytes: &[u8]) -> Option<&'static str> {
     if bytes.starts_with(&[0xff, 0xd8, 0xff]) { Some("jpg") }
     else if bytes.starts_with(&[0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a]) { Some("png") }
     else if bytes.len() >= 12 && &bytes[..4] == b"RIFF" && &bytes[8..12] == b"WEBP" { Some("webp") }

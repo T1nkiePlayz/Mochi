@@ -11,6 +11,7 @@ moved or updated and work for packaged installs; the handler is re-pointed at th
 * **Desktop**: the same file in the folder reported by `xdg-user-dir DESKTOP` (or `~/Desktop`), marked executable, plus a best-effort
   `gio set <file> metadata::trusted true` so GNOME lets you run it. Only offered when that folder exists.
 * `Exec=xdg-open mochi://launch/<id>` (`%` doubled as the Desktop Entry spec requires); the name has backslashes escaped and control characters removed.
+* The entry carries an `X-Mochi=shortcut` marker key so the import scan never offers the shortcut back as a new desktop game; older unmarked files are recognised by their `mochi://launch/` Exec (see `sources::classify::is_mochi_shortcut`).
 * `Icon=` is the game cover, fitted into a transparent 256 px square at `<Mochi config>/shortcut-icons/<id>.png` (the Mochi icon when there is no cover).
 
 ## macOS

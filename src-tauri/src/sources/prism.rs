@@ -2,7 +2,7 @@
 //! Each instance becomes a game whose default Tofu is that instance's `.minecraft` folder; launching
 //! hands the instance id back to its launcher (`--launch <id>`).
 
-use super::{encode, make, percent_decode, read, real_dir, sort_games, ImportedGame};
+use super::{encode, make, mccopy, percent_decode, read, real_dir, sort_games, ImportedGame};
 use serde::Serialize;
 use std::{
     fs,
@@ -64,6 +64,9 @@ pub struct MinecraftInstance {
     /// Name and version from a pack manifest left in the instance (`modrinth.index.json`, CurseForge `manifest.json`); a hint, not an id.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub index: Option<PackIndex>,
+    /// Set by `scan_instances` when a Mochi copy of this instance already exists next to it, so the import UI can say so.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub copy_exists: bool,
 }
 
 /// A modpack project the launcher installed this instance from.
@@ -161,7 +164,7 @@ pub(super) fn read_instance(root: &Path, dir: &Path, launcher: &InstanceLauncher
     let game_dir = [".minecraft", "minecraft"].iter().map(|sub| dir.join(sub)).find(|path| path.is_dir()).unwrap_or_else(|| dir.join(".minecraft"));
     let (version, loader) = read(&dir.join("mmc-pack.json")).map(|text| pack_info(&text)).unwrap_or((None, "vanilla".into()));
     let mut item = make(format!("{}:{}", launcher.id, id), name, "prism", instance_target(launcher.id, &id), dir.to_str().map(str::to_owned));
-    item.minecraft = Some(MinecraftInstance { version, loader, game_dir: game_dir.to_string_lossy().into_owned(), pack: managed_pack(&config), index: pack_index(dir, &game_dir) });
+    item.minecraft = Some(MinecraftInstance { version, loader, game_dir: game_dir.to_string_lossy().into_owned(), pack: managed_pack(&config), index: pack_index(dir, &game_dir), copy_exists: false });
     // Custom instance icons live in `<data>/icons/<iconKey>.png`; the built-in ones are not files.
     item.icon_path = ini_value(&config, "iconKey").filter(|key| crate::util::valid_id(key, 120))
         .and_then(|key| ["png", "svg", "jpg"].iter().map(|ext| root.join("icons").join(format!("{key}.{ext}"))).find(|path| super::icons::usable_icon(path)))
@@ -169,16 +172,26 @@ pub(super) fn read_instance(root: &Path, dir: &Path, launcher: &InstanceLauncher
     Some(item)
 }
 
-/// Every instance under the given launcher data folders.
+/// Every instance under the given launcher data folders. Mochi's own copies (`<base> (Mochi)` …, see
+/// `mccopy::reserve`) are never offered — importing one would copy a copy — while their original stays
+/// and records that its copy exists (`copy_exists`) so the import UI can say so.
 pub fn scan_instances(roots: &[(PathBuf, &'static InstanceLauncher)]) -> Vec<ImportedGame> {
     let mut out = Vec::new();
     let mut seen = std::collections::HashSet::new();
     for (root, launcher) in roots {
         let Ok(entries) = fs::read_dir(instances_dir(root, launcher)) else { continue };
-        for entry in entries.flatten().filter(real_dir).take(500) {
-            if let Some(item) = read_instance(root, &entry.path(), launcher) {
-                if seen.insert(item.id.clone()) { out.push(item); }
-            }
+        let dirs: Vec<PathBuf> = entries.flatten().filter(real_dir).take(500).map(|entry| entry.path()).collect();
+        // The folders of Mochi's copies here, reduced to the originals they were copied from.
+        let copied: std::collections::HashSet<&str> = dirs.iter()
+            .filter_map(|path| path.file_name().and_then(|name| name.to_str()))
+            .filter_map(mccopy::mochi_copy_base).collect();
+        for dir in &dirs {
+            let Some(mut item) = read_instance(root, dir, launcher) else { continue };
+            let id = dir.file_name().and_then(|name| name.to_str()).unwrap_or_default();
+            // `reserve` suffixes both the copy's folder and its configured name, so either marks a copy.
+            if mccopy::mochi_copy_base(id).is_some() || mccopy::mochi_copy_base(&item.name).is_some() { continue; }
+            if let Some(info) = item.minecraft.as_mut() { info.copy_exists = copied.contains(id); }
+            if seen.insert(item.id.clone()) { out.push(item); }
         }
     }
     sort_games(out)
@@ -222,6 +235,29 @@ mod tests {
         assert_eq!(games[1].minecraft.as_ref().unwrap().loader, "neoforge");
         assert!(games[2].minecraft.as_ref().unwrap().game_dir.ends_with("Vanilla/.minecraft"));
         assert_eq!(games[2].minecraft.as_ref().unwrap().loader, "vanilla");
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn mochi_copies_are_never_offered_but_their_originals_note_them() {
+        let root = temp_dir("prism-mochi-copy");
+        let prism = launcher("prism").unwrap();
+        write(&root.join("instances/Anarchy/instance.cfg"), "name=Anarchy\n");
+        write(&root.join("instances/Anarchy (Mochi)/instance.cfg"), "name=Anarchy (Mochi)\n");
+        write(&root.join("instances/Anarchy (Mochi 2)/instance.cfg"), "name=Anarchy (Mochi 2)\n");
+        write(&root.join("instances/Solo/instance.cfg"), "name=Solo\n");
+        // Copies are recognised by folder and by configured name, and a copy without its original is still not offered.
+        write(&root.join("instances/Renamed/instance.cfg"), "name=Renamed (Mochi)\n");
+        write(&root.join("instances/Orphan (Mochi 9)/instance.cfg"), "name=Orphan (Mochi 9)\n");
+        // Names that merely mention Mochi are ordinary instances and stay importable.
+        write(&root.join("instances/Mochi/instance.cfg"), "name=Mochi\n");
+        write(&root.join("instances/Flavour/instance.cfg"), "name=Pack (Mochi-ish)\n");
+
+        let games = scan_instances(&[(root.clone(), prism)]);
+        let by = |name: &str| games.iter().find(|game| game.name == name).map(|game| game.minecraft.as_ref().unwrap().copy_exists);
+        assert_eq!(games.iter().map(|game| game.name.as_str()).collect::<Vec<_>>(), ["Anarchy", "Mochi", "Pack (Mochi-ish)", "Solo"]);
+        assert_eq!(by("Anarchy"), Some(true), "the original knows its Mochi copy exists");
+        assert_eq!(by("Solo"), Some(false));
         let _ = fs::remove_dir_all(root);
     }
 

@@ -6,13 +6,13 @@ const options: Array<{ id: MinecraftMode; title: string; text: string }> = [
 ];
 
 /** The one choice for every selected Minecraft instance: import a copy, or work on the originals. */
-export function MinecraftModeChooser({ value, onChange }: { value: MinecraftMode; onChange: (mode: MinecraftMode) => void }) {
+export function MinecraftModeChooser({ value, onChange, copiesExist = false }: { value: MinecraftMode; onChange: (mode: MinecraftMode) => void; /** A selected instance already has a Mochi copy on disk. */ copiesExist?: boolean }) {
   return (
     <div className="sgp-mcmode" role="radiogroup" aria-label="How to import Minecraft instances">
       {options.map((option) => (
         <label key={option.id} className={"sgp-mcmode-option" + (value === option.id ? " selected" : "")}>
           <input type="radio" name="minecraft-mode" checked={value === option.id} onChange={() => onChange(option.id)} />
-          <span><strong>{option.title}</strong><small>{option.text}</small></span>
+          <span><strong>{option.title}</strong><small>{option.text}</small>{option.id === "copy" && value === "copy" && copiesExist && <small>A selected instance already has a Mochi copy.</small>}</span>
         </label>
       ))}
     </div>
