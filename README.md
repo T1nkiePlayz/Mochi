@@ -104,10 +104,12 @@ Short sounds for navigation, selection, dialogs, launches, downloads and achieve
 ### Metadata and artwork
 - Providers: **IGDB** (text, genres, screenshots, trailer, covers; needs a free Twitch Client ID/Secret), **SteamGridDB** (artwork; needs a free API key) and the **Steam Store** (no key, Steam games only). Choose the behaviour in Settings; IGDB matches are confirmed by you.
 - **Custom artwork**: pick, drop or crop your own image, or search SteamGridDB. Hand-edited fields and custom artwork are never overwritten by refreshes.
+- **Steam's own artwork**: when a lookup finds nothing, Mochi imports the covers Steam has already downloaded to your disk (both the current and the old `librarycache` layouts), so games keep real covers offline and older titles are not left blank.
 - Imported games get their desktop-entry icon (or the launcher's logo) as a local cover until real artwork is found. For Nexus Mods games without usable icons, Mochi can fall back to an IGDB cover when IGDB is configured. Results are cached and everything works offline from the cache. See [docs/metadata.md](docs/metadata.md).
 
 ### Playtime, stats and achievements
 - Playtime is credited when a game exits, for games Mochi starts directly and for games handed to another launcher (followed by process group or install folder; Linux and macOS). The Play button turns into **Stop**.
+- **Steam playtime import**: bring in the playtime Steam already recorded for your games (read from Steam's own local records), so switching launchers does not restart your history.
 - A **Stats** view shows playtime and activity.
 - **77 Mochi achievements** across Playtime, Streaks, Habits, Variety, Library, Explore, Mods and Steam categories, with rarities.
 - **Cloud saving** of achievements is a per-device toggle in Settings > Achievements (needs sign-in with cloud sync on); the same section can clear achievements data, locally and in the cloud.
@@ -250,6 +252,7 @@ The release key fingerprint is listed in [docs/verify-downloads.md](docs/verify-
 - Mod downloads happen in Rust against a per-provider URL allow-list, with size and hash checks and path-traversal-safe extraction. Third-party HTML (mod descriptions) is rendered through a strict sanitiser.
 - **No secrets in the client.** The app ships only the public Supabase URL and publishable key. The CurseForge API key exists only as a Supabase edge-function secret; user provider keys live in Supabase Vault.
 - Auth uses Supabase; provider sign-in opens the system browser and returns through `mochi://auth/callback`, and the app asks before installing a session.
+- Sign-up rejects passwords that appear in public data breaches, checked against Have I Been Pwned's k-anonymity API so only the first five characters of a password hash ever leave your device. A failed or offline check never blocks account creation.
 - Releases are not code-signed (see the warning above). The updater verifies its own signature key independently of OS signing.
 - Mochi does not host or distribute game content. You are responsible for what you choose to run.
 
@@ -287,6 +290,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [x] Launcher language selector in setup and Settings, with game-news interface text following the selected language
 - [x] Accounts, optional metadata-only cloud sync, TOTP MFA, provider credential management and offline library use
 - [x] Linux packages, universal macOS DMG, update verification and release checksums/signatures/attestations
+- [x] First public release: v0.1.1 (AppImage, deb, rpm and a universal macOS DMG, with checksums, GPG signatures and build attestations)
 
 ### Planned
 
@@ -362,7 +366,7 @@ Checks (the same ones CI runs):
     npm run build             # validates themes, type-checks, bundles
     npm run lint
     npm test                  # vitest + metadata and mods tests
-    npm run typecheck:tests
+    npm run typecheck:deals-tests
     cd src-tauri && cargo clippy --all-targets -- -D warnings && cargo test
 
 `npm run tauri build` works locally without the updater signing key (updater artifacts are only enabled by the release workflow).
@@ -373,7 +377,7 @@ Layout: `src/` (React UI, `lib/` wrappers, `themes/`, `bigpicture/`, `controller
 
 ## Releasing
 
-Push a tag `vX.Y.Z` (`-beta.N` for pre-releases) on the commit to ship. The release workflow builds AppImage, deb, rpm and a universal macOS DMG, generates `SHA256SUMS.txt` and publishes the release. Without Apple secrets the DMG is ad-hoc signed and unnotarized (what is published today). Secrets, checklist and re-runs: [docs/release.md](docs/release.md).
+Push a tag `vX.Y.Z` (`-beta.N` for pre-releases) on the commit to ship. The release workflow builds AppImage, deb, rpm and a universal macOS DMG, generates `SHA256SUMS.txt` and publishes the release. The tagged commit's message becomes the release notes body — write it as the release announcement — and the workflow adds a Downloads section and copy-and-paste verification commands. Without Apple secrets the DMG is ad-hoc signed and unnotarized (what is published today). Secrets, checklist and re-runs: [docs/release.md](docs/release.md).
 
 ## Contributing
 
