@@ -255,6 +255,7 @@ The release key fingerprint is listed in [docs/verify-downloads.md](docs/verify-
 - Sign-up rejects passwords that appear in public data breaches, checked against Have I Been Pwned's k-anonymity API so only the first five characters of a password hash ever leave your device. A failed or offline check never blocks account creation.
 - Releases are not code-signed (see the warning above). The updater verifies its own signature key independently of OS signing.
 - Mochi does not host or distribute game content. You are responsible for what you choose to run.
+- Found a vulnerability? Report it privately as described in [SECURITY.md](SECURITY.md), not in a public issue.
 
 ## Current limitations
 
@@ -298,6 +299,18 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] Stable release
 - [ ] Theme marketplace / in-app theme gallery for browsing and installing community themes
 - [ ] Theme creator with live editing of colours, fonts and hooks, plus theme export
+- [ ] Built-in Proton-GE / Wine-GE installer, so runtimes no longer have to be installed outside Mochi
+- [ ] Synced path remapping: when a synced game's path is missing on this machine, locate it or rescan and match by store ID
+- [ ] Playtime import from Heroic, Lutris and GOG, alongside the existing Steam playtime import
+- [ ] Source scanner health check that reports when a launcher's file format has changed instead of silently missing games
+- [ ] Save sync to a folder you choose (Syncthing, Nextcloud, WebDAV) built on save backups, with nothing hosted by Mochi
+- [ ] Emulator and ROM libraries (RetroArch, Dolphin, PCSX2 and others) with ROM folder scanning
+- [ ] Plugins out of Experimental, including plugins that add new game sources
+- [ ] Discord Rich Presence
+- [ ] RetroAchievements support
+- [ ] Per-game controller profiles for games that do not go through Steam Input
+- [ ] Flathub package
+- [ ] Release SBOM and reproducible builds
 
 ## Documentation index
 
