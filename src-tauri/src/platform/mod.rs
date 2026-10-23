@@ -448,6 +448,7 @@ pub fn remove_game_shortcut(game_id: &str) -> Result<(), String> { os::remove_ga
 fn launch_target_exists(target: &str) -> bool {
     let target = target.trim();
     if target.is_empty() { return false; }
+    if let Some((_, rom)) = crate::sources::emulators::parse_target(target) { return rom.is_file(); }
     if target.contains("://") { return true; }
     let path = Path::new(target);
     if path.is_absolute() || target.starts_with("~/") || target.starts_with("./") {

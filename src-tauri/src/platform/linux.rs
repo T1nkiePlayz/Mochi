@@ -221,6 +221,7 @@ pub fn prepare_launch(target: &str, config: &LaunchConfig) -> Result<Prepared, S
             opener(format!("itch://install?game_id={id}&launch"))
         });
     }
+    if crate::sources::emulators::parse_target(target).is_some() { return emulator_command(target, config); }
     if let Some(id) = target.strip_prefix("flatpak://").or_else(|| target.strip_prefix("flatpak run ")) {
         let id = id.trim();
         if !valid_flatpak_id(id) { return Err("Enter a valid Flatpak application ID, such as com.example.Game.".into()); }
@@ -247,6 +248,15 @@ pub fn prepare_launch(target: &str, config: &LaunchConfig) -> Result<Prepared, S
         return handoff(command);
     }
     prepare_file(target, config)
+}
+
+/// A ROM in its emulator (chosen in Settings, Emulators); the emulator is the game process, so playtime is tracked directly.
+fn emulator_command(target: &str, config: &LaunchConfig) -> Result<Prepared, String> {
+    let argv = crate::sources::emulators::launch_argv(target, &config.args)?;
+    let mut iter = argv.into_iter();
+    let mut command = Command::new(iter.next().ok_or("Launch target is empty.")?);
+    command.args(iter);
+    Ok(Prepared { command, direct: true })
 }
 
 /// Starts Battle.net inside its Wine prefix and asks it to launch one game (`--exec="launch CODE"`).

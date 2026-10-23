@@ -21,6 +21,7 @@ pub fn source_defs() -> Vec<SourceDef> {
         SourceDef { id: "battlenet", name: "Battle.net", description: "Blizzard games installed with the Battle.net app." },
         SourceDef { id: "gog", name: "GOG Galaxy", description: "GOG games installed with GOG Galaxy." },
         SourceDef { id: "prism", name: "Minecraft instances", description: "Instances from Prism Launcher, PolyMC, MultiMC and Fjord Launcher." },
+        SourceDef { id: "emulators", name: "Emulators and ROMs", description: "ROM folders you add in Settings, run with RetroArch, Dolphin, PCSX2 and other emulators." },
         SourceDef { id: "apps", name: "Applications", description: "Games in your Applications folders." },
     ]
 }
@@ -102,6 +103,7 @@ pub fn is_installed(source: &str, home: &Path) -> bool {
         "battlenet" => Path::new(BATTLENET_PRODUCT_DB).is_file() || launcher_installed(home, "battlenet"),
         "gog" => launcher_installed(home, "gog") || Path::new(gog::GALAXY_CONFIG).is_file(),
         "prism" => instance_roots(home).iter().any(|(root, _)| root.is_dir()),
+        "emulators" => super::emulators::any_configured(home),
         _ => false,
     }
 }

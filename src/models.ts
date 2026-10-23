@@ -1,4 +1,4 @@
-export type ImportSourceId = "flatpak" | "heroic" | "steam" | "lutris" | "bottles" | "itch" | "apps" | "epic" | "whisky" | "battlenet" | "gog" | "prism" | "legendary" | "nile";
+export type ImportSourceId = "flatpak" | "heroic" | "steam" | "lutris" | "bottles" | "itch" | "apps" | "epic" | "whisky" | "battlenet" | "gog" | "prism" | "legendary" | "nile" | "emulators";
 
 /** How a Tofu starts its Piko. Passed to the native launcher on every launch. */
 export type TofuLaunchConfig = {

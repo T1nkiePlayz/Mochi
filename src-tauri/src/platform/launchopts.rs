@@ -42,6 +42,7 @@ pub fn classify(target: &str) -> (Applies, Option<&'static str>) {
     if target.starts_with("heroic://") || target.starts_with("bottles:run/") || target.starts_with("lutris:") || target.starts_with("itch://") || target.starts_with("legendary://") || target.starts_with("nile://") || crate::sources::battlenet::parse_wine_target(target).is_some() {
         return (Applies::None, Some("Another launcher starts this game, so Mochi's launch options do not apply. Set them in that launcher."));
     }
+    if crate::sources::emulators::parse_target(target).is_some() { return (Applies::Full, Some("Mochi starts the emulator chosen in Settings, Emulators. Arguments are added to that emulator's own; wrappers and runtimes do not apply.")); }
     (Applies::Full, None)
 }
 
@@ -199,6 +200,19 @@ pub fn preview(target: &str, config: &LaunchConfig, tools: &Tools, linux: bool, 
         Applies::Flatpak => {
             let id = target.strip_prefix("flatpak://").or_else(|| target.strip_prefix("flatpak run ")).unwrap_or("").trim();
             if out.errors.is_empty() { out.argv = flatpak_argv(id, config); out.command = Some(display_command(&out.argv, &[], None)); }
+        }
+        Applies::Full if crate::sources::emulators::parse_target(target).is_some() => {
+            if out.errors.is_empty() {
+                match crate::sources::emulators::launch_argv(target, &config.args) {
+                    Ok(argv) => {
+                        out.env = config.env.iter().map(|(key, value)| (key.clone(), value.clone())).collect();
+                        out.cwd = config.working_dir.clone().filter(|dir| !dir.is_empty());
+                        out.command = Some(display_command(&argv, &out.env, out.cwd.as_deref()));
+                        out.argv = argv;
+                    }
+                    Err(error) => out.errors.push(error),
+                }
+            }
         }
         Applies::Full => {
             if out.errors.is_empty() {

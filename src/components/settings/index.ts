@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import { createElement, lazy, Suspense, type ComponentType } from "react";
 import { AppearanceSection } from "./AppearanceSection";
 import { LanguageSection } from "./LanguageSection";
 import { AccessibilitySection } from "./AccessibilitySection";
@@ -20,6 +20,10 @@ import { DealsSection } from "./DealsSection";
 import { StorageSection } from "./StorageSection";
 import { PluginsSection } from "./PluginsSection";
 import { RuntimesSection } from "./RuntimesSection";
+
+// Rarely opened and sizeable, so it loads on demand and stays out of the entry chunk.
+const LazyEmulatorsSection = lazy(() => import("./EmulatorsSection").then((module) => ({ default: module.EmulatorsSection })));
+const EmulatorsSection: ComponentType = () => createElement(Suspense, { fallback: null }, createElement(LazyEmulatorsSection));
 
 /**
  * Settings sections in display order. To add one, create a component in this folder
@@ -43,6 +47,7 @@ export const settingsSections: Array<{ id: string; Section: ComponentType }> = [
   { id: "deals", Section: DealsSection },
   { id: "playlimits", Section: PlayLimitsSection },
   { id: "librarytools", Section: LibraryToolsSection },
+  { id: "emulators", Section: EmulatorsSection },
   { id: "storage", Section: StorageSection },
   { id: "runtimes", Section: RuntimesSection },
   { id: "experimental", Section: ExperimentalSection },

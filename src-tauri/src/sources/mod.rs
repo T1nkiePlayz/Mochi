@@ -31,12 +31,14 @@ pub fn heroic_roots(home: &Path) -> Vec<PathBuf> { os::heroic_roots(home) }
 
 pub mod battlenet;
 pub mod classify;
+pub mod emulators;
 pub mod gog;
 pub mod health;
 pub mod icons;
 pub mod launchers;
 pub mod mccopy;
 pub mod prism;
+pub mod romscan;
 pub(crate) mod vdf;
 
 /// Steam install folders for this OS (used to find the signed-in account).
@@ -597,6 +599,7 @@ fn scan(source: &str, home: &Path) -> Vec<ImportedGame> {
         "legendary" => scan_legendary(&legendary_roots(home)),
         "nile" => scan_nile(&nile_roots(home)),
         "prism" => prism::scan_instances(&os::instance_roots(home)),
+        "emulators" => romscan::scan_configured(),
         other => os::scan_extra(other, home),
     }
 }
@@ -685,6 +688,8 @@ pub fn scan_import_games(source: &str, library_path: Option<String>) -> Vec<Impo
         ("itch", Some(path)) => scan_itch(&[path]),
         ("legendary", Some(path)) => scan_legendary(&[path]),
         ("nile", Some(path)) => scan_nile(&[path]),
+        // A ROM folder to look through, whatever systems it holds.
+        ("emulators", Some(path)) => romscan::scan_folders(&[emulators::RomFolder { path: path.to_string_lossy().into_owned(), system: "auto".into() }]),
         // A portable MultiMC/Prism folder (the one holding `instances`).
         ("prism", Some(path)) => prism::INSTANCE_LAUNCHERS.iter().find(|launcher| path.join(launcher.config).is_file())
             .map(|launcher| prism::scan_instances(&[(path.clone(), launcher)]))
