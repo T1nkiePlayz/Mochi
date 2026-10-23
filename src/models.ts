@@ -143,6 +143,8 @@ export type Piko = {
   /** Web links the user attached (walkthroughs, wikis); http(s) only. */
   links?: GameLink[];
   executablePath?: string;
+  /** This device uses `executablePath` instead of the synced path `cloudValue` (set by "Fix missing paths"); never synced, so other machines keep the path they synced. */
+  pathOverride?: { executablePath: string; cloudValue: string };
   /** Environment, arguments, working directory, runtime and wrappers for launching this game. */
   launchOptions?: LaunchOptions;
   /** Extra launch-option sets; the active one replaces `launchOptions` when the game starts. Local to this device. */
