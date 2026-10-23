@@ -69,6 +69,7 @@ import { pathRemapMessages } from "./i18nPathRemap";
 import { runtimeInstallerMessages } from "./i18nRuntimeInstaller";
 import { sourceHealthMessages } from "./i18nSourceHealth";
 import { playtimeImportMessages } from "./i18nPlaytimeImport";
+import { saveSyncMessages } from "./i18nSaveSync";
 import { libraryStatusMessages } from "./i18nLibraryStatus";
 import { completePhraseMessages } from "./i18nCompletePhrases";
 import { navigationActionMessages } from "./i18nNavigationActions";
@@ -186,7 +187,7 @@ export const catalogues: Catalogue[] = [emulatorMessages, auditMessages, setting
     libraryFilterMessages, uiSmallMessages, duplicateMessages, pathRemapMessages, libraryStatusMessages,
     completePhraseMessages, navigationActionMessages, launchProfileMessages, savedFilterMessages,
     editFilterMessages, launchHelpMessages, longUiHelpMessages, pickerGuidanceMessages,
-    smartFilterMessages, installedMessages, statsMessages, metadataMessages, runtimeInstallerMessages, sourceHealthMessages, playtimeImportMessages];
+    smartFilterMessages, installedMessages, statsMessages, metadataMessages, runtimeInstallerMessages, sourceHealthMessages, playtimeImportMessages, saveSyncMessages];
 
 let mergedIndex: Map<string, Record<string, string>> | null = null;
 

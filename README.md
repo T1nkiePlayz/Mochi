@@ -74,6 +74,7 @@ Mochi is a cross-platform (Linux and macOS) desktop game launcher that sits abov
 - **Command palette** (Ctrl+K / Cmd+K): fuzzy-search games and run actions (theme, settings sections, mods, snapshots, Big Picture); type `>` for actions only ([docs/command-palette.md](docs/command-palette.md)).
 - **Per-game launch options**: environment variables, arguments, working directory, Proton/Wine runtime, GameMode, MangoHud and gamescope, with a live preview of the exact command and a ready-to-paste Steam launch option string ([docs/launch-options.md](docs/launch-options.md)).
 - **Save backups**: zip snapshots of Minecraft worlds, Steam userdata and any folder you add, with safe restore and automatic backup when a game closes ([docs/save-backups.md](docs/save-backups.md)).
+- **Save sync**: share save backups between computers through a folder you choose (Syncthing, Nextcloud, WebDAV), with nothing hosted by Mochi ([docs/save-sync.md](docs/save-sync.md)).
 - **Shortcuts**: create desktop shortcuts (Linux menu/Desktop, macOS .app) and add any game to Steam as a non-Steam game ([docs/shortcuts.md](docs/shortcuts.md)).
 - **Command line and deep links**: `mochi launch|open <game>`, `mochi list` and `mochi://launch|open/<game>` work with a running or closed Mochi; ambiguous names open a chooser ([docs/cli.md](docs/cli.md)).
 - **Per-game notes and links**: plain-text notes and web links in the game editor's Notes tab, shown on the game page and included in the library backup.
@@ -309,7 +310,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [x] Synced path remapping: when a synced game's path is missing on this machine, locate it or rescan and match by store ID
 - [x] Playtime import from Heroic, Lutris and GOG, alongside the existing Steam playtime import
 - [x] Source scanner health check that reports when a launcher's file format has changed instead of silently missing games
-- [ ] Save sync to a folder you choose (Syncthing, Nextcloud, WebDAV) built on save backups, with nothing hosted by Mochi
+- [x] Save sync to a folder you choose (Syncthing, Nextcloud, WebDAV) built on save backups, with nothing hosted by Mochi
 - [x] Emulator and ROM libraries (RetroArch, Dolphin, PCSX2 and others) with ROM folder scanning
 - [ ] Plugins out of Experimental, including plugins that add new game sources
 - [ ] Discord Rich Presence
@@ -322,7 +323,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 
 ### Everyday use
 
-[Accessibility](docs/accessibility.md) · [Backlog and wishlist](docs/backlog.md) · [CLI and deep links](docs/cli.md) · [Command palette](docs/command-palette.md) · [Controller](docs/controller.md) · [Duplicates](docs/duplicates.md) · [Emulators and ROMs](docs/emulators.md) · [Launch options](docs/launch-options.md) · [Path remap](docs/path-remap.md) · [Runtimes (Proton-GE, Wine-GE)](docs/runtimes.md) · [Save backups](docs/save-backups.md) · [Settings export/import](docs/settings-export.md) · [Shortcuts](docs/shortcuts.md) · [Source health](docs/source-health.md) · [Storage manager](docs/storage.md)
+[Accessibility](docs/accessibility.md) · [Backlog and wishlist](docs/backlog.md) · [CLI and deep links](docs/cli.md) · [Command palette](docs/command-palette.md) · [Controller](docs/controller.md) · [Duplicates](docs/duplicates.md) · [Emulators and ROMs](docs/emulators.md) · [Launch options](docs/launch-options.md) · [Path remap](docs/path-remap.md) · [Runtimes (Proton-GE, Wine-GE)](docs/runtimes.md) · [Save backups](docs/save-backups.md) · [Save sync](docs/save-sync.md) · [Settings export/import](docs/settings-export.md) · [Shortcuts](docs/shortcuts.md) · [Source health](docs/source-health.md) · [Storage manager](docs/storage.md)
 
 ### Discover, metadata and extras
 

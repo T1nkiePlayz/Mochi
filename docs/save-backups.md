@@ -61,3 +61,5 @@ by a running game can be captured mid-write; close the game first for a perfect 
 `src-tauri/src/savebackup.rs` (commands `list_save_locations`, `create_save_backup`, `list_save_backups`, `restore_save_backup`,
 `delete_save_backup`, `auto_backup_saves`, `get/set_save_backup_settings`), `src/lib/saveBackups.ts`,
 `src/components/SaveBackups.tsx`, `src/state/useSaveBackupOnExit.ts`.
+
+To carry backups to another computer through a folder you sync yourself, see [Save sync](save-sync.md).

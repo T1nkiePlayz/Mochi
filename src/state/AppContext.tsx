@@ -9,6 +9,7 @@ import { useQuickExitHints } from "./useQuickExitHints";
 import { useDownloadPacing } from "./useDownloadPacing";
 import { useGameTheme } from "./useGameTheme";
 import { useScheduledBackup } from "./useScheduledBackup";
+import { useSaveSyncOnStartup } from "./useSaveSyncOnStartup";
 import { useThemeEngine } from "../lib/theme";
 import { getPlatformCapabilities, listRuntimes, type PlatformCapabilities, type RuntimeInfo } from "../lib/platform";
 import type { ImportedGame, ImportSourceId } from "../lib/sources";
@@ -107,6 +108,7 @@ function useAppController() {
   useEffect(() => { commitWhenLocaleReady(behavior.language, () => applyLauncherLanguage(behavior.language)); }, [behavior.language]);
   useGameNewsPoller(behavior.gameNews, lib.library, notify, behavior.language);
   useScheduledBackup(storage.ready, notify);
+  useSaveSyncOnStartup(storage.ready, lib.library);
   useLibraryWatcher(behavior.watchFolders, storage.ready, lib.library, notify);
   usePathRemapCheck(storage.ready, lib.library, notify);
   useSourceHealthNotices(notify);
