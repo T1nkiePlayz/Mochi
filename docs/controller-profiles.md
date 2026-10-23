@@ -19,6 +19,6 @@ The remap is written as an `SDL_GAMECONTROLLERCONFIG` line for each connected co
 ## Limits
 
 - Only for programs Mochi starts itself (including Wine and Proton). Games handed to Steam are controlled by Steam Input, Flatpak apps and games started by other launchers do not get the profile; the editor says so.
-- gilrs (Mochi's input library) does not expose SDL mapping strings, so the remap works for controllers Mochi has a built-in button map for (Xbox 360/One/Series and PlayStation 4/5 pads on Linux, wired or through the kernel drivers). Other controllers are listed in the editor as skipped. The remap is built when the game starts from the controllers connected at that moment; with none connected it is skipped.
+- gilrs (Mochi's input library) does not expose SDL mapping strings, so the remap works only for controllers whose exact SDL GUID is in Mochi's bundled table of Linux mappings (Xbox 360/One/Series, DualShock 4 and DualSense, each driver variant listed separately). Mochi never guesses a mapping from the controller family; other controllers are listed in the editor as skipped. The remap is built when the game starts from the controllers connected at that moment; with none connected it is skipped.
 - Games that do not use SDL (or that read input another way) ignore the profile.
-- The built-in button maps and the SDL variables are not tested against real hardware or every SDL version.
+- The bundled mappings are copied from [SDL_GameControllerDB](https://github.com/mdqinc/SDL_GameControllerDB) (zlib license, Copyright (C) 2014-present the SDL_GameControllerDB contributors). The SDL variables are not tested against real hardware or every SDL version.

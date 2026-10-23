@@ -11,21 +11,6 @@ const STEAM_VIRTUAL: &str = "0x28de/0x11ff";
 /// The buttons SDL's mapping strings name that a profile may move.
 pub const REMAPPABLE: [&str; 12] = ["a", "b", "x", "y", "leftshoulder", "rightshoulder", "lefttrigger", "righttrigger", "leftstick", "rightstick", "start", "back"];
 
-/// SDL mapping bodies (Linux evdev bindings) for pads whose layout is fixed by their kernel driver, keyed by vendor and product.
-/// gilrs does not expose the mapping it uses, so a pad that is not listed here cannot be remapped.
-const XBOX_BODY: &str = "a:b0,b:b1,back:b6,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b8,leftshoulder:b4,leftstick:b9,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b10,righttrigger:a5,rightx:a3,righty:a4,start:b7,x:b2,y:b3";
-const PLAYSTATION_BODY: &str = "a:b0,b:b1,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b10,leftshoulder:b4,leftstick:b11,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b12,righttrigger:a5,rightx:a3,righty:a4,start:b9,x:b3,y:b2";
-const KNOWN_PADS: [(u16, u16, &str, &str); 8] = [
-    (0x045e, 0x028e, "Xbox 360 Controller", XBOX_BODY),
-    (0x045e, 0x02dd, "Xbox One Controller", XBOX_BODY),
-    (0x045e, 0x02ea, "Xbox One Controller", XBOX_BODY),
-    (0x045e, 0x02fd, "Xbox One Controller", XBOX_BODY),
-    (0x045e, 0x0b12, "Xbox Series Controller", XBOX_BODY),
-    (0x054c, 0x05c4, "PS4 Controller", PLAYSTATION_BODY),
-    (0x054c, 0x09cc, "PS4 Controller", PLAYSTATION_BODY),
-    (0x054c, 0x0ce6, "PS5 Controller", PLAYSTATION_BODY),
-];
-
 #[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ControllerProfile {
@@ -108,12 +93,15 @@ pub fn remap_body(body: &str, remap: &BTreeMap<String, String>) -> Result<String
     Ok(out.join(","))
 }
 
-/// One `SDL_GAMECONTROLLERCONFIG` line for a pad, or `None` when Mochi has no button map for it.
+/// The bundled mapping for a pad's exact GUID.
+pub fn known_mapping(guid: &str) -> Option<(&'static str, &'static str)> {
+    crate::controllerdb::LINUX_MAPPINGS.iter().find(|(known, ..)| known.eq_ignore_ascii_case(guid)).map(|(_, name, body)| (*name, *body))
+}
+
+/// One `SDL_GAMECONTROLLERCONFIG` line for a pad, or `None` when Mochi has no exact mapping for its GUID.
 pub fn mapping_line(pad: &Pad, remap: &BTreeMap<String, String>) -> Option<Result<String, &'static str>> {
-    let (vendor, product) = pad.vendor.zip(pad.product).or_else(|| guid_ids(&pad.guid))?;
-    let (_, _, name, body) = KNOWN_PADS.iter().find(|(v, p, ..)| *v == vendor && *p == product)?;
-    guid_ids(&pad.guid)?;
-    Some(remap_body(body, remap).map(|mapped| format!("{},{name},{mapped},platform:Linux,", pad.guid)))
+    let (name, body) = known_mapping(&pad.guid)?;
+    Some(remap_body(body, remap).map(|mapped| format!("{},{name},{mapped},platform:Linux,", pad.guid.to_ascii_lowercase())))
 }
 
 fn type_name(profile_hint: &str, pad: &Pad) -> Option<&'static str> {
@@ -192,6 +180,37 @@ mod tests {
     }
 
     #[test]
+    fn every_bundled_guid_maps_to_its_own_body() {
+        let remap = effective_remap(&profile("nintendo")).unwrap();
+        for (guid, name, body) in crate::controllerdb::LINUX_MAPPINGS {
+            assert!(guid_ids(guid).is_some(), "{guid}");
+            assert_eq!(known_mapping(guid), Some((name, body)));
+            let line = mapping_line(&pad(name, guid, 0, 0), &remap).unwrap().unwrap();
+            assert!(line.starts_with(&format!("{guid},{name},")), "{guid}");
+            assert_eq!(line, format!("{guid},{name},{},platform:Linux,", remap_body(body, &remap).unwrap()));
+        }
+    }
+
+    #[test]
+    fn hid_sony_and_xbox_360_variants_get_their_own_bodies() {
+        let remap = effective_remap(&profile("nintendo")).unwrap();
+        let sony = mapping_line(&pad("DS4", "030000004c050000cc09000011010000", 0x054c, 0x09cc), &remap).unwrap().unwrap();
+        // hid-sony binds the cross to b1, so swapping A and B gives a:b2,b:b1.
+        assert!(sony.contains(",a:b2,") && sony.contains(",b:b1,"), "{sony}");
+        let hat = mapping_line(&pad("360", "030000005e0400008e02000001000000", 0x045e, 0x028e), &remap).unwrap().unwrap();
+        assert!(hat.contains("dpdown:h0.1") && !hat.contains("guide:"), "{hat}");
+    }
+
+    #[test]
+    fn unknown_guids_are_skipped_not_guessed() {
+        let family_only = pad("DS4", "030000004c050000cc090000ffff0000", 0x054c, 0x09cc);
+        assert!(mapping_line(&family_only, &BTreeMap::new()).is_none());
+        let env = profile_env(&profile("nintendo"), &[family_only], false);
+        assert!(env.env.is_empty());
+        assert_eq!(env.notes.len(), 1);
+    }
+
+    #[test]
     fn nintendo_layout_swaps_face_buttons() {
         let line = mapping_line(&xbox(), &effective_remap(&profile("nintendo")).unwrap()).unwrap().unwrap();
         assert!(line.starts_with(&format!("{XBOX_GUID},Xbox 360 Controller,")));
@@ -203,7 +222,7 @@ mod tests {
     fn custom_remap_moves_buttons_and_drops_the_old_output() {
         let mut p = profile("custom");
         p.remap = BTreeMap::from([("leftshoulder".to_owned(), "a".to_owned())]);
-        let body = remap_body(XBOX_BODY, &effective_remap(&p).unwrap()).unwrap();
+        let body = remap_body(known_mapping(XBOX_GUID).unwrap().1, &effective_remap(&p).unwrap()).unwrap();
         assert!(body.split(',').any(|e| e == "a:b4"));
         assert!(!body.split(',').any(|e| e.starts_with("leftshoulder:")));
         assert!(body.split(',').any(|e| e == "b:b1"));

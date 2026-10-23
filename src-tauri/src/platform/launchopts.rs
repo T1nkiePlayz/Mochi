@@ -452,9 +452,7 @@ mod tests {
         vec![crate::controllerprofile::Pad { name: "Xbox 360".into(), guid: "030000005e0400008e02000014010000".into(), vendor: Some(0x045e), product: Some(0x028e) }]
     }
     fn with_profile(layout: &str) -> LaunchConfig {
-        let mut c = LaunchConfig::default();
-        c.controller = Some(crate::controllerprofile::ControllerProfile { layout: layout.into(), ignore_steam_virtual: true, ..Default::default() });
-        c
+        LaunchConfig { controller: Some(crate::controllerprofile::ControllerProfile { layout: layout.into(), ignore_steam_virtual: true, ..Default::default() }), ..Default::default() }
     }
     fn env_of<'a>(env: &'a [(String, String)], key: &str) -> Option<&'a str> { env.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str()) }
 
