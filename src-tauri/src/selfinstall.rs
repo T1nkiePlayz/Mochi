@@ -99,6 +99,8 @@ fn plist_short_version(path: &Path) -> Option<String> {
 /// Whether this launch is a build that should offer to install itself. Cheap; called before the app is built.
 pub fn detect() -> Option<Candidate> {
     if cfg!(debug_assertions) && std::env::var_os("MOCHI_SELFINSTALL_DEV").is_none_or(|v| v != "1") { return None; }
+    // Flathub owns updates and the install location of a Flatpak.
+    if crate::platform::sandbox::is_flatpak() { return None; }
     detect_platform()
 }
 

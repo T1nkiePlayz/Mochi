@@ -1,10 +1,10 @@
-import { openExternalUrl } from "./platform";
+import { getPlatformCapabilities, openExternalUrl } from "./platform";
 import { isNetworkError } from "./offline";
 
 const CHECK_TIMEOUT_MS = 20_000;
 
 /**
- * Update checking and installation. Two paths:
+ * Update checking and installation. Two paths (Flatpak installs skip both; Flathub updates them):
  *  - native: Tauri's updater (signed bundles from latest.json) for AppImage and macOS .app installs;
  *  - manual: GitHub's "latest release" API for deb/rpm/AUR/dev builds or when the updater fails.
  * Everything here degrades to a plain result object; nothing throws into the UI.
@@ -86,6 +86,10 @@ const messageOf = (error: unknown) => (error instanceof Error ? error.message : 
 /** Vite dev server without Tauri (see src/devMock.ts). */
 const isDevMock = () => import.meta.env.DEV && Boolean((window as unknown as Record<string, unknown>).__MOCHI_DEV_MOCK__);
 
+async function isFlatpakInstall(): Promise<boolean> {
+  try { return (await getPlatformCapabilities()).installType === "flatpak"; } catch { return false; }
+}
+
 async function checkGithub(currentVersion: string): Promise<CheckResult> {
   try {
     const controller = new AbortController();
@@ -108,6 +112,8 @@ export async function checkForUpdate(currentVersion: string): Promise<CheckResul
   if (isDevMock()) {
     return { kind: "available", info: { version: "9.9.9", notes: "Development mock release.\n\n- Faster startup\n- Fixes", releaseUrl: RELEASES_PAGE, installable: true } };
   }
+  // Flathub delivers Flatpak updates; neither the native updater nor the release page applies.
+  if (await isFlatpakInstall()) return { kind: "current" };
   try {
     const { check } = await import("@tauri-apps/plugin-updater");
     const update = await check({ timeout: CHECK_TIMEOUT_MS });

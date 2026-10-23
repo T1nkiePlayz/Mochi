@@ -1,4 +1,4 @@
-export type ImportSourceId = "flatpak" | "heroic" | "steam" | "lutris" | "bottles" | "itch" | "apps" | "epic" | "whisky" | "battlenet" | "gog" | "prism" | "legendary" | "nile";
+export type ImportSourceId = "flatpak" | "heroic" | "steam" | "lutris" | "bottles" | "itch" | "apps" | "epic" | "whisky" | "battlenet" | "gog" | "prism" | "legendary" | "nile" | "emulators";
 
 /** How a Tofu starts its Piko. Passed to the native launcher on every launch. */
 export type TofuLaunchConfig = {
@@ -143,12 +143,16 @@ export type Piko = {
   /** Web links the user attached (walkthroughs, wikis); http(s) only. */
   links?: GameLink[];
   executablePath?: string;
+  /** This device uses `executablePath` instead of the synced path `cloudValue` (set by "Fix missing paths"); never synced, so other machines keep the path they synced. */
+  pathOverride?: { executablePath: string; cloudValue: string | null };
   /** Environment, arguments, working directory, runtime and wrappers for launching this game. */
   launchOptions?: LaunchOptions;
   /** Extra launch-option sets; the active one replaces `launchOptions` when the game starts. Local to this device. */
   launchProfiles?: LaunchProfile[];
   /** The `launchProfiles` id in use; the plain `launchOptions` when unset. */
   activeLaunchProfile?: string;
+  /** Id of the controller profile (SDL/Proton environment) this game launches with; profiles are stored on this device only. */
+  controllerProfileId?: string;
   /** Where the game is installed on this device; used to follow its process. Never synced. */
   installPath?: string;
   source?: "built-in" | "custom";

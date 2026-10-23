@@ -143,4 +143,19 @@ mod tests {
         assert!(games[1].launch_target.ends_with("FTL/start.sh"));
         let _ = fs::remove_dir_all(root);
     }
+
+    #[test]
+    fn malformed_galaxy_config_and_info_files_are_reported() {
+        let root = temp_dir("gog-health");
+        write(&root.join("config.json"), "{ not json");
+        let (dirs, collector) = crate::sources::health::collect(|| galaxy_library_dirs(&root.join("config.json")));
+        assert!(dirs.is_empty());
+        assert_eq!(collector.failed_paths().len(), 1);
+
+        write(&root.join("Game/start.sh"), "#!/bin/sh");
+        write(&root.join("Game/goggame-1.info"), "garbage");
+        let (games, collector) = crate::sources::health::collect(|| scan_linux_installs(std::slice::from_ref(&root)));
+        assert_eq!(games.len(), 1);
+        assert!(collector.failed_paths()[0].ends_with("goggame-1.info"));
+    }
 }

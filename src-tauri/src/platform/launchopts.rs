@@ -42,6 +42,7 @@ pub fn classify(target: &str) -> (Applies, Option<&'static str>) {
     if target.starts_with("heroic://") || target.starts_with("bottles:run/") || target.starts_with("lutris:") || target.starts_with("itch://") || target.starts_with("legendary://") || target.starts_with("nile://") || crate::sources::battlenet::parse_wine_target(target).is_some() {
         return (Applies::None, Some("Another launcher starts this game, so Mochi's launch options do not apply. Set them in that launcher."));
     }
+    if crate::sources::emulators::parse_target(target).is_some() { return (Applies::Full, Some("Mochi starts the emulator chosen in Settings, Emulators. Arguments are added to that emulator's own; wrappers and runtimes do not apply.")); }
     (Applies::Full, None)
 }
 
@@ -95,7 +96,7 @@ pub fn plan_file(target: &str, config: &LaunchConfig, tools: &Tools, linux: bool
             let selected = known.iter().find(|r| r.kind == "compat" && r.id == runtime).ok_or("The selected runtime is no longer installed.")?;
             if let Some(prefix) = prefix {
                 plan.create_dirs.push(prefix.to_path_buf());
-                if runtime == "wine" {
+                if super::is_wine_runtime(&runtime) {
                     plan.env.push(("WINEPREFIX".into(), path_string(prefix)));
                 } else {
                     plan.env.push(("STEAM_COMPAT_DATA_PATH".into(), path_string(prefix)));
@@ -104,7 +105,7 @@ pub fn plan_file(target: &str, config: &LaunchConfig, tools: &Tools, linux: bool
                 }
             }
             inner.push(selected.path.clone());
-            if runtime != "wine" { inner.push("run".into()); }
+            if !super::is_wine_runtime(&runtime) { inner.push("run".into()); }
             inner.push(target.into());
         }
         "sh" | "bash" => inner.extend(["sh".into(), target.into()]),
@@ -176,6 +177,8 @@ pub struct LaunchPreview {
     /// `cd DIR && K=V program args`, quoted for reading; never run through a shell.
     pub command: Option<String>,
     pub steam_options: Option<String>,
+    /// Why part of the controller profile is not applied (or that Steam Input owns the controller).
+    pub controller_notes: Vec<crate::controllerprofile::ControllerNote>,
     pub errors: Vec<String>,
 }
 
@@ -187,12 +190,37 @@ fn display_command(argv: &[String], env: &[(String, String)], cwd: Option<&str>)
     parts.join(" ")
 }
 
+/// The controller profile's environment for a launch; empty (and noted) unless Mochi starts the program itself.
+pub fn controller_env(config: &LaunchConfig, applies: Applies, pads: &[crate::controllerprofile::Pad]) -> crate::controllerprofile::ProfileEnv {
+    use crate::controllerprofile::{profile_env, ControllerNote, ProfileEnv};
+    let Some(profile) = &config.controller else { return ProfileEnv::default() };
+    let message = match applies {
+        Applies::Full => {
+            let proton = config.runtime.as_deref().is_some_and(|id| id.starts_with("proton"));
+            let mut out = profile_env(profile, pads, proton);
+            // The user's own variables win over the profile's.
+            out.env.retain(|(key, _)| !config.env.contains_key(key));
+            return out;
+        }
+        Applies::Steam => "Steam Input controls this game's controller, so the controller profile is not applied.",
+        Applies::Flatpak => "The controller profile is not applied to Flatpak apps.",
+        Applies::None => "Another launcher starts this game, so the controller profile is not applied.",
+    };
+    ProfileEnv { env: Vec::new(), notes: vec![ControllerNote { message: message.into(), pad: None }] }
+}
+
 pub fn preview(target: &str, config: &LaunchConfig, tools: &Tools, linux: bool, prefix: Option<&Path>) -> LaunchPreview {
+    preview_with_pads(target, config, tools, linux, prefix, &crate::gamepad::profile_pads())
+}
+
+pub fn preview_with_pads(target: &str, config: &LaunchConfig, tools: &Tools, linux: bool, prefix: Option<&Path>, pads: &[crate::controllerprofile::Pad]) -> LaunchPreview {
     let target = target.trim();
     let (applies, note) = classify(target);
     let mut out = LaunchPreview { applies: Some(applies), note: note.map(str::to_owned), ..Default::default() };
     if target.is_empty() { out.errors.push("Set a launch target first.".into()); return out; }
     out.errors = validate(config, linux, true);
+    let controller = controller_env(config, applies, pads);
+    out.controller_notes = controller.notes;
     match applies {
         Applies::None => { out.errors.clear(); }
         Applies::Steam => { if out.errors.is_empty() { out.steam_options = Some(steam_options(config, linux)); } }
@@ -200,11 +228,25 @@ pub fn preview(target: &str, config: &LaunchConfig, tools: &Tools, linux: bool, 
             let id = target.strip_prefix("flatpak://").or_else(|| target.strip_prefix("flatpak run ")).unwrap_or("").trim();
             if out.errors.is_empty() { out.argv = flatpak_argv(id, config); out.command = Some(display_command(&out.argv, &[], None)); }
         }
+        Applies::Full if crate::sources::emulators::parse_target(target).is_some() => {
+            if out.errors.is_empty() {
+                match crate::sources::emulators::launch_argv(target, &config.args) {
+                    Ok(argv) => {
+                        out.env = config.env.iter().map(|(key, value)| (key.clone(), value.clone())).collect();
+                        out.cwd = config.working_dir.clone().filter(|dir| !dir.is_empty());
+                        out.command = Some(display_command(&argv, &out.env, out.cwd.as_deref()));
+                        out.argv = argv;
+                    }
+                    Err(error) => out.errors.push(error),
+                }
+            }
+        }
         Applies::Full => {
             if out.errors.is_empty() {
                 match plan_file(target, config, tools, linux, prefix) {
                     Ok(plan) => {
                         let mut env = plan.env;
+                        env.extend(controller.env);
                         for (key, value) in &config.env { env.retain(|(existing, _)| existing != key); env.push((key.clone(), value.clone())); }
                         out.cwd = config.working_dir.clone().filter(|dir| !dir.is_empty());
                         out.command = Some(display_command(&plan.argv, &env, out.cwd.as_deref()));
@@ -418,5 +460,63 @@ mod tests {
         let bad = preview("/g/b", &LaunchConfig { env: BTreeMap::from([("9".to_owned(), "".to_owned())]), ..Default::default() }, &full(), true, None);
         assert_eq!(bad.errors.len(), 1);
         assert!(bad.command.is_none());
+    }
+
+    fn pads() -> Vec<crate::controllerprofile::Pad> {
+        vec![crate::controllerprofile::Pad { name: "Xbox 360".into(), guid: "030000005e0400008e02000014010000".into(), vendor: Some(0x045e), product: Some(0x028e) }]
+    }
+    fn with_profile(layout: &str) -> LaunchConfig {
+        LaunchConfig { controller: Some(crate::controllerprofile::ControllerProfile { layout: layout.into(), ignore_steam_virtual: true, ..Default::default() }), ..Default::default() }
+    }
+    fn env_of<'a>(env: &'a [(String, String)], key: &str) -> Option<&'a str> { env.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str()) }
+
+    #[test]
+    fn controller_profile_env_reaches_the_preview_and_the_command() {
+        let out = preview_with_pads("/g/game.x86_64", &with_profile("nintendo"), &full(), true, None, &pads());
+        assert!(out.errors.is_empty(), "{:?}", out.errors);
+        assert!(env_of(&out.env, "SDL_GAMECONTROLLERCONFIG").unwrap().contains(",a:b1,"));
+        assert_eq!(env_of(&out.env, "SDL_GAMECONTROLLER_IGNORE_DEVICES"), Some("0x28de/0x11ff"));
+        let command = out.command.unwrap();
+        assert!(command.contains("SDL_GAMECONTROLLER_IGNORE_DEVICES=0x28de/0x11ff") && command.contains("SDL_GAMECONTROLLERCONFIG="));
+    }
+
+    #[test]
+    fn user_variables_win_over_the_controller_profile() {
+        let mut c = with_profile("nintendo");
+        c.env.insert("SDL_GAMECONTROLLER_IGNORE_DEVICES".into(), "mine".into());
+        let out = preview_with_pads("/g/game.x86_64", &c, &full(), true, None, &pads());
+        let values: Vec<&str> = out.env.iter().filter(|(k, _)| k == "SDL_GAMECONTROLLER_IGNORE_DEVICES").map(|(_, v)| v.as_str()).collect();
+        assert_eq!(values, ["mine"]);
+        assert!(env_of(&out.env, "SDL_GAMECONTROLLERCONFIG").is_some());
+        assert!(controller_env(&c, Applies::Full, &pads()).env.iter().all(|(k, _)| k != "SDL_GAMECONTROLLER_IGNORE_DEVICES"));
+    }
+
+    #[test]
+    fn proton_runtime_gets_the_hidraw_variables() {
+        let mut c = with_profile("xbox");
+        c.runtime = Some("proton:/p/GE/proton".into());
+        c.controller.as_mut().unwrap().proton_hidraw = true;
+        let out = preview_with_pads("/g/game.exe", &c, &full(), true, Some(Path::new("/prefix")), &pads());
+        assert!(out.errors.is_empty(), "{:?}", out.errors);
+        assert_eq!(env_of(&out.env, "PROTON_ENABLE_HIDRAW"), Some("1"));
+    }
+
+    #[test]
+    fn games_handed_to_other_launchers_get_no_profile_env() {
+        for target in ["steam://rungameid/1", "flatpak://org.x.Game", "heroic://launch/1", "/g/x.desktop"] {
+            let out = preview_with_pads(target, &with_profile("nintendo"), &full(), true, None, &pads());
+            assert!(out.env.is_empty(), "{target}");
+            assert_eq!(out.controller_notes.len(), 1, "{target}");
+        }
+        let steam = preview_with_pads("steam://rungameid/1", &with_profile("nintendo"), &full(), true, None, &pads());
+        assert!(steam.controller_notes[0].message.contains("Steam Input"));
+        assert!(!steam.steam_options.unwrap().contains("SDL_"));
+        assert!(controller_env(&with_profile("nintendo"), Applies::Steam, &pads()).env.is_empty());
+    }
+
+    #[test]
+    fn no_profile_means_no_controller_env() {
+        let out = preview_with_pads("/g/game.x86_64", &LaunchConfig::default(), &full(), true, None, &pads());
+        assert!(out.env.is_empty() && out.controller_notes.is_empty());
     }
 }

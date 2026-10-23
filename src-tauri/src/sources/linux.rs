@@ -20,6 +20,7 @@ pub fn source_defs() -> Vec<SourceDef> {
         SourceDef { id: "prism", name: "Minecraft instances", description: "Instances from Prism Launcher, PolyMC, MultiMC and Fjord Launcher." },
         SourceDef { id: "battlenet", name: "Battle.net", description: "Blizzard games installed in Wine prefixes (Lutris, Bottles, Heroic)." },
         SourceDef { id: "gog", name: "GOG", description: "GOG games from the offline installers or Minigalaxy (~/GOG Games)." },
+        SourceDef { id: "emulators", name: "Emulators and ROMs", description: "ROM folders you add in Settings, run with RetroArch, Dolphin, PCSX2 and other emulators." },
         SourceDef { id: "apps", name: "Desktop applications", description: "Games registered in your application menu." },
     ]
 }
@@ -112,6 +113,7 @@ pub fn is_installed(source: &str, home: &Path) -> bool {
         "legendary" => command_exists("legendary") || launcher_installed(home, "rare") || flatpak_data(home, "io.github.dummerle.rare"),
         "nile" => command_exists("nile"),
         "prism" => instance_roots(home).iter().any(|(root, _)| root.is_dir()),
+        "emulators" => super::emulators::any_configured(home),
         "battlenet" => !wine_prefixes(home).is_empty(),
         "gog" => gog_dirs(home).iter().any(|dir| dir.is_dir()) || launcher_installed(home, "minigalaxy") || flatpak_data(home, "io.github.sharkwouter.Minigalaxy"),
         _ => false,

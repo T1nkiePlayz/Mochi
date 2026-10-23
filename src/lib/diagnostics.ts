@@ -22,6 +22,7 @@ export type DiagnosticsInput = {
   experimental: string[];
   signedIn: boolean;
   home?: string | null;
+  sourceHealth?: Array<{ name: string; status: string; filesExamined: number; gameCount: number; failures: Array<{ path: string; reason: string }> }>;
   recentLog?: { game: string; text: string } | null;
 };
 
@@ -38,6 +39,13 @@ export function buildDiagnostics(input: DiagnosticsInput): string {
     `Games: ${input.gameCount}${Object.keys(input.gamesBySource).length ? ` (${Object.entries(input.gamesBySource).map(([source, count]) => `${source} ${count}`).join(", ")})` : ""}`,
     `Experimental features: ${input.experimental.join(", ") || "none"}`,
   ];
+  if (input.sourceHealth?.length) {
+    lines.push("", "Source health:");
+    for (const source of input.sourceHealth) {
+      lines.push(`- ${source.name}: ${source.status}, ${source.gameCount} games, ${source.filesExamined} files checked`);
+      for (const failure of source.failures.slice(0, 10)) lines.push(`    ${failure.path}: ${failure.reason}`);
+    }
+  }
   if (input.recentLog?.text.trim()) lines.push("", `Last game output (${input.recentLog.game}):`, "```", input.recentLog.text.trim().split("\n").slice(-60).join("\n"), "```");
   return redact(lines.join("\n"), input.home);
 }

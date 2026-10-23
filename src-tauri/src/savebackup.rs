@@ -28,7 +28,7 @@ const BUF: usize = 64 * 1024;
 /// Folders that are never a save location, compared lowercase (macOS file systems are case-insensitive).
 const SYSTEM_DIRS: &[&str] = &[
     "/", "/bin", "/boot", "/dev", "/etc", "/home", "/lib", "/lib64", "/mnt", "/media", "/opt", "/proc", "/root", "/run", "/sbin", "/srv", "/sys", "/tmp",
-    "/usr", "/var", "/users", "/applications", "/library", "/system", "/volumes", "/private", "/cores", "/network",
+    "/usr", "/var", "/users", "/applications", "/library", "/system", "/volumes", "/private", "/private/etc", "/private/var", "/private/tmp", "/cores", "/network",
 ];
 
 /// One backup, as listed and as stored in the index.
@@ -47,11 +47,25 @@ pub struct BackupInfo {
     /// "manual", "auto" or "safety" (taken right before a restore).
     pub kind: String,
     pub fingerprint: String,
+    /// Save sync: `<created ms>-<device id>`, the name of this snapshot in the sync folder ("" until exported or imported).
+    pub sync_id: String,
+    /// Save sync: id of the device that took an imported snapshot ("" for backups made here).
+    pub origin: String,
+    /// Save sync: name of the device that took an imported snapshot.
+    pub device: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase", default)]
-struct Index { path: String, label: String, backups: Vec<BackupInfo> }
+pub(crate) struct Index {
+    pub(crate) path: String,
+    pub(crate) label: String,
+    pub(crate) backups: Vec<BackupInfo>,
+    /// Machine-independent identity of the location (see `sync_key`), the folder name used in a sync folder.
+    pub(crate) sync_key: String,
+    /// Sync ids already exported or imported, so a backup deleted or pruned here is never imported again.
+    pub(crate) known: Vec<String>,
+}
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase", default)]
@@ -96,12 +110,22 @@ pub struct SaveLocation {
     pub backups: usize,
     pub last_backup: Option<u64>,
     pub backup_bytes: u64,
+    /// Save sync: identity shared by every device (not derived from local paths).
+    pub sync_key: String,
+    /// Save sync: the newest snapshot, when it came from another device and is newer than everything taken here.
+    pub remote_newer: Option<BackupInfo>,
 }
 
 /// What `create_save_backup` is asked to back up (a location returned by `list_save_locations`).
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LocationInput { pub piko_id: String, pub path: String, #[serde(default)] pub label: String }
+pub struct LocationInput {
+    pub piko_id: String,
+    pub path: String,
+    #[serde(default)] pub label: String,
+    /// Save sync identity of the location. Never read from the caller: `locate` fills it from `list_locations`.
+    #[serde(skip)] pub sync_key: String,
+}
 
 #[derive(Debug, Clone, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -124,7 +148,7 @@ pub struct AutoSummary { pub created: usize, pub unchanged: usize, pub failed: u
 pub struct Ctx { pub root: PathBuf, pub home: Option<PathBuf>, pub steam_roots: Vec<PathBuf>, pub settings: Settings }
 
 impl Ctx {
-    fn current() -> Result<Ctx, String> {
+    pub(crate) fn current() -> Result<Ctx, String> {
         let root = crate::modinstance::data_dir().ok_or("Mochi is still starting.")?.join("save-backups");
         let home = crate::platform::home_dir();
         let steam_roots = home.as_deref().map(crate::sources::steam_install_roots).unwrap_or_default();
@@ -134,7 +158,7 @@ impl Ctx {
 }
 
 /// Backups, restores and deletes run one at a time so two never fight over an index or a folder.
-static WORK: Mutex<()> = Mutex::new(());
+pub(crate) static WORK: Mutex<()> = Mutex::new(());
 
 // ---------------------------------------------------------------------------
 // Settings, index
@@ -144,19 +168,19 @@ fn load_settings(root: &Path) -> Settings {
     fs::read(root.join("settings.json")).ok().and_then(|bytes| serde_json::from_slice::<Settings>(&bytes).ok()).unwrap_or_default().clamped()
 }
 
-fn location_dir(root: &Path, key: &str) -> Result<PathBuf, String> {
+pub(crate) fn location_dir(root: &Path, key: &str) -> Result<PathBuf, String> {
     if !valid_id(key, 120) { return Err("Invalid save location.".into()); }
     Ok(root.join(key))
 }
 
-fn load_index(dir: &Path) -> Index {
+pub(crate) fn load_index(dir: &Path) -> Index {
     let mut index: Index = fs::read(dir.join("index.json")).ok().and_then(|bytes| serde_json::from_slice(&bytes).ok()).unwrap_or_default();
     index.backups.retain(|backup| dir.join(format!("{}.zip", backup.created_at)).is_file());
     index.backups.sort_by_key(|backup| backup.created_at);
     index
 }
 
-fn save_index(dir: &Path, index: &Index) -> Result<(), String> {
+pub(crate) fn save_index(dir: &Path, index: &Index) -> Result<(), String> {
     fs::create_dir_all(dir).map_err(|e| format!("Unable to create the backup folder: {e}"))?;
     let bytes = serde_json::to_vec(index).map_err(|e| e.to_string())?;
     fsio::write_atomic_durable(&dir.join("index.json"), &bytes).map_err(|e| format!("Unable to save the backup list: {e}"))
@@ -207,6 +231,14 @@ fn safe_part(text: &str, max: usize) -> String {
 /// Stable key of a (game, folder) pair: letters of the game id plus a hash of the resolved folder.
 pub fn location_key(piko_id: &str, canonical: &Path) -> String {
     let digest = Sha256::digest(canonical.to_string_lossy().as_bytes());
+    let prefix = safe_part(piko_id, 40);
+    format!("{}-{}", if prefix.is_empty() { "game".to_string() } else { prefix }, &hex(&digest)[..16])
+}
+
+/// Identity of a save location that is the same on every device (no local paths): game id plus kind, Minecraft instance
+/// name and the folder label (world name, "Steam Cloud saves (account N)", or the added folder's name).
+pub fn sync_key(piko_id: &str, kind: &str, group: Option<&str>, label: &str) -> String {
+    let digest = Sha256::digest(format!("{piko_id}\n{kind}\n{}\n{label}", group.unwrap_or("")).as_bytes());
     let prefix = safe_part(piko_id, 40);
     format!("{}-{}", if prefix.is_empty() { "game".to_string() } else { prefix }, &hex(&digest)[..16])
 }
@@ -320,15 +352,20 @@ fn extract_zip(zip_path: &Path, dest: &Path, expected_entries: usize) -> Result<
 // Backups
 // ---------------------------------------------------------------------------
 
-enum Created { Backup(BackupInfo), Unchanged, Empty }
+pub(crate) enum Created { Backup(BackupInfo), Unchanged, Empty }
 
-fn create_backup(ctx: &Ctx, input: &LocationInput, kind: &str, dedupe: bool, protect: Option<&str>) -> Result<Created, String> {
+pub(crate) fn create_backup(ctx: &Ctx, input: &LocationInput, kind: &str, dedupe: bool, protect: Option<&str>) -> Result<Created, String> {
     let canon = check_location(Path::new(&input.path), ctx)?;
     let key = location_key(&input.piko_id, &canon);
-    create_at(ctx, &key, &canon, &input.label, kind, dedupe, protect)
+    let created = create_at(ctx, &key, &canon, (&input.label, &input.sync_key), kind, dedupe, protect)?;
+    // Save sync: export right away (best effort, a missing sync folder never fails a backup).
+    if let (Created::Backup(info), true) = (&created, kind != "safety") { crate::savesync::after_snapshot(ctx, &info.location_key); }
+    Ok(created)
 }
 
-fn create_at(ctx: &Ctx, key: &str, canon: &Path, label: &str, kind: &str, dedupe: bool, protect: Option<&str>) -> Result<Created, String> {
+/// `names` is the folder's label and its sync key.
+fn create_at(ctx: &Ctx, key: &str, canon: &Path, names: (&str, &str), kind: &str, dedupe: bool, protect: Option<&str>) -> Result<Created, String> {
+    let (label, sync) = names;
     let dir = location_dir(&ctx.root, key)?;
     let items = scan(canon)?;
     if items.is_empty() { return Ok(Created::Empty); }
@@ -336,23 +373,26 @@ fn create_at(ctx: &Ctx, key: &str, canon: &Path, label: &str, kind: &str, dedupe
     let mut index = load_index(&dir);
     if dedupe && index.backups.last().is_some_and(|last| last.fingerprint == print) { return Ok(Created::Unchanged); }
     fs::create_dir_all(&dir).map_err(|e| format!("Unable to create the backup folder: {e}"))?;
-    let mut stamp = now_ms();
-    while dir.join(format!("{stamp}.zip")).exists() || index.backups.last().is_some_and(|last| last.created_at >= stamp) { stamp += 1; }
+    // O(1): after the newest backup (imported ones may be dated slightly ahead); a stray file with that name is the only reason to step.
+    let mut stamp = now_ms().max(index.backups.last().map_or(0, |last| last.created_at.saturating_add(1)));
+    while dir.join(format!("{stamp}.zip")).exists() { stamp += 1; }
     let dest = dir.join(format!("{stamp}.zip"));
     write_zip(&items, &dest)?;
     let info = BackupInfo {
         id: format!("{key}~{stamp}"), location_key: key.to_string(), created_at: stamp, size: fs::metadata(&dest).map_or(0, |m| m.len()),
-        entries: items.len(), files: items.iter().filter(|item| !item.dir).count(), kind: kind.to_string(), fingerprint: print,
+        entries: items.len(), files: items.iter().filter(|item| !item.dir).count(), kind: kind.to_string(), fingerprint: print, ..Default::default()
     };
     index.path = canon.to_string_lossy().into_owned();
     index.label = label.to_string();
+    // The key is set once and never replaced, so a backup taken from a different view of the folder cannot re-home its snapshots.
+    if !sync.is_empty() && index.sync_key.is_empty() { index.sync_key = sync.to_string(); }
     index.backups.push(info.clone());
     if let Err(error) = save_index(&dir, &index) { let _ = fs::remove_file(&dest); return Err(error); }
     prune(ctx, key, protect);
     Ok(Created::Backup(info))
 }
 
-fn remove_backup(dir: &Path, index: &mut Index, id: &str) {
+pub(crate) fn remove_backup(dir: &Path, index: &mut Index, id: &str) {
     if let Some(at) = index.backups.iter().position(|backup| backup.id == id) {
         let backup = index.backups.remove(at);
         let _ = fs::remove_file(dir.join(format!("{}.zip", backup.created_at)));
@@ -361,12 +401,16 @@ fn remove_backup(dir: &Path, index: &mut Index, id: &str) {
 
 /// Keeps the newest `keep` backups of a folder, then brings all backups under the size cap by dropping the oldest ones
 /// (the newest backup of each folder and `protect` always stay). Best effort: failures leave extra backups, never fewer.
-fn prune(ctx: &Ctx, key: &str, protect: Option<&str>) {
+pub(crate) fn prune(ctx: &Ctx, key: &str, protect: Option<&str>) {
     if let Ok(dir) = location_dir(&ctx.root, key) {
         let mut index = load_index(&dir);
-        while index.backups.len() > ctx.settings.keep {
-            let Some(id) = index.backups.iter().find(|backup| Some(backup.id.as_str()) != protect).map(|backup| backup.id.clone()) else { break };
-            remove_backup(&dir, &mut index, &id);
+        // Backups made here and backups imported by save sync are limited separately, each to `keep`, so imports never push out
+        // this device's own backups. Removing either only deletes local files, never anything in a sync folder.
+        for imported in [false, true] {
+            while index.backups.iter().filter(|backup| backup.origin.is_empty() != imported).count() > ctx.settings.keep {
+                let Some(id) = index.backups.iter().find(|backup| backup.origin.is_empty() != imported && Some(backup.id.as_str()) != protect).map(|backup| backup.id.clone()) else { break };
+                remove_backup(&dir, &mut index, &id);
+            }
         }
         let _ = save_index(&dir, &index);
     }
@@ -430,7 +474,7 @@ fn restore_backup(ctx: &Ctx, id: &str) -> Result<RestoreResult, String> {
     let mut safety = None;
     if target.is_dir() {
         let canon = check_location(&target, ctx)?;
-        match create_at(ctx, &key, &canon, &index.label, "safety", false, Some(id)) {
+        match create_at(ctx, &key, &canon, (&index.label, &index.sync_key), "safety", false, Some(id)) {
             Ok(Created::Backup(info)) => safety = Some(info),
             Ok(_) => {}
             Err(error) => { let _ = fs::remove_dir_all(&staging); return Err(format!("Could not back up the current saves first, so nothing was changed: {error}")); }
@@ -487,9 +531,17 @@ fn minecraft_worlds(content_root: &Path) -> Vec<(String, PathBuf)> {
     out
 }
 
-fn list_locations(ctx: &Ctx, piko_id: &str, hints: &Hints) -> Vec<SaveLocation> {
+/// The newest snapshot taken on another device, when it is newer than everything taken here.
+pub(crate) fn remote_newer(backups: &[BackupInfo]) -> Option<BackupInfo> {
+    let horizon = now_ms().saturating_add(crate::savesync::MAX_FUTURE_MS);
+    let local = backups.iter().filter(|backup| backup.origin.is_empty()).map(|backup| backup.created_at).max().unwrap_or(0);
+    backups.iter().filter(|backup| !backup.origin.is_empty() && backup.kind != "safety" && backup.created_at > local && backup.created_at <= horizon).max_by_key(|backup| backup.created_at).cloned()
+}
+
+pub(crate) fn list_locations(ctx: &Ctx, piko_id: &str, hints: &Hints) -> Vec<SaveLocation> {
     let mut out: Vec<SaveLocation> = Vec::new();
     let mut add = |kind: &str, label: String, group: Option<String>, path: &Path, detected: bool| {
+        let sync = sync_key(piko_id, kind, group.as_deref(), &label);
         let (key, path_text, problem) = match check_location(path, ctx) {
             Ok(canon) => (location_key(piko_id, &canon), canon.to_string_lossy().into_owned(), None),
             Err(_) if detected => return,
@@ -499,7 +551,8 @@ fn list_locations(ctx: &Ctx, piko_id: &str, hints: &Hints) -> Vec<SaveLocation> 
         let backups = location_dir(&ctx.root, &key).map(|dir| load_index(&dir).backups).unwrap_or_default();
         out.push(SaveLocation {
             key, kind: kind.to_string(), label, group, path: path_text, source: (!detected).then(|| path.to_string_lossy().into_owned()), problem, backups: backups.len(),
-            last_backup: backups.last().map(|backup| backup.created_at), backup_bytes: backups.iter().map(|backup| backup.size).sum(),
+            last_backup: backups.last().map(|backup| backup.created_at), backup_bytes: backups.iter().map(|backup| backup.size).sum(), sync_key: sync,
+            remote_newer: remote_newer(&backups),
         });
     };
     for instance in hints.instances.iter().filter(|instance| !instance.content_root.trim().is_empty()) {
@@ -520,7 +573,7 @@ fn list_locations(ctx: &Ctx, piko_id: &str, hints: &Hints) -> Vec<SaveLocation> 
 fn auto_backup(ctx: &Ctx, piko_id: &str, hints: &Hints) -> AutoSummary {
     let mut summary = AutoSummary::default();
     for location in list_locations(ctx, piko_id, hints).into_iter().filter(|location| location.problem.is_none()) {
-        let input = LocationInput { piko_id: piko_id.to_string(), path: location.path, label: location.label };
+        let input = LocationInput { piko_id: piko_id.to_string(), path: location.path, label: location.label, sync_key: location.sync_key };
         let result = { let _guard = WORK.lock_recover(); create_backup(ctx, &input, "auto", true, None) };
         match result {
             Ok(Created::Backup(_)) => summary.created += 1,
@@ -541,11 +594,25 @@ pub async fn list_save_locations(piko_id: String, hints: Hints) -> Result<Vec<Sa
     blocking(move || list_locations(&ctx, &piko_id, &hints)).await
 }
 
+/// Fills in the label and sync key of a location the caller named by path, from the game's own locations (never from the caller).
+pub(crate) fn locate(ctx: &Ctx, mut input: LocationInput, hints: &Hints) -> LocationInput {
+    input.sync_key.clear();
+    if let Ok(canon) = check_location(Path::new(&input.path), ctx) {
+        let path = canon.to_string_lossy();
+        if let Some(found) = list_locations(ctx, &input.piko_id, hints).into_iter().find(|location| location.problem.is_none() && location.path == path) {
+            input.label = found.label;
+            input.sync_key = found.sync_key;
+        }
+    }
+    input
+}
+
 #[tauri::command]
-pub async fn create_save_backup(location: LocationInput) -> Result<BackupResult, String> {
+pub async fn create_save_backup(location: LocationInput, hints: Option<Hints>) -> Result<BackupResult, String> {
     let ctx = Ctx::current()?;
     blocking(move || {
         let _guard = WORK.lock_recover();
+        let location = locate(&ctx, location, &hints.unwrap_or_default());
         Ok(match create_backup(&ctx, &location, "manual", true, None)? {
             Created::Backup(backup) => BackupResult { backup: Some(backup), skipped: None },
             Created::Unchanged => BackupResult { backup: None, skipped: Some("unchanged".into()) },
@@ -620,7 +687,7 @@ mod tests {
         fs::create_dir_all(dir.join("empty")).unwrap();
         dir
     }
-    fn input(path: &Path) -> LocationInput { LocationInput { piko_id: "minecraft".into(), path: path.to_string_lossy().into_owned(), label: "World".into() } }
+    fn input(path: &Path) -> LocationInput { LocationInput { piko_id: "minecraft".into(), path: path.to_string_lossy().into_owned(), label: "World".into(), sync_key: String::new() } }
     fn make(env: &Env, path: &Path, kind: &str, dedupe: bool) -> Created { create_backup(&env.ctx, &input(path), kind, dedupe, None).unwrap() }
     fn info(created: Created) -> BackupInfo { match created { Created::Backup(info) => info, _ => panic!("expected a backup") } }
     fn key_of(env: &Env, path: &Path) -> String { location_key("minecraft", &check_location(path, &env.ctx).unwrap()) }
