@@ -69,6 +69,7 @@ Mochi is a cross-platform (Linux and macOS) desktop game launcher that sits abov
 - In-app notification centre plus desktop notifications (`notify-send` on Linux, `osascript` on macOS).
 - **Backlog and wishlist**: mark games Want to play / Playing / Finished / Dropped with notes, keep a wishlist of games you don't own yet, and let *What should I play?* pick by mood and time ([docs/backlog.md](docs/backlog.md)).
 - **Duplicate merge**: the same game from several sources (Steam, Heroic, Flatpak, desktop entries) can be merged into one entry with a *Play via* picker, and unmerged at any time ([docs/duplicates.md](docs/duplicates.md)).
+- **Missing path repair**: games synced from another machine whose files are not on this device get a *Missing on this device* flag, with *Locate...*, *Find automatically* (rescan and match by store ID) and a bulk *Fix missing paths* review ([docs/path-remap.md](docs/path-remap.md)).
 - **Command palette** (Ctrl+K / Cmd+K): fuzzy-search games and run actions (theme, settings sections, mods, snapshots, Big Picture); type `>` for actions only ([docs/command-palette.md](docs/command-palette.md)).
 - **Per-game launch options**: environment variables, arguments, working directory, Proton/Wine runtime, GameMode, MangoHud and gamescope, with a live preview of the exact command and a ready-to-paste Steam launch option string ([docs/launch-options.md](docs/launch-options.md)).
 - **Save backups**: zip snapshots of Minecraft worlds, Steam userdata and any folder you add, with safe restore and automatic backup when a game closes ([docs/save-backups.md](docs/save-backups.md)).
@@ -197,7 +198,7 @@ Manually added games can target: executables, `.desktop` files, Flatpak IDs, `.s
 
 ## Accounts, cloud sync and offline use
 
-An account is optional. It enables sync of library metadata (profiles, Pikos, Tofus, including favourites, tags, artwork source and kind) through Supabase; game files and local paths are never uploaded, and a synced path may need fixing on another machine. Sign in with email/password, Google or GitHub, use TOTP multi-factor authentication where configured, and keep up to five saved accounts on a device. IGDB, SteamGridDB and Nexus keys are stored server-side in Supabase Vault and never returned to the app.
+An account is optional. It enables sync of library metadata (profiles, Pikos, Tofus, including favourites, tags, artwork source and kind) through Supabase; game files and local paths are never uploaded, and a synced path may need fixing on another machine, and Mochi flags such games and helps you fix them ([docs/path-remap.md](docs/path-remap.md)). Sign in with email/password, Google or GitHub, use TOTP multi-factor authentication where configured, and keep up to five saved accounts on a device. IGDB, SteamGridDB and Nexus keys are stored server-side in Supabase Vault and never returned to the app.
 
 Offline, the library, launching, playtime, stats, themes, settings, installed-mod management and cached artwork all work. Fonts for built-in themes are bundled, so themes render without a network. Metadata, Discover, sign-in, trailers and downloads need a connection and fail quietly. Full table: [docs/offline.md](docs/offline.md).
 
@@ -265,7 +266,7 @@ The release key fingerprint is listed in [docs/verify-downloads.md](docs/verify-
 - Runtimes (Wine, Proton, CrossOver) are detected, not installed.
 - Nexus Mods requirements are read from the mod's Requirements data and installed like other dependencies only when you have a Nexus key (and Premium for downloads); otherwise they are shown as links.
 - Games handed to another launcher can only be stopped once Mochi detects them.
-- Synced paths may not work on another machine; sync is metadata-only.
+- Synced paths may not work on another machine; sync is metadata-only. Mochi flags games whose paths are missing and offers *Locate...* or *Find automatically* (Settings > Data > Fix missing paths); the fix stays on that device ([docs/path-remap.md](docs/path-remap.md)).
 - Storage formats and UI may change before a stable release.
 
 ## Roadmap
@@ -300,7 +301,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] Theme marketplace / in-app theme gallery for browsing and installing community themes
 - [ ] Theme creator with live editing of colours, fonts and hooks, plus theme export
 - [ ] Built-in Proton-GE / Wine-GE installer, so runtimes no longer have to be installed outside Mochi
-- [ ] Synced path remapping: when a synced game's path is missing on this machine, locate it or rescan and match by store ID
+- [x] Synced path remapping: when a synced game's path is missing on this machine, locate it or rescan and match by store ID
 - [ ] Playtime import from Heroic, Lutris and GOG, alongside the existing Steam playtime import
 - [ ] Source scanner health check that reports when a launcher's file format has changed instead of silently missing games
 - [ ] Save sync to a folder you choose (Syncthing, Nextcloud, WebDAV) built on save backups, with nothing hosted by Mochi
@@ -316,7 +317,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 
 ### Everyday use
 
-[Accessibility](docs/accessibility.md) · [Backlog and wishlist](docs/backlog.md) · [Command palette](docs/command-palette.md) · [CLI and deep links](docs/cli.md) · [Controller](docs/controller.md) · [Duplicates](docs/duplicates.md) · [Launch options](docs/launch-options.md) · [Save backups](docs/save-backups.md) · [Settings export/import](docs/settings-export.md) · [Shortcuts](docs/shortcuts.md) · [Storage manager](docs/storage.md)
+[Accessibility](docs/accessibility.md) · [Backlog and wishlist](docs/backlog.md) · [Command palette](docs/command-palette.md) · [CLI and deep links](docs/cli.md) · [Controller](docs/controller.md) · [Duplicates](docs/duplicates.md) · [Path remap](docs/path-remap.md) · [Launch options](docs/launch-options.md) · [Save backups](docs/save-backups.md) · [Settings export/import](docs/settings-export.md) · [Shortcuts](docs/shortcuts.md) · [Storage manager](docs/storage.md)
 
 ### Discover, metadata and extras
 
