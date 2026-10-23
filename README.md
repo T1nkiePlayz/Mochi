@@ -199,8 +199,7 @@ A **Piko** is a game in your library: name, artwork, genres, launch target, sour
 
 Battle.net, GOG Galaxy (macOS app bundles; offline installers under `~/GOG Games` on Linux) and Prism, Fjord, PolyMC and MultiMC Minecraft instances are imported too (see [docs/improvements/importers-round6.md](docs/improvements/importers-round6.md)); Battle.net and the Prism family are unverified on macOS hardware. The Whisky pin format was inferred from its source and is not verified on a real machine. Imports never move, copy or uninstall anything, and you can point Mochi at a library folder manually when detection misses it.
 
-Manually added games can target: executables, `.desktop` files, Flatpak IDs, `.sh`/`.bash`, `.py`, `.js`, macOS `.app` bundles, `.exe`/`.bat` through the Tofu's runtime (Wine or Proton, GameMode and MangoHud on Linux; CrossOver or Whisky on macOS), and the launcher URIs above. Runtimes are detected, not installed (except Proton-GE and Wine-GE on Linux, see Settings > Compatibility tools).
-Manually added games can target: executables, `.desktop` files, Flatpak IDs, `.sh`/`.bash`, `.py`, `.js`, macOS `.app` bundles, emulator ROMs (`mochi-emu://<system>?rom=<path>`, made by the Emulators import), `.exe`/`.bat` through the Tofu's runtime (Wine or Proton, GameMode and MangoHud on Linux; CrossOver or Whisky on macOS), and the launcher URIs above. Runtimes are detected, not installed.
+Manually added games can target: executables, `.desktop` files, Flatpak IDs, `.sh`/`.bash`, `.py`, `.js`, macOS `.app` bundles, emulator ROMs (`mochi-emu://<system>?rom=<path>`, made by the Emulators import), `.exe`/`.bat` through the Tofu's runtime (Wine or Proton, GameMode and MangoHud on Linux; CrossOver or Whisky on macOS), and the launcher URIs above. Runtimes are detected, not installed (except Proton-GE and Wine-GE on Linux, see Settings > Compatibility tools).
 
 ## Accounts, cloud sync and offline use
 
