@@ -23,4 +23,6 @@ The executable path is synced metadata, so a fix is stored as a device-local ove
 
 ## Limits
 
+Merged duplicates are checked per source: each Play via source path that is missing is listed and can be located by hand. Name-only matches for games that have no source are offered from any source, so check them before accepting. The check re-runs when a game path changes (and at startup), not on a timer, so a folder that disappears while Mochi is open is noticed at the next start.
+
 Only local filesystem paths are checked, and only the sources Mochi can scan. Games from other machines that no launcher here lists must be located by hand.

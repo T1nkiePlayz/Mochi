@@ -5,8 +5,8 @@ import { steamAppIdOf } from "./metadata/merge";
 import { detectImportSources, scanImportGames, type ImportedGame } from "./sources";
 
 /** Which path of a game a slot is. `tofu*` fields belong to the Tofu named by `tofuId`. */
-export type PathField = "executablePath" | "installPath" | "workingDir" | "tofuPath" | "tofuGameDir" | "tofuContentRoot" | "tofuInstallPath";
-export type PathSlot = { gameId: string; tofuId?: string; field: PathField; path: string };
+export type PathField = "executablePath" | "installPath" | "workingDir" | "tofuPath" | "tofuGameDir" | "tofuContentRoot" | "tofuInstallPath" | "sourceExecutable" | "sourceInstall";
+export type PathSlot = { gameId: string; tofuId?: string; launchSourceId?: string; field: PathField; path: string };
 
 export type NewPaths = { executablePath?: string; installPath?: string };
 export type RemapMatch = { gameId: string; newPaths: NewPaths; confidence: "store-id" | "name"; matched: Pick<ImportedGame, "id" | "name" | "source"> };
@@ -31,6 +31,10 @@ export function collectPaths(library: readonly Piko[]): PathSlot[] {
     if (piko.id === "__empty") continue;
     const add = (field: PathField, path: string | undefined) => { if (isLocalPath(path)) out.push({ gameId: piko.id, field, path }); };
     add("executablePath", piko.executablePath); add("installPath", piko.installPath); add("workingDir", piko.launchOptions?.workingDir);
+    for (const source of piko.launchSources ?? []) {
+      if (isLocalPath(source.executablePath)) out.push({ gameId: piko.id, launchSourceId: source.id, field: "sourceExecutable", path: source.executablePath });
+      if (isLocalPath(source.installPath)) out.push({ gameId: piko.id, launchSourceId: source.id, field: "sourceInstall", path: source.installPath });
+    }
     for (const tofu of piko.tofus ?? []) out.push(...tofuSlots(piko.id, tofu));
   }
   return out;
@@ -137,9 +141,10 @@ export function applyNewPaths(piko: Piko, newPaths: NewPaths): Partial<Piko> | n
   if (newPaths.installPath && newPaths.installPath !== piko.installPath) changes.installPath = newPaths.installPath;
   const exe = newPaths.executablePath;
   if (exe && exe !== piko.executablePath) {
-    const cloudValue = piko.pathOverride && piko.pathOverride.executablePath === piko.executablePath ? piko.pathOverride.cloudValue : piko.executablePath;
+    // `null` records that the cloud holds no path, so the push keeps uploading nothing.
+    const cloudValue = piko.pathOverride && piko.pathOverride.executablePath === piko.executablePath ? piko.pathOverride.cloudValue : piko.executablePath ?? null;
     changes.executablePath = exe;
-    changes.pathOverride = cloudValue !== undefined && cloudValue !== exe ? { executablePath: exe, cloudValue } : undefined;
+    changes.pathOverride = cloudValue !== exe ? { executablePath: exe, cloudValue } : undefined;
   }
   return Object.keys(changes).length ? changes : null;
 }
@@ -150,6 +155,10 @@ export function applyLocated(piko: Piko, slot: PathSlot, picked: string): Partia
     case "executablePath": return applyNewPaths(piko, { executablePath: picked });
     case "installPath": return picked === piko.installPath ? null : { installPath: picked };
     case "workingDir": return { launchOptions: { env: [], args: [], ...piko.launchOptions, workingDir: picked } };
+    case "sourceExecutable": case "sourceInstall": {
+      const key = slot.field === "sourceExecutable" ? "executablePath" : "installPath";
+      return { launchSources: piko.launchSources?.map((source) => (source.id === slot.launchSourceId ? { ...source, [key]: picked } : source)) };
+    }
     default: {
       const key = { tofuPath: "path", tofuGameDir: "gameDir", tofuContentRoot: "contentRoot", tofuInstallPath: "installPath" }[slot.field] as keyof Tofu;
       return { tofus: piko.tofus.map((tofu) => (tofu.id === slot.tofuId ? { ...tofu, [key]: picked } : tofu)) };
@@ -158,4 +167,4 @@ export function applyLocated(piko: Piko, slot: PathSlot, picked: string): Partia
 }
 
 /** True for slots a file (not a folder) is expected at. */
-export const slotWantsFile = (slot: PathSlot) => slot.field === "executablePath";
+export const slotWantsFile = (slot: PathSlot) => slot.field === "executablePath" || slot.field === "sourceExecutable";

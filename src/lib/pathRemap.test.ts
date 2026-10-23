@@ -103,3 +103,22 @@ describe("device-local override", () => {
     expect(applyLocated(game, { gameId: "x", field: "workingDir", path: "/mac/w" }, "/home/w")?.launchOptions?.workingDir).toBe("/home/w");
   });
 });
+
+describe("device-local remaps and merged sources", () => {
+  it("keeps an absent cloud path absent after remapping a game that had no executable", () => {
+    const game = piko({ id: "n", name: "N" });
+    const changes = applyNewPaths(game, { executablePath: "/new/n" });
+    expect(changes?.pathOverride).toEqual({ executablePath: "/new/n", cloudValue: null });
+    const remapped = { ...game, ...changes };
+    expect(cloudExecutablePath(remapped)).toBeUndefined();
+    const merged = mergeCloudLibrary([remapped], [piko({ id: "n", name: "N" })]);
+    expect(merged[0].executablePath).toBe("/new/n");
+  });
+  it("collects and relocates launch source paths of merged duplicates", () => {
+    const game = piko({ id: "m", name: "M", executablePath: "steam://rungameid/1", launchSources: [{ id: "s1", label: "Heroic", executablePath: "/old/m", installPath: "/old" }] });
+    const slots = collectPaths([game]);
+    expect(slots.map((slot) => slot.field)).toEqual(["sourceExecutable", "sourceInstall"]);
+    const changes = applyLocated(game, slots[0], "/new/m");
+    expect(changes?.launchSources?.[0].executablePath).toBe("/new/m");
+  });
+});

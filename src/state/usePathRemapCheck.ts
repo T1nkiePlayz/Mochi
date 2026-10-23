@@ -10,7 +10,7 @@ const DEBOUNCE_MS = 2500;
  * (the check re-runs only when the collected paths change), debounced and off the critical path. Tells the user once per game.
  */
 export function usePathRemapCheck(ready: boolean, library: Piko[], notify: (title: string, message: string) => void) {
-  const signature = useMemo(() => collectPaths(library).map((slot) => `${slot.gameId}\u0001${slot.tofuId ?? ""}\u0001${slot.field}\u0001${slot.path}`).join("\u0002"), [library]);
+  const signature = useMemo(() => collectPaths(library).map((slot) => `${slot.gameId}\u0001${slot.tofuId ?? ""}\u0001${slot.launchSourceId ?? ""}\u0001${slot.field}\u0001${slot.path}`).join("\u0002"), [library]);
   const latest = useRef({ library, notify });
   latest.current = { library, notify };
   const announced = useRef(new Set<string>());

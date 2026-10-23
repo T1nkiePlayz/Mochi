@@ -10,6 +10,7 @@ import { useMissingSlots } from "../../lib/pathRemapStore";
 const FIELD_LABELS: Record<PathField, string> = {
   executablePath: "Executable", installPath: "Install folder", workingDir: "Working directory", tofuPath: "Mod folder",
   tofuGameDir: "Game folder", tofuContentRoot: "Content folder", tofuInstallPath: "Instance folder",
+  sourceExecutable: "Executable", sourceInstall: "Install folder",
 };
 export const fieldLabel = (field: PathField) => FIELD_LABELS[field];
 
@@ -45,7 +46,7 @@ export function MissingPathNotice({ game }: { game: Piko }) {
 
   return <section className="missing-path-notice" role="status" aria-label={t("Missing on this device")}>
     <p><AlertTriangle size={16} aria-hidden="true" /> <strong>{t("Missing on this device")}</strong> {t("These saved paths do not exist here. Locate them, or let Mochi look for the game in your launchers. The fix is kept on this device only.")}</p>
-    <ul>{slots.map((slot) => <li key={`${slot.tofuId ?? ""}:${slot.field}`}><span><small>{t(FIELD_LABELS[slot.field])}</small><span className="path-text" title={slot.path}>{slot.path}</span></span>
+    <ul>{slots.map((slot) => <li key={`${slot.tofuId ?? ""}:${slot.launchSourceId ?? ""}:${slot.field}`}><span><small>{t(FIELD_LABELS[slot.field])}</small><span className="path-text" title={slot.path}>{slot.path}</span></span>
       <button type="button" className="secondary-button" onClick={() => void locate(slot)}>{t("Locate...")}</button></li>)}</ul>
     <div className="missing-path-actions"><button type="button" className="secondary-button" disabled={scanning} onClick={() => void find()}>{scanning ? t("Scanning your launchers…") : t("Find automatically")}</button></div>
     {found === "none" && <p className="metadata-note">{t("No match was found in your installed launchers. Use Locate... instead.")}</p>}

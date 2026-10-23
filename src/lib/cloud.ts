@@ -76,7 +76,7 @@ export async function pullLibrary(client: SupabaseClient, userId: string): Promi
 
 /** The executable path the cloud holds for a game: the synced value when this device uses a local override of it. */
 export const cloudExecutablePath = (piko: Pick<Piko, "executablePath" | "pathOverride">) =>
-  piko.pathOverride && piko.pathOverride.executablePath === piko.executablePath ? piko.pathOverride.cloudValue : piko.executablePath;
+  piko.pathOverride && piko.pathOverride.executablePath === piko.executablePath ? (piko.pathOverride.cloudValue ?? undefined) : piko.executablePath;
 
 const clamp = (value: string | undefined, max: number) => (value && value.length > max ? value.slice(0, max) : value);
 
@@ -166,7 +166,7 @@ export function mergeCloudLibrary(local: Piko[], cloud: Piko[]): Piko[] {
     if (!mine) return remote;
     const tofuById = new Map(mine.tofus.map((tofu) => [tofu.id, tofu]));
     // A path fixed on this device stays while the cloud still holds the value it was fixed from; a newer cloud value wins.
-    const keepPath = mine.pathOverride !== undefined && mine.pathOverride.executablePath === mine.executablePath && remote.executablePath === mine.pathOverride.cloudValue;
+    const keepPath = mine.pathOverride !== undefined && mine.pathOverride.executablePath === mine.executablePath && (remote.executablePath ?? null) === mine.pathOverride.cloudValue;
     return {
       ...mine,
       ...remote,
