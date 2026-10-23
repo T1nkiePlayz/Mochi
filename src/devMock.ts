@@ -172,7 +172,7 @@ const handlers: Record<string, Handler> = {
   },
   get_platform_capabilities: () => ({
     platform: "linux", displayName: "Linux", launchMethods: ["file", "flatpak", "custom"], supportsFlatpak: true,
-    supportsAppBundles: false, supportsStartup: true, supportsSystemNotifications: true, supportsShortcuts: true,
+    supportsAppBundles: false, supportsStartup: true, supportsSystemNotifications: true, supportsShortcuts: true, supportsRuntimeInstall: true,
     isSteamDeck: new URLSearchParams(location.search).has("deck"), isGamescope: new URLSearchParams(location.search).has("gamescope"),
   }),
   self_install_status: () => null, self_install_verify: () => ({ status: "verified", detail: "Dev mock." }), self_install_apply: () => null, self_install_skip: () => null,

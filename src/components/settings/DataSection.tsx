@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "../../lib/useTranslation";
 import { getVersion } from "@tauri-apps/api/app";
 import { getPlatformCapabilities } from "../../lib/platform";
+import { scannerHealth } from "../../lib/sources";
+import { loadSourceReport } from "../../lib/sourceHealth";
 import { buildDiagnostics } from "../../lib/diagnostics";
 import { ChevronDown } from "lucide-react";
 import { MochiIcon } from "../MochiIcon";
@@ -11,6 +13,7 @@ import { clearAllDataSources, clearDataSource, dataSources, gamesWithArtworkFrom
 import { providerLabels } from "../../state/useCredentials";
 import type { ProviderId } from "../../lib/metadata/types";
 import { SettingsGroup, ToggleRow } from "./Section";
+import { openPathReview, useMissingCount } from "../../lib/pathRemapStore";
 import { SettingsTransfer } from "./SettingsTransfer";
 import { LibraryBackup } from "./LibraryBackup";
 import { steamPlaytimeTargets } from "../../lib/steamPlaytime";
@@ -21,6 +24,7 @@ export function DataSection() {
   const t = useTranslation();
   const { behavior, setBehavior, account, credentials, lib, metadata, cloud, themeEngine, chooseConfigLocation, refreshPlaytime } = useApp();
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const missingPaths = useMissingCount();
   const user = account.user;
   const [busy, setBusy] = useState<DataSourceId | "all" | null>(null);
   const [note, setNote] = useState("");
@@ -39,7 +43,7 @@ export function DataSection() {
       const caps = await getPlatformCapabilities().catch(() => ({ platform: "unknown", displayName: "Unknown", isSteamDeck: false, isGamescope: false, launchMethods: [] as string[] }));
       const bySource: Record<string, number> = {};
       for (const piko of lib.library) { const kind = piko.kind ?? "game"; bySource[kind] = (bySource[kind] ?? 0) + 1; }
-      const report = buildDiagnostics({ version: await getVersion().catch(() => "unknown"), platform: caps, userAgent: navigator.userAgent, online: navigator.onLine, gameCount: lib.library.length, gamesBySource: bySource, experimental: behavior.experimental, signedIn: Boolean(user) });
+      const report = buildDiagnostics({ version: await getVersion().catch(() => "unknown"), platform: caps, userAgent: navigator.userAgent, online: navigator.onLine, gameCount: lib.library.length, gamesBySource: bySource, experimental: behavior.experimental, signedIn: Boolean(user), sourceHealth: await (async () => { const last = loadSourceReport(); return last.length ? last : scannerHealth({ notify: false }).catch(() => []); })() });
       await navigator.clipboard.writeText(report);
       setNote(t("Debug info copied. It contains no passwords, keys or email addresses, and your home folder name is hidden."));
     } catch { setNote(t("Could not copy debug info.")); }
@@ -104,6 +108,7 @@ export function DataSection() {
     <div className="setting-row"><span><strong>{t("Cloud data")}</strong><small>{cloud.cloudDataAccessAllowed ? t("Delete your cloud Pikos and Tofus. Your local library, account, and saved provider credentials stay unchanged.") : t("Mochi Cloud data controls are not enabled for this account.")}</small></span><button type="button" className="secondary-button danger-outline" disabled={!account.user || !cloud.cloudDataAccessAllowed || cloud.cloudDataBusy} onClick={() => void cloud.clearCloudData()}>{cloud.cloudDataBusy ? t("Clearing…") : cloud.cloudDataAccessAllowed ? t("Clear cloud data") : t("Unavailable")}</button></div>
     {cloud.cloudDataMessage && <p className="metadata-note settings-note" role="status">{cloud.cloudDataMessage}</p>}
     <div className="setting-row setting-location-row"><span><strong>{t("Library location")}</strong><small>{t("Your Mochi configuration, themes and launcher data are stored here.")}</small></span><span className="setting-location-value"><code>{themeEngine.configInfo?.configPath || t("Default Mochi location")}</code><button type="button" className="secondary-button" onClick={() => void chooseConfigLocation()}>{t("Change")}</button></span></div>
+    <div className="setting-row"><span><strong>{t("Fix missing paths")}</strong><small>{missingPaths ? t("{count} games point at files that are not on this device (for example after syncing from another machine). Mochi can rescan your launchers and match them by store ID.").replace("{count}", String(missingPaths)) : t("No game points at a missing path on this device.")}</small></span><button type="button" className="secondary-button" disabled={!missingPaths} onClick={openPathReview}>{t("Fix missing paths")}</button></div>
     <SettingsTransfer />
     <LibraryBackup />
     <button className="setting-row setting-button" aria-expanded={showAdvanced} onClick={() => setShowAdvanced(!showAdvanced)}><span><strong>{t("Advanced settings")}</strong><small>{t("Diagnostics and launcher controls.")}</small></span><MochiIcon name="chevron" fallback={ChevronDown} className={showAdvanced ? "rotate" : ""} size={16} /></button>

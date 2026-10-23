@@ -7,6 +7,7 @@ import { hasArtwork } from "../../lib/fallbackArt";
 import { CloudBadge } from "./CloudBadge";
 import type { CloudStatus } from "../../lib/cloudStatus";
 import { MochiIcon } from "../MochiIcon";
+import { MissingPathBadge } from "./MissingPath";
 
 type Props = {
   piko: Piko;
@@ -60,6 +61,7 @@ export const GameCard = memo(function GameCard({ piko, selected, running, cloudS
         <GameArtwork className="game-card-art" cacheKey={piko.artworkCacheKey} fallback={piko.artwork} name={piko.name} kind={piko.kind} sourceId={piko.sourceId} />
         <div className="game-card-copy">
           <strong><span className="game-card-name" title={piko.name}>{piko.name}</span><CloudBadge status={cloudStatus} /></strong>
+          <MissingPathBadge gameId={piko.id} />
           <small>{running ? t("Running now") : piko.categories?.map((category) => t(category)).join(" · ") || t(piko.platformCategory || "Other")}</small>
           {piko.tags?.length ? <span className="game-card-tags">{piko.tags.slice(0, 3).map((tag) => <span key={tag}>#{tag}</span>)}</span> : null}
         </div>
