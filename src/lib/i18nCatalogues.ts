@@ -65,6 +65,10 @@ import { libraryDialogsMessages } from "./i18nLibraryDialogs";
 import { libraryFilterMessages } from "./i18nLibraryFilters";
 import { uiSmallMessages } from "./i18nUiSmall";
 import { duplicateMessages } from "./i18nDuplicates";
+import { pathRemapMessages } from "./i18nPathRemap";
+import { runtimeInstallerMessages } from "./i18nRuntimeInstaller";
+import { sourceHealthMessages } from "./i18nSourceHealth";
+import { playtimeImportMessages } from "./i18nPlaytimeImport";
 import { saveSyncMessages } from "./i18nSaveSync";
 import { libraryStatusMessages } from "./i18nLibraryStatus";
 import { completePhraseMessages } from "./i18nCompletePhrases";
@@ -81,6 +85,7 @@ import { statsMessages } from "./i18nStats";
 import { metadataMessages } from "./i18nMetadata";
 import { recentUiMessages } from "./i18nRecentUi";
 import { settingsRecentMessages } from "./i18nSettingsRecent";
+import { emulatorMessages } from "./i18nEmulators";
 
 /**
  * Shared UI message catalogue. Keys are stable English source strings so missing
@@ -167,7 +172,7 @@ export type Catalogue = Record<string, Record<string, string>>;
  * exactly like the old per-call `catalogue[message]?.[locale] ?? …` chain; the merged index below
  * evaluates that chain once instead of on every translate() call. New catalogues go here, first.
  */
-export const catalogues: Catalogue[] = [auditMessages, settingsRecentMessages, recentUiMessages, messages, setupMessages, setupCopyMessages,
+export const catalogues: Catalogue[] = [emulatorMessages, auditMessages, settingsRecentMessages, recentUiMessages, messages, setupMessages, setupCopyMessages,
     setupCopyExtraMessages, cloudSetupMessages, accountSetupMessages, serviceSetupMessages,
     chromeMessages, settingsMessages, downloadMessages, dealMessages, dealExtraMessages,
     libraryMessages, systemMessages, libraryExtraMessages, commonMessages, settingsTitleMessages,
@@ -179,10 +184,10 @@ export const catalogues: Catalogue[] = [auditMessages, settingsRecentMessages, r
     updateArtworkMessages, artworkAndSourcesMessages, discoveryMessages, discoverStatusMessages,
     discoverMoreMessages, projectDetailMessages, projectDependencyMessages, projectDetailExtraMessages,
     footerMessages, controlsMessages, discoverExtraMessages, importMessages, libraryDialogsMessages,
-    libraryFilterMessages, uiSmallMessages, duplicateMessages, libraryStatusMessages,
+    libraryFilterMessages, uiSmallMessages, duplicateMessages, pathRemapMessages, libraryStatusMessages,
     completePhraseMessages, navigationActionMessages, launchProfileMessages, savedFilterMessages,
     editFilterMessages, launchHelpMessages, longUiHelpMessages, pickerGuidanceMessages,
-    smartFilterMessages, installedMessages, statsMessages, metadataMessages, saveSyncMessages];
+    smartFilterMessages, installedMessages, statsMessages, metadataMessages, runtimeInstallerMessages, sourceHealthMessages, playtimeImportMessages, saveSyncMessages];
 
 let mergedIndex: Map<string, Record<string, string>> | null = null;
 

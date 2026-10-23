@@ -23,9 +23,11 @@ mod nxm;
 mod modrinth;
 mod platform;
 mod prefixes;
+mod runtime_installer;
 mod selfinstall;
 mod shortcuts;
 mod playtime;
+mod playtime_import;
 mod process;
 mod savebackup;
 mod savesync;
@@ -180,6 +182,14 @@ fn get_playtime_history(since_epoch: Option<u64>) -> Result<Vec<playtime::Sessio
 #[tauri::command(async)]
 fn import_steam_playtime(targets: Vec<steam_playtime::Target>) -> Result<steam_playtime::ImportResult, String> { steam_playtime::import(&targets) }
 
+/// Heroic, Lutris and GOG Galaxy playtime: which sources exist here, what an import would add, and the import.
+#[tauri::command(async)]
+fn playtime_import_sources() -> Vec<String> { playtime_import::detected_sources() }
+#[tauri::command(async)]
+fn preview_playtime_import(source: String, targets: Vec<playtime_import::Match>) -> Result<Vec<playtime_import::PreviewRow>, String> { playtime_import::preview(&source, &targets) }
+#[tauri::command(async)]
+fn import_playtime(source: String, targets: Vec<playtime_import::Match>) -> Result<steam_playtime::ImportResult, String> { playtime_import::import(&source, &targets) }
+
 #[tauri::command(async)]
 fn get_dir_size(path: String) -> Result<dirsize::DirSize, String> { dirsize::dir_size_cached(&path) }
 
@@ -203,6 +213,12 @@ fn remove_game_shortcut(game_id: String) -> Result<(), String> { platform::remov
 
 #[tauri::command(async)]
 fn detect_import_sources() -> Vec<sources::DetectedImportSource> { sources::detect_import_sources() }
+
+#[tauri::command(async)]
+fn paths_exist(paths: Vec<String>) -> Vec<bool> { sources::paths_exist(&paths) }
+
+#[tauri::command(async)]
+fn scanner_health() -> Vec<sources::health::SourceHealth> { sources::scanner_health() }
 
 #[tauri::command(async)]
 fn scan_import_games(source: String, library_path: Option<String>) -> Vec<sources::ImportedGame> { sources::scan_import_games(source.trim(), library_path) }
@@ -351,9 +367,9 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             write_library_index, youtube_embed_url, send_system_notification, open_external_url, open_path_in_file_manager, set_launch_on_startup,
-            launch_game_tracked, stop_game, get_active_sessions, get_playtime, get_playtime_history, import_steam_playtime, get_dir_size, get_downloads,
+            launch_game_tracked, stop_game, get_active_sessions, get_playtime, get_playtime_history, import_steam_playtime, playtime_import_sources, preview_playtime_import, import_playtime, get_dir_size, get_downloads,
             list_flatpaks, list_runtimes, list_launch_runtimes, preview_launch_command, get_platform_capabilities, create_game_shortcut, remove_game_shortcut, shortcuts::get_shortcut_targets, shortcuts::create_piko_shortcut, shortcuts::add_piko_to_steam,
-            detect_import_sources, scan_import_games, copy_minecraft_instance, read_minecraft_pack,
+            detect_import_sources, scan_import_games, paths_exist, copy_minecraft_instance, read_minecraft_pack, scanner_health, sources::emulators::get_emulator_overview, sources::emulators::set_emulator_settings,
             bigpicture::get_system_status, bigpicture::suspend_system, bigpicture::power_action, bigpicture::get_power_capabilities, soundpacks::list_sound_packs, soundpacks::import_sound_pack, soundpacks::remove_sound_pack, soundpacks::export_sound_pack, sharecard::write_share_card, soundpacks::read_sound_pack_file, bigpicture::quit_mochi, gamepad::get_gamepads, gamepad::gamepad_rumble,
             get_mochi_config_info, move_mochi_config, set_mochi_theme, list_user_themes, load_user_theme, clear_mochi_app_data, import_theme,
             fonts::cache_theme_fonts, settings_zip::export_settings_zip, settings_zip::read_settings_zip, settings_zip::install_themes_from_settings_zip,
@@ -371,7 +387,7 @@ fn main() {
             modinstance::rollback_mod_update, modinstance::sync_instance_mods, modinstance::import_mods_from_folder, modlocs::detect_mod_locations,
             modscan::hash_mod_files, modscan::modrinth_identify, modscan::record_instance_mods, modscan::list_instance_records, modscan::copy_instance_records,
             modprofiles::read_tofu_manifest, modprofiles::write_tofu_manifest, modprofiles::restore_instance_records, modprofiles::apply_tofu_mods, nxm::get_nxm_handler, nxm::set_nxm_handler,
-            mochipack::write_mochipack_file, mochipack::read_mochipack_file, librarybackup::write_library_backup, librarybackup::read_library_backup, librarybackup::write_scheduled_library_backup, prefixes::get_prefix_info, prefixes::reset_game_prefix, prefixes::restore_game_prefix, prefixes::delete_game_prefix_backup, prefixes::run_prefix_tool,
+            mochipack::write_mochipack_file, mochipack::read_mochipack_file, librarybackup::write_library_backup, librarybackup::read_library_backup, librarybackup::write_scheduled_library_backup, prefixes::get_prefix_info, prefixes::reset_game_prefix, prefixes::restore_game_prefix, prefixes::delete_game_prefix_backup, prefixes::run_prefix_tool, runtime_installer::list_installed_runtimes, runtime_installer::list_runtime_releases, runtime_installer::install_runtime, runtime_installer::remove_runtime,
             modsnapshot::create_tofu_snapshot, modsnapshot::list_tofu_snapshots, modsnapshot::restore_tofu_snapshot, modsnapshot::delete_tofu_snapshot,
             gamelogs::list_game_logs, gamelogs::read_game_log, gamelogs::clear_game_logs,
             savebackup::list_save_locations, savebackup::create_save_backup, savebackup::list_save_backups, savebackup::restore_save_backup, savebackup::delete_save_backup, savebackup::auto_backup_saves, savebackup::get_save_backup_settings, savebackup::set_save_backup_settings, savesync::get_save_sync_status, savesync::set_save_sync_folder, savesync::sync_saves_now, savesync::remove_save_sync_data,

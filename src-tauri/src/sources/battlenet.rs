@@ -116,10 +116,16 @@ pub fn parse_product_db(bytes: &[u8]) -> Vec<Product> {
 }
 
 fn read_product_db(path: &Path) -> Vec<Product> {
+    if !path.exists() { return Vec::new(); }
+    super::health::examined(path);
     let mut bytes = Vec::new();
     match fs::File::open(path) {
-        Ok(file) if (&file).take(MAX_PRODUCT_DB_BYTES).read_to_end(&mut bytes).is_ok() => parse_product_db(&bytes),
-        _ => Vec::new(),
+        Ok(file) if (&file).take(MAX_PRODUCT_DB_BYTES).read_to_end(&mut bytes).is_ok() => {
+            let products = parse_product_db(&bytes);
+            if products.is_empty() && !bytes.is_empty() { super::health::failed(path, "no products decoded (database format may have changed)"); }
+            products
+        }
+        _ => { super::health::failed(path, "could not be read"); Vec::new() }
     }
 }
 
@@ -268,5 +274,17 @@ pub(crate) mod tests {
         assert_eq!(parse_wine_target("battlenet-wine://%2Fa%2F..%2Fb/WoW"), None);
         assert_eq!(parse_wine_target("battlenet-wine://%2Fa/Wo W"), None);
         assert_eq!(parse_wine_target("battlenet-wine://%2Fhome%2Fme%2Fp/D3"), Some((PathBuf::from("/home/me/p"), "D3".into())));
+    }
+
+    #[test]
+    fn undecodable_product_db_is_reported() {
+        let root = temp_dir("bnet-health");
+        let db = root.join("product.db");
+        fs::write(&db, [0xff; 12]).unwrap();
+        let (games, collector) = crate::sources::health::collect(|| scan_native(&db));
+        assert!(games.is_empty());
+        assert_eq!(collector.failed_paths().len(), 1);
+        let (_, missing) = crate::sources::health::collect(|| scan_native(&root.join("absent.db")));
+        assert!(missing.failed_paths().is_empty());
     }
 }

@@ -19,6 +19,9 @@ pub fn capabilities() -> PlatformCapabilities {
         supports_startup: true,
         supports_system_notifications: true,
         supports_shortcuts: false,
+        supports_runtime_install: false,
+        is_flatpak: false,
+        install_type: "native".into(),
         is_steam_deck: false,
         is_gamescope: false,
     }
@@ -73,6 +76,14 @@ pub fn prepare_launch(target: &str, config: &LaunchConfig) -> Result<Prepared, S
         let mut command = open_command();
         command.args(["-b", launcher.bundle, "--args", "--launch"]).arg(id);
         return Ok(Prepared { command, direct: false });
+    }
+    // A ROM in its emulator: the bundle's own executable is the game process, so playtime is tracked directly.
+    if crate::sources::emulators::parse_target(target).is_some() {
+        let argv = crate::sources::emulators::launch_argv(target, &config.args)?;
+        let mut iter = argv.into_iter();
+        let mut command = Command::new(iter.next().ok_or("Launch target is empty.")?);
+        command.args(iter);
+        return Ok(Prepared { command, direct: true });
     }
     if OPEN_SCHEMES.iter().any(|scheme| target.starts_with(scheme)) {
         let mut command = open_command();
