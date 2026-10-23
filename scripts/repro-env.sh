@@ -11,15 +11,19 @@ cargo_home="${CARGO_HOME:-$HOME/.cargo}"
 sysroot="$(rustc --print sysroot)"
 rustup_home="$(dirname "$(dirname "$sysroot")")"
 
-flags="${RUSTFLAGS:-}"
+# Idempotent: the flags before our first run are remembered, so running this twice never appends twice.
+base="${REPRO_BASE_RUSTFLAGS-${RUSTFLAGS:-}}"
+flags="$base"
 for map in "$root=/build/mochi" "$cargo_home=/build/cargo" "$rustup_home=/build/rustup"; do
   flags="$flags --remap-path-prefix=$map"
 done
 
 if [[ "${1:-}" == "--shell" ]]; then
   echo "export SOURCE_DATE_EPOCH='$epoch'"
+  echo "export REPRO_BASE_RUSTFLAGS='$base'"
   echo "export RUSTFLAGS='${flags# }'"
 else
   echo "SOURCE_DATE_EPOCH=$epoch"
+  echo "REPRO_BASE_RUSTFLAGS=$base"
   echo "RUSTFLAGS=${flags# }"
 fi

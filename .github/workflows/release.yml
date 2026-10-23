@@ -326,8 +326,8 @@ jobs:
           version="${TAG#v}"
           mkdir sbom
           cargo install --locked cargo-cyclonedx --version 0.5.9
-          # Every crate in Cargo.lock that is built into the app, for the platforms we ship.
-          cargo cyclonedx --manifest-path src-tauri/Cargo.toml --format json --spec-version 1.5 \
+          # `--target all` covers every platform, so macOS-only crates are in the SBOM too (not just the Linux host).
+          cargo cyclonedx --manifest-path src-tauri/Cargo.toml --format json --spec-version 1.5 --target all \
             --override-filename "mochi-$version-rust"
           mv "src-tauri/mochi-$version-rust.json" "sbom/mochi-$version-rust.cdx.json"
           # Production dependencies only, read straight from package-lock.json (no install needed).

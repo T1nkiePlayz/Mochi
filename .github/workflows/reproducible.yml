@@ -55,6 +55,8 @@ jobs:
             echo "::group::Build in $dir"
             cd "$dir"
             export SOURCE_DATE_EPOCH="$epoch"
+            # Tag runs: same version sync as the release workflow's prepare job, so Cargo.lock matches under --locked.
+            if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then node scripts/sync-version.mjs "$GITHUB_REF_NAME"; fi
             # Sets RUSTFLAGS with --remap-path-prefix for this checkout, ~/.cargo and the rustup toolchain.
             eval "$(scripts/repro-env.sh --shell)"
             npm ci
