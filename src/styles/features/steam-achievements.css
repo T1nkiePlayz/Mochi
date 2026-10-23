@@ -26,3 +26,9 @@
 @keyframes steam-ach-spin { to { transform: rotate(360deg); } }
 @media (max-width: 560px) { .steam-ach-row { grid-template-columns: 40px minmax(0, 1fr); } .steam-ach-date { grid-column: 2; text-align: left; } }
 @media (prefers-reduced-motion: reduce) { .steam-ach .spin { animation: none; } }
+
+/* RetroAchievements reuses the Steam achievement rows. */
+.ra-ach-actions { display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.ra-ach-stats { display: flex; flex-wrap: wrap; gap: 4px; }
+.ra-ach-row .steam-ach-icon { image-rendering: pixelated; }
+.ra-ach-row.locked .steam-ach-icon { filter: grayscale(.4); }

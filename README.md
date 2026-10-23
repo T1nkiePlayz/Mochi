@@ -112,6 +112,7 @@ Short sounds for navigation, selection, dialogs, launches, downloads and achieve
 - **Steam playtime import**: bring in the playtime Steam already recorded for your games (read from Steam's own local records), so switching launchers does not restart your history.
 - A **Stats** view shows playtime and activity.
 - **77 Mochi achievements** across Playtime, Streaks, Habits, Variety, Library, Explore, Mods and Steam categories, with rarities.
+- **RetroAchievements** progress on a game's page (hardcore and softcore, points, badges, unlock dates) for games you link to a RetroAchievements game, using your own Web API key kept only on your device. See [docs/retroachievements.md](docs/retroachievements.md).
 - **Cloud saving** of achievements is a per-device toggle in Settings > Achievements (needs sign-in with cloud sync on); the same section can clear achievements data, locally and in the cloud.
 - **Steam achievements** per game, read from your local Steam account and public profile (optionally with your own Web API key, kept only on your device). See [docs/improvements/achievements.md](docs/improvements/achievements.md).
 
@@ -307,7 +308,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] Emulator and ROM libraries (RetroArch, Dolphin, PCSX2 and others) with ROM folder scanning
 - [ ] Plugins out of Experimental, including plugins that add new game sources
 - [ ] Discord Rich Presence
-- [ ] RetroAchievements support
+- [x] RetroAchievements support
 - [ ] Per-game controller profiles for games that do not go through Steam Input
 - [ ] Flathub package
 - [ ] Release SBOM and reproducible builds
