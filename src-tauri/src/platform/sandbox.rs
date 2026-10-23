@@ -59,6 +59,20 @@ pub fn host_command(command: Command) -> Command {
     if is_flatpak() { wrap(&command) } else { command }
 }
 
+/// Shown when a sandboxed game ignores the stop request: SIGKILL cannot cross `flatpak-spawn`.
+pub fn stuck_stop_notice() -> String {
+    "The game did not quit when asked and may still be running. Mochi cannot force-stop programs on the host from the Flatpak; close it from the game or your system's task manager.".into()
+}
+
+/// Message for a hook that outlived its time limit.
+pub fn hook_timeout_message(program: &str, limit_secs: u64, abandoned: bool) -> String {
+    if abandoned {
+        format!("\"{program}\" took longer than {limit_secs} seconds and did not stop when asked; Mochi left it running on the host (it was not killed).")
+    } else {
+        format!("\"{program}\" took longer than {limit_secs} seconds and was stopped.")
+    }
+}
+
 /// Finds `name` on the host's PATH from inside the sandbox.
 pub fn host_command_path(name: &str) -> Option<PathBuf> {
     if name.is_empty() || !name.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | '+')) { return None; }
@@ -105,6 +119,12 @@ mod tests {
         let mut command = Command::new("xdg-open");
         command.arg("https://example.com");
         assert_eq!(argv(&wrap(&command)), ["flatpak-spawn", "--host", "xdg-open", "https://example.com"]);
+    }
+
+    #[test]
+    fn hook_timeout_messages_distinguish_abandoned_hooks() {
+        assert!(hook_timeout_message("x", 5, false).ends_with("was stopped."));
+        assert!(hook_timeout_message("x", 5, true).contains("not killed"));
     }
 
     #[test]

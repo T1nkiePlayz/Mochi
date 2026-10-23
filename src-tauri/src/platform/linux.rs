@@ -322,7 +322,9 @@ pub fn ensure_platform_integration() -> Result<(), String> {
     fs::write(applications.join(format!("{handler_name}-handler.desktop")), handler_content).map_err(|e| format!("Unable to update Mochi URL handler: {e}"))?;
 
     if command_exists("update-desktop-database") {
-        let _ = Command::new("update-desktop-database").arg(&applications).status();
+        let mut command = Command::new("update-desktop-database");
+        command.arg(&applications);
+        let _ = super::sandbox::host_command(command).status();
     }
     Ok(())
 }

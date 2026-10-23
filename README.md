@@ -150,6 +150,7 @@ Background check 10 seconds after start and every 6 hours (Settings > Updates > 
 
 ### Linux and macOS integration
 - **Flatpak** manifest and sandbox support (host launches through `flatpak-spawn`; [docs/flatpak.md](docs/flatpak.md)).
+
 Application-menu shortcuts (`mochi://launch/<id>`), start at login, tray icon, managed AppImage copy and `mochi://` handler on Linux; LaunchAgent, Dock reopen and menu-bar hiding on macOS. Experimental opt-in features live in Settings > Experimental ([docs/experimental-features.md](docs/experimental-features.md)).
 
 ## Screenshots

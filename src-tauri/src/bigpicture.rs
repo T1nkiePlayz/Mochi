@@ -248,6 +248,7 @@ fn linux_env() -> LinuxPower {
 fn login1_can(method: &str) -> Option<bool> {
     if !crate::platform::command_exists("busctl") { return None; }
     let mut command = std::process::Command::new("busctl");
+    // `run_capture` runs this on the host when sandboxed.
     command.args(["--system", "call", "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", method]);
     crate::platform::run_capture(command, Duration::from_secs(2)).and_then(|bytes| parse_login1_can(&String::from_utf8_lossy(&bytes)))
 }
@@ -278,7 +279,9 @@ pub fn get_power_capabilities() -> PowerCapabilities {
 #[tauri::command(async)]
 pub fn power_action(action: PowerAction) -> Result<(), String> {
     let Some(command) = power_command(action) else { return Err(format!("This system cannot {} from Mochi.", action.verb())) };
-    let output = std::process::Command::new(command.program).args(&command.args).output()
+    let mut host = std::process::Command::new(command.program);
+    host.args(&command.args);
+    let output = crate::platform::sandbox::host_command(host).output()
         .map_err(|error| format!("Unable to {}: {error}", action.verb()))?;
     if output.status.success() { return Ok(()); }
     let text = format!("{}\n{}", String::from_utf8_lossy(&output.stderr), String::from_utf8_lossy(&output.stdout));
