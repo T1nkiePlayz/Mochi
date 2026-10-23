@@ -5,7 +5,7 @@ Mochi reads other launchers' local files (Steam, Heroic, Epic, Lutris, itch.io a
 ## Where
 - Settings > Library tools > **Source health**: press **Run check**. Each launcher gets a status pill and an expandable list of files examined and failures with a short reason. Launchers that are not installed are hidden.
 - After an import scan (or the background library watcher) one notification names launchers that are unreadable or partly unreadable, or that went from having games to none while their files still exist. The same problem is announced once, not on every re-scan.
-- **Copy debug info** (Settings > Data) includes a "Source health" section.
+- **Copy debug info** (Settings > Data) includes a "Source health" section from the last report; it only runs a check when none exists, and never raises a notification.
 
 ## Statuses
 - `ok`: files read, games found.
@@ -23,4 +23,4 @@ Mochi reads other launchers' local files (Steam, Heroic, Epic, Lutris, itch.io a
 ## Limits
 - A launcher that silently changes semantics but keeps a readable format is not detected.
 - Launcher CLIs (Lutris, Bottles) are checked by their output, not by files.
-- Battle.net, GOG Galaxy and Prism paths are not checked in detail on macOS.
+- The macOS-only checks (Whisky, Battle.net, GOG Galaxy) are cfg-gated and were only compiled for Linux; they are untested on real macOS hardware.

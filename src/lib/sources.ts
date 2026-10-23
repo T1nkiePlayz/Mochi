@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ImportSourceId } from "../models";
-import { noteSourceHealth } from "./sourceHealth";
+import { noteSourceHealth, saveSourceReport } from "./sourceHealth";
 
 export type { ImportSourceId };
 
@@ -55,7 +55,10 @@ export type MinecraftScan = { version?: string | null; loader: string; gameDir: 
 export const detectImportSources = () => invoke<DetectedImportSource[]>("detect_import_sources").then((sources) => { noteSourceHealth(sources); return sources; });
 
 /** Re-scans every source and reports how readable each one's files were. */
-export const scannerHealth = () => invoke<SourceHealth[]>("scanner_health").then((report) => { noteSourceHealth(report.map((health) => ({ health }))); return report; });
+export const scannerHealth = (options: { notify?: boolean } = {}) => invoke<SourceHealth[]>("scanner_health").then((report) => {
+  if (options.notify === false) saveSourceReport(report); else noteSourceHealth(report.map((health) => ({ health })));
+  return report;
+});
 
 export const scanImportGames = (source: ImportSourceId, libraryPath?: string) =>
   invoke<ImportedGame[]>("scan_import_games", { source, libraryPath: libraryPath ?? null });

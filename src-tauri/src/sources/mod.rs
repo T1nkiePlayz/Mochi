@@ -878,14 +878,14 @@ mod tests {
         let apps = home.join("steamapps");
         write(&apps.join("libraryfolders.vdf"), "\u{0}garbage that is not vdf");
         write(&apps.join("appmanifest_1.acf"), "\"AppState\" { \"appid\" \"1\" }");
-        let (status, collector) = health_of(|| scan_steam(&[home.clone()], false), |games| games.len());
+        let (status, collector) = health_of(|| scan_steam(std::slice::from_ref(&home), false), |games| games.len());
         assert_eq!(status, health::HealthStatus::ParseError);
         assert_eq!(collector.failed_paths().len(), 2);
 
         // One good manifest next to the bad one makes it partial.
         fs::create_dir_all(apps.join("common/Good")).unwrap();
         write(&apps.join("appmanifest_2.acf"), "\"AppState\"\n{\n\t\"appid\"\t\t\"2\"\n\t\"name\"\t\t\"Good\"\n\t\"installdir\"\t\t\"Good\"\n}");
-        let (status, result) = { let (r, c) = health::collect(|| scan_steam(&[home.clone()], false)); (health::status(&c, r.iter().filter(|g| g.kind == ImportKind::Game).count(), true), r) };
+        let (status, result) = { let (r, c) = health::collect(|| scan_steam(std::slice::from_ref(&home), false)); (health::status(&c, r.iter().filter(|g| g.kind == ImportKind::Game).count(), true), r) };
         assert_eq!(status, health::HealthStatus::Partial);
         assert!(result.iter().any(|game| game.id == "steam:2"));
     }
@@ -896,7 +896,7 @@ mod tests {
         let apps = home.join("steamapps");
         fs::create_dir_all(apps.join("common/Good")).unwrap();
         write(&apps.join("appmanifest_2.acf"), "\"AppState\"\n{\n\t\"appid\"\t\t\"2\"\n\t\"name\"\t\t\"Good\"\n\t\"installdir\"\t\t\"Good\"\n}");
-        let (status, _) = health_of(|| scan_steam(&[home.clone()], false), |games| games.iter().filter(|g| g.kind == ImportKind::Game).count());
+        let (status, _) = health_of(|| scan_steam(std::slice::from_ref(&home), false), |games| games.iter().filter(|g| g.kind == ImportKind::Game).count());
         assert_eq!(status, health::HealthStatus::Ok);
     }
 
@@ -904,7 +904,7 @@ mod tests {
     fn heroic_broken_and_unrecognised_installed_json_are_reported() {
         let home = temp_dir("health-heroic");
         write(&home.join("legendaryConfig/legendary/installed.json"), "{ not json");
-        let (status, collector) = health_of(|| scan_heroic(&[home.clone()]), |games| games.len());
+        let (status, collector) = health_of(|| scan_heroic(std::slice::from_ref(&home)), |games| games.len());
         assert_eq!(status, health::HealthStatus::ParseError);
         assert_eq!(collector.failed_paths().len(), 1);
 
@@ -913,7 +913,7 @@ mod tests {
         let game = home.join("Games/Celeste");
         fs::create_dir_all(&game).unwrap();
         write(&home.join("gog_store/installed.json"), &format!("{{\"installed\": [{{\"appName\": \"a\", \"install_path\": {:?}}}]}}", game.to_string_lossy()));
-        let (status, collector) = health_of(|| scan_heroic(&[home.clone()]), |games| games.len());
+        let (status, collector) = health_of(|| scan_heroic(std::slice::from_ref(&home)), |games| games.len());
         assert_eq!(status, health::HealthStatus::Partial);
         assert!(collector.failed_paths()[0].ends_with("legendary/installed.json"));
     }
@@ -923,14 +923,14 @@ mod tests {
         use std::io::Write;
         let home = temp_dir("health-itch");
         write(&home.join("apps/a/.itch/receipt.json.gz"), "this is not gzip");
-        let (status, _) = health_of(|| scan_itch_with(&[home.clone()], false), |games| games.len());
+        let (status, _) = health_of(|| scan_itch_with(std::slice::from_ref(&home), false), |games| games.len());
         assert_eq!(status, health::HealthStatus::ParseError);
 
         let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
         encoder.write_all(b"{\"game\": {\"id\": 7, \"title\": \"Seven\"}}").unwrap();
         fs::create_dir_all(home.join("apps/b/.itch")).unwrap();
         fs::write(home.join("apps/b/.itch/receipt.json.gz"), encoder.finish().unwrap()).unwrap();
-        let (status, _) = health_of(|| scan_itch_with(&[home.clone()], false), |games| games.len());
+        let (status, _) = health_of(|| scan_itch_with(std::slice::from_ref(&home), false), |games| games.len());
         assert_eq!(status, health::HealthStatus::Partial);
     }
 
