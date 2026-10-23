@@ -1,0 +1,6 @@
+# Pinned so release builds are reproducible. CI and the release workflow install the same version
+# (dtolnay/rust-toolchain with `toolchain: 1.99.1`). Bump all of them together.
+[toolchain]
+channel = "1.99.1"
+profile = "minimal"
+components = ["clippy", "rustfmt"]

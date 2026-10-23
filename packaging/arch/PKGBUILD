@@ -23,7 +23,7 @@ build() {
   cd "$_name-$pkgver"
   npm ci
   npm run build
-  cargo build --release --manifest-path src-tauri/Cargo.toml
+  cargo build --release --locked --manifest-path src-tauri/Cargo.toml
 }
 
 package() {

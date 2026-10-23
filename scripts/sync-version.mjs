@@ -24,3 +24,13 @@ if (updated === cargo && !cargo.includes(`version = "${version}"`)) {
   process.exit(1);
 }
 writeFileSync(cargoPath, updated);
+
+// Keep Cargo.lock in step so release builds can use `cargo build --locked`.
+const lockPath = "src-tauri/Cargo.lock";
+const lock = readFileSync(lockPath, "utf8");
+const lockUpdated = lock.replace(/(^name = "mochi"\nversion = ")[^"]+(")/m, `$1${version}$2`);
+if (!/^name = "mochi"\nversion = "/m.test(lock)) {
+  console.error("Could not find the mochi package in src-tauri/Cargo.lock");
+  process.exit(1);
+}
+writeFileSync(lockPath, lockUpdated);

@@ -55,6 +55,16 @@ gh attestation verify <file> --repo T1nkiePlayz/Mochi
 
 This checks a signature from GitHub that ties the file to this repository's `release.yml` workflow and the tagged commit.
 
+## 4. Software bill of materials (SBOM)
+
+Each release also carries two CycloneDX 1.5 SBOMs, `mochi-<version>-rust.cdx.json` (Rust crates from `Cargo.lock`) and `mochi-<version>-npm.cdx.json` (production npm packages from `package-lock.json`). They are listed in `SHA256SUMS.txt`, have `.asc` signatures like every other file, and are attached to the packages as SBOM attestations:
+
+```bash
+gh attestation verify <file> --repo T1nkiePlayz/Mochi --predicate-type https://cyclonedx.org/bom
+```
+
+How builds are made reproducible is described in [reproducible-builds.md](reproducible-builds.md).
+
 ---
 
 ## For maintainers: one-time GPG key setup
