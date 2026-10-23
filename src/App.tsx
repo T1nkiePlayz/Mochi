@@ -21,6 +21,7 @@ import { OfflineBanner } from "./components/OfflineBanner";
 import { useTranslation } from "./lib/useTranslation";
 import { commitWhenLocaleReady } from "./lib/i18n";
 import { applyLauncherLanguage } from "./lib/languages";
+import { PathRemapHost } from "./components/library/PathRemapDialog";
 
 // Dialogs only mount when opened, so their code (and the pickers/editors behind them) stays out of the entry chunk.
 const AddGameModals = lazy(() => import("./components/AddGameModals").then((m) => ({ default: m.AddGameModals })));
@@ -150,5 +151,5 @@ export default function App() {
       activeContainer?.classList.remove("is-scrolling");
     };
   }, []);
-  return <AccessibilityProvider><AppProvider><ControllerRuntime /><BigPictureGate><Shell /></BigPictureGate><ShortcutsHelp /><GameSearch /><CommandPalette /></AppProvider></AccessibilityProvider>;
+  return <AccessibilityProvider><AppProvider><ControllerRuntime /><BigPictureGate><Shell /></BigPictureGate><ShortcutsHelp /><GameSearch /><CommandPalette /><PathRemapHost /></AppProvider></AccessibilityProvider>;
 }

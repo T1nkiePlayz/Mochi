@@ -19,6 +19,7 @@ pub fn capabilities() -> PlatformCapabilities {
         supports_startup: true,
         supports_system_notifications: true,
         supports_shortcuts: false,
+        supports_runtime_install: false,
         is_steam_deck: false,
         is_gamescope: false,
     }

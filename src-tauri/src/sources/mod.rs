@@ -664,6 +664,15 @@ fn take_prescan(source: &str) -> Option<Vec<ImportedGame>> {
     (at.elapsed() < PRESCAN_TTL).then_some(games)
 }
 
+/// Whether each path exists (a cheap metadata call per path; directories are not read). Entries that are not absolute
+/// local paths (launcher URIs, desktop ids, empty text) are reported as existing so they are never flagged as missing.
+pub fn paths_exist(paths: &[String]) -> Vec<bool> {
+    paths.iter().map(|path| {
+        let path = path.trim();
+        !Path::new(path).is_absolute() || std::fs::metadata(path).is_ok()
+    }).collect()
+}
+
 pub fn scan_import_games(source: &str, library_path: Option<String>) -> Vec<ImportedGame> {
     let Some(home) = home_dir() else { return Vec::new() };
     let manual = library_path.as_deref().map(str::trim).filter(|path| !path.is_empty()).map(PathBuf::from).filter(|path| path.is_absolute());
@@ -836,6 +845,26 @@ mod tests {
         assert_eq!(read(&dir.join("latin1.acf")).as_deref(), Some("\"\u{FFFD}\""));
         assert!(read(&dir.join("missing")).is_none());
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn paths_exist_checks_local_paths_only() {
+        let dir = std::env::temp_dir().join(format!("mochi-paths-exist-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let file = dir.join("game.sh");
+        std::fs::write(&file, "x").expect("file");
+        let missing = dir.join("gone");
+        let input = vec![
+            file.to_string_lossy().into_owned(),
+            dir.to_string_lossy().into_owned(),
+            missing.to_string_lossy().into_owned(),
+            "steam://rungameid/620".to_owned(),
+            "flatpak://org.test.App".to_owned(),
+            String::new(),
+        ];
+        assert_eq!(paths_exist(&input), vec![true, true, false, true, true, true]);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

@@ -44,6 +44,8 @@ pub struct PlatformCapabilities {
     pub supports_startup: bool,
     pub supports_system_notifications: bool,
     pub supports_shortcuts: bool,
+    /// Can install Proton-GE / Wine-GE from inside Mochi.
+    pub supports_runtime_install: bool,
     /// Running on a Steam Deck (or SteamOS handheld).
     pub is_steam_deck: bool,
     /// Running inside a gamescope session (Steam Gaming Mode).
@@ -410,6 +412,12 @@ pub fn capabilities() -> PlatformCapabilities {
     PlatformCapabilities { is_steam_deck: crate::bigpicture::is_steam_deck(), is_gamescope: crate::bigpicture::is_gamescope(), ..os::capabilities() }
 }
 pub fn list_runtimes() -> Vec<RuntimeInfo> { os::list_runtimes() }
+
+/// Steam's install folder, if there is one.
+pub fn steam_root() -> Option<PathBuf> { os::steam_root() }
+
+/// Wine runtimes (plain `wine` or a Mochi-installed Wine-GE, id `wine:<path>`) run the program directly; anything else is Proton.
+pub fn is_wine_runtime(id: &str) -> bool { id == "wine" || id.starts_with("wine:") }
 
 /// Runs `work` with the real tool lookups (PATH, detected runtimes, the Steam root).
 pub fn with_system_tools<R>(work: impl FnOnce(&launchopts::Tools) -> R) -> R {
