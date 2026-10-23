@@ -65,6 +65,7 @@ import { libraryDialogsMessages } from "./i18nLibraryDialogs";
 import { libraryFilterMessages } from "./i18nLibraryFilters";
 import { uiSmallMessages } from "./i18nUiSmall";
 import { duplicateMessages } from "./i18nDuplicates";
+import { saveSyncMessages } from "./i18nSaveSync";
 import { libraryStatusMessages } from "./i18nLibraryStatus";
 import { completePhraseMessages } from "./i18nCompletePhrases";
 import { navigationActionMessages } from "./i18nNavigationActions";
@@ -181,7 +182,7 @@ export const catalogues: Catalogue[] = [auditMessages, settingsRecentMessages, r
     libraryFilterMessages, uiSmallMessages, duplicateMessages, libraryStatusMessages,
     completePhraseMessages, navigationActionMessages, launchProfileMessages, savedFilterMessages,
     editFilterMessages, launchHelpMessages, longUiHelpMessages, pickerGuidanceMessages,
-    smartFilterMessages, installedMessages, statsMessages, metadataMessages];
+    smartFilterMessages, installedMessages, statsMessages, metadataMessages, saveSyncMessages];
 
 let mergedIndex: Map<string, Record<string, string>> | null = null;
 

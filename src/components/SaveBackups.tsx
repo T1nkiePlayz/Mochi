@@ -120,7 +120,7 @@ function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }
               {expanded === location.key && <ul className="save-backups-versions" aria-label={t("Save backups")}>
                 {(backups[location.key] ?? []).length === 0 && <li className="muted">{t("No backups yet.")}</li>}
                 {(backups[location.key] ?? []).map((backup) => <li key={backup.id}>
-                  <span>{when(backup.createdAt)}</span><span className="chip">{BACKUP_KIND_LABEL[backup.kind]}</span><small className="muted">{formatBytes(backup.size)} · {backup.files} file{backup.files === 1 ? "" : "s"}</small>
+                  <span>{when(backup.createdAt)}</span><span className="chip">{BACKUP_KIND_LABEL[backup.kind]}</span>{backup.origin && <span className="chip">{t("From {device}").replace("{device}", backup.device || t("another device"))}</span>}<small className="muted">{formatBytes(backup.size)} · {backup.files} file{backup.files === 1 ? "" : "s"}</small>
                   <span className="save-backups-actions">
                     <button type="button" className="secondary-button" onClick={() => void restore(location, backup)} disabled={running || busy === location.key} title={running ? t("Close the game before restoring") : undefined}><RotateCcw size={13} /> {t("Restore")}</button>
                     <button type="button" className="icon-button" aria-label={t("Delete backup")} title={t("Delete backup")} onClick={() => void remove(location, backup)}><Trash2 size={15} /></button>

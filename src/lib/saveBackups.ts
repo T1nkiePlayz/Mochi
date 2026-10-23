@@ -4,8 +4,8 @@ import { MINECRAFT_PIKO_ID } from "./minecraftPiko";
 import { steamAppIdOf } from "./metadata/merge";
 
 export type SaveHints = { steamAppId: number | null; folders: string[]; instances: Array<{ id: string; name: string; contentRoot: string }> };
-export type SaveLocation = { key: string; kind: "minecraft" | "steam" | "custom"; label: string; group: string | null; path: string; /** The folder as the user added it (custom folders). */ source: string | null; problem: string | null; backups: number; lastBackup: number | null; backupBytes: number };
-export type BackupInfo = { id: string; locationKey: string; createdAt: number; size: number; entries: number; files: number; kind: "manual" | "auto" | "safety"; fingerprint: string };
+export type SaveLocation = { key: string; kind: "minecraft" | "steam" | "custom"; label: string; group: string | null; path: string; /** The folder as the user added it (custom folders). */ source: string | null; problem: string | null; backups: number; lastBackup: number | null; backupBytes: number; /** Same on every device (save sync). */ syncKey: string; /** The newest snapshot, when another device took it and it is newer than anything taken here. */ remoteNewer: BackupInfo | null };
+export type BackupInfo = { id: string; locationKey: string; createdAt: number; size: number; entries: number; files: number; kind: "manual" | "auto" | "safety"; fingerprint: string; syncId: string; /** Id of the device that took an imported snapshot ("" when made here). */ origin: string; /** Name of that device. */ device: string };
 export type BackupResult = { backup: BackupInfo | null; skipped: "unchanged" | "empty" | null };
 export type RestoreResult = { safety: BackupInfo | null; files: number };
 export type AutoSummary = { created: number; unchanged: number; failed: number; firstError: string | null };

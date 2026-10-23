@@ -4,7 +4,7 @@ import type { Piko } from "../models";
 import { addFolder, autoBackupEnabled, closedGames, describeAuto, describeResult, groupLocations, hasSaveSources, removeFolder, saveHints, type SaveLocation } from "./saveBackups";
 
 const piko = (over: Partial<Piko>): Piko => ({ id: "g", name: "Game", description: "", accent: "#000", artwork: "", tofus: [], ...over });
-const location = (over: Partial<SaveLocation>): SaveLocation => ({ key: "k", kind: "custom", label: "L", group: null, path: "/p", source: null, problem: null, backups: 0, lastBackup: null, backupBytes: 0, ...over });
+const location = (over: Partial<SaveLocation>): SaveLocation => ({ key: "k", kind: "custom", label: "L", group: null, path: "/p", source: null, problem: null, backups: 0, lastBackup: null, backupBytes: 0, syncKey: "", remoteNewer: null, ...over });
 
 describe("save backup hints", () => {
   it("lists Minecraft instances with a game folder", () => {

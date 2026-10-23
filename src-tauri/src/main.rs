@@ -28,6 +28,7 @@ mod shortcuts;
 mod playtime;
 mod process;
 mod savebackup;
+mod savesync;
 mod sharecard;
 mod sources;
 mod soundpacks;
@@ -373,7 +374,7 @@ fn main() {
             mochipack::write_mochipack_file, mochipack::read_mochipack_file, librarybackup::write_library_backup, librarybackup::read_library_backup, librarybackup::write_scheduled_library_backup, prefixes::get_prefix_info, prefixes::reset_game_prefix, prefixes::restore_game_prefix, prefixes::delete_game_prefix_backup, prefixes::run_prefix_tool,
             modsnapshot::create_tofu_snapshot, modsnapshot::list_tofu_snapshots, modsnapshot::restore_tofu_snapshot, modsnapshot::delete_tofu_snapshot,
             gamelogs::list_game_logs, gamelogs::read_game_log, gamelogs::clear_game_logs,
-            savebackup::list_save_locations, savebackup::create_save_backup, savebackup::list_save_backups, savebackup::restore_save_backup, savebackup::delete_save_backup, savebackup::auto_backup_saves, savebackup::get_save_backup_settings, savebackup::set_save_backup_settings,
+            savebackup::list_save_locations, savebackup::create_save_backup, savebackup::list_save_backups, savebackup::restore_save_backup, savebackup::delete_save_backup, savebackup::auto_backup_saves, savebackup::get_save_backup_settings, savebackup::set_save_backup_settings, savesync::get_save_sync_status, savesync::set_save_sync_folder, savesync::sync_saves_now, savesync::remove_save_sync_data,
             selfinstall::self_install_status, selfinstall::self_install_verify, selfinstall::self_install_apply, selfinstall::self_install_skip,
         ])
         .build(tauri::generate_context!())
