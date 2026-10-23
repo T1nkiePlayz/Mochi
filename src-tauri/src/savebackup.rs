@@ -28,7 +28,7 @@ const BUF: usize = 64 * 1024;
 /// Folders that are never a save location, compared lowercase (macOS file systems are case-insensitive).
 const SYSTEM_DIRS: &[&str] = &[
     "/", "/bin", "/boot", "/dev", "/etc", "/home", "/lib", "/lib64", "/mnt", "/media", "/opt", "/proc", "/root", "/run", "/sbin", "/srv", "/sys", "/tmp",
-    "/usr", "/var", "/users", "/applications", "/library", "/system", "/volumes", "/private", "/cores", "/network",
+    "/usr", "/var", "/users", "/applications", "/library", "/system", "/volumes", "/private", "/private/etc", "/private/var", "/private/tmp", "/cores", "/network",
 ];
 
 /// One backup, as listed and as stored in the index.
