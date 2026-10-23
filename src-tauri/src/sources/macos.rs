@@ -3,7 +3,7 @@
 //! unit-tested on Linux as well; only the roots below are macOS specific.
 #![cfg_attr(not(target_os = "macos"), allow(dead_code))]
 
-use super::{battlenet, classify, gog, icons, launchers::{self, DetectedLauncher, Env, Memo, Method}, make, prism, make_launcher, scan_epic_manifests, sort_games, ImportKind, ImportedGame, SourceDef};
+use super::{battlenet, classify, gog, health, icons, launchers::{self, DetectedLauncher, Env, Memo, Method}, make, prism, make_launcher, scan_epic_manifests, sort_games, ImportKind, ImportedGame, SourceDef};
 use crate::platform::command_path;
 use std::{
     fs,
@@ -187,7 +187,13 @@ fn scan_whisky(bottles: &Path) -> Vec<ImportedGame> {
     let Ok(entries) = fs::read_dir(bottles) else { return Vec::new() };
     let mut out = Vec::new();
     for bottle in entries.flatten() {
-        let Ok(metadata) = plist::Value::from_file(bottle.path().join("Metadata.plist")) else { continue };
+        let file = bottle.path().join("Metadata.plist");
+        if !file.exists() { continue; }
+        health::examined(&file);
+        let metadata = match plist::Value::from_file(&file) {
+            Ok(metadata) => metadata,
+            Err(error) => { health::failed(&file, format!("invalid plist: {error}")); continue }
+        };
         out.extend(whisky_pins(&bottle.file_name().to_string_lossy(), &metadata));
     }
     sort_games(out)
@@ -212,6 +218,11 @@ pub fn scan_extra(source: &str, home: &Path) -> Vec<ImportedGame> {
 mod tests {
     use super::*;
     use crate::sources::{testutil::temp_dir, ImportKind};
+
+    fn write_plist_garbage(path: &Path) {
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, "not a plist").unwrap();
+    }
 
     fn info(extra: &str) -> plist::Value {
         let xml = format!(r#"<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict>{extra}</dict></plist>"#);
@@ -300,6 +311,10 @@ mod tests {
         metadata.to_file_xml(bottle.join("Metadata.plist")).unwrap();
         assert_eq!(scan_whisky(&root.join("Bottles")).len(), 1);
         assert!(scan_whisky(&root.join("nothing-here")).is_empty());
+        write_plist_garbage(&root.join("Bottles/Broken/Metadata.plist"));
+        let (games, collector) = health::collect(|| scan_whisky(&root.join("Bottles")));
+        assert_eq!(games.len(), 1);
+        assert_eq!(collector.failed_paths().len(), 1);
         let _ = fs::remove_dir_all(&root);
     }
 

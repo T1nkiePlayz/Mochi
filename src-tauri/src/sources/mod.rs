@@ -29,6 +29,7 @@ use macos as os;
 pub mod battlenet;
 pub mod classify;
 pub mod gog;
+pub mod health;
 pub mod icons;
 pub mod launchers;
 pub mod mccopy;
@@ -54,6 +55,8 @@ pub struct DetectedImportSource {
     pub installed: bool,
     pub game_count: Option<u32>,
     pub launcher_count: Option<u32>,
+    /// What the scan could and could not read (see `health`).
+    pub health: health::SourceHealth,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Serialize, Debug)]
@@ -125,7 +128,17 @@ pub(crate) fn read(path: &Path) -> Option<String> {
     Some(String::from_utf8_lossy(&bytes).into_owned())
 }
 
-fn json(path: &Path) -> Option<Value> { serde_json::from_str(&read(path)?).ok() }
+/// Parses a JSON file. A missing file is just absent; one that exists but cannot be read or parsed is
+/// recorded in the scan's health report.
+fn json(path: &Path) -> Option<Value> {
+    if !path.exists() { return None; }
+    health::examined(path);
+    let Some(text) = read(path) else { health::failed(path, "could not be read"); return None };
+    match serde_json::from_str(&text) {
+        Ok(value) => Some(value),
+        Err(error) => { health::failed(path, format!("invalid JSON: {error}")); None }
+    }
+}
 
 fn string(value: &Value, keys: &[&str]) -> Option<String> {
     let object = value.as_object()?;
@@ -174,7 +187,16 @@ fn steam_libraries(steam_roots: &[PathBuf]) -> Vec<PathBuf> {
         let apps = root.join("steamapps");
         if !apps.is_dir() { continue; }
         let mut candidates = vec![apps.clone()];
-        if let Some(text) = read(&apps.join("libraryfolders.vdf")) {
+        let folders = apps.join("libraryfolders.vdf");
+        if folders.exists() {
+            health::examined(&folders);
+            match read(&folders) {
+                None => health::failed(&folders, "could not be read"),
+                Some(text) if !text.trim().is_empty() && vdf::library_paths(&text).is_empty() => health::failed(&folders, "no library folders found in file"),
+                Some(_) => {}
+            }
+        }
+        if let Some(text) = read(&folders) {
             candidates.extend(vdf::library_paths(&text).into_iter().map(|path| PathBuf::from(path).join("steamapps")));
         }
         for candidate in candidates {
@@ -193,9 +215,10 @@ fn scan_steam_library(apps: &Path, seen: &mut HashSet<String>, out: &mut Vec<Imp
         let path = entry.path();
         let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         if !name.starts_with("appmanifest_") || path.extension().and_then(|e| e.to_str()) != Some("acf") { continue; }
-        let Some(text) = read(&path) else { continue };
+        health::examined(&path);
+        let Some(text) = read(&path) else { health::failed(&path, "could not be read"); continue };
         let find = |key: &str| text.lines().find_map(|line| vdf::quoted_value(line, key));
-        let (Some(id), Some(title), Some(dir)) = (find("appid"), find("name"), find("installdir")) else { continue };
+        let (Some(id), Some(title), Some(dir)) = (find("appid"), find("name"), find("installdir")) else { health::failed(&path, "missing appid, name or installdir"); continue };
         // Steam's own tooling (Proton, runtimes) is installed like a game but is not one.
         if !id.bytes().all(|b| b.is_ascii_digit()) || title.starts_with("Proton ") || title.starts_with("Steam Linux Runtime") || title.starts_with("Steamworks Common") { continue; }
         let install = apps.join("common").join(&dir);
@@ -212,7 +235,10 @@ fn scan_steam_shortcuts(steam_roots: &[PathBuf]) -> Vec<ImportedGame> {
     for root in steam_roots {
         let Ok(users) = fs::read_dir(root.join("userdata")) else { continue };
         for user in users.flatten() {
-            let Ok(data) = fs::read(user.path().join("config/shortcuts.vdf")) else { continue };
+            let shortcuts_file = user.path().join("config/shortcuts.vdf");
+            let Ok(data) = fs::read(&shortcuts_file) else { continue };
+            health::examined(&shortcuts_file);
+            if vdf::parse_tree(&data).is_none() { health::failed(&shortcuts_file, "not a valid binary VDF file"); }
             for shortcut in vdf::parse_shortcuts(&data) {
                 if !seen.insert(shortcut.app_id) { continue; }
                 // Steam addresses non-Steam shortcuts by (appid << 32) | 0x02000000.
@@ -287,6 +313,15 @@ fn heroic_installs(value: &Value, default_runner: &str, loose: bool, depth: usiz
     }
 }
 
+/// `heroic_installs`, plus a health note when a non-empty install list yields nothing recognisable
+/// (the file parsed, but its keys changed). Sideload libraries are exempt: they list uninstalled games too.
+fn checked_installs(path: &Path, value: &Value, runner: &str, loose: bool, out: &mut Vec<HeroicInstall>) {
+    let before = out.len();
+    heroic_installs(value, runner, loose, 0, out);
+    let has_entries = match value { Value::Array(items) => !items.is_empty(), Value::Object(object) => !object.is_empty(), _ => true };
+    if runner != "sideload" && has_entries && out.len() == before { health::failed(path, "no recognisable install entries (file format may have changed)"); }
+}
+
 /// Collects `app name -> title` pairs from Heroic's library caches.
 fn heroic_titles(value: &Value, depth: usize, out: &mut std::collections::HashMap<String, String>) {
     if depth > 8 { return; }
@@ -319,7 +354,8 @@ fn scan_heroic(roots: &[PathBuf]) -> Vec<ImportedGame> {
         for file in HEROIC_LIBRARY_FILES { if let Some(value) = json(&root.join(file)) { heroic_titles(&value, 0, &mut titles); } }
         let mut installs = Vec::new();
         for (file, runner, loose) in HEROIC_INSTALL_FILES {
-            if let Some(value) = json(&root.join(file)) { heroic_installs(&value, runner, loose, 0, &mut installs); }
+            let path = root.join(file);
+            if let Some(value) = json(&path) { checked_installs(&path, &value, runner, loose, &mut installs); }
         }
         if let Ok(entries) = fs::read_dir(root.join("GamesConfig")) {
             for entry in entries.flatten().filter(|e| e.path().extension().and_then(|x| x.to_str()) == Some("json")) {
@@ -363,7 +399,8 @@ fn scan_store_cli(roots: &[PathBuf], source: &str, runner: &str, loose: bool, ta
     let mut seen = HashSet::new();
     for root in roots.iter().filter(|root| root.is_dir()) {
         let mut installs = Vec::new();
-        if let Some(value) = json(&root.join("installed.json")) { heroic_installs(&value, runner, loose, 0, &mut installs); }
+        let file = root.join("installed.json");
+        if let Some(value) = json(&file) { checked_installs(&file, &value, runner, loose, &mut installs); }
         for install in installs {
             let safe = !install.id.is_empty() && install.id.len() <= 128 && install.id.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | ':'));
             if !safe || !Path::new(&install.path).is_dir() { continue; }
@@ -407,7 +444,13 @@ fn scan_epic_manifests(dir: &Path) -> Vec<ImportedGame> {
     let mut seen = HashSet::new();
     let games = entries.flatten()
         .filter(|entry| entry.path().extension().and_then(|ext| ext.to_str()) == Some("item"))
-        .filter_map(|entry| read(&entry.path()).and_then(|text| parse_epic_manifest(&text)))
+        .filter_map(|entry| {
+            let path = entry.path();
+            health::examined(&path);
+            let Some(text) = read(&path) else { health::failed(&path, "could not be read"); return None };
+            if let Err(error) = serde_json::from_str::<Value>(&text) { health::failed(&path, format!("invalid JSON: {error}")); return None; }
+            parse_epic_manifest(&text)
+        })
         .filter(|game| seen.insert(game.id.clone()))
         .collect();
     sort_games(games)
@@ -431,10 +474,14 @@ fn find_receipts(root: &Path, depth: usize, out: &mut Vec<PathBuf>) {
 
 fn read_receipt(path: &Path) -> Option<Value> {
     use std::io::Read;
-    let file = fs::File::open(path).ok()?;
+    health::examined(path);
+    let Ok(file) = fs::File::open(path) else { health::failed(path, "could not be read"); return None };
     let mut text = String::new();
-    flate2::read::GzDecoder::new(file).take(2 * 1024 * 1024).read_to_string(&mut text).ok()?;
-    serde_json::from_str(&text).ok()
+    if let Err(error) = flate2::read::GzDecoder::new(file).take(2 * 1024 * 1024).read_to_string(&mut text) { health::failed(path, format!("not a readable gzip text file: {error}")); return None; }
+    match serde_json::from_str(&text) {
+        Ok(value) => Some(value),
+        Err(error) => { health::failed(path, format!("invalid JSON: {error}")); None }
+    }
 }
 
 /// The single `.app` bundle directly inside an itch game folder, which is what macOS launches.
@@ -460,7 +507,7 @@ fn scan_itch_with(roots: &[PathBuf], prefer_bundles: bool) -> Vec<ImportedGame> 
         let Some(value) = read_receipt(&receipt) else { continue };
         let game = value.get("game");
         let id = value.get("game_id").or_else(|| value.get("gameId")).and_then(Value::as_i64).or_else(|| game.and_then(|g| g.get("id")).and_then(Value::as_i64));
-        let Some(id) = id else { continue };
+        let Some(id) = id else { health::failed(&receipt, "receipt has no game id"); continue };
         if !seen.insert(id) { continue; }
         let name = game.and_then(|g| string(g, &["title", "name"])).or_else(|| string(&value, &["title", "name"])).unwrap_or_else(|| "itch.io game".into());
         let install = receipt.parent().and_then(Path::parent);
@@ -484,15 +531,26 @@ fn scan_lutris() -> Vec<ImportedGame> {
     let Some(mut command) = linux::lutris_command() else { return Vec::new() };
     command.args(["--list-games", "--json"]);
     let Some(output) = run_capture(command, SCAN_TIMEOUT) else { return Vec::new() };
-    let text = String::from_utf8_lossy(&output);
-    let Some(start) = text.find('[') else { return Vec::new() };
-    let Ok(Value::Array(items)) = serde_json::from_str::<Value>(&text[start..]) else { return Vec::new() };
-    let games = items.iter().filter_map(|item| {
+    let source = Path::new("lutris --list-games --json");
+    health::examined(source);
+    match parse_lutris(&String::from_utf8_lossy(&output)) {
+        Ok(games) => games,
+        Err(reason) => { health::failed(source, reason); Vec::new() }
+    }
+}
+
+/// Games from `lutris --list-games --json` output (which may be preceded by log lines).
+#[cfg(target_os = "linux")]
+fn parse_lutris(text: &str) -> Result<Vec<ImportedGame>, String> {
+    let start = text.find('[').ok_or("output has no JSON list")?;
+    let Value::Array(items) = serde_json::from_str::<Value>(&text[start..]).map_err(|error| format!("invalid JSON: {error}"))? else { return Err("output is not a JSON list".into()) };
+    let games: Vec<ImportedGame> = items.iter().filter_map(|item| {
         let id = item.get("id").and_then(Value::as_i64)?;
         let name = string(item, &["name", "title"])?;
         Some(make(format!("lutris:{id}"), name, "lutris", format!("lutris:rungameid/{id}"), string(item, &["directory", "path"])))
     }).collect();
-    sort_games(games)
+    if !items.is_empty() && games.is_empty() { return Err("no entries with an id and name (output format may have changed)".into()); }
+    Ok(sort_games(games))
 }
 
 #[cfg(target_os = "linux")]
@@ -504,7 +562,12 @@ fn scan_bottles() -> Vec<ImportedGame> {
         let bottle = line.trim().strip_prefix("- ").unwrap_or("").trim();
         if bottle.is_empty() { continue; }
         let Some(output) = run(&["--json", "programs", "-b", bottle]) else { continue };
-        let Ok(value) = serde_json::from_slice::<Value>(&output) else { continue };
+        let source = PathBuf::from(format!("bottles-cli programs -b {bottle}"));
+        health::examined(&source);
+        let value = match serde_json::from_slice::<Value>(&output) {
+            Ok(value) => value,
+            Err(error) => { health::failed(&source, format!("invalid JSON: {error}")); continue }
+        };
         let items = match value {
             Value::Array(items) => items,
             Value::Object(mut object) => object.remove("programs").and_then(|v| if let Value::Array(a) = v { Some(a) } else { None }).unwrap_or_default(),
@@ -545,11 +608,15 @@ pub fn detect_import_sources() -> Vec<DetectedImportSource> {
     let Some(home) = home_dir() else { return Vec::new() };
     let defs = os::source_defs();
     // Launcher CLIs can be slow, so scan every source at once.
-    let scans: Vec<Vec<ImportedGame>> = std::thread::scope(|scope| {
-        let handles: Vec<_> = defs.iter().map(|def| { let home = &home; scope.spawn(move || scan(def.id, home)) }).collect();
+    let results: Vec<(Vec<ImportedGame>, health::Collector)> = std::thread::scope(|scope| {
+        let handles: Vec<_> = defs.iter().map(|def| { let home = &home; scope.spawn(move || health::collect(|| scan(def.id, home))) }).collect();
         handles.into_iter().map(|handle| handle.join().unwrap_or_default()).collect()
     });
+    let (scans, collectors): (Vec<_>, Vec<_>) = results.into_iter().unzip();
     let counts: Vec<(usize, usize)> = scans.iter().map(|games| count_kinds(games)).collect();
+    let reports: Vec<health::SourceHealth> = defs.iter().zip(&collectors).zip(&counts)
+        .map(|((def, collector), (games, _))| health::report(def.id, def.name, collector, *games, os::is_installed(def.id, &home), &home)).collect();
+    *last_health().lock_recover() = reports.clone();
     // The import dialog lists sources and then scans the one the user picks: hand that scan the result
     // we already have instead of walking the same folders and running the same launcher CLIs again.
     {
@@ -558,7 +625,7 @@ pub fn detect_import_sources() -> Vec<DetectedImportSource> {
         let now = Instant::now();
         for (def, games) in defs.iter().zip(scans) { prescan.insert(def.id, (now, games)); }
     }
-    defs.iter().zip(counts).map(|(def, (games, launchers))| DetectedImportSource {
+    defs.iter().zip(counts).zip(reports).map(|((def, (games, launchers)), health)| DetectedImportSource {
         id: def.id.into(),
         name: def.name.into(),
         description: def.description.into(),
@@ -566,7 +633,19 @@ pub fn detect_import_sources() -> Vec<DetectedImportSource> {
         installed: games + launchers > 0 || os::is_installed(def.id, &home),
         game_count: Some(games as u32),
         launcher_count: Some(launchers as u32),
+        health,
     }).collect()
+}
+
+fn last_health() -> &'static Mutex<Vec<health::SourceHealth>> {
+    static LAST: OnceLock<Mutex<Vec<health::SourceHealth>>> = OnceLock::new();
+    LAST.get_or_init(Default::default)
+}
+
+/// Re-scans every source and reports how readable each one's files were (home folder shown as `~`).
+pub fn scanner_health() -> Vec<health::SourceHealth> {
+    detect_import_sources();
+    last_health().lock_recover().clone()
 }
 
 /// Scans from the last `detect_import_sources`, each usable once and only briefly, so pressing
@@ -805,6 +884,102 @@ mod tests {
         ]);
         assert_eq!(items.iter().map(|i| i.name.as_str()).collect::<Vec<_>>(), ["Abe", "Zelda", "Steam"]);
         assert_eq!(count_kinds(&items), (2, 1));
+    }
+
+
+    // --- scanner health ---------------------------------------------------
+
+    fn health_of<T>(scan: impl FnOnce() -> T, games: impl Fn(&T) -> usize) -> (health::HealthStatus, health::Collector) {
+        let (result, collector) = health::collect(scan);
+        (health::status(&collector, games(&result), true), collector)
+    }
+
+    #[test]
+    fn missing_data_is_not_installed_not_an_error() {
+        let home = temp_dir("health-none");
+        let (result, collector) = health::collect(|| scan_steam(&[home.join("nowhere")], false));
+        assert_eq!(health::status(&collector, result.len(), false), health::HealthStatus::NotInstalled);
+    }
+
+    #[test]
+    fn steam_unparseable_files_are_reported() {
+        let home = temp_dir("health-steam");
+        let apps = home.join("steamapps");
+        write(&apps.join("libraryfolders.vdf"), "\u{0}garbage that is not vdf");
+        write(&apps.join("appmanifest_1.acf"), "\"AppState\" { \"appid\" \"1\" }");
+        let (status, collector) = health_of(|| scan_steam(std::slice::from_ref(&home), false), |games| games.len());
+        assert_eq!(status, health::HealthStatus::ParseError);
+        assert_eq!(collector.failed_paths().len(), 2);
+
+        // One good manifest next to the bad one makes it partial.
+        fs::create_dir_all(apps.join("common/Good")).unwrap();
+        write(&apps.join("appmanifest_2.acf"), "\"AppState\"\n{\n\t\"appid\"\t\t\"2\"\n\t\"name\"\t\t\"Good\"\n\t\"installdir\"\t\t\"Good\"\n}");
+        let (status, result) = { let (r, c) = health::collect(|| scan_steam(std::slice::from_ref(&home), false)); (health::status(&c, r.iter().filter(|g| g.kind == ImportKind::Game).count(), true), r) };
+        assert_eq!(status, health::HealthStatus::Partial);
+        assert!(result.iter().any(|game| game.id == "steam:2"));
+    }
+
+    #[test]
+    fn steam_healthy_scan_is_ok() {
+        let home = temp_dir("health-steam-ok");
+        let apps = home.join("steamapps");
+        fs::create_dir_all(apps.join("common/Good")).unwrap();
+        write(&apps.join("appmanifest_2.acf"), "\"AppState\"\n{\n\t\"appid\"\t\t\"2\"\n\t\"name\"\t\t\"Good\"\n\t\"installdir\"\t\t\"Good\"\n}");
+        let (status, _) = health_of(|| scan_steam(std::slice::from_ref(&home), false), |games| games.iter().filter(|g| g.kind == ImportKind::Game).count());
+        assert_eq!(status, health::HealthStatus::Ok);
+    }
+
+    #[test]
+    fn heroic_broken_and_unrecognised_installed_json_are_reported() {
+        let home = temp_dir("health-heroic");
+        write(&home.join("legendaryConfig/legendary/installed.json"), "{ not json");
+        let (status, collector) = health_of(|| scan_heroic(std::slice::from_ref(&home)), |games| games.len());
+        assert_eq!(status, health::HealthStatus::ParseError);
+        assert_eq!(collector.failed_paths().len(), 1);
+
+        // Valid JSON whose keys no longer match anything is flagged too; a good file beside it makes it partial.
+        write(&home.join("legendaryConfig/legendary/installed.json"), "{\"Game\": {\"renamed\": 1}}");
+        let game = home.join("Games/Celeste");
+        fs::create_dir_all(&game).unwrap();
+        write(&home.join("gog_store/installed.json"), &format!("{{\"installed\": [{{\"appName\": \"a\", \"install_path\": {:?}}}]}}", game.to_string_lossy()));
+        let (status, collector) = health_of(|| scan_heroic(std::slice::from_ref(&home)), |games| games.len());
+        assert_eq!(status, health::HealthStatus::Partial);
+        assert!(collector.failed_paths()[0].ends_with("legendary/installed.json"));
+    }
+
+    #[test]
+    fn itch_corrupt_receipts_are_reported() {
+        use std::io::Write;
+        let home = temp_dir("health-itch");
+        write(&home.join("apps/a/.itch/receipt.json.gz"), "this is not gzip");
+        let (status, _) = health_of(|| scan_itch_with(std::slice::from_ref(&home), false), |games| games.len());
+        assert_eq!(status, health::HealthStatus::ParseError);
+
+        let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        encoder.write_all(b"{\"game\": {\"id\": 7, \"title\": \"Seven\"}}").unwrap();
+        fs::create_dir_all(home.join("apps/b/.itch")).unwrap();
+        fs::write(home.join("apps/b/.itch/receipt.json.gz"), encoder.finish().unwrap()).unwrap();
+        let (status, _) = health_of(|| scan_itch_with(std::slice::from_ref(&home), false), |games| games.len());
+        assert_eq!(status, health::HealthStatus::Partial);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn lutris_output_that_does_not_parse_is_an_error() {
+        assert!(parse_lutris("Traceback: boom").is_err());
+        assert!(parse_lutris("[{\"id\": ").is_err());
+        assert!(parse_lutris("[{\"slug\": \"x\"}]").is_err());
+        assert_eq!(parse_lutris("log line\n[{\"id\": 3, \"name\": \"Three\"}]").unwrap().len(), 1);
+        assert!(parse_lutris("[]").unwrap().is_empty());
+    }
+
+    #[test]
+    fn health_report_strips_the_home_folder() {
+        let home = Path::new("/home/someone");
+        let (_, collector) = health::collect(|| health::failed(&home.join(".steam/appmanifest_1.acf"), "bad"));
+        let report = health::report("steam", "Steam", &collector, 0, true, home);
+        assert_eq!(report.failures[0].path, "~/.steam/appmanifest_1.acf");
+        assert_eq!(report.status, health::HealthStatus::ParseError);
     }
 }
 

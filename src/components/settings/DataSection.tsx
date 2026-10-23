@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "../../lib/useTranslation";
 import { getVersion } from "@tauri-apps/api/app";
 import { getPlatformCapabilities } from "../../lib/platform";
+import { scannerHealth } from "../../lib/sources";
+import { loadSourceReport } from "../../lib/sourceHealth";
 import { buildDiagnostics } from "../../lib/diagnostics";
 import { ChevronDown } from "lucide-react";
 import { MochiIcon } from "../MochiIcon";
@@ -40,7 +42,7 @@ export function DataSection() {
       const caps = await getPlatformCapabilities().catch(() => ({ platform: "unknown", displayName: "Unknown", isSteamDeck: false, isGamescope: false, launchMethods: [] as string[] }));
       const bySource: Record<string, number> = {};
       for (const piko of lib.library) { const kind = piko.kind ?? "game"; bySource[kind] = (bySource[kind] ?? 0) + 1; }
-      const report = buildDiagnostics({ version: await getVersion().catch(() => "unknown"), platform: caps, userAgent: navigator.userAgent, online: navigator.onLine, gameCount: lib.library.length, gamesBySource: bySource, experimental: behavior.experimental, signedIn: Boolean(user) });
+      const report = buildDiagnostics({ version: await getVersion().catch(() => "unknown"), platform: caps, userAgent: navigator.userAgent, online: navigator.onLine, gameCount: lib.library.length, gamesBySource: bySource, experimental: behavior.experimental, signedIn: Boolean(user), sourceHealth: await (async () => { const last = loadSourceReport(); return last.length ? last : scannerHealth({ notify: false }).catch(() => []); })() });
       await navigator.clipboard.writeText(report);
       setNote(t("Debug info copied. It contains no passwords, keys or email addresses, and your home folder name is hidden."));
     } catch { setNote(t("Could not copy debug info.")); }

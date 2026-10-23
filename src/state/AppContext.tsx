@@ -39,6 +39,7 @@ import { usePlugins } from "./usePlugins";
 import { experimentalFeatures } from "../lib/experimental";
 import { useLibraryWatcher } from "./useLibraryWatcher";
 import { usePathRemapCheck } from "./usePathRemapCheck";
+import { useSourceHealthNotices } from "./useSourceHealthNotices";
 import { checkAccountPin } from "../lib/accountPin";
 import { usePlayLimits } from "./usePlayLimits";
 import { useScreenshotNotifier } from "./useScreenshotNotifier";
@@ -108,6 +109,7 @@ function useAppController() {
   useScheduledBackup(storage.ready, notify);
   useLibraryWatcher(behavior.watchFolders, storage.ready, lib.library, notify);
   usePathRemapCheck(storage.ready, lib.library, notify);
+  useSourceHealthNotices(notify);
   const collections = useCollections(storage.ownerKey, storage.ready, lib.setLibrary);
   const cloud = useCloudSync(user, lib.library, lib.setLibrary, storage.ready, storage.ownerKey);
   const downloads = useDownloads(activeNav === "Downloads", notify, behavior.language);
