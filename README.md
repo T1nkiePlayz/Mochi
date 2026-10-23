@@ -229,7 +229,7 @@ You only need to do this once per downloaded copy. Details and file locations: [
 
 ## Verify your download
 
-Each release publishes three proofs; details and the one-time maintainer setup are in [docs/verify-downloads.md](docs/verify-downloads.md).
+Each release publishes three proofs plus CycloneDX SBOMs (`mochi-<version>-rust.cdx.json`, `mochi-<version>-npm.cdx.json`, also checksummed and signed; see [docs/reproducible-builds.md](docs/reproducible-builds.md)); details and the one-time maintainer setup are in [docs/verify-downloads.md](docs/verify-downloads.md).
 
 ```bash
 # 1. Checksums (SHA256SUMS.txt in the same folder; use shasum -a 256 on macOS)
@@ -310,7 +310,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] RetroAchievements support
 - [ ] Per-game controller profiles for games that do not go through Steam Input
 - [ ] Flathub package
-- [ ] Release SBOM and reproducible builds
+- [x] Release SBOM and reproducible builds
 
 ## Documentation index
 

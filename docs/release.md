@@ -11,8 +11,11 @@ The workflow `.github/workflows/release.yml`:
 1. **prepare** syncs the version from the tag into `package.json`, `tauri.conf.json` and `Cargo.toml` (`scripts/sync-version.mjs`), commits that to `main` when the tag is the tip of `main` (a failed push only warns), and creates a **draft** GitHub Release. If the Apple secrets are missing the notes get the right-click-Open / `xattr -dr com.apple.quarantine` instructions.
 2. **linux** builds AppImage, deb and rpm and uploads them with the updater manifest `latest.json`.
 3. **macos** (after linux, so `latest.json` is never written concurrently) builds one universal DMG (`--target universal-apple-darwin`, arm64 and Intel) and adds its updater entries. It then verifies the `.app`: bundle id, version, game category, the `mochi` URL scheme, `LSMinimumSystemVersion`, both architectures, `codesign --verify`, and when signed/notarized the Developer ID authority, `stapler` and `spctl`.
-4. **publish** writes `SHA256SUMS.txt`, GPG-signs it and every file (`.asc`), creates GitHub build attestations, uploads them and turns the draft into a release (pre-releases are not marked "latest"; the updater reads `releases/latest`).
+4. **sbom** (parallel to the builds) generates CycloneDX SBOMs for the Rust crates (`cargo-cyclonedx` 0.5.9) and the production npm packages (`@cyclonedx/cyclonedx-npm` 6.0.1) as `mochi-<version>-rust.cdx.json` and `mochi-<version>-npm.cdx.json`.
+5. **publish** adds the SBOMs to the assets, writes `SHA256SUMS.txt`, GPG-signs it and every file (`.asc`), creates GitHub build attestations plus SBOM attestations (`actions/attest-sbom`) for the packages, uploads them and turns the draft into a release (pre-releases are not marked "latest"; the updater reads `releases/latest`).
    It also publishes `install-hashes.json` and `install-hashes.json.sig` (see below).
+
+Release builds use `--locked`, the pinned toolchain in `rust-toolchain.toml` (keep it in step with the `toolchain:` input in the workflows), and `SOURCE_DATE_EPOCH`/`--remap-path-prefix` from `scripts/repro-env.sh`. `scripts/sync-version.mjs` also updates the `mochi` entry in `Cargo.lock`, which `--locked` requires. The weekly `reproducible.yml` workflow proves the Rust binary and frontend bundle rebuild identically; see [reproducible-builds.md](reproducible-builds.md).
 
 To rebuild a tag: Actions > Release Mochi > Run workflow > enter the tag. Existing assets of the same name are replaced by tauri-action.
 
