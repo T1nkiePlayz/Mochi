@@ -119,6 +119,8 @@ pub struct PadInfo {
     pub family: Family,
     pub vendor: Option<u16>,
     pub product: Option<u16>,
+    /// SDL joystick GUID (32 hex digits); identifies the pad in a controller profile.
+    pub guid: String,
     pub rumble: bool,
 }
 
@@ -149,6 +151,7 @@ fn pad_info(gilrs: &Gilrs, id: GamepadId, on_deck: bool) -> PadInfo {
         family: detect_family(&name, pad.vendor_id(), pad.product_id(), on_deck),
         vendor: pad.vendor_id(),
         product: pad.product_id(),
+        guid: pad.uuid().iter().map(|byte| format!("{byte:02x}")).collect(),
         rumble: pad.is_ff_supported(),
         name,
     }
@@ -260,6 +263,11 @@ fn rumble(gilrs: &mut Gilrs, id: Option<usize>, strong: f32, weak: f32, millis: 
         .ok()?;
     built.play().ok()?;
     Some((built, Instant::now() + Duration::from_millis(u64::from(millis) + 50)))
+}
+
+/// The connected pads in the shape controller profiles use.
+pub fn profile_pads() -> Vec<crate::controllerprofile::Pad> {
+    get_gamepads().into_iter().map(|pad| crate::controllerprofile::Pad { name: pad.name, guid: pad.guid, vendor: pad.vendor, product: pad.product }).collect()
 }
 
 #[tauri::command]

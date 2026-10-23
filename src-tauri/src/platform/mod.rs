@@ -82,6 +82,8 @@ pub struct LaunchConfig {
     pub gamescope: GamescopeConfig,
     /// Commands to run before the game starts and after it closes.
     pub hooks: crate::hooks::HooksConfig,
+    /// Per-game controller profile, applied as SDL/Proton environment variables to direct launches.
+    pub controller: Option<crate::controllerprofile::ControllerProfile>,
     #[serde(skip)]
     pub prefix_dir: Option<PathBuf>,
     /// Where this game's session logs go; output is captured when set.
@@ -264,6 +266,7 @@ pub fn launch_game(target: &str, config: &LaunchConfig) -> Result<Launched, Stri
     }
     let Prepared { mut command, direct } = os::prepare_launch(target, config)?;
     if applies == launchopts::Applies::Full {
+        for (key, value) in launchopts::controller_env(config, applies, &crate::gamepad::profile_pads()).env { command.env(key, value); }
         for (key, value) in &config.env { command.env(key, value); }
         if let Some(dir) = config.working_dir.as_deref().filter(|dir| !dir.is_empty()) { command.current_dir(dir); }
     }

@@ -5,6 +5,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { AlertTriangle } from "lucide-react";
 import { chooseGameAppBundle, chooseGameTarget, listInstalledFlatpaks, normalizeLaunchTarget, type FlatpakApp, type LaunchMethodId } from "../../../lib/platform";
 import { Select } from "../../ui/Select";
+import { ControllerProfileSection } from "./ControllerProfileSection";
 import { LaunchOptionsSection } from "./LaunchOptionsSection";
 import type { EditorContext } from "./types";
 
@@ -61,6 +62,7 @@ export function LaunchTab({ ctx }: { ctx: EditorContext }) {
       </div>
     </label>
     <LaunchOptionsSection key={ctx.draft.activeLaunchProfile ?? ""} ctx={ctx} />
+    <ControllerProfileSection ctx={ctx} />
     {error && <p className="auth-error" role="alert">{error}</p>}
   </div>;
 }

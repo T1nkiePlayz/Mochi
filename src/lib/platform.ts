@@ -5,6 +5,7 @@ import type { Piko, Tofu } from "../models";
 import { effectiveLaunchOptions } from "./launchProfiles";
 import { modSyncFor } from "./mods/targets";
 import { buildLaunchConfig } from "./launch";
+import { controllerProfileFor, launcherControllerProfile } from "../controller/profiles";
 import { launchTargetFor } from "./minecraftPiko";
 import { sourceInstallPathFor } from "./launchSources";
 
@@ -61,11 +62,13 @@ export type LaunchPreview = {
   cwd: string | null;
   command: string | null;
   steamOptions: string | null;
+  /** Why the controller profile is not (fully) applied: a fixed sentence plus the pad it is about. */
+  controllerNotes: Array<{ message: string; pad: string | null }>;
   errors: string[];
 };
 
 export function previewLaunchCommand(piko: Piko, tofu: Tofu | undefined): Promise<LaunchPreview> {
-  return invoke<LaunchPreview>("preview_launch_command", { request: { gameId: piko.id, launchTarget: launchTargetFor(piko, tofu) ?? "", tofuId: tofu?.id ?? null, config: buildLaunchConfig(tofu?.launch, effectiveLaunchOptions(piko)) } });
+  return invoke<LaunchPreview>("preview_launch_command", { request: { gameId: piko.id, launchTarget: launchTargetFor(piko, tofu) ?? "", tofuId: tofu?.id ?? null, config: buildLaunchConfig(tofu?.launch, effectiveLaunchOptions(piko), launcherControllerProfile(controllerProfileFor(piko))) } });
 }
 
 export const getPlaytime = () => invoke<PlaytimeEntry[]>("get_playtime");
@@ -86,7 +89,7 @@ export function launchGame(piko: Piko, tofu: Tofu | undefined): Promise<void> {
       launchTarget,
       installPath: tofu?.installPath ?? sourceInstallPathFor(piko) ?? null,
       tofuId: tofu?.id ?? null,
-      config: buildLaunchConfig(tofu?.launch, effectiveLaunchOptions(piko)),
+      config: buildLaunchConfig(tofu?.launch, effectiveLaunchOptions(piko), launcherControllerProfile(controllerProfileFor(piko))),
       // A Tofu with its own store is copied into the game folder, Tofus sharing a folder swap their mods; natively, right before starting.
       modSync: modSyncFor(tofu, piko.tofus) ?? null,
     },

@@ -7,6 +7,7 @@ import { addEnvRow, duplicateEnvNames, envNameError, removeEnvRow, setEnvRow, up
 import { launchTargetFor } from "../../../lib/minecraftPiko";
 import type { LaunchOptions } from "../../../models";
 import { activeLaunchProfile, addLaunchProfile, effectiveLaunchOptions, MAX_LAUNCH_PROFILES, removeLaunchProfile, renameLaunchProfile, selectLaunchProfile, withLaunchOptions } from "../../../lib/launchProfiles";
+import { controllerProfileFor, useControllerProfiles } from "../../../controller/profiles";
 import { Select } from "../../ui/Select";
 import { PrefixManager } from "./PrefixManager";
 import { Switch } from "../../ui/Checkbox";
@@ -21,6 +22,7 @@ export function LaunchOptionsSection({ ctx }: { ctx: EditorContext }) {
   const { draft, patch, capabilities } = ctx;
   const options = effectiveLaunchOptions(draft) ?? empty;
   const profile = activeLaunchProfile(draft);
+  const controllerProfiles = useControllerProfiles();
   const linux = capabilities?.platform !== "macos";
   const set = (changes: Partial<LaunchOptions>) => patch(withLaunchOptions(draft, updateLaunchOptions(effectiveLaunchOptions(draft), changes)));
   const [newName, setNewName] = useState("");
@@ -36,7 +38,7 @@ export function LaunchOptionsSection({ ctx }: { ctx: EditorContext }) {
   // The launcher builds the preview (debounced; a stale answer is dropped).
   const tofu = draft.tofus[0];
   const target = launchTargetFor(draft, tofu) ?? "";
-  const signature = JSON.stringify([target, draft.id, effectiveLaunchOptions(draft), tofu?.id, tofu?.launch]);
+  const signature = JSON.stringify([target, draft.id, effectiveLaunchOptions(draft), tofu?.id, tofu?.launch, controllerProfileFor(draft), controllerProfiles.length]);
   useEffect(() => {
     let cancelled = false;
     const timer = window.setTimeout(() => {

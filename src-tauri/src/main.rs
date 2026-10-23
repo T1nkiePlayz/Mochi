@@ -1,6 +1,8 @@
 use serde::Deserialize;
 use tauri::{Emitter, Manager, WindowEvent};
 
+mod controllerdb;
+mod controllerprofile;
 mod fonts;
 mod bigpicture;
 mod cli;
