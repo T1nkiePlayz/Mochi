@@ -26,6 +26,8 @@ const MAX_ERRORS: usize = 5;
 const MAX_KNOWN: usize = 4000;
 const MAX_MANIFEST_BYTES: u64 = 8 << 20;
 const BUF: usize = 64 * 1024;
+/// A manifest entry dated further ahead than this (a wrong clock, or a hostile manifest) is reported as damaged and skipped.
+pub(crate) const MAX_FUTURE_MS: u64 = 3_600_000;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 #[serde(rename_all = "camelCase", default)]
@@ -33,6 +35,8 @@ pub struct SyncConfig {
     pub enabled: bool,
     pub folder: String,
     pub device_id: String,
+    /// Hash of this computer's identity when `device_id` was made; a copied app-data folder carries a different one.
+    pub machine: String,
     pub last_sync_at: u64,
     pub imported: usize,
     pub exported: usize,
@@ -94,10 +98,25 @@ fn save_config(ctx: &Ctx, config: &SyncConfig) -> Result<(), String> {
     fsio::write_atomic_durable(&ctx.root.join(CONFIG), &bytes).map_err(|e| format!("Unable to save the sync settings: {e}"))
 }
 
-fn ensure_device_id(config: &mut SyncConfig) {
-    if valid_id(&config.device_id, 40) { return; }
+fn ensure_device_id(config: &mut SyncConfig) { ensure_device_id_for(config, &machine_fingerprint()); }
+
+/// Keeps `device_id` tied to the computer: an id copied along with the app data (a clone, a restored disk image) would make two
+/// computers believe they own the same snapshots, so it is replaced. Files in the folder that name the old id are then foreign
+/// and are never pruned.
+fn ensure_device_id_for(config: &mut SyncConfig, machine: &str) {
+    if valid_id(&config.device_id, 40) && (config.machine.is_empty() || config.machine == machine) { config.machine = machine.to_string(); return; }
+    config.machine = machine.to_string();
     let seed = format!("{}|{}|{}|{:?}", now_ms(), std::process::id(), device_name(), std::thread::current().id());
     config.device_id = hex(&Sha256::digest(seed.as_bytes()))[..12].to_string();
+}
+
+/// A hash (never the raw id) of what identifies this computer: the machine id on Linux, the platform UUID on macOS, else the host name.
+fn machine_fingerprint() -> String {
+    let raw = ["/etc/machine-id", "/var/lib/dbus/machine-id"].iter().find_map(|path| fs::read_to_string(path).ok().filter(|text| !text.trim().is_empty()))
+        .or_else(|| std::process::Command::new("ioreg").args(["-rd1", "-c", "IOPlatformExpertDevice"]).output().ok().and_then(|out| String::from_utf8(out.stdout).ok())
+            .and_then(|text| text.lines().find(|line| line.contains("IOPlatformUUID")).map(str::to_string)))
+        .unwrap_or_else(device_name);
+    hex(&Sha256::digest(format!("mochi-save-sync|{}", raw.trim()).as_bytes()))[..16].to_string()
 }
 
 fn device_name() -> String {
@@ -256,7 +275,13 @@ fn import_key(ctx: &Ctx, config: &SyncConfig, base: &Path, key: &str, tally: &mu
     if !valid_id(&index.sync_key, 120) { return Ok(()); }
     let sdir = base.join(&index.sync_key);
     let manifest = read_manifest(&sdir);
+    let horizon = now_ms().saturating_add(MAX_FUTURE_MS);
     let mut entries: Vec<Entry> = manifest.snapshots.into_iter().filter(entry_ok).filter(|entry| entry.device_id != config.device_id).collect();
+    entries.retain(|entry| {
+        let sane = entry.created_at > 0 && entry.created_at <= horizon;
+        if !sane && !index.known.contains(&entry.id) { tally.errors.push(format!("A saved copy from {} has an impossible date and was skipped ({}).", entry.device, entry.id)); }
+        sane
+    });
     entries.sort_by_key(|entry| entry.created_at);
     let mut imported = 0;
     for entry in entries {
@@ -266,8 +291,12 @@ fn import_key(ctx: &Ctx, config: &SyncConfig, base: &Path, key: &str, tally: &mu
         if len < entry.size { tally.pending += 1; continue; }
         if len > entry.size { tally.errors.push(format!("A saved copy from {} is damaged and was skipped ({}).", entry.device, entry.id)); continue; }
         fs::create_dir_all(&dir).map_err(|e| format!("Unable to create the backup folder: {e}"))?;
+        // No stepping loop: on a clash take the slot after the newest backup.
         let mut stamp = entry.created_at;
-        while dir.join(format!("{stamp}.zip")).exists() { stamp += 1; }
+        if index.backups.iter().any(|backup| backup.created_at == stamp) || dir.join(format!("{stamp}.zip")).exists() {
+            stamp = index.backups.last().map_or(0, |last| last.created_at).max(stamp).saturating_add(1);
+            if dir.join(format!("{stamp}.zip")).exists() { tally.pending += 1; continue; }
+        }
         match copy_atomic(&source, &dir.join(format!("{stamp}.zip")), Some(&entry.sha256)) {
             Ok((_, size)) => {
                 index.backups.push(BackupInfo {
@@ -451,7 +480,7 @@ mod tests {
     }
     fn snapshot(device: &Device, content: &str) -> BackupInfo {
         write(&device.world.join("level.dat"), content);
-        let input = LocationInput { piko_id: "minecraft".into(), path: device.world.to_string_lossy().into_owned(), label: "World".into(), kind: "minecraft".into(), group: Some("Inst".into()) };
+        let input = LocationInput { piko_id: "minecraft".into(), path: device.world.to_string_lossy().into_owned(), label: "World".into(), sync_key: crate::savebackup::sync_key("minecraft", "minecraft", Some("Inst"), "World") };
         match create_backup(&device.ctx, &input, "manual", true, None).unwrap() { Created::Backup(info) => info, _ => panic!("expected a backup") }
     }
     fn setup(tag: &str) -> (PathBuf, PathBuf) {
@@ -649,5 +678,107 @@ mod tests {
         assert!(status.enabled && status.available);
         assert!(!set_folder(&a.ctx, "", false).unwrap().enabled);
         let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn same_named_worlds_in_two_instances_keep_distinct_stable_keys() {
+        use crate::savebackup::{locate, Hints, InstanceHint};
+        let (base, folder) = setup("ss-keys");
+        let a = device(&base, "alpha", &folder);
+        let home = a.ctx.home.clone().unwrap();
+        let mut hints = Hints::default();
+        let mut worlds = Vec::new();
+        for name in ["X", "Y"] {
+            let root = home.join("inst").join(name);
+            write(&root.join("saves").join("New World").join("level.dat"), name);
+            hints.instances.push(InstanceHint { id: name.into(), name: name.into(), content_root: root.to_string_lossy().into_owned() });
+            worlds.push(root.join("saves").join("New World"));
+        }
+        let mut keys = Vec::new();
+        for world in &worlds {
+            // The caller names only a path (and may lie about the label); kind and group come from the game's own locations.
+            let input = locate(&a.ctx, LocationInput { piko_id: "minecraft".into(), path: world.to_string_lossy().into_owned(), label: "whatever".into(), sync_key: "forged".into() }, &hints);
+            assert_eq!(input.label, "New World");
+            let Created::Backup(info) = create_backup(&a.ctx, &input, "manual", true, None).unwrap() else { panic!("backup") };
+            keys.push(load_index(&location_dir(&a.ctx.root, &info.location_key).unwrap()).sync_key);
+        }
+        assert!(!keys[0].is_empty() && keys[0] != keys[1]);
+        let games = [SyncGame { piko_id: "minecraft".into(), hints: hints.clone() }];
+        ensure_indexes(&a.ctx, &games);
+        let again: Vec<String> = local_keys(&a.ctx).iter().map(|key| load_index(&location_dir(&a.ctx.root, key).unwrap()).sync_key).collect();
+        assert!(keys.iter().all(|key| again.contains(key)) && again.len() == 2);
+        // A later backup that does not know the instances never replaces a key.
+        let bare = locate(&a.ctx, LocationInput { piko_id: "minecraft".into(), path: worlds[0].to_string_lossy().into_owned(), label: "x".into(), sync_key: String::new() }, &Hints::default());
+        assert!(bare.sync_key.is_empty());
+        write(&worlds[0].join("level.dat"), "changed again");
+        let Created::Backup(info) = create_backup(&a.ctx, &bare, "manual", false, None).unwrap() else { panic!("backup") };
+        assert_eq!(load_index(&location_dir(&a.ctx.root, &info.location_key).unwrap()).sync_key, keys[0]);
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn future_dated_manifest_entries_are_reported_and_never_stall_ids() {
+        let (base, folder) = setup("ss-future");
+        let a = device(&base, "alpha", &folder);
+        let b = device(&base, "bravo", &folder);
+        let made = snapshot(&a, "alpha data");
+        snapshot(&b, "bravo data");
+        let sdir = sync_dir(&folder, &made, &a);
+        for stamp in [now_ms() + 86_400_000, u64::MAX, 0] {
+            let mut manifest = read_manifest(&sdir);
+            for entry in manifest.snapshots.iter_mut().filter(|e| e.device_id == "alpha") { entry.created_at = stamp; }
+            write_manifest(&sdir, &manifest).unwrap();
+            let tally = sync(&b);
+            assert_eq!((tally.imported, tally.errors.len()), (0, 1), "{stamp}");
+        }
+        let backups = load_index(&location_dir(&b.ctx.root, &local_keys(&b.ctx)[0]).unwrap()).backups;
+        assert!(remote_newer(&backups).is_none());
+        // Local ids stay O(1) even after a backup dated slightly ahead.
+        let mut index = load_index(&location_dir(&b.ctx.root, &local_keys(&b.ctx)[0]).unwrap());
+        let ahead = index.backups.last().unwrap().created_at + 1_800_000;
+        fs::copy(location_dir(&b.ctx.root, &local_keys(&b.ctx)[0]).unwrap().join(format!("{}.zip", index.backups[0].created_at)), location_dir(&b.ctx.root, &local_keys(&b.ctx)[0]).unwrap().join(format!("{ahead}.zip"))).unwrap();
+        index.backups.push(BackupInfo { id: "x~1".into(), created_at: ahead, ..index.backups[0].clone() });
+        save_index(&location_dir(&b.ctx.root, &local_keys(&b.ctx)[0]).unwrap(), &index).unwrap();
+        let started = std::time::Instant::now();
+        let next = snapshot(&b, "bravo data, newer and longer");
+        assert!(next.created_at > ahead && started.elapsed().as_secs() < 5);
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn imported_snapshots_never_push_out_this_devices_own_backups() {
+        let (base, folder) = setup("ss-keep");
+        let a = device(&base, "alpha", &folder);
+        let mut b = device(&base, "bravo", &folder);
+        b.ctx.settings.keep = 1;
+        snapshot(&a, "alpha one");
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        snapshot(&a, "alpha two two");
+        let own = snapshot(&b, "bravo only");
+        let tally = sync(&b);
+        assert_eq!(tally.imported, 2);
+        let dir = location_dir(&b.ctx.root, &own.location_key).unwrap();
+        let backups = load_index(&dir).backups;
+        assert_eq!(backups.iter().filter(|x| x.origin.is_empty()).count(), 1);
+        assert_eq!(backups.iter().filter(|x| !x.origin.is_empty()).count(), 1);
+        assert!(dir.join(format!("{}.zip", own.created_at)).is_file());
+        // Pruned imports leave the sync folder untouched, and do not come back.
+        let sdir = sync_dir(&folder, &own, &b);
+        assert_eq!(read_manifest(&sdir).snapshots.iter().filter(|e| e.device_id == "alpha").count(), 2);
+        assert_eq!(sync(&b).imported, 0);
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn a_copied_device_id_is_replaced_on_another_machine() {
+        let mut config = SyncConfig { device_id: "cloned".into(), ..Default::default() };
+        ensure_device_id_for(&mut config, "machine-a");
+        assert_eq!((config.device_id.as_str(), config.machine.as_str()), ("cloned", "machine-a"));
+        ensure_device_id_for(&mut config, "machine-a");
+        assert_eq!(config.device_id, "cloned");
+        ensure_device_id_for(&mut config, "machine-b");
+        assert_ne!(config.device_id, "cloned");
+        assert!(valid_id(&config.device_id, 40) && config.machine == "machine-b");
+        assert_eq!(machine_fingerprint(), machine_fingerprint());
     }
 }

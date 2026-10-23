@@ -12,7 +12,7 @@ export type AutoSummary = { created: number; unchanged: number; failed: number; 
 export type BackupSettings = { keep: number; maxTotalBytes: number };
 
 export const listSaveLocations = (pikoId: string, hints: SaveHints) => invoke<SaveLocation[]>("list_save_locations", { pikoId, hints });
-export const createSaveBackup = (pikoId: string, location: Pick<SaveLocation, "path" | "label">) => invoke<BackupResult>("create_save_backup", { location: { pikoId, path: location.path, label: location.label } });
+export const createSaveBackup = (pikoId: string, location: Pick<SaveLocation, "path" | "label">, hints: SaveHints) => invoke<BackupResult>("create_save_backup", { location: { pikoId, path: location.path, label: location.label }, hints });
 export const listSaveBackups = (locationKey: string) => invoke<BackupInfo[]>("list_save_backups", { locationKey });
 export const restoreSaveBackup = (id: string) => invoke<RestoreResult>("restore_save_backup", { id });
 export const deleteSaveBackup = (id: string) => invoke<void>("delete_save_backup", { id });

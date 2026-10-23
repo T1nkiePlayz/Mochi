@@ -71,7 +71,7 @@ function SaveBackupsModal({ game, onClose }: { game: Piko; onClose: () => void }
 
   const backUp = async (location: SaveLocation) => {
     setBusy(location.key); setMessage("");
-    try { setMessage(t(describeResult(await createSaveBackup(game.id, location)))); await refresh(location.key); }
+    try { setMessage(t(describeResult(await createSaveBackup(game.id, location, JSON.parse(hintsKey))))); await refresh(location.key); }
     catch (error) { setMessage(t(errorText(error))); } finally { setBusy(""); }
   };
   const restore = async (location: SaveLocation, backup: BackupInfo) => {
