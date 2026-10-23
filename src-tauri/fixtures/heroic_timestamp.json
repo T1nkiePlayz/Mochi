@@ -1,0 +1,8 @@
+{
+  "Fortnite": { "firstPlayed": "2023-01-01T10:00:00.000Z", "lastPlayed": "2023-11-14T22:13:20.000Z", "totalPlayed": 90 },
+  "1207658924": { "firstPlayed": "2020-09-13T12:26:40.000Z", "totalPlayed": 124.6 },
+  "sideload1": { "lastPlayed": 1650000000, "totalPlayed": "15" },
+  "broken": { "totalPlayed": "lots" },
+  "empty": { "totalPlayed": 0 },
+  "notAnObject": 7
+}

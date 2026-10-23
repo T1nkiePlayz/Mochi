@@ -10,7 +10,7 @@
 //! The mapping from a Steam app id to a Mochi game comes from the UI (`steamAppIdOf`), so the
 //! native side never needs the library itself.
 
-use crate::{playtime, platform, sources, steam_achievements, util};
+use crate::{playtime, playtime_import, platform, sources, steam_achievements, util};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
@@ -210,43 +210,22 @@ fn parse_apps(text: &str) -> BTreeMap<u32, AppPlaytime> {
 // The import itself
 // ---------------------------------------------------------------------------
 
-/// What one import changes: the missing part of Steam's total for one game, as one historic row.
+use playtime_import::Plan;
+#[cfg(test)]
 type PlanRow = playtime::HistoricCredit;
 
-#[derive(Debug, Default, PartialEq, Eq)]
-struct Plan {
-    rows: Vec<PlanRow>,
-    unchanged: u32,
-    unmapped: u32,
-}
-
-/// Decides what one import changes. Pure, so the delta maths, the unmapped count and
-/// idempotency are unit tested without touching the tracker.
+/// Decides what one import changes, through the planner every playtime source shares. Steam apps
+/// are matched by app id (the identity key is the id as text).
 ///
 /// `tracked` maps game id -> seconds Mochi already has; `now` dates apps Steam never stamped.
 fn plan(apps: &BTreeMap<u32, AppPlaytime>, targets: &[Target], tracked: &HashMap<String, u64>, now: u64) -> Plan {
-    let by_appid: HashMap<u32, &Target> = targets.iter().map(|target| (target.appid, target)).collect();
-    let mut plan = Plan::default();
-    for (&appid, steam) in apps {
-        let Some(target) = by_appid.get(&appid) else {
-            // Steam playtime no Mochi game maps to is only counted, never an error.
-            if steam.minutes > 0 { plan.unmapped += 1; }
-            continue;
-        };
-        let imported = steam.minutes.saturating_mul(60);
-        let already = tracked.get(&target.game_id).copied().unwrap_or(0);
-        // Only the missing part is recorded, as a single historic session. When Mochi already
-        // tracks at least as much (clock skew, play outside Steam) nothing is added — which is
-        // also exactly what makes a second import a no-op.
-        let delta = imported.saturating_sub(already);
-        if delta > 0 {
-            let at = if steam.last_played > 0 { steam.last_played } else { now };
-            plan.rows.push(PlanRow { game_id: target.game_id.clone(), name: target.name.clone(), seconds: delta, at });
-        } else {
-            plan.unchanged += 1;
-        }
-    }
-    plan
+    let entries: Vec<playtime_import::Entry> = apps.iter()
+        .map(|(appid, steam)| playtime_import::Entry { keys: vec![appid.to_string()], minutes: steam.minutes, last_played: steam.last_played })
+        .collect();
+    let matches: Vec<playtime_import::Match> = targets.iter()
+        .map(|target| playtime_import::Match { keys: vec![target.appid.to_string()], game_id: target.game_id.clone(), name: target.name.clone() })
+        .collect();
+    playtime_import::plan(&entries, &matches, tracked, now)
 }
 
 /// Steam's `localconfig.vdf` for one account, from any of the given installs (capped and read

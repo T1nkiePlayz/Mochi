@@ -112,7 +112,7 @@ Short sounds for navigation, selection, dialogs, launches, downloads and achieve
 
 ### Playtime, stats and achievements
 - Playtime is credited when a game exits, for games Mochi starts directly and for games handed to another launcher (followed by process group or install folder; Linux and macOS). The Play button turns into **Stop**.
-- **Steam playtime import**: bring in the playtime Steam already recorded for your games (read from Steam's own local records), so switching launchers does not restart your history.
+- **Playtime import** ([docs](docs/playtime-import.md)): bring in the playtime Steam, Heroic, Lutris and GOG Galaxy already recorded for your games (read from their own local records), so switching launchers does not restart your history.
 - A **Stats** view shows playtime and activity.
 - **77 Mochi achievements** across Playtime, Streaks, Habits, Variety, Library, Explore, Mods and Steam categories, with rarities.
 - **Cloud saving** of achievements is a per-device toggle in Settings > Achievements (needs sign-in with cloud sync on); the same section can clear achievements data, locally and in the cloud.
@@ -304,7 +304,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] Theme creator with live editing of colours, fonts and hooks, plus theme export
 - [x] Built-in Proton-GE / Wine-GE installer, so runtimes no longer have to be installed outside Mochi
 - [x] Synced path remapping: when a synced game's path is missing on this machine, locate it or rescan and match by store ID
-- [ ] Playtime import from Heroic, Lutris and GOG, alongside the existing Steam playtime import
+- [x] Playtime import from Heroic, Lutris and GOG, alongside the existing Steam playtime import
 - [x] Source scanner health check that reports when a launcher's file format has changed instead of silently missing games
 - [ ] Save sync to a folder you choose (Syncthing, Nextcloud, WebDAV) built on save backups, with nothing hosted by Mochi
 - [ ] Emulator and ROM libraries (RetroArch, Dolphin, PCSX2 and others) with ROM folder scanning

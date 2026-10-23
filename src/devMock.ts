@@ -214,6 +214,9 @@ const handlers: Record<string, Handler> = {
     steamPlaytimeImported = true;
     return result;
   },
+  playtime_import_sources: () => ["heroic", "lutris"],
+  preview_playtime_import: () => [],
+  import_playtime: () => ({ imported: 0, unchanged: 0, unmapped: 0 }),
   get_active_sessions: () => [],
   list_runtimes: () => [
     { id: "wine", name: "Wine", kind: "compat", path: "/usr/bin/wine" },
