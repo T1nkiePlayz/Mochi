@@ -6,7 +6,7 @@ import { isInstanceTarget, mergeInstances } from "./minecraftPiko";
 
 const platformLabels: Record<string, string> = {
   steam: "Steam", heroic: "Heroic", lutris: "Lutris", bottles: "Bottles", itch: "itch.io", apps: "Applications", flatpak: "Flatpak",
-  epic: "Epic Games", whisky: "Whisky", battlenet: "Battle.net", gog: "GOG", prism: "Minecraft", legendary: "Epic Games", nile: "Amazon Games",
+  epic: "Epic Games", whisky: "Whisky", battlenet: "Battle.net", gog: "GOG", prism: "Minecraft", legendary: "Epic Games", nile: "Amazon Games", emulators: "Emulators",
 };
 
 /** The default Tofu of an imported game. (A Minecraft instance is a Tofu of the one Minecraft Piko; see `minecraftPiko.ts`.) */

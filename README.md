@@ -50,7 +50,7 @@
 - [License](#license)
 ## Overview
 
-Mochi is a cross-platform (Linux and macOS) desktop game launcher that sits above existing game ecosystems instead of replacing them. It gives you one library for games that already live on your computer: Steam, Heroic, Epic, itch.io, Flatpak, Lutris, Bottles, Whisky/CrossOver, plain executables, scripts and apps.
+Mochi is a cross-platform (Linux and macOS) desktop game launcher that sits above existing game ecosystems instead of replacing them. It gives you one library for games that already live on your computer: Steam, Heroic, Epic, itch.io, Flatpak, Lutris, Bottles, Whisky/CrossOver, emulators and ROM folders, plain executables, scripts and apps.
 
 - **Local first.** Installations stay where they are; the library, launching, playtime, themes and settings work without an account or a network. Cloud sync is optional and metadata-only.
 - **Native where it matters.** React/TypeScript for the UI; Tauri 2 and Rust for launching, discovery, process tracking and downloads. OS-specific code lives in `src-tauri/src/platform/` and `src-tauri/src/sources/`, and the UI asks `get_platform_capabilities` instead of assuming an OS.
@@ -134,6 +134,7 @@ Settings > Accessibility covers text and interface size (85-150%), high contrast
 Background check 10 seconds after start and every 6 hours (Settings > Updates > Auto-update), never installing without you pressing **Install & restart**. Updates are verified against an embedded public key. **Opening a newer build.** When you open a newer AppImage, or a `Mochi.app` outside `/Applications`, Mochi checks it against a signed `install-hashes.json` from that version's GitHub release. If it cannot verify the build it warns you; if you continue, it installs the build and restarts from the installed location. See [docs/updates.md](docs/updates.md) and [docs/release.md](docs/release.md).
 
 ### More library features
+- **Emulators and ROM libraries**: add ROM folders in Settings > Emulators, import them as games, and launch each ROM in RetroArch, Dolphin, PCSX2, DuckStation, PPSSPP, melonDS, mGBA, Flycast or MAME, with playtime tracked ([docs/emulators.md](docs/emulators.md)).
 - **ProtonDB** tier badge on Steam games (Linux), fetched on demand and never blocking.
 - **Tray / menu bar quick launch**: your most played and recently played games launch straight from the tray menu (Linux and macOS).
 - **Launch hooks**: optional pre- and post-launch commands per game, run as plain arguments (never through a shell) with a time limit; failures only notify.
@@ -193,7 +194,7 @@ A **Piko** is a game in your library: name, artwork, genres, launch target, sour
 
 Battle.net, GOG Galaxy (macOS app bundles; offline installers under `~/GOG Games` on Linux) and Prism, Fjord, PolyMC and MultiMC Minecraft instances are imported too (see [docs/improvements/importers-round6.md](docs/improvements/importers-round6.md)); Battle.net and the Prism family are unverified on macOS hardware. The Whisky pin format was inferred from its source and is not verified on a real machine. Imports never move, copy or uninstall anything, and you can point Mochi at a library folder manually when detection misses it.
 
-Manually added games can target: executables, `.desktop` files, Flatpak IDs, `.sh`/`.bash`, `.py`, `.js`, macOS `.app` bundles, `.exe`/`.bat` through the Tofu's runtime (Wine or Proton, GameMode and MangoHud on Linux; CrossOver or Whisky on macOS), and the launcher URIs above. Runtimes are detected, not installed.
+Manually added games can target: executables, `.desktop` files, Flatpak IDs, `.sh`/`.bash`, `.py`, `.js`, macOS `.app` bundles, emulator ROMs (`mochi-emu://<system>?rom=<path>`, made by the Emulators import), `.exe`/`.bat` through the Tofu's runtime (Wine or Proton, GameMode and MangoHud on Linux; CrossOver or Whisky on macOS), and the launcher URIs above. Runtimes are detected, not installed.
 
 ## Accounts, cloud sync and offline use
 
@@ -304,7 +305,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] Playtime import from Heroic, Lutris and GOG, alongside the existing Steam playtime import
 - [ ] Source scanner health check that reports when a launcher's file format has changed instead of silently missing games
 - [ ] Save sync to a folder you choose (Syncthing, Nextcloud, WebDAV) built on save backups, with nothing hosted by Mochi
-- [ ] Emulator and ROM libraries (RetroArch, Dolphin, PCSX2 and others) with ROM folder scanning
+- [x] Emulator and ROM libraries (RetroArch, Dolphin, PCSX2 and others) with ROM folder scanning
 - [ ] Plugins out of Experimental, including plugins that add new game sources
 - [ ] Discord Rich Presence
 - [ ] RetroAchievements support
@@ -316,7 +317,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 
 ### Everyday use
 
-[Accessibility](docs/accessibility.md) · [Backlog and wishlist](docs/backlog.md) · [Command palette](docs/command-palette.md) · [CLI and deep links](docs/cli.md) · [Controller](docs/controller.md) · [Duplicates](docs/duplicates.md) · [Launch options](docs/launch-options.md) · [Save backups](docs/save-backups.md) · [Settings export/import](docs/settings-export.md) · [Shortcuts](docs/shortcuts.md) · [Storage manager](docs/storage.md)
+[Accessibility](docs/accessibility.md) · [Backlog and wishlist](docs/backlog.md) · [Command palette](docs/command-palette.md) · [CLI and deep links](docs/cli.md) · [Controller](docs/controller.md) · [Duplicates](docs/duplicates.md) · [Emulators and ROMs](docs/emulators.md) · [Launch options](docs/launch-options.md) · [Save backups](docs/save-backups.md) · [Settings export/import](docs/settings-export.md) · [Shortcuts](docs/shortcuts.md) · [Storage manager](docs/storage.md)
 
 ### Discover, metadata and extras
 

@@ -100,6 +100,16 @@ function mockSteamAchievements(appid: number) {
   }));
   return { status: "ok", stale: false, source: "community", steamId: "76561197960287930", fetchedAt: now, data: { appid, gameName: `Steam app ${appid}`, achievements, unlocked: 4, total: names.length } };
 }
+let emulatorState: { folders: Array<{ path: string; system: string }>; systems: Record<string, Record<string, string>> } = { folders: [{ path: "/home/dev/ROMs", system: "auto" }], systems: {} };
+const emulatorOverview = () => ({
+  systems: [
+    { id: "snes", name: "Super Nintendo", extensions: ["sfc", "smc", "zip"], emulators: ["retroarch"], cores: ["snes9x"], defaultEmulator: "retroarch", defaultCore: "snes9x" },
+    { id: "gamecube", name: "Nintendo GameCube", extensions: ["gcm", "rvz", "iso"], emulators: ["dolphin", "retroarch"], cores: [], defaultEmulator: "dolphin", defaultCore: null },
+  ],
+  emulators: [{ id: "retroarch", name: "RetroArch", installedVia: "flatpak" }, { id: "dolphin", name: "Dolphin", installedVia: "native" }, { id: "pcsx2", name: "PCSX2", installedVia: null }],
+  settings: emulatorState,
+});
+
 const handlers: Record<string, Handler> = {
   ...instanceHandlers,
   ...saveHandlers,
@@ -322,6 +332,8 @@ const handlers: Record<string, Handler> = {
   cache_theme_fonts: () => "",
   get_mochi_config_info: () => ({ configPath: "~/.config/Mochi/config.json", themesPath: "~/.config/Mochi/themes", selectedTheme: localStorage.getItem("mochi:theme") ?? "mochi" }),
   set_mochi_theme: (args) => { localStorage.setItem("mochi:theme", String(args.themeId)); return null; },
+  get_emulator_overview: () => emulatorOverview(),
+  set_emulator_settings: (args) => { emulatorState = args.settings as typeof emulatorState; return emulatorOverview(); },
   detect_import_sources: () => [
     { id: "steam", name: "Steam", description: "Games installed through Steam and its libraries.", detected: true, installed: true, gameCount: 240, launcherCount: 1 },
     { id: "heroic", name: "Heroic Games Launcher", description: "Epic, GOG and Amazon games managed by Heroic.", detected: true, installed: true, gameCount: 6, launcherCount: 0 },
