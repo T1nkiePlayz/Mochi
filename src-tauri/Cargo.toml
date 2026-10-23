@@ -32,6 +32,8 @@ image = { version = "0.25.10", default-features = false, features = ["png", "jpe
 gilrs = "0.11.2"
 # Reads macOS Info.plist / Whisky metadata; platform-neutral so the parsers are tested on Linux too.
 plist = "1"
+# Reads the playtime tables of Lutris (pga.db) and GOG Galaxy (galaxy-2.0.db) from a private copy.
+rusqlite = { version = "0.40", features = ["bundled"] }
 
 # macOS notifications under Mochi's own name and icon (osascript ones show Script Editor's).
 [target.'cfg(target_os = "macos")'.dependencies]

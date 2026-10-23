@@ -26,6 +26,9 @@ use linux as os;
 #[cfg(target_os = "macos")]
 use macos as os;
 
+/// Heroic's config roots on this OS (native, Flatpak, macOS app support).
+pub fn heroic_roots(home: &Path) -> Vec<PathBuf> { os::heroic_roots(home) }
+
 pub mod battlenet;
 pub mod classify;
 pub mod gog;

@@ -14,6 +14,7 @@ import { SettingsGroup, ToggleRow } from "./Section";
 import { SettingsTransfer } from "./SettingsTransfer";
 import { LibraryBackup } from "./LibraryBackup";
 import { steamPlaytimeTargets } from "../../lib/steamPlaytime";
+import { PlaytimeImport } from "./PlaytimeImport";
 import { useSteamPlaytimeImport } from "../../state/useSteamPlaytimeImport";
 
 export function DataSection() {
@@ -94,6 +95,7 @@ export function DataSection() {
     <div className="setting-row"><span><strong>{t("Import Steam playtime")}</strong><small>{t("Adds the playtime Steam saved for your games to Mochi's stats, as one earlier session per game. Importing twice adds nothing.")}</small></span><button type="button" className="secondary-button" disabled={playtimeTargets.length === 0 || steamPlaytime.status === "importing"} onClick={() => void importPlaytime()}>{steamPlaytime.status === "importing" ? t("Importing…") : t("Import")}</button></div>
     {steamPlaytime.status === "done" && <p className="metadata-note settings-note" role="status">{t("Steam playtime: {imported} games updated, {unchanged} already matched, {unmapped} not in your library.").replace("{imported}", String(steamPlaytime.result.imported)).replace("{unchanged}", String(steamPlaytime.result.unchanged)).replace("{unmapped}", String(steamPlaytime.result.unmapped))}</p>}
     {steamPlaytime.status === "error" && <p className="metadata-note settings-note" role="alert">{steamPlaytime.message}</p>}
+    <PlaytimeImport library={lib.library} onImported={() => void refreshPlaytime()} />
     <div className="data-source-footer">
       <small className="metadata-note">{t("Clearing removes saved lookups and downloaded covers from this device only. Games stay in your library and Mochi shows generated covers until you refresh.")}</small>
       <button type="button" className="secondary-button danger-outline" disabled={busy !== null} onClick={() => void run("all")}>{busy === "all" ? t("Clearing…") : t("Clear all cached data")}</button>
