@@ -33,6 +33,9 @@ pub fn capabilities() -> PlatformCapabilities {
         supports_startup: true,
         supports_system_notifications: true,
         supports_shortcuts: true,
+        supports_runtime_install: true,
+        is_flatpak: false,
+        install_type: "native".into(),
         is_steam_deck: false,
         is_gamescope: false,
     }
@@ -59,8 +62,9 @@ fn flatpak_is_game(id: &str) -> bool {
 }
 
 pub fn list_flatpaks() -> Result<Vec<FlatpakApp>, String> {
-    let output = Command::new("flatpak")
-        .args(["list", "--app", "--columns=application,name"])
+    let mut command = Command::new("flatpak");
+    command.args(["list", "--app", "--columns=application,name"]);
+    let output = super::sandbox::host_command(command)
         .output()
         .map_err(|e| format!("Unable to query installed Flatpaks: {e}"))?;
     if !output.status.success() {
@@ -81,7 +85,7 @@ pub fn list_flatpaks() -> Result<Vec<FlatpakApp>, String> {
 }
 
 fn flatpak_installed(id: &str) -> bool {
-    command_exists("flatpak") && Command::new("flatpak").args(["info", id]).output().map(|o| o.status.success()).unwrap_or(false)
+    command_exists("flatpak") && { let mut command = Command::new("flatpak"); command.args(["info", id]); super::sandbox::host_command(command).output().map(|o| o.status.success()).unwrap_or(false) }
 }
 
 fn valid_flatpak_id(id: &str) -> bool {
@@ -118,11 +122,27 @@ fn proton_installs() -> Vec<RuntimeInfo> {
     found
 }
 
+/// Wine builds Mochi installed itself (Wine-GE), under `<Mochi data>/runtimes/wine`.
+fn wine_installs() -> Vec<RuntimeInfo> {
+    let Some(root) = crate::runtime_installer::wine_root() else { return Vec::new() };
+    let Ok(entries) = fs::read_dir(&root) else { return Vec::new() };
+    let mut found: Vec<RuntimeInfo> = entries.flatten().filter_map(|entry| {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let binary = entry.path().join("bin/wine");
+        if name.starts_with('.') || !binary.is_file() { return None; }
+        let path = binary.to_string_lossy().into_owned();
+        Some(RuntimeInfo { id: format!("wine:{path}"), name: format!("{name} (Mochi)"), kind: "compat".into(), path })
+    }).collect();
+    found.sort_by(|a, b| b.name.cmp(&a.name));
+    found
+}
+
 pub fn list_runtimes() -> Vec<RuntimeInfo> {
     let mut runtimes = Vec::new();
     if let Some(path) = command_path("wine") {
         runtimes.push(RuntimeInfo { id: "wine".into(), name: "Wine".into(), kind: "compat".into(), path: path.to_string_lossy().into_owned() });
     }
+    runtimes.extend(wine_installs());
     runtimes.extend(proton_installs());
     for (command, name) in WRAPPERS {
         if let Some(path) = command_path(command) {
@@ -329,7 +349,9 @@ pub fn ensure_platform_integration() -> Result<(), String> {
     fs::write(applications.join(format!("{handler_name}-handler.desktop")), handler_content).map_err(|e| format!("Unable to update Mochi URL handler: {e}"))?;
 
     if command_exists("update-desktop-database") {
-        let _ = Command::new("update-desktop-database").arg(&applications).status();
+        let mut command = Command::new("update-desktop-database");
+        command.arg(&applications);
+        let _ = super::sandbox::host_command(command).status();
     }
     Ok(())
 }
@@ -407,7 +429,9 @@ fn notify_send_args(title: &str, body: &str, icon: Option<&Path>) -> Vec<OsStrin
 }
 
 pub fn send_system_notification(title: &str, body: &str) -> Result<(), String> {
-    let status = Command::new("notify-send").args(notify_send_args(title, body, notification_icon().as_deref())).status().map_err(|e| format!("Unable to start notify-send: {e}"))?;
+    let mut command = Command::new("notify-send");
+    command.args(notify_send_args(title, body, notification_icon().as_deref()));
+    let status = super::sandbox::host_command(command).status().map_err(|e| format!("Unable to start notify-send: {e}"))?;
     if status.success() { Ok(()) } else { Err("The system notification daemon rejected the notification.".into()) }
 }
 

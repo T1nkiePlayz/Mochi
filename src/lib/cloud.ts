@@ -74,6 +74,10 @@ export async function pullLibrary(client: SupabaseClient, userId: string): Promi
   }));
 }
 
+/** The executable path the cloud holds for a game: the synced value when this device uses a local override of it. */
+export const cloudExecutablePath = (piko: Pick<Piko, "executablePath" | "pathOverride">) =>
+  piko.pathOverride && piko.pathOverride.executablePath === piko.executablePath ? (piko.pathOverride.cloudValue ?? undefined) : piko.executablePath;
+
 const clamp = (value: string | undefined, max: number) => (value && value.length > max ? value.slice(0, max) : value);
 
 /** Replaces the cloud library with `library` in one transaction on the server. Returns the ids now confirmed in the cloud. */
@@ -86,7 +90,7 @@ export async function pushLibrary(client: SupabaseClient, library: Piko[]): Prom
     accent: piko.accent,
     artwork: piko.artwork && piko.artwork.length <= 8192 ? piko.artwork : null,
     artwork_url: piko.artworkUrl ?? null,
-    executable_path: clamp(piko.executablePath, 4096) ?? null,
+    executable_path: clamp(cloudExecutablePath(piko), 4096) ?? null,
     source: piko.source ?? "built-in",
     source_id: piko.sourceId && CLOUD_SOURCE_IDS.has(piko.sourceId) ? piko.sourceId : null,
     platform_category: piko.platformCategory ?? null,
@@ -161,6 +165,8 @@ export function mergeCloudLibrary(local: Piko[], cloud: Piko[]): Piko[] {
     const mine = localById.get(remote.id);
     if (!mine) return remote;
     const tofuById = new Map(mine.tofus.map((tofu) => [tofu.id, tofu]));
+    // A path fixed on this device stays while the cloud still holds the value it was fixed from; a newer cloud value wins.
+    const keepPath = mine.pathOverride !== undefined && mine.pathOverride.executablePath === mine.executablePath && (remote.executablePath ?? null) === mine.pathOverride.cloudValue;
     return {
       ...mine,
       ...remote,
@@ -171,7 +177,8 @@ export function mergeCloudLibrary(local: Piko[], cloud: Piko[]): Piko[] {
       collectionIds: mine.collectionIds,
       lockedFields: mine.lockedFields,
       modLinks: mine.modLinks,
-      executablePath: remote.executablePath ?? mine.executablePath,
+      executablePath: keepPath ? mine.executablePath : remote.executablePath ?? mine.executablePath,
+      pathOverride: keepPath ? mine.pathOverride : undefined,
       tofus: remote.tofus.map((tofu) => ({ ...tofuById.get(tofu.id), ...tofu })),
     } satisfies Piko;
   });

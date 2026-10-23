@@ -166,6 +166,13 @@ pub fn terminate(pid: u32, is_group: bool) {
             let alive = if is_group { group_alive(pid) } else { snapshot().contains_key(&pid) };
             if !alive { return; }
         }
+        if crate::platform::sandbox::is_flatpak() {
+            // SIGKILL would only end flatpak-spawn and cannot be forwarded: the game would keep running on
+            // the host while Mochi called it stopped. Leave it tracked and say so.
+            eprintln!("Mochi: a game ignored the stop request and may still be running on the host.");
+            let _ = crate::platform::send_system_notification("Mochi", &crate::platform::sandbox::stuck_stop_notice());
+            return;
+        }
         send(libc::SIGKILL);
     });
 }

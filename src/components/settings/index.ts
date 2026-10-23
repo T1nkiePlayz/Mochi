@@ -19,6 +19,7 @@ import { AccountPinSection } from "./AccountPinSection";
 import { DealsSection } from "./DealsSection";
 import { StorageSection } from "./StorageSection";
 import { PluginsSection } from "./PluginsSection";
+import { RuntimesSection } from "./RuntimesSection";
 
 // Rarely opened and sizeable, so it loads on demand and stays out of the entry chunk.
 const LazyEmulatorsSection = lazy(() => import("./EmulatorsSection").then((module) => ({ default: module.EmulatorsSection })));
@@ -48,6 +49,7 @@ export const settingsSections: Array<{ id: string; Section: ComponentType }> = [
   { id: "librarytools", Section: LibraryToolsSection },
   { id: "emulators", Section: EmulatorsSection },
   { id: "storage", Section: StorageSection },
+  { id: "runtimes", Section: RuntimesSection },
   { id: "experimental", Section: ExperimentalSection },
   { id: "plugins", Section: PluginsSection },
   { id: "help", Section: HelpSection },

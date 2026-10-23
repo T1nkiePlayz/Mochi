@@ -2,7 +2,7 @@
 //! Each instance becomes a game whose default Tofu is that instance's `.minecraft` folder; launching
 //! hands the instance id back to its launcher (`--launch <id>`).
 
-use super::{encode, make, mccopy, percent_decode, read, real_dir, sort_games, ImportedGame};
+use super::{encode, health, make, mccopy, percent_decode, read, real_dir, sort_games, ImportedGame};
 use serde::Serialize;
 use std::{
     fs,
@@ -159,10 +159,19 @@ pub(super) fn instances_dir(root: &Path, launcher: &InstanceLauncher) -> PathBuf
 pub(super) fn read_instance(root: &Path, dir: &Path, launcher: &InstanceLauncher) -> Option<ImportedGame> {
     let id = dir.file_name()?.to_str()?.to_owned();
     if id.starts_with('.') || id.starts_with('_') { return None; }
-    let config = read(&dir.join("instance.cfg"))?;
+    let config_file = dir.join("instance.cfg");
+    if !config_file.exists() { return None; }
+    health::examined(&config_file);
+    let Some(config) = read(&config_file) else { health::failed(&config_file, "could not be read"); return None };
+    if !config.contains('=') { health::failed(&config_file, "not a valid instance config (no key=value lines)"); }
     let name = ini_value(&config, "name").unwrap_or_else(|| id.clone());
     let game_dir = [".minecraft", "minecraft"].iter().map(|sub| dir.join(sub)).find(|path| path.is_dir()).unwrap_or_else(|| dir.join(".minecraft"));
-    let (version, loader) = read(&dir.join("mmc-pack.json")).map(|text| pack_info(&text)).unwrap_or((None, "vanilla".into()));
+    let pack_file = dir.join("mmc-pack.json");
+    let (version, loader) = read(&pack_file).map(|text| {
+        health::examined(&pack_file);
+        if serde_json::from_str::<serde_json::Value>(&text).is_err() { health::failed(&pack_file, "invalid JSON"); }
+        pack_info(&text)
+    }).unwrap_or((None, "vanilla".into()));
     let mut item = make(format!("{}:{}", launcher.id, id), name, "prism", instance_target(launcher.id, &id), dir.to_str().map(str::to_owned));
     item.minecraft = Some(MinecraftInstance { version, loader, game_dir: game_dir.to_string_lossy().into_owned(), pack: managed_pack(&config), index: pack_index(dir, &game_dir), copy_exists: false });
     // Custom instance icons live in `<data>/icons/<iconKey>.png`; the built-in ones are not files.
@@ -306,5 +315,17 @@ mod tests {
         for bad in ["mc-instance://prism/..", "mc-instance://prism/a%2Fb", "mc-instance://prism/", "mc-instance://evil/x", "mc-instance://prism/--help", "steam://x", "mc-instance://prism/%zz"] {
             assert!(parse_instance_target(bad).is_none(), "{bad}");
         }
+    }
+
+    #[test]
+    fn broken_instance_files_are_reported_without_changing_the_scan() {
+        let root = temp_dir("prism-health");
+        write(&root.join("instances/Pack/instance.cfg"), "name=Pack\n");
+        write(&root.join("instances/Pack/mmc-pack.json"), "{ not json");
+        write(&root.join("instances/Bad/instance.cfg"), "no equals here");
+        let launcher = &INSTANCE_LAUNCHERS[0];
+        let (games, collector) = crate::sources::health::collect(|| scan_instances(&[(root.clone(), launcher)]));
+        assert_eq!(games.len(), 2);
+        assert_eq!(collector.failed_paths().len(), 2);
     }
 }

@@ -96,7 +96,7 @@ pub fn plan_file(target: &str, config: &LaunchConfig, tools: &Tools, linux: bool
             let selected = known.iter().find(|r| r.kind == "compat" && r.id == runtime).ok_or("The selected runtime is no longer installed.")?;
             if let Some(prefix) = prefix {
                 plan.create_dirs.push(prefix.to_path_buf());
-                if runtime == "wine" {
+                if super::is_wine_runtime(&runtime) {
                     plan.env.push(("WINEPREFIX".into(), path_string(prefix)));
                 } else {
                     plan.env.push(("STEAM_COMPAT_DATA_PATH".into(), path_string(prefix)));
@@ -105,7 +105,7 @@ pub fn plan_file(target: &str, config: &LaunchConfig, tools: &Tools, linux: bool
                 }
             }
             inner.push(selected.path.clone());
-            if runtime != "wine" { inner.push("run".into()); }
+            if !super::is_wine_runtime(&runtime) { inner.push("run".into()); }
             inner.push(target.into());
         }
         "sh" | "bash" => inner.extend(["sh".into(), target.into()]),
