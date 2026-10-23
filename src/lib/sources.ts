@@ -1,7 +1,19 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ImportSourceId } from "../models";
+import { noteSourceHealth } from "./sourceHealth";
 
 export type { ImportSourceId };
+
+export type SourceHealthStatus = "ok" | "not_installed" | "empty" | "partial" | "parse_error";
+export type SourceHealth = {
+  id: ImportSourceId;
+  name: string;
+  status: SourceHealthStatus;
+  filesExamined: number;
+  /** Files that exist but could not be read or parsed, with a short reason (home folder shown as `~`). */
+  failures: Array<{ path: string; reason: string }>;
+  gameCount: number;
+};
 
 export type DetectedImportSource = {
   id: ImportSourceId;
@@ -13,6 +25,7 @@ export type DetectedImportSource = {
   installed?: boolean;
   gameCount: number | null;
   launcherCount?: number | null;
+  health?: SourceHealth;
 };
 
 export type ImportedGame = {
@@ -39,7 +52,10 @@ export type MinecraftPackHint = {
 };
 export type MinecraftScan = { version?: string | null; loader: string; gameDir: string; /** A Mochi copy of this instance already exists next to it. */ copyExists?: boolean } & MinecraftPackHint;
 
-export const detectImportSources = () => invoke<DetectedImportSource[]>("detect_import_sources");
+export const detectImportSources = () => invoke<DetectedImportSource[]>("detect_import_sources").then((sources) => { noteSourceHealth(sources); return sources; });
+
+/** Re-scans every source and reports how readable each one's files were. */
+export const scannerHealth = () => invoke<SourceHealth[]>("scanner_health").then((report) => { noteSourceHealth(report.map((health) => ({ health }))); return report; });
 
 export const scanImportGames = (source: ImportSourceId, libraryPath?: string) =>
   invoke<ImportedGame[]>("scan_import_games", { source, libraryPath: libraryPath ?? null });

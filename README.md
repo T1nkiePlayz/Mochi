@@ -69,6 +69,7 @@ Mochi is a cross-platform (Linux and macOS) desktop game launcher that sits abov
 - In-app notification centre plus desktop notifications (`notify-send` on Linux, `osascript` on macOS).
 - **Backlog and wishlist**: mark games Want to play / Playing / Finished / Dropped with notes, keep a wishlist of games you don't own yet, and let *What should I play?* pick by mood and time ([docs/backlog.md](docs/backlog.md)).
 - **Duplicate merge**: the same game from several sources (Steam, Heroic, Flatpak, desktop entries) can be merged into one entry with a *Play via* picker, and unmerged at any time ([docs/duplicates.md](docs/duplicates.md)).
+- **Source health**: Settings > Library tools shows whether each launcher's files can still be read, and a notice appears when a launcher's format change would hide games ([docs/source-health.md](docs/source-health.md)).
 - **Command palette** (Ctrl+K / Cmd+K): fuzzy-search games and run actions (theme, settings sections, mods, snapshots, Big Picture); type `>` for actions only ([docs/command-palette.md](docs/command-palette.md)).
 - **Per-game launch options**: environment variables, arguments, working directory, Proton/Wine runtime, GameMode, MangoHud and gamescope, with a live preview of the exact command and a ready-to-paste Steam launch option string ([docs/launch-options.md](docs/launch-options.md)).
 - **Save backups**: zip snapshots of Minecraft worlds, Steam userdata and any folder you add, with safe restore and automatic backup when a game closes ([docs/save-backups.md](docs/save-backups.md)).
@@ -261,7 +262,7 @@ The release key fingerprint is listed in [docs/verify-downloads.md](docs/verify-
 
 - Builds are unsigned and unnotarized; macOS needs the manual Gatekeeper steps above.
 - macOS support is newer and less tested than Linux; some paths (Whisky, entitlements) are unverified on real hardware.
-- Source scanners read other launchers' local formats and may break when those change. Battle.net, GOG Galaxy and Prism code paths are unverified on real macOS hardware.
+- Source scanners read other launchers' local formats and may break when those change; Settings > Library tools > Source health reports launchers whose files can no longer be read ([docs/source-health.md](docs/source-health.md)). Battle.net, GOG Galaxy and Prism code paths are unverified on real macOS hardware.
 - Runtimes (Wine, Proton, CrossOver) are detected, not installed.
 - Nexus Mods requirements are read from the mod's Requirements data and installed like other dependencies only when you have a Nexus key (and Premium for downloads); otherwise they are shown as links.
 - Games handed to another launcher can only be stopped once Mochi detects them.
@@ -302,7 +303,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] Built-in Proton-GE / Wine-GE installer, so runtimes no longer have to be installed outside Mochi
 - [ ] Synced path remapping: when a synced game's path is missing on this machine, locate it or rescan and match by store ID
 - [ ] Playtime import from Heroic, Lutris and GOG, alongside the existing Steam playtime import
-- [ ] Source scanner health check that reports when a launcher's file format has changed instead of silently missing games
+- [x] Source scanner health check that reports when a launcher's file format has changed instead of silently missing games
 - [ ] Save sync to a folder you choose (Syncthing, Nextcloud, WebDAV) built on save backups, with nothing hosted by Mochi
 - [ ] Emulator and ROM libraries (RetroArch, Dolphin, PCSX2 and others) with ROM folder scanning
 - [ ] Plugins out of Experimental, including plugins that add new game sources
@@ -316,7 +317,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 
 ### Everyday use
 
-[Accessibility](docs/accessibility.md) · [Backlog and wishlist](docs/backlog.md) · [Command palette](docs/command-palette.md) · [CLI and deep links](docs/cli.md) · [Controller](docs/controller.md) · [Duplicates](docs/duplicates.md) · [Launch options](docs/launch-options.md) · [Save backups](docs/save-backups.md) · [Settings export/import](docs/settings-export.md) · [Shortcuts](docs/shortcuts.md) · [Storage manager](docs/storage.md)
+[Accessibility](docs/accessibility.md) · [Backlog and wishlist](docs/backlog.md) · [Command palette](docs/command-palette.md) · [CLI and deep links](docs/cli.md) · [Controller](docs/controller.md) · [Duplicates](docs/duplicates.md) · [Launch options](docs/launch-options.md) · [Save backups](docs/save-backups.md) · [Settings export/import](docs/settings-export.md) · [Shortcuts](docs/shortcuts.md) · [Source health](docs/source-health.md) · [Storage manager](docs/storage.md)
 
 ### Discover, metadata and extras
 
