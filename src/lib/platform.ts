@@ -26,6 +26,8 @@ export type PlatformCapabilities = {
   supportsStartup: boolean;
   supportsSystemNotifications: boolean;
   supportsShortcuts: boolean;
+  /** Can install Proton-GE / Wine-GE from Settings. */
+  supportsRuntimeInstall: boolean;
   /** Running on a Steam Deck. */
   isSteamDeck: boolean;
   /** Running inside a gamescope (Steam Gaming Mode) session. */
