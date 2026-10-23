@@ -119,6 +119,7 @@ fn install_root(kind: Kind, steam_root: Option<&Path>, data_dir: Option<&Path>) 
 fn wine_root_in(data_dir: &Path) -> PathBuf { data_dir.join("runtimes").join("wine") }
 
 /// Mochi's own Wine-GE folder, listed by runtime detection.
+#[cfg(target_os = "linux")]
 pub fn wine_root() -> Option<PathBuf> { crate::modinstance::data_dir().map(|dir| wine_root_in(&dir)) }
 
 fn is_runtime_dir(kind: Kind, dir: &Path) -> bool {
