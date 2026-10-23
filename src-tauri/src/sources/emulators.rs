@@ -647,4 +647,48 @@ mod tests {
         assert!(overview.emulators.iter().any(|e| e.id == "duckstation" && e.installed_via == Some("native")));
         let _ = fs::remove_dir_all(home);
     }
+
+    #[test]
+    fn mame_refuses_option_like_set_names() {
+        let mame = emulator("mame").unwrap();
+        let native = Install::Native("/usr/bin/mame".into());
+        let home = Path::new("/home/u");
+        assert!(build_argv(mame, &native, Path::new("/r/-listxml.zip"), None, &[], home).unwrap_err().contains("dash"));
+        assert!(build_argv(mame, &native, Path::new("/r/listxml.zip"), None, &[], home).is_ok());
+    }
+
+    #[test]
+    fn flatpak_never_gets_the_root_or_home_folder() {
+        let flat = Install::Flatpak("net.pcsx2.PCSX2".into());
+        let go = |rom: &str| build_argv(emulator("pcsx2").unwrap(), &flat, Path::new(rom), None, &[], Path::new("/home/u"));
+        assert!(go("/game.iso").is_err());
+        assert!(go("/home/u/game.iso").is_err());
+        assert_eq!(go("/home/u/roms/game.iso").unwrap()[2], "--filesystem=/home/u/roms:ro");
+    }
+
+    #[test]
+    fn launches_stay_inside_configured_folders_and_the_systems_extensions() {
+        let home = temp_dir("emu-confine");
+        let roms = home.join("roms");
+        let outside = home.join("outside");
+        fs::create_dir_all(&roms).unwrap();
+        fs::create_dir_all(&outside).unwrap();
+        let good = rom(&roms, "Good.sfc");
+        let elsewhere = rom(&outside, "Other.sfc");
+        let wrong_ext = rom(&roms, "Disc.iso");
+        std::os::unix::fs::symlink(&elsewhere, roms.join("Link.sfc")).unwrap();
+        std::os::unix::fs::symlink(&outside, roms.join("dir")).unwrap();
+        let which = which_in(&["retroarch"]);
+        let probe = Probe { os: Os::Linux, home: home.clone(), which: &which, system_flatpak: home.join("sys"), app_dirs: vec![] };
+        fs::create_dir_all(home.join(".config/retroarch/cores")).unwrap();
+        fs::write(home.join(".config/retroarch/cores/snes9x_libretro.so"), b"").unwrap();
+        let settings = Settings { folders: vec![RomFolder { path: roms.to_string_lossy().into_owned(), system: "auto".into() }], ..Default::default() };
+        let run = |rom: &Path| resolve_launch(&make_target("snes", rom), &[], &settings, &probe);
+        assert!(run(&good).is_ok());
+        assert!(run(&elsewhere).unwrap_err().contains("not inside a ROM folder"));
+        assert!(run(&wrong_ext).unwrap_err().contains("not a Super Nintendo ROM"));
+        assert!(run(&roms.join("Link.sfc")).unwrap_err().contains("not inside a ROM folder"));
+        assert!(run(&roms.join("dir/Other.sfc")).unwrap_err().contains("not inside a ROM folder"));
+        let _ = fs::remove_dir_all(home);
+    }
 }

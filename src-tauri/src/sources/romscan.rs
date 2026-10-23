@@ -229,4 +229,13 @@ mod tests {
         assert!(scan_folders(&[folder(&root.join("missing"), "auto")]).is_empty());
         let _ = fs::remove_dir_all(root);
     }
+
+    #[test]
+    fn option_like_mame_sets_are_not_imported() {
+        let root = temp_dir("rom-dash");
+        touch(&root.join("-listxml.zip"), "");
+        touch(&root.join("sf2.zip"), "");
+        assert_eq!(names(&scan_folders(&[folder(&root, "arcade")])), ["sf2"]);
+        let _ = fs::remove_dir_all(root);
+    }
 }
