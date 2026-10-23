@@ -28,6 +28,9 @@ export type PlatformCapabilities = {
   supportsShortcuts: boolean;
   /** Can install Proton-GE / Wine-GE from Settings. */
   supportsRuntimeInstall: boolean;
+  /** Running inside a Flatpak sandbox; updates come from Flathub. */
+  isFlatpak: boolean;
+  installType: "flatpak" | "appimage" | "native";
   /** Running on a Steam Deck. */
   isSteamDeck: boolean;
   /** Running inside a gamescope (Steam Gaming Mode) session. */

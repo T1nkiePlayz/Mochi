@@ -240,7 +240,9 @@ pub fn run_prefix_tool(app: tauri::AppHandle, game_id: String, tofu_id: Option<S
     let runtime = resolve_runtime(runtime.as_deref())?;
     let plan = plan_tool(&tool, verb.as_deref(), &runtime, &prefix, platform::with_system_tools(|tools| (tools.steam_root)()).as_deref(), &platform::command_path, &|path| path.exists())?;
     let mut command = Command::new(&plan.argv[0]);
-    command.args(&plan.argv[1..]).envs(plan.env.iter().map(|(key, value)| (key, value))).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
+    command.args(&plan.argv[1..]).envs(plan.env.iter().map(|(key, value)| (key, value)));
+    let mut command = platform::sandbox::host_command(command);
+    command.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
     if !platform::is_wine_runtime(&runtime.id) {
         // Proton wants its data folder to exist; a Wine prefix is created by wine itself.
         fs::create_dir_all(&prefix).map_err(|error| format!("Could not create the prefix folder: {error}"))?;
