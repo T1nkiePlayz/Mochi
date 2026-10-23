@@ -96,6 +96,7 @@ Eleven built-in themes (shown above): Mochi, Mochi Light, Minecraft Ore, Minecra
 - **Power menu** (Menu > Power): suspend or sleep, restart and shut down (Linux and macOS; each asks for a second press, and options the system does not allow are hidden), plus minimise, full screen and quit.
 - **Controller support** (Xbox, PlayStation, Switch Pro, Steam Deck, generic pads) for the whole app: spatial navigation, on-screen keyboard, configurable layout and prompts.
 - **Steam Deck** detection, 44px touch targets and instructions for adding Mochi to Steam.
+- **Per-game controller profiles**: Xbox/Nintendo layouts or a custom button remap, a controller type hint, "use only this controller" and hidraw for PlayStation/Switch pads, applied as SDL/Proton environment variables when Mochi starts the game itself. See [docs/controller-profiles.md](docs/controller-profiles.md).
 - See [docs/controller.md](docs/controller.md) and [docs/steam-deck.md](docs/steam-deck.md).
 
 ### Interface sounds
@@ -308,7 +309,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] Plugins out of Experimental, including plugins that add new game sources
 - [ ] Discord Rich Presence
 - [ ] RetroAchievements support
-- [ ] Per-game controller profiles for games that do not go through Steam Input
+- [x] Per-game controller profiles for games that do not go through Steam Input
 - [ ] Flathub package
 - [ ] Release SBOM and reproducible builds
 

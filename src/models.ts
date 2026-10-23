@@ -149,6 +149,8 @@ export type Piko = {
   launchProfiles?: LaunchProfile[];
   /** The `launchProfiles` id in use; the plain `launchOptions` when unset. */
   activeLaunchProfile?: string;
+  /** Id of the controller profile (SDL/Proton environment) this game launches with; profiles are stored on this device only. */
+  controllerProfileId?: string;
   /** Where the game is installed on this device; used to follow its process. Never synced. */
   installPath?: string;
   source?: "built-in" | "custom";

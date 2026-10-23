@@ -1,3 +1,4 @@
+import type { launcherControllerProfile } from "../controller/profiles";
 import type { LaunchOptions, TofuLaunchConfig } from "../models";
 
 export const defaultLaunchConfig = (): TofuLaunchConfig => ({ wrappers: [], args: "", env: "" });
@@ -70,7 +71,7 @@ export function runtimeIdOf(runtime: LaunchOptions["runtime"]): string | undefin
 }
 
 /** The native launcher's representation of a game's launch settings: the Piko's options, then the Tofu's on top. */
-export function buildLaunchConfig(config: TofuLaunchConfig | undefined, options?: LaunchOptions) {
+export function buildLaunchConfig(config: TofuLaunchConfig | undefined, options?: LaunchOptions, controller: ReturnType<typeof launcherControllerProfile> = null) {
   const tofuArgs = parseArgs(config?.args ?? "");
   const wrappers = new Set(config?.wrappers ?? []);
   if (options?.gamemode) wrappers.add("gamemoderun");
@@ -86,5 +87,7 @@ export function buildLaunchConfig(config: TofuLaunchConfig | undefined, options?
     workingDir: config?.workingDir || options?.workingDir || null,
     gamescope: { enabled: !!options?.gamescope?.enabled, args: options?.gamescope?.args ?? [] },
     hooks: { pre: parseArgs(options?.hooks?.pre ?? ""), post: parseArgs(options?.hooks?.post ?? "") },
+    /** The game's controller profile; the launcher turns it into SDL/Proton variables for direct launches. */
+    controller,
   };
 }

@@ -18,6 +18,10 @@ Confirm is the south button (A on Xbox, cross on PlayStation). Nintendo layouts 
 
 Stored under the local-storage key `mochi:controller` (not in `Behavior`): enabled, swap confirm/back, stick dead zone, repeat speed, prompt style, on-screen keyboard, interface sounds. See `src/controller/settings.ts`.
 
+## Per-game profiles
+
+Games Mochi starts itself can get their own controller setup (button layout, controller type, which pad to use). See [controller-profiles.md](controller-profiles.md).
+
 ## Writing UI that works with a controller
 
 - Use real buttons/links/inputs. Anything focusable with the keyboard is reachable.

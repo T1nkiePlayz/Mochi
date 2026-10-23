@@ -29,7 +29,7 @@ describe("launch parsing", () => {
 describe("buildLaunchConfig", () => {
   const options: LaunchOptions = { env: [["A", "1"], ["B", "piko"]], args: ["-x"], workingDir: "/piko", runtime: { kind: "proton", id: "proton:/p/proton" }, gamemode: true, gamescope: { enabled: true, args: ["-f"] } };
   it("works without options", () => {
-    expect(buildLaunchConfig(undefined)).toEqual({ runtime: null, wrappers: [], args: [], env: {}, workingDir: null, gamescope: { enabled: false, args: [] }, hooks: { pre: [], post: [] } });
+    expect(buildLaunchConfig(undefined)).toEqual({ runtime: null, wrappers: [], args: [], env: {}, workingDir: null, gamescope: { enabled: false, args: [] }, hooks: { pre: [], post: [] }, controller: null });
   });
   it("uses the Piko options", () => {
     const config = buildLaunchConfig(undefined, options);
