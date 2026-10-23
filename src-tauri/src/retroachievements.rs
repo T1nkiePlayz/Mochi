@@ -138,6 +138,7 @@ pub fn build_url(endpoint: &str, user: &str, key: &str, params: &[(&str, String)
 }
 
 /// The URL with the value of every `y` (key) parameter replaced, safe for logs and the UI.
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn redact_url(url: &reqwest::Url) -> String {
     let mut out = url.clone();
     let pairs: Vec<(String, String)> = url.query_pairs().map(|(k, v)| (k.to_string(), if k == "y" { "REDACTED".to_string() } else { v.to_string() })).collect();
@@ -283,14 +284,15 @@ async fn request_json(url: reqwest::Url) -> Result<String, FetchError> {
         .connect_timeout(Duration::from_secs(8)).timeout(Duration::from_secs(25)).build(), "Unable to prepare the RetroAchievements request")
         .map_err(|_| FetchError::Other("Unable to prepare the RetroAchievements request.".into()))?;
     // Errors are mapped to fixed text: reqwest errors carry the URL, and the URL carries the key.
-    let shown = redact_url(&url);
+    // Only the endpoint name may appear in messages: the full URL carries the user name and key.
+    let endpoint = url.path_segments().and_then(|mut parts| parts.next_back()).unwrap_or("API").trim_end_matches(".php").to_string();
     let mut response = client.get(url).send().await.map_err(|error| {
         if error.is_connect() || error.is_timeout() { FetchError::Offline } else { FetchError::Other("The RetroAchievements request failed.".into()) }
     })?;
     let status = response.status().as_u16();
     if status == 401 || status == 403 { return Err(FetchError::Denied); }
     if status == 429 { return Err(FetchError::Other("RetroAchievements is busy right now. Try again in a minute.".into())); }
-    if !response.status().is_success() { return Err(FetchError::Other(format!("RetroAchievements returned HTTP {status} for {shown}."))); }
+    if !response.status().is_success() { return Err(FetchError::Other(format!("RetroAchievements returned HTTP {status} for {endpoint}."))); }
     if response.content_length().is_some_and(|length| length as usize > MAX_BYTES) { return Err(FetchError::Other("The RetroAchievements response is too large.".into())); }
     let mut body = Vec::new();
     while let Some(chunk) = response.chunk().await.map_err(|_| FetchError::Offline)? {

@@ -1,3 +1,4 @@
+import type { RaMatch } from "../../../lib/retroAchievements";
 import type { Collection, Piko } from "../../../models";
 import type { PlatformCapabilities } from "../../../lib/platform";
 import type { ArtworkSelection } from "../../artwork/ArtworkPicker";
@@ -19,5 +20,8 @@ export type EditorContext = {
   artworkReset: boolean;
   setArtworkReset: (value: boolean) => void;
   hasIgdb: boolean;
+  /** The RetroAchievements link held in the draft; persisted on Save, discarded on Cancel. */
+  raMatch: RaMatch | null;
+  setRaMatch: (match: RaMatch | null) => void;
   refreshGame?: (piko: Piko) => Promise<unknown> | unknown;
 };

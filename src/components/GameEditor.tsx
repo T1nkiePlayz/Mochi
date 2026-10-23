@@ -16,6 +16,7 @@ import { GeneralTab } from "./library/editor/GeneralTab";
 import { LaunchTab } from "./library/editor/LaunchTab";
 import { NotesTab } from "./library/editor/NotesTab";
 import { MetadataTab } from "./library/editor/MetadataTab";
+import { readRaMatch, writeRaMatch, type RaMatch } from "../lib/retroAchievements";
 import type { EditorContext, LockedField } from "./library/editor/types";
 
 type Props = {
@@ -38,6 +39,8 @@ export function GameEditor({ game, capabilities, onSave, onClose }: Props) {
   const [artwork, setArtwork] = useState<ArtworkSelection | null>(null);
   const [artworkReset, setArtworkReset] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
+  const [raMatch, setRaMatch] = useState<RaMatch | null>(() => readRaMatch(game.id));
+  const raBaseline = useRef(raMatch).current;
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -52,7 +55,7 @@ export function GameEditor({ game, capabilities, onSave, onClose }: Props) {
   const ctx: EditorContext = {
     game, draft, capabilities, collections: app.collections.collections, tagSuggestions: allTags, patch, unlock,
     createCollection: (name) => app.collections.createCollection(name),
-    artwork, setArtwork, artworkReset, setArtworkReset, hasIgdb: app.hasIgdb,
+    artwork, setArtwork, artworkReset, setArtworkReset, hasIgdb: app.hasIgdb, raMatch, setRaMatch,
     refreshGame: (app.metadata as { refreshGame?: EditorContext["refreshGame"] }).refreshGame,
   };
 
@@ -84,6 +87,7 @@ export function GameEditor({ game, capabilities, onSave, onClose }: Props) {
       (Object.keys(final) as Array<keyof Piko>).concat(Object.keys(baseline) as Array<keyof Piko>).forEach((key) => {
         if (JSON.stringify(final[key]) !== JSON.stringify(baseline[key])) (changes as Record<string, unknown>)[key] = final[key];
       });
+      if (JSON.stringify(raMatch) !== JSON.stringify(raBaseline)) writeRaMatch(game.id, raMatch);
       onSave(changes);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));

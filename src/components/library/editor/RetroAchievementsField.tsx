@@ -2,14 +2,13 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Search } from "lucide-react";
 import { useTranslation } from "../../../lib/useTranslation";
 import { Select } from "../../ui/Select";
-import { RA_CHANGED, RA_CONSOLES, autoSuggest, consoleIdForPlatform, hasRaCredentials, parseGameId, readRaConfig, readRaMatch, searchRaGames, writeRaMatch, type RaGame, type RaMatch } from "../../../lib/retroAchievements";
+import { RA_CONSOLES, autoSuggest, consoleIdForPlatform, hasRaCredentials, parseGameId, readRaConfig, searchRaGames, type RaGame, type RaMatch } from "../../../lib/retroAchievements";
 import type { EditorContext } from "./types";
 
 /** Links a game to its RetroAchievements game. Changes apply at once and stay on this device (see `writeRaMatch`). */
 export function RetroAchievementsField({ ctx }: { ctx: EditorContext }) {
   const t = useTranslation();
-  const gameId = ctx.game.id;
-  const [match, setMatch] = useState<RaMatch | null>(() => readRaMatch(gameId));
+  const match = ctx.raMatch;
   const known = consoleIdForPlatform(ctx.draft.platformCategory);
   const [consoleId, setConsoleId] = useState<string>(String(match?.consoleId ?? known ?? ""));
   const [query, setQuery] = useState(ctx.draft.name);
@@ -19,12 +18,6 @@ export function RetroAchievementsField({ ctx }: { ctx: EditorContext }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const credentials = hasRaCredentials(readRaConfig());
-
-  useEffect(() => {
-    const sync = () => setMatch(readRaMatch(gameId));
-    window.addEventListener(RA_CHANGED, sync);
-    return () => window.removeEventListener(RA_CHANGED, sync);
-  }, [gameId]);
 
   const run = async (text: string, auto: boolean) => {
     const id = Number(consoleId);
@@ -46,14 +39,14 @@ export function RetroAchievementsField({ ctx }: { ctx: EditorContext }) {
 
   const link = (raGameId: number, title?: string) => {
     const next: RaMatch = { raGameId, ...(Number(consoleId) ? { consoleId: Number(consoleId) } : {}), ...(title ? { title } : {}) };
-    writeRaMatch(gameId, next); setMatch(next); setResults(null); setSuggestion(null); setManual(""); setMessage("");
+    ctx.setRaMatch(next); setResults(null); setSuggestion(null); setManual(""); setMessage("");
   };
   const manualId = parseGameId(manual);
 
   return <section className="metadata-match" aria-label={t("RetroAchievements game")}>
     <h3>{t("RetroAchievements game")}</h3>
-    <p className="metadata-note">{match ? t("Linked to {title}.").replace("{title}", match.title || `#${match.raGameId}`) : t("Not linked")} {t("Changes here apply right away and stay on this device.")}</p>
-    {match && <div className="editor-actions-row"><button type="button" className="secondary-button danger-outline" onClick={() => { writeRaMatch(gameId, null); setMatch(null); }}>{t("Unlink")}</button></div>}
+    <p className="metadata-note">{match ? t("Linked to {title}.").replace("{title}", match.title || `#${match.raGameId}`) : t("Not linked")}</p>
+    {match && <div className="editor-actions-row"><button type="button" className="secondary-button danger-outline" onClick={() => ctx.setRaMatch(null)}>{t("Unlink")}</button></div>}
     {!credentials && <p className="metadata-note">{t("Add your RetroAchievements user name and Web API key in Settings > Achievements.")}</p>}
     {credentials && <>
       <Select value={consoleId} label={t("Console")} placeholder={t("Choose a console")} onChange={setConsoleId} options={RA_CONSOLES.map((item) => ({ value: String(item.id), label: item.name }))} />
