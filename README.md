@@ -149,6 +149,7 @@ Background check 10 seconds after start and every 6 hours (Settings > Updates > 
 - **Plugins**: small folders with a `plugin.json` and `main.js` that add command palette commands, run in a restricted worker with explicit permissions ([docs/plugins.md](docs/plugins.md)).
 
 ### Linux and macOS integration
+- **Flatpak** manifest and sandbox support (host launches through `flatpak-spawn`; [docs/flatpak.md](docs/flatpak.md)).
 Application-menu shortcuts (`mochi://launch/<id>`), start at login, tray icon, managed AppImage copy and `mochi://` handler on Linux; LaunchAgent, Dock reopen and menu-bar hiding on macOS. Experimental opt-in features live in Settings > Experimental ([docs/experimental-features.md](docs/experimental-features.md)).
 
 ## Screenshots
@@ -215,7 +216,7 @@ Verify what you downloaded before running it: see [Verify your download](#verify
 
 ### Linux
 
-AppImage, `.deb` and `.rpm` are published, and the repository has an Arch `PKGBUILD` (`packaging/arch`). For the AppImage: `chmod +x Mochi*.AppImage && ./Mochi*.AppImage`. The AppImage and the macOS app update themselves in place; deb, rpm and AUR installs only get an "Open release page" prompt.
+AppImage, `.deb` and `.rpm` are published, and the repository has an Arch `PKGBUILD` (`packaging/arch`). For the AppImage: `chmod +x Mochi*.AppImage && ./Mochi*.AppImage`. The AppImage and the macOS app update themselves in place; deb, rpm and AUR installs only get an "Open release page" prompt. A Flatpak manifest lives in `packaging/flatpak` (Flathub listing pending; see [docs/flatpak.md](docs/flatpak.md)); Flatpak installs are updated by Flathub, not by Mochi.
 
 ### macOS (12.0 or newer, Apple silicon and Intel)
 
@@ -309,7 +310,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] Discord Rich Presence
 - [ ] RetroAchievements support
 - [ ] Per-game controller profiles for games that do not go through Steam Input
-- [ ] Flathub package
+- [x] Flathub package
 - [ ] Release SBOM and reproducible builds
 
 ## Documentation index

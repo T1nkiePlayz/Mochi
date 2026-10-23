@@ -26,6 +26,9 @@ export type PlatformCapabilities = {
   supportsStartup: boolean;
   supportsSystemNotifications: boolean;
   supportsShortcuts: boolean;
+  /** Running inside a Flatpak sandbox; updates come from Flathub. */
+  isFlatpak: boolean;
+  installType: "flatpak" | "appimage" | "native";
   /** Running on a Steam Deck. */
   isSteamDeck: boolean;
   /** Running inside a gamescope (Steam Gaming Mode) session. */

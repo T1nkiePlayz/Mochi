@@ -12,6 +12,7 @@ use std::{
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 mod launchagent;
 pub mod launchopts;
+pub mod sandbox;
 #[cfg(target_os = "linux")]
 mod linux;
 // Compiled on Linux for tests only, so the macOS adapter is type-checked and unit-tested everywhere.
@@ -44,6 +45,10 @@ pub struct PlatformCapabilities {
     pub supports_startup: bool,
     pub supports_system_notifications: bool,
     pub supports_shortcuts: bool,
+    /// Running inside a Flatpak sandbox: host programs start through `flatpak-spawn --host` and updates come from Flathub.
+    pub is_flatpak: bool,
+    /// `flatpak`, `appimage` or `native`.
+    pub install_type: String,
     /// Running on a Steam Deck (or SteamOS handheld).
     pub is_steam_deck: bool,
     /// Running inside a gamescope session (Steam Gaming Mode).
@@ -176,6 +181,8 @@ pub fn user_dir(kind: UserDir) -> Option<PathBuf> {
 /// Locates an executable on PATH (plus the usual GUI-session gaps on macOS).
 pub fn command_path(name: &str) -> Option<PathBuf> {
     if name.is_empty() || name.contains('/') { return None; }
+    // The sandbox sees none of the host's programs; ask the host instead.
+    if sandbox::is_flatpak() { return sandbox::host_command_path(name); }
     let mut dirs: Vec<PathBuf> = std::env::var_os("PATH").map(|p| std::env::split_paths(&p).collect()).unwrap_or_default();
     for extra in ["/usr/local/bin", "/opt/homebrew/bin", "/usr/bin", "/bin"] {
         let extra = PathBuf::from(extra);
@@ -192,8 +199,9 @@ pub fn is_executable(path: &Path) -> bool {
 }
 
 /// Runs a command, capturing stdout, and kills it if it exceeds `timeout`.
-pub fn run_capture(mut command: Command, timeout: Duration) -> Option<Vec<u8>> {
+pub fn run_capture(command: Command, timeout: Duration) -> Option<Vec<u8>> {
     use std::io::Read;
+    let mut command = sandbox::host_command(command);
     let mut child = command.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn().ok()?;
     let mut stdout = child.stdout.take()?;
     let reader = std::thread::spawn(move || { let mut buffer = Vec::new(); let _ = stdout.read_to_end(&mut buffer); buffer });
@@ -212,8 +220,11 @@ pub fn run_capture(mut command: Command, timeout: Duration) -> Option<Vec<u8>> {
 /// Spawns `command` as the leader of a new process group, detached from our
 /// stdio, and reaps it in the background so it never lingers as a zombie.
 /// With a `log`, the child's stdout and stderr are appended to that file (and kept under the size cap).
-pub fn spawn_detached_logged(mut command: Command, log: Option<(std::fs::File, PathBuf)>) -> Result<u32, String> {
+pub fn spawn_detached_logged(command: Command, log: Option<(std::fs::File, PathBuf)>) -> Result<u32, String> {
     use std::os::unix::process::CommandExt;
+    // In a Flatpak the game runs on the host; flatpak-spawn stays alive for as long as it does,
+    // so its pid stands in for the game's when tracking playtime.
+    let mut command = sandbox::host_command(command);
     command.process_group(0).stdin(Stdio::null());
     let log_path = match log {
         Some((file, path)) => match file.try_clone() {
@@ -407,7 +418,7 @@ pub fn ensure_platform_integration() -> Result<(), String> { os::ensure_platform
 pub fn set_launch_on_startup(enabled: bool) -> Result<(), String> { os::set_launch_on_startup(enabled) }
 pub fn list_flatpaks() -> Result<Vec<FlatpakApp>, String> { os::list_flatpaks() }
 pub fn capabilities() -> PlatformCapabilities {
-    PlatformCapabilities { is_steam_deck: crate::bigpicture::is_steam_deck(), is_gamescope: crate::bigpicture::is_gamescope(), ..os::capabilities() }
+    PlatformCapabilities { is_flatpak: sandbox::is_flatpak(), install_type: sandbox::install_type().into(), is_steam_deck: crate::bigpicture::is_steam_deck(), is_gamescope: crate::bigpicture::is_gamescope(), ..os::capabilities() }
 }
 pub fn list_runtimes() -> Vec<RuntimeInfo> { os::list_runtimes() }
 

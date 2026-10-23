@@ -1,0 +1,52 @@
+name: Flatpak
+
+on:
+  pull_request:
+    paths:
+      - "packaging/flatpak/**"
+      - ".github/workflows/flatpak.yml"
+  workflow_dispatch:
+    inputs:
+      build:
+        description: "Also run flatpak-builder (slow: downloads the GNOME runtime and the release .deb)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Install validators
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends appstream desktop-file-utils
+      - name: Validate metainfo
+        run: appstreamcli validate --no-net packaging/flatpak/dev.sidequestgames.Mochilauncher.metainfo.xml
+      - name: Validate desktop file
+        run: desktop-file-validate packaging/flatpak/dev.sidequestgames.Mochilauncher.desktop
+      - name: Check manifest pins
+        run: |
+          grep -Eq 'sha256: [0-9a-f]{64}$' packaging/flatpak/dev.sidequestgames.Mochilauncher.yml
+          version="$(sed -n 's/^version = "\(.*\)"/\1/p' src-tauri/Cargo.toml | head -1)"
+          grep -q "releases/download/v${version}/Mochi_${version}_amd64.deb" packaging/flatpak/dev.sidequestgames.Mochilauncher.yml \
+            || echo "::warning::The Flatpak manifest does not point at the v${version} .deb yet (bump it per docs/flatpak.md)."
+
+  build:
+    if: github.event_name == 'workflow_dispatch' && inputs.build
+    needs: validate
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-48
+      options: --privileged
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          submodules: recursive
+      - name: Build
+        run: |
+          flatpak-builder --force-clean --user --install-deps-from=flathub --disable-rofiles-fuse \
+            --repo=repo build-dir packaging/flatpak/dev.sidequestgames.Mochilauncher.yml

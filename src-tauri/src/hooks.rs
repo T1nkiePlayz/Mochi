@@ -22,7 +22,9 @@ struct HookResult { game_id: String, phase: &'static str, ok: bool, message: Str
 fn run(words: &[String], limit: Duration) -> Result<(), String> {
     let Some((program, args)) = words.split_first() else { return Ok(()) };
     if words.len() > MAX_WORDS || program.trim().is_empty() { return Err("The hook command is not valid.".into()); }
-    let mut child = Command::new(program).args(args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
+    let mut command = Command::new(program);
+    command.args(args);
+    let mut child = crate::platform::sandbox::host_command(command).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
         .spawn().map_err(|error| format!("Could not start \"{program}\": {error}"))?;
     let started = Instant::now();
     loop {
