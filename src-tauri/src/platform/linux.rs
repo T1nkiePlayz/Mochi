@@ -33,6 +33,7 @@ pub fn capabilities() -> PlatformCapabilities {
         supports_startup: true,
         supports_system_notifications: true,
         supports_shortcuts: true,
+        supports_runtime_install: true,
         is_flatpak: false,
         install_type: "native".into(),
         is_steam_deck: false,
@@ -121,11 +122,27 @@ fn proton_installs() -> Vec<RuntimeInfo> {
     found
 }
 
+/// Wine builds Mochi installed itself (Wine-GE), under `<Mochi data>/runtimes/wine`.
+fn wine_installs() -> Vec<RuntimeInfo> {
+    let Some(root) = crate::runtime_installer::wine_root() else { return Vec::new() };
+    let Ok(entries) = fs::read_dir(&root) else { return Vec::new() };
+    let mut found: Vec<RuntimeInfo> = entries.flatten().filter_map(|entry| {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let binary = entry.path().join("bin/wine");
+        if name.starts_with('.') || !binary.is_file() { return None; }
+        let path = binary.to_string_lossy().into_owned();
+        Some(RuntimeInfo { id: format!("wine:{path}"), name: format!("{name} (Mochi)"), kind: "compat".into(), path })
+    }).collect();
+    found.sort_by(|a, b| b.name.cmp(&a.name));
+    found
+}
+
 pub fn list_runtimes() -> Vec<RuntimeInfo> {
     let mut runtimes = Vec::new();
     if let Some(path) = command_path("wine") {
         runtimes.push(RuntimeInfo { id: "wine".into(), name: "Wine".into(), kind: "compat".into(), path: path.to_string_lossy().into_owned() });
     }
+    runtimes.extend(wine_installs());
     runtimes.extend(proton_installs());
     for (command, name) in WRAPPERS {
         if let Some(path) = command_path(command) {

@@ -172,7 +172,7 @@ const handlers: Record<string, Handler> = {
   },
   get_platform_capabilities: () => ({
     platform: "linux", displayName: "Linux", launchMethods: ["file", "flatpak", "custom"], supportsFlatpak: true,
-    supportsAppBundles: false, supportsStartup: true, supportsSystemNotifications: true, supportsShortcuts: true,
+    supportsAppBundles: false, supportsStartup: true, supportsSystemNotifications: true, supportsShortcuts: true, supportsRuntimeInstall: true,
     isFlatpak: false, installType: "native",
     isSteamDeck: new URLSearchParams(location.search).has("deck"), isGamescope: new URLSearchParams(location.search).has("gamescope"),
   }),
@@ -215,6 +215,9 @@ const handlers: Record<string, Handler> = {
     steamPlaytimeImported = true;
     return result;
   },
+  playtime_import_sources: () => ["heroic", "lutris"],
+  preview_playtime_import: () => [],
+  import_playtime: () => ({ imported: 0, unchanged: 0, unmapped: 0 }),
   get_active_sessions: () => [],
   list_runtimes: () => [
     { id: "wine", name: "Wine", kind: "compat", path: "/usr/bin/wine" },

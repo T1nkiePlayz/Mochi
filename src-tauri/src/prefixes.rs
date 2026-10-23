@@ -145,7 +145,7 @@ pub fn plan_tool(
     exists: &dyn Fn(&Path) -> bool,
 ) -> Result<ToolPlan, String> {
     if runtime.kind != "compat" { return Err("Pick a Wine or Proton runtime first.".into()); }
-    let proton = runtime.id != "wine";
+    let proton = !crate::platform::is_wine_runtime(&runtime.id);
     let kind = detect_kind(prefix);
     if kind == "wine" && proton { return Err("This prefix was made by Wine. Choose Wine as the runtime to maintain it, or reset the prefix.".into()); }
     if kind == "proton" && !proton { return Err("This prefix was made by Proton. Choose a Proton runtime to maintain it, or reset the prefix.".into()); }
@@ -243,7 +243,7 @@ pub fn run_prefix_tool(app: tauri::AppHandle, game_id: String, tofu_id: Option<S
     command.args(&plan.argv[1..]).envs(plan.env.iter().map(|(key, value)| (key, value)));
     let mut command = platform::sandbox::host_command(command);
     command.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
-    if runtime.id != "wine" {
+    if !platform::is_wine_runtime(&runtime.id) {
         // Proton wants its data folder to exist; a Wine prefix is created by wine itself.
         fs::create_dir_all(&prefix).map_err(|error| format!("Could not create the prefix folder: {error}"))?;
     }

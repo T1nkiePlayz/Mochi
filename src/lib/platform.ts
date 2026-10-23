@@ -26,6 +26,8 @@ export type PlatformCapabilities = {
   supportsStartup: boolean;
   supportsSystemNotifications: boolean;
   supportsShortcuts: boolean;
+  /** Can install Proton-GE / Wine-GE from Settings. */
+  supportsRuntimeInstall: boolean;
   /** Running inside a Flatpak sandbox; updates come from Flathub. */
   isFlatpak: boolean;
   installType: "flatpak" | "appimage" | "native";
