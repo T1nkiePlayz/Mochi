@@ -328,12 +328,13 @@ fn pick_emulator(probe: &Probe, sys: &System, choice: Option<&SystemChoice>) -> 
 // ---------------------------------------------------------------------------
 
 /// The argv for one ROM. `rom_dir` is shared read-only with Flatpak apps.
-fn build_argv(def: &EmulatorDef, install: &Install, rom: &Path, core: Option<&Path>, args: &[String]) -> Result<Vec<String>, String> {
+fn build_argv(def: &EmulatorDef, install: &Install, rom: &Path, core: Option<&Path>, args: &[String], home: &Path) -> Result<Vec<String>, String> {
     let text = |path: &Path| path.to_string_lossy().into_owned();
     let mut argv: Vec<String> = match install {
         Install::Native(path) | Install::App(path) => vec![text(path)],
         Install::Flatpak(id) => {
             let dir = rom.parent().ok_or("The ROM has no folder.")?;
+            if dir == Path::new("/") || dir == home { return Err("Mochi will not give Flatpak access to the whole disk or home folder. Move the ROM into its own folder.".into()); }
             let dir = text(dir);
             if dir.contains([':', '\0']) { return Err("Flatpak cannot be given a ROM folder whose path contains a colon. Move the ROM.".into()); }
             vec!["flatpak".into(), "run".into(), format!("--filesystem={dir}:ro"), id.clone()]
@@ -348,6 +349,7 @@ fn build_argv(def: &EmulatorDef, install: &Install, rom: &Path, core: Option<&Pa
         Style::Mame => {
             let dir = rom.parent().ok_or("The ROM has no folder.")?;
             let name = rom.file_stem().ok_or("The ROM has no name.")?;
+            if name.to_string_lossy().starts_with('-') { return Err("MAME set names cannot start with a dash.".into()); }
             argv.extend(["-rompath".into(), text(dir), name.to_string_lossy().into_owned()]);
         }
     }
@@ -358,12 +360,18 @@ fn build_argv(def: &EmulatorDef, install: &Install, rom: &Path, core: Option<&Pa
 pub fn resolve_launch(target: &str, extra: &[String], settings: &Settings, probe: &Probe) -> Result<Vec<String>, String> {
     let (sys, rom) = parse_target(target).ok_or("This emulator launch target is not valid.")?;
     if !rom.is_file() { return Err(format!("The ROM \"{}\" no longer exists. Rescan your ROM folders or edit the game.", rom.display())); }
+    let ext = rom.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
+    if !sys.exts.contains(&ext.as_str()) { return Err(format!("\"{}\" is not a {} ROM file.", rom.display(), sys.name)); }
+    let real = fs::canonicalize(&rom).map_err(|e| e.to_string())?;
+    if !settings.folders.iter().any(|folder| fs::canonicalize(&folder.path).is_ok_and(|root| real.starts_with(root))) {
+        return Err(format!("The ROM \"{}\" is not inside a ROM folder set in Settings, Emulators.", rom.display()));
+    }
     let choice = settings.systems.get(sys.id);
     let (def, install) = pick_emulator(probe, sys, choice)?;
     let core = if def.style == Style::RetroArch { Some(pick_core(sys, choice, &retroarch_cores(probe, &install))?) } else { None };
     let mut args = split_args(choice.map(|choice| choice.args.as_str()).unwrap_or(""))?;
     args.extend(extra.iter().cloned());
-    build_argv(def, &install, &rom, core.as_deref(), &args)
+    build_argv(def, &install, &rom, core.as_deref(), &args, &probe.home)
 }
 
 /// `resolve_launch` with the real settings file and system probe (what the launcher and the preview call).
@@ -576,7 +584,7 @@ mod tests {
 
     fn argv(id: &str, install: Install, rom: &str, core: Option<&str>, args: &[&str]) -> Vec<String> {
         let args: Vec<String> = args.iter().map(|a| (*a).to_owned()).collect();
-        build_argv(emulator(id).unwrap(), &install, Path::new(rom), core.map(Path::new), &args).unwrap()
+        build_argv(emulator(id).unwrap(), &install, Path::new(rom), core.map(Path::new), &args, Path::new("/home/u")).unwrap()
     }
 
     #[test]
@@ -597,7 +605,10 @@ mod tests {
         assert_eq!(argv("retroarch", flat("org.libretro.RetroArch"), "/r/a.sfc", Some("/h/core.so"), &[]), ["flatpak", "run", "--filesystem=/r:ro", "org.libretro.RetroArch", "-L", "/h/core.so", "/r/a.sfc"]);
         assert_eq!(argv("dolphin", flat("org.DolphinEmu.dolphin-emu"), "/r/a.rvz", None, &[]), ["flatpak", "run", "--filesystem=/r:ro", "org.DolphinEmu.dolphin-emu", "-b", "-e", "/r/a.rvz"]);
         assert_eq!(argv("pcsx2", flat("net.pcsx2.PCSX2"), "/r/a.iso", None, &[]), ["flatpak", "run", "--filesystem=/r:ro", "net.pcsx2.PCSX2", "-batch", "--", "/r/a.iso"]);
-        assert!(build_argv(emulator("ppsspp").unwrap(), &flat("org.ppsspp.PPSSPP"), Path::new("/r:x/a.iso"), None, &[]).is_err());
+        assert!(build_argv(emulator("ppsspp").unwrap(), &flat("org.ppsspp.PPSSPP"), Path::new("/r:x/a.iso"), None, &[], Path::new("/home/u")).is_err());
+        let one = |dir: &str| build_argv(emulator("ppsspp").unwrap(), &flat("org.ppsspp.PPSSPP"), Path::new(&format!("{dir}/a.iso")), None, &[], Path::new("/home/u"));
+        assert!(one("").is_err() && one("/home/u").is_err() && one("/home/u/roms").is_ok());
+        assert!(build_argv(emulator("mame").unwrap(), &Install::Native("/usr/bin/mame".into()), Path::new("/r/-listxml.zip"), None, &[], Path::new("/home/u")).is_err());
     }
 
     #[test]
@@ -611,7 +622,13 @@ mod tests {
         fs::write(home.join(".config/retroarch/cores/snes9x_libretro.so"), b"").unwrap();
         let which = which_in(&["retroarch", "duckstation-qt"]);
         let probe = Probe { os: Os::Linux, home: home.clone(), which: &which, system_flatpak: home.join("sys"), app_dirs: vec![] };
-        let mut settings = Settings::default();
+        let mut settings = Settings { folders: vec![RomFolder { path: roms.to_string_lossy().into_owned(), system: "auto".into() }], ..Default::default() };
+        let outside = temp_dir("emu-outside");
+        let stray = rom(&outside, "Evil.sfc");
+        assert!(resolve_launch(&make_target("snes", &stray), &[], &settings, &probe).unwrap_err().contains("not inside a ROM folder"));
+        assert!(resolve_launch(&make_target("snes", &iso), &[], &settings, &probe).unwrap_err().contains("not a Super Nintendo ROM"));
+        assert!(resolve_launch(&make_target("snes", &sfc), &[], &Settings::default(), &probe).is_err());
+        let _ = fs::remove_dir_all(outside);
         let line = resolve_launch(&make_target("snes", &sfc), &["-v".to_owned()], &settings, &probe).unwrap();
         assert_eq!(line, ["/usr/bin/retroarch", "-v", "-L", home.join(".config/retroarch/cores/snes9x_libretro.so").to_str().unwrap(), sfc.to_str().unwrap()]);
         settings.systems.insert("ps1".into(), SystemChoice { args: "--fast \"a b\"".into(), ..Default::default() });

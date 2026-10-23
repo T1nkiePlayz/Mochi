@@ -132,6 +132,8 @@ pub fn scan_folders(folders: &[RomFolder]) -> Vec<ImportedGame> {
     let games = found.into_iter().filter(|(file, _, _)| !hidden.contains(&key(file))).filter_map(|(file, root, mapped)| {
         let system = system_for(&file, &root, &mapped)?;
         let stem = file.file_stem()?.to_string_lossy().into_owned();
+        // MAME takes the set name as a bare argument, so a leading dash would be read as an option.
+        if system.id == "arcade" && stem.starts_with('-') { return None; }
         let target = emulators::make_target(system.id, &file);
         Some(make(format!("emulators:{}:{}", system.id, file.to_string_lossy()), clean_title(&stem), "emulators", target, None))
     }).collect();
@@ -210,11 +212,13 @@ mod tests {
         touch(&root.join("N64/wrong.sfc"), "");
         touch(&root.join(".hidden/Secret.nes"), "");
         touch(&root.join(".Hidden.nes"), "");
+        touch(&root.join("Arcade/-listxml.zip"), "");
+        touch(&root.join("Arcade/sf2.zip"), "");
         let mut deep = root.join("far");
         for level in 0..=MAX_DEPTH + 1 { deep = deep.join(format!("d{level}")); }
         touch(&deep.join("TooDeep.nes"), "");
         let games = scan_folders(&[folder(&root, "auto"), folder(&root, "auto")]);
-        assert_eq!(names(&games), ["Advance", "Mario", "Metroid", "Sonic"]);
+        assert_eq!(names(&games), ["Advance", "Mario", "Metroid", "sf2", "Sonic"]);
         let by = |name: &str| games.iter().find(|g| g.name == name).unwrap().launch_target.clone();
         assert!(by("Advance").starts_with("mochi-emu://gba?"));
         assert!(by("Sonic").starts_with("mochi-emu://genesis?"));
