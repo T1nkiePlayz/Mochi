@@ -20,3 +20,12 @@
 .chip-static { font-size: 12px; color: var(--mochi-text-muted); }
 .details-play-via { display: inline-flex; align-items: center; gap: 8px; }
 @media (max-width: 720px) { .duplicates-notice { flex-wrap: wrap; } .game-sources-list li { flex-direction: column; align-items: stretch; } }
+.missing-path-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--mochi-warning); }
+.missing-path-notice { display: grid; gap: 10px; padding: 12px 16px; margin: 0 0 12px; border: var(--mochi-border-width, 1px) solid var(--mochi-warning); border-radius: var(--mochi-radius); background: var(--mochi-surface-hover); }
+.missing-path-notice > p { margin: 0; color: var(--mochi-text-muted); }
+.missing-path-notice > p strong { color: var(--mochi-text); }
+.missing-path-notice ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.missing-path-notice li, .missing-path-proposal { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.missing-path-notice li > span, .missing-path-proposal > span { display: grid; gap: 2px; min-width: 0; }
+.missing-path-notice .path-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.missing-path-actions { display: flex; gap: 8px; }

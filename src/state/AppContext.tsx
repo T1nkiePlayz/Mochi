@@ -38,6 +38,7 @@ import { useDeals } from "./useDeals";
 import { usePlugins } from "./usePlugins";
 import { experimentalFeatures } from "../lib/experimental";
 import { useLibraryWatcher } from "./useLibraryWatcher";
+import { usePathRemapCheck } from "./usePathRemapCheck";
 import { checkAccountPin } from "../lib/accountPin";
 import { usePlayLimits } from "./usePlayLimits";
 import { useScreenshotNotifier } from "./useScreenshotNotifier";
@@ -106,6 +107,7 @@ function useAppController() {
   useGameNewsPoller(behavior.gameNews, lib.library, notify, behavior.language);
   useScheduledBackup(storage.ready, notify);
   useLibraryWatcher(behavior.watchFolders, storage.ready, lib.library, notify);
+  usePathRemapCheck(storage.ready, lib.library, notify);
   const collections = useCollections(storage.ownerKey, storage.ready, lib.setLibrary);
   const cloud = useCloudSync(user, lib.library, lib.setLibrary, storage.ready, storage.ownerKey);
   const downloads = useDownloads(activeNav === "Downloads", notify, behavior.language);
