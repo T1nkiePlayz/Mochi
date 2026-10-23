@@ -45,6 +45,7 @@ function RuntimeKindPanel({ kind, title, progress }: { kind: RuntimeKind; title:
     if (!progress || progress.kind !== kind || progress.tag !== tag || !busy) return null;
     const percent = installPercent(progress);
     if (progress.phase === "downloading") return percent === null ? t("Downloading… {percent}%").replace("{percent}", "0") : t("Downloading… {percent}%").replace("{percent}", String(percent));
+    if (progress.phase === "preparing") return t("Preparing…");
     return progress.phase === "verifying" ? t("Verifying download…") : t("Unpacking…");
   };
 

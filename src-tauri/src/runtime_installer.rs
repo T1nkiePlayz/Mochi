@@ -136,8 +136,14 @@ fn installed_in(kind: Kind, root: &Path) -> Vec<InstalledRuntime> {
     found
 }
 
-/// A release counts as installed when a runtime folder carries its tag (Wine-GE folders add a prefix and arch suffix).
-fn is_installed(tag: &str, installed: &[InstalledRuntime]) -> bool { installed.iter().any(|r| r.name == tag || r.name.contains(tag)) }
+/// A release counts as installed when a runtime folder is named exactly after its tag (Wine-GE folders add a `lutris-` prefix and an arch suffix).
+fn is_installed(tag: &str, installed: &[InstalledRuntime]) -> bool {
+    installed.iter().any(|r| {
+        let bare = r.name.strip_prefix("lutris-").unwrap_or(&r.name);
+        let bare = bare.strip_suffix("-x86_64").unwrap_or(bare);
+        r.name == tag || bare == tag
+    })
+}
 
 /// Deletes `name` under the managed root of `kind`; refuses anything that is not a plain folder directly inside it.
 fn remove_in(root: &Path, name: &str) -> Result<(), String> {
@@ -237,6 +243,54 @@ fn extract_tar<R: Read>(reader: R, dest: &Path) -> Result<(), String> {
             continue;
         } else {
             return Err(format!("The archive contains an unsupported entry ({}).", relative.display()));
+        }
+    }
+    // Per-entry checks are lexical; this resolves chained links against the real filesystem.
+    verify_links(dest)
+}
+
+/// Resolves `path` against the real filesystem; a dangling tail is resolved lexically on top of its canonical parent.
+fn resolve_real(path: &Path) -> Option<PathBuf> {
+    if let Ok(real) = fs::canonicalize(path) { return Some(real); }
+    let parent = fs::canonicalize(path.parent()?).ok()?;
+    let name = path.file_name()?;
+    // `..` as a final component cannot be dangling; a plain name that does not exist is fine.
+    if name == ".." || name == "." { return None; }
+    Some(parent.join(name))
+}
+
+/// Walks the unpacked tree and fails if any symlink, followed on disk (chains included), leaves `root`.
+fn verify_links(root: &Path) -> Result<(), String> {
+    let canonical_root = fs::canonicalize(root).map_err(|e| format!("Unable to resolve the install folder: {e}"))?;
+    let mut pending = vec![root.to_path_buf()];
+    while let Some(dir) = pending.pop() {
+        for entry in fs::read_dir(&dir).map_err(|e| format!("Unable to read the unpacked runtime: {e}"))?.flatten() {
+            let path = entry.path();
+            let file_type = entry.file_type().map_err(|e| format!("Unable to read the unpacked runtime: {e}"))?;
+            if file_type.is_symlink() {
+                let target = fs::read_link(&path).map_err(|e| format!("Unable to read a link: {e}"))?;
+                let joined = path.parent().unwrap_or(root).join(&target);
+                let ok = match fs::canonicalize(&joined) {
+                    Ok(real) => real.starts_with(&canonical_root),
+                    Err(_) => {
+                        // Dangling: canonicalize the parent of the link target and resolve the remainder lexically.
+                        let mut base = fs::canonicalize(path.parent().unwrap_or(root)).ok();
+                        for component in target.components() {
+                            let Some(current) = base.take() else { break };
+                            base = match component {
+                                Component::Normal(part) => { let next = current.join(part); Some(resolve_real(&next).unwrap_or(next)) }
+                                Component::ParentDir => current.parent().map(Path::to_path_buf),
+                                Component::CurDir => Some(current),
+                                _ => None,
+                            };
+                        }
+                        base.is_some_and(|real| real.starts_with(&canonical_root))
+                    }
+                };
+                if !ok { return Err(format!("The archive contains a link that leaves the install folder ({}).", path.strip_prefix(root).unwrap_or(&path).display())); }
+            } else if file_type.is_dir() {
+                pending.push(path);
+            }
         }
     }
     Ok(())
@@ -502,6 +556,15 @@ mod tests {
     }
 
     #[test]
+    fn installed_flag_needs_the_exact_folder_name() {
+        let named = |n: &str| vec![InstalledRuntime { name: n.into(), path: String::new() }];
+        assert!(is_installed("GE-Proton10-1", &named("GE-Proton10-1")));
+        assert!(!is_installed("GE-Proton10-1", &named("GE-Proton10-10")));
+        assert!(!is_installed("GE-Proton10-1", &named("lutris-GE-Proton10-10-x86_64")));
+        assert!(is_installed("GE-Proton10-1", &named("lutris-GE-Proton10-1-x86_64")));
+    }
+
+    #[test]
     fn remove_stays_inside_the_managed_root() {
         let base = temp_dir("rt-remove");
         let root = base.join("root");
@@ -554,6 +617,25 @@ mod tests {
         result.unwrap();
         assert_eq!(fs::read(base.join("stage/GE/lib/link")).unwrap(), b"#!/bin/sh");
         assert_eq!(fs::read(base.join("stage/GE/hard")).unwrap(), b"#!/bin/sh");
+        let _ = fs::remove_dir_all(base);
+    }
+
+    #[test]
+    fn chained_links_that_resolve_outside_are_rejected_but_internal_ones_work() {
+        let hop = tar_with(&[("d/s", tar::EntryType::Symlink, "..", b""), ("x", tar::EntryType::Symlink, "d/s/..", b"")]);
+        let (base, result) = unpack("rt-chain", &hop);
+        assert!(result.is_err());
+        let _ = fs::remove_dir_all(base);
+        let ok = tar_with(&[
+            ("GE/", tar::EntryType::Directory, "", b""),
+            ("GE/files/", tar::EntryType::Directory, "", b""),
+            ("GE/files/lib/", tar::EntryType::Directory, "", b""),
+            ("GE/files/lib64", tar::EntryType::Symlink, "lib", b""),
+            ("GE/files/dangling", tar::EntryType::Symlink, "lib/missing", b""),
+        ]);
+        let (base, result) = unpack("rt-internal", &ok);
+        result.unwrap();
+        assert!(base.join("stage/GE/files/lib64").is_dir());
         let _ = fs::remove_dir_all(base);
     }
 
