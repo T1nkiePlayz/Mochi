@@ -84,6 +84,7 @@ Mochi is a cross-platform (Linux and macOS) desktop game launcher that sits abov
 - **Keyboard-first library**: the grid is one Tab stop; arrow keys, Home/End, Page Up/Down and typing a game's name move between games, Enter opens, Shift+Enter plays, Ctrl/Cmd+D favourites and `/` goes to search. A controller uses the same cards. Press `?` for the full list.
 - **Crash suspects**: *Find suspect mods* in a game's Logs reads the log for the mods it names and offers a switch-off button for each (the quick-exit notification names them too). The existing pre-launch check still warns about duplicate, missing, incompatible and wrong-version mods.
 - **Windows prefix manager** (Linux, game editor > Launch options): where a game's Wine/Proton prefix is and how big, Wine settings, registry, repair (`wineboot -u`), a short list of winetricks components (Visual C++, .NET, DirectX, fonts), and a reset that keeps the old copy so you can restore it.
+- **Compatibility tools installer** (Linux, Settings > Compatibility tools): install Proton-GE and Wine-GE from GitHub with a SHA-512 check, list what is installed and remove it again ([docs/runtimes.md](docs/runtimes.md)).
 - **More store imports** (Linux): Epic games installed with Legendary or Rare and Amazon games installed with Nile, launched through those tools. **Find missing covers** (Settings > Data, or the palette) looks up every game that only has a generated cover.
 - **Settings backup**: export or import settings, themes, collections, wishlist and per-game choices as a zip; credentials are never included ([docs/settings-export.md](docs/settings-export.md)).
 
@@ -193,7 +194,7 @@ A **Piko** is a game in your library: name, artwork, genres, launch target, sour
 
 Battle.net, GOG Galaxy (macOS app bundles; offline installers under `~/GOG Games` on Linux) and Prism, Fjord, PolyMC and MultiMC Minecraft instances are imported too (see [docs/improvements/importers-round6.md](docs/improvements/importers-round6.md)); Battle.net and the Prism family are unverified on macOS hardware. The Whisky pin format was inferred from its source and is not verified on a real machine. Imports never move, copy or uninstall anything, and you can point Mochi at a library folder manually when detection misses it.
 
-Manually added games can target: executables, `.desktop` files, Flatpak IDs, `.sh`/`.bash`, `.py`, `.js`, macOS `.app` bundles, `.exe`/`.bat` through the Tofu's runtime (Wine or Proton, GameMode and MangoHud on Linux; CrossOver or Whisky on macOS), and the launcher URIs above. Runtimes are detected, not installed.
+Manually added games can target: executables, `.desktop` files, Flatpak IDs, `.sh`/`.bash`, `.py`, `.js`, macOS `.app` bundles, `.exe`/`.bat` through the Tofu's runtime (Wine or Proton, GameMode and MangoHud on Linux; CrossOver or Whisky on macOS), and the launcher URIs above. Runtimes are detected, not installed (except Proton-GE and Wine-GE on Linux, see Settings > Compatibility tools).
 
 ## Accounts, cloud sync and offline use
 
@@ -262,7 +263,7 @@ The release key fingerprint is listed in [docs/verify-downloads.md](docs/verify-
 - Builds are unsigned and unnotarized; macOS needs the manual Gatekeeper steps above.
 - macOS support is newer and less tested than Linux; some paths (Whisky, entitlements) are unverified on real hardware.
 - Source scanners read other launchers' local formats and may break when those change. Battle.net, GOG Galaxy and Prism code paths are unverified on real macOS hardware.
-- Runtimes (Wine, Proton, CrossOver) are detected, not installed.
+- Runtimes are detected, not installed, except Proton-GE and Wine-GE on Linux, which you can install from Settings > Compatibility tools ([docs/runtimes.md](docs/runtimes.md)). Other Wine, Proton and CrossOver builds are installed outside Mochi.
 - Nexus Mods requirements are read from the mod's Requirements data and installed like other dependencies only when you have a Nexus key (and Premium for downloads); otherwise they are shown as links.
 - Games handed to another launcher can only be stopped once Mochi detects them.
 - Synced paths may not work on another machine; sync is metadata-only.
@@ -299,7 +300,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] Stable release
 - [ ] Theme marketplace / in-app theme gallery for browsing and installing community themes
 - [ ] Theme creator with live editing of colours, fonts and hooks, plus theme export
-- [ ] Built-in Proton-GE / Wine-GE installer, so runtimes no longer have to be installed outside Mochi
+- [x] Built-in Proton-GE / Wine-GE installer, so runtimes no longer have to be installed outside Mochi
 - [ ] Synced path remapping: when a synced game's path is missing on this machine, locate it or rescan and match by store ID
 - [ ] Playtime import from Heroic, Lutris and GOG, alongside the existing Steam playtime import
 - [ ] Source scanner health check that reports when a launcher's file format has changed instead of silently missing games
@@ -316,7 +317,7 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 
 ### Everyday use
 
-[Accessibility](docs/accessibility.md) · [Backlog and wishlist](docs/backlog.md) · [Command palette](docs/command-palette.md) · [CLI and deep links](docs/cli.md) · [Controller](docs/controller.md) · [Duplicates](docs/duplicates.md) · [Launch options](docs/launch-options.md) · [Save backups](docs/save-backups.md) · [Settings export/import](docs/settings-export.md) · [Shortcuts](docs/shortcuts.md) · [Storage manager](docs/storage.md)
+[Accessibility](docs/accessibility.md) · [Backlog and wishlist](docs/backlog.md) · [Command palette](docs/command-palette.md) · [CLI and deep links](docs/cli.md) · [Controller](docs/controller.md) · [Duplicates](docs/duplicates.md) · [Launch options](docs/launch-options.md) · [Runtimes (Proton-GE, Wine-GE)](docs/runtimes.md) · [Save backups](docs/save-backups.md) · [Settings export/import](docs/settings-export.md) · [Shortcuts](docs/shortcuts.md) · [Storage manager](docs/storage.md)
 
 ### Discover, metadata and extras
 
