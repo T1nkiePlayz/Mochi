@@ -28,6 +28,7 @@ import { GameLogsButton } from "./GameLogs";
 import { SaveBackupsButton } from "./SaveBackups";
 import { SaveSyncNotice } from "./SaveSyncNotice";
 import { steamAppIdOf } from "../lib/metadata/merge";
+import { RetroAchievements } from "./RetroAchievements";
 import { ScreenshotGallery, singleCredit } from "./details/ScreenshotGallery";
 import { canPlayHlsNatively, pickTrailer } from "../lib/trailer";
 import { imageSourceLabels } from "../lib/imageSource";
@@ -144,6 +145,7 @@ export function GameDetails({ game, capabilities, cloudStatus, running, playtime
     </div>
     {onSourceChange && onUnmerge && <div className="game-details-content"><GameSources game={game} onUse={onSourceChange} onUnmerge={onUnmerge} /></div>}
     <div className="game-workspace">{workspace}</div>
+    {game.kind !== "launcher" && <div className="game-details-content"><RetroAchievements gameId={game.id} gameName={game.name} /></div>}
     {(steamAppId !== null || choice.kind !== "none") && <div className="game-details-content">
       {steamAppId !== null && <SteamAchievements key={steamAppId} appid={steamAppId} gameName={game.name} />}
       {choice.kind === "steam" ? <section className="game-details-section"><div className="discover-section-heading"><div><h3>{t("Trailer")}</h3><p>{t("From the Steam store.")}</p></div></div><div className="game-trailer-frame">{online ? <video controls preload="none" playsInline poster={choice.video.thumbnail} title={t("{name} trailer").replace("{name}", game.name)} onError={() => setVideoFailed(true)}>{choice.video.webm && <source src={choice.video.webm} type="video/webm" onError={choice.video.mp4 ? undefined : () => setVideoFailed(true)} />}{choice.video.mp4 && <source src={choice.video.mp4} type="video/mp4" onError={() => setVideoFailed(true)} />}{choice.video.hls && <source src={choice.video.hls} type="application/vnd.apple.mpegurl" onError={() => setVideoFailed(true)} />}</video> : <p className="game-trailer-offline">{t("Trailer needs internet")}</p>}</div></section> : null}

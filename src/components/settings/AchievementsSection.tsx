@@ -6,6 +6,7 @@ import { clearAllAchievements, setAchievementCloudSetting, useAchievementCloudAv
 import { confirmAction } from "../../lib/confirm";
 import { formatRelativeTime } from "../../lib/format";
 import { SettingsGroup, ToggleRow } from "./Section";
+import { RetroAchievementsSettings } from "./RetroAchievementsSettings";
 
 const statusText = (state: string, at: number | undefined, message: string | undefined, t: (message: string) => string): string => {
   switch (state) {
@@ -53,5 +54,6 @@ export function AchievementsSection() {
       <button type="button" className="secondary-button danger-outline" disabled={busy || (!unlockedCount && !account.user)} onClick={() => void clear()}>{busy ? t("Clearing…") : t("Clear achievements")}</button>
     </div>
     {note && <p className="metadata-note settings-note" role="status">{note}</p>}
+    <RetroAchievementsSettings />
   </SettingsGroup>;
 }

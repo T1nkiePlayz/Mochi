@@ -7,6 +7,7 @@ import { applyIgdbMetadata, resolveIgdbImage } from "../../../lib/metadata";
 import { bestIgdbMatch } from "../../../lib/search";
 import { TagEditor } from "../TagEditor";
 import type { EditorContext } from "./types";
+import { RetroAchievementsField } from "./RetroAchievementsField";
 import { cssUrl } from "../../../lib/metadata/merge";
 
 const providerOf = (ctx: EditorContext, field: "name" | "description" | "categories" | "artwork") => {
@@ -100,6 +101,7 @@ export function MetadataTab({ ctx }: { ctx: EditorContext }) {
         })}{!candidates.length && !busy && <p className="metadata-note">{t("No games found for that search.")}</p>}</div>}
       </> : <p className="metadata-note">{offline ? t("You are offline. ") : ""}IGDB matching needs you to be signed in with an IGDB key saved in Settings. Everything here can still be edited by hand.</p>}
     </section>
+    <RetroAchievementsField ctx={ctx} />
     {message && <p className="metadata-note" role="status">{message}</p>}
   </div>;
 }

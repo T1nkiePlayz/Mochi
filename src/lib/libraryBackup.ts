@@ -9,7 +9,7 @@ export const BACKUP_VERSION = 1;
 export const MAX_VALUE_CHARS = 40 * 1024 * 1024;
 
 /** Library data kept in the webview. Accounts, tokens and device settings are never part of a backup. */
-const FIXED_KEYS = ["mochi:pikos", "mochi:collections", "mochi:wishlist", "mochi:saved-filters", "mochi:time-to-beat", "mochi:launcher-overrides", "mochi:duplicate-dismissed"];
+const FIXED_KEYS = ["mochi:pikos", "mochi:collections", "mochi:wishlist", "mochi:saved-filters", "mochi:time-to-beat", "mochi:launcher-overrides", "mochi:duplicate-dismissed", "mochi:retroachievements-games"];
 const PROFILE_KEY = /^mochi:profile:[^:]{1,80}:(pikos|collections|wishlist)$/;
 
 export const isBackupKey = (key: string) => FIXED_KEYS.includes(key) || PROFILE_KEY.test(key);

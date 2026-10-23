@@ -9,6 +9,12 @@ describe("library backup", () => {
     expect(Object.keys(data).sort()).toEqual(["mochi:pikos", "mochi:profile:u1:pikos"]);
     expect(isBackupKey("mochi:settings")).toBe(false);
   });
+  it("keeps RetroAchievements game links but never the API key", () => {
+    const data = collectBackupData(memory({ "mochi:retroachievements-games": "{\"a\":{\"raGameId\":5}}", "mochi:retroachievements-config": "{\"username\":\"u\",\"apiKey\":\"SECRETKEY\"}" }));
+    expect(Object.keys(data)).toEqual(["mochi:retroachievements-games"]);
+    expect(JSON.stringify(buildBackup(data))).not.toContain("SECRETKEY");
+    expect(isBackupKey("mochi:retroachievements-config")).toBe(false);
+  });
   it("round-trips and rejects foreign or damaged files", () => {
     const text = JSON.stringify(buildBackup({ "mochi:pikos": [{ id: "a", name: "A", tofus: [] }], "mochi:accounts": [1] }, "1.0", 5));
     const { file, summary } = parseBackup(text);
