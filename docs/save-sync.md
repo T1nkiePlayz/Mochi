@@ -43,6 +43,10 @@ computers needs the same instance name and world name; an added folder needs the
 - If the folder is not there (unmounted share), nothing is written and the status says so; Mochi does not create it.
 - Mochi deletes only files it wrote: this device's snapshots beyond the local "keep" setting, and, with **Remove from sync folder**,
   all of this device's snapshots (which also turns sync off). Other devices' files and any other file are never deleted.
+- Imported snapshots have their own limit: the newest "keep" copies per game are kept locally, separately from this
+  device's own backups, so importing never pushes out a local backup. Pruning an imported copy only removes the local
+  copy, never the file in the sync folder.
+- Snapshots dated more than an hour in the future are skipped and reported as damaged, so a wrong clock can't hide newer backups.
 - Two devices that write the manifest at the same moment can lose each other's entries; each device re-adds its own on its next sync.
 
 ## Limits
