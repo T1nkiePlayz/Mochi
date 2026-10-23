@@ -1,0 +1,136 @@
+# Flatpak manifest for Mochi (Flathub). Repackages the released .deb, the approach Tauri documents
+# for Flatpak: https://v2.tauri.app/distribute/flatpak/
+# Bump `url` and `sha256` below (and the metainfo <release>) for every release; see docs/flatpak.md.
+app-id: dev.sidequestgames.Mochilauncher
+runtime: org.gnome.Platform
+runtime-version: '48'
+sdk: org.gnome.Sdk
+command: mochi
+
+finish-args:
+  # Windows: Wayland first, X11 only when there is no Wayland session.
+  - --socket=wayland
+  - --socket=fallback-x11
+  # Shared memory with X11 and the compositor (WebKitGTK needs it under X11).
+  - --share=ipc
+  # GPU rendering for the web view.
+  - --device=dri
+  # Game library lookups, metadata, news, Discover and mod downloads, accounts and cloud sync.
+  - --share=network
+  # Interface sounds and the audio of embedded media.
+  - --socket=pulseaudio
+  # Controllers and rumble (Big Picture mode). /dev/input and hidraw are not covered by dri.
+  - --device=all
+  # Mochi reads other launchers' data (Steam, Heroic, Lutris, Bottles, itch, ...) and the game
+  # folders, Wine prefixes and mods that live under $HOME. There is no portal for that.
+  - --filesystem=home
+  # Start Steam, Heroic, Wine, Proton and `flatpak run` games on the host through
+  # `flatpak-spawn --host`. Mochi never uses this for anything else.
+  - --talk-name=org.freedesktop.Flatpak
+  # Desktop notifications for downloads, updates and finished tasks.
+  - --talk-name=org.freedesktop.Notifications
+  # Tray icon (quick launch menu).
+  - --talk-name=org.kde.StatusNotifierWatcher
+
+modules:
+  # Tauri's tray icon loads libayatana-appindicator at runtime; the GNOME runtime does not ship it.
+  # Definitions copied from flathub/shared-modules (libayatana-appindicator-gtk3.json), pinned,
+  # with their patches vendored in patches/ so this directory is self-contained.
+  - name: intltool
+    cleanup: ['*']
+    sources:
+      - type: archive
+        url: https://launchpad.net/intltool/trunk/0.51.0/+download/intltool-0.51.0.tar.gz
+        mirror-urls:
+          - https://gstreamer.freedesktop.org/src/mirror/intltool-0.51.0.tar.gz
+        sha256: 67c74d94196b153b774ab9f89b2fa6c6ba79352407037c8c14d5aeb334e959cd
+      - type: patch
+        path: patches/intltool-perl5.26-regex-fixes.patch
+
+  - name: libdbusmenu
+    buildsystem: autotools
+    build-options:
+      cflags: -Wno-error
+    cleanup: ['*.la', /include, /lib/pkgconfig, /libexec, /share/doc, /share/gtk-doc]
+    config-opts:
+      - --with-gtk=3
+      - --disable-dumper
+      - --disable-static
+      - --disable-tests
+      - --disable-gtk-doc
+      - --enable-introspection=no
+      - --disable-vala
+    sources:
+      - type: archive
+        url: https://launchpad.net/libdbusmenu/16.04/16.04.0/+download/libdbusmenu-16.04.0.tar.gz
+        mirror-urls:
+          - https://ftp.fr.openbsd.org/pub/OpenBSD/distfiles/libdbusmenu-16.04.0.tar.gz
+        sha256: b9cc4a2acd74509435892823607d966d424bd9ad5d0b00938f27240a1bfa878a
+      - type: patch
+        path: patches/0001-Fix-HAVE_VALGRIND-AM_CONDITIONAL.patch
+
+  - name: ayatana-ido
+    buildsystem: cmake-ninja
+    cleanup: [/include, /lib/pkgconfig]
+    config-opts:
+      - -DENABLE_INTROSPECTION=OFF
+    sources:
+      - type: git
+        url: https://github.com/AyatanaIndicators/ayatana-ido.git
+        tag: 0.10.4
+        commit: f968079b09e2310fefc3fc307359025f1c74b3eb
+      - type: patch
+        path: patches/0001-Make-introspection-configurable.patch
+
+  - name: libayatana-indicator
+    buildsystem: cmake-ninja
+    cleanup: [/include, /lib/pkgconfig, /libexec, /share]
+    sources:
+      - type: git
+        url: https://github.com/AyatanaIndicators/libayatana-indicator.git
+        tag: 0.9.4
+        commit: 611bb384b73fa6311777ba4c41381a06f5b99dad
+
+  - name: libayatana-appindicator
+    buildsystem: cmake-ninja
+    cleanup: [/include, /lib/pkgconfig]
+    config-opts:
+      - -DENABLE_BINDINGS_MONO=NO
+      - -DENABLE_BINDINGS_VALA=NO
+      - -DENABLE_GTKDOC=NO
+    sources:
+      - type: git
+        url: https://github.com/AyatanaIndicators/libayatana-appindicator.git
+        tag: 0.5.94
+        commit: 31e8bb083b307e1cc96af4874a94707727bd1e79
+
+  - name: mochi
+    buildsystem: simple
+    build-commands:
+      # A .deb is an `ar` archive holding data.tar.*; only the payload under usr/ is used.
+      - ar x mochi.deb
+      - tar -xf data.tar.* -C .
+      - install -Dm755 usr/bin/mochi /app/bin/mochi
+      # Flatpak only exports icons named after the app id.
+      - |
+        found=0
+        for icon in usr/share/icons/hicolor/*/apps/mochi.png; do
+          [ -f "$icon" ] || continue
+          size=$(basename "$(dirname "$(dirname "$icon")")")
+          install -Dm644 "$icon" "/app/share/icons/hicolor/$size/apps/$FLATPAK_ID.png"
+          found=1
+        done
+        [ "$found" = 1 ] || { echo "no icons found in the .deb" >&2; exit 1; }
+      - install -Dm644 dev.sidequestgames.Mochilauncher.desktop /app/share/applications/dev.sidequestgames.Mochilauncher.desktop
+      - install -Dm644 dev.sidequestgames.Mochilauncher.metainfo.xml /app/share/metainfo/dev.sidequestgames.Mochilauncher.metainfo.xml
+    sources:
+      - type: file
+        # Release asset of tag v0.1.1; sha256 from that release's SHA256SUMS.txt.
+        url: https://github.com/T1nkiePlayz/Mochi/releases/download/v0.1.1/Mochi_0.1.1_amd64.deb
+        sha256: 28dc656cecc36cfecbb7cb172992bd8ae4138da4c8600b4a5efd20f8e8352279
+        dest-filename: mochi.deb
+        only-arches: [x86_64]
+      - type: file
+        path: dev.sidequestgames.Mochilauncher.desktop
+      - type: file
+        path: dev.sidequestgames.Mochilauncher.metainfo.xml

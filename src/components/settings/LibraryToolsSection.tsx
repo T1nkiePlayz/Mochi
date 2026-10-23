@@ -3,6 +3,7 @@ import { useTranslation } from "../../lib/useTranslation";
 import { X } from "lucide-react";
 import { useApp } from "../../state/AppContext";
 import { SettingsGroup, ToggleRow } from "./Section";
+import { SourceHealthPanel } from "./SourceHealthPanel";
 
 /** Screenshots and background library watching. */
 export function LibraryToolsSection() {
@@ -18,5 +19,6 @@ export function LibraryToolsSection() {
     <div className="setting-row"><span><strong>{t("Shared screenshot folders")}</strong><small>{t("Folders with one sub-folder per game, named like the game (Heroic, Lutris, Bottles, your own captures). You can also add a folder to a single game on its page.")}</small></span>
       <button type="button" className="secondary-button" onClick={() => void addFolder()}>{t("Add folder")}</button></div>
     {behavior.screenshotFolders.length > 0 && <ul className="screenshot-folders" aria-label={t("Shared screenshot folders")}>{behavior.screenshotFolders.map((folder) => <li key={folder}><span title={folder}>{folder}</span><button type="button" className="icon-button" aria-label={t("Remove {name}").replace("{name}", folder)} onClick={() => setBehavior({ ...behavior, screenshotFolders: behavior.screenshotFolders.filter((item) => item !== folder) })}><X size={14} /></button></li>)}</ul>}
+    <SourceHealthPanel />
   </SettingsGroup>;
 }

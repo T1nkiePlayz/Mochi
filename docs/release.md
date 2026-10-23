@@ -40,6 +40,7 @@ Behaviour: all three signing secrets present = signed with your identity; plus t
 
 * CI green on the tagged commit.
 * Supabase redirect URLs include `mochi://auth/callback` and `mochi://auth/verify`.
+* Flatpak: bump `url` and `sha256` (from `SHA256SUMS.txt`) of the `.deb` and add a `<release>` to the metainfo in `packaging/flatpak/` ([docs/flatpak.md](flatpak.md)), then update the Flathub repository once listed.
 * After publishing: open the DMG on a Mac, run the Gatekeeper steps if unsigned, test a `mochi://` link and Check for updates.
 
 ## Self-install hash manifest

@@ -22,18 +22,39 @@ struct HookResult { game_id: String, phase: &'static str, ok: bool, message: Str
 fn run(words: &[String], limit: Duration) -> Result<(), String> {
     let Some((program, args)) = words.split_first() else { return Ok(()) };
     if words.len() > MAX_WORDS || program.trim().is_empty() { return Err("The hook command is not valid.".into()); }
-    let mut child = Command::new(program).args(args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
+    let mut command = Command::new(program);
+    command.args(args);
+    let mut child = crate::platform::sandbox::host_command(command).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
         .spawn().map_err(|error| format!("Could not start \"{program}\": {error}"))?;
     let started = Instant::now();
     loop {
         match child.try_wait() {
             Ok(Some(status)) if status.success() => return Ok(()),
             Ok(Some(status)) => return Err(format!("\"{program}\" exited with {status}.")),
-            Ok(None) if started.elapsed() >= limit => { let _ = child.kill(); let _ = child.wait(); return Err(format!("\"{program}\" took longer than {} seconds and was stopped.", limit.as_secs())); }
+            Ok(None) if started.elapsed() >= limit => return Err(stop_hook(child, program, limit)),
             Ok(None) => thread::sleep(Duration::from_millis(100)),
             Err(error) => return Err(format!("Could not check \"{program}\": {error}")),
         }
     }
+}
+
+/// Stops a hook that ran out of time. In a Flatpak the child is `flatpak-spawn`: SIGTERM is forwarded to
+/// the host program but SIGKILL is not, so a hook that ignores SIGTERM is abandoned rather than killed.
+fn stop_hook(mut child: std::process::Child, program: &str, limit: Duration) -> String {
+    use crate::platform::sandbox::{hook_timeout_message, is_flatpak};
+    if !is_flatpak() {
+        let _ = child.kill();
+        let _ = child.wait();
+        return hook_timeout_message(program, limit.as_secs(), false);
+    }
+    // SAFETY: plain kill(2) with SIGTERM on our own child's pid.
+    unsafe { libc::kill(child.id() as i32, libc::SIGTERM); }
+    for _ in 0..20 {
+        thread::sleep(Duration::from_millis(100));
+        if matches!(child.try_wait(), Ok(Some(_))) { return hook_timeout_message(program, limit.as_secs(), false); }
+    }
+    thread::spawn(move || { let _ = child.wait(); });
+    hook_timeout_message(program, limit.as_secs(), true)
 }
 
 fn report(app: &AppHandle, game_id: &str, phase: &'static str, outcome: Result<(), String>) {
