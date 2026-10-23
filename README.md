@@ -50,7 +50,7 @@
 - [License](#license)
 ## Overview
 
-Mochi is a cross-platform (Linux and macOS) desktop game launcher that sits above existing game ecosystems instead of replacing them. It gives you one library for games that already live on your computer: Steam, Heroic, Epic, itch.io, Flatpak, Lutris, Bottles, Whisky/CrossOver, plain executables, scripts and apps.
+Mochi is a cross-platform (Linux and macOS) desktop game launcher that sits above existing game ecosystems instead of replacing them. It gives you one library for games that already live on your computer: Steam, Heroic, Epic, itch.io, Flatpak, Lutris, Bottles, Whisky/CrossOver, emulators and ROM folders, plain executables, scripts and apps.
 
 - **Local first.** Installations stay where they are; the library, launching, playtime, themes and settings work without an account or a network. Cloud sync is optional and metadata-only.
 - **Native where it matters.** React/TypeScript for the UI; Tauri 2 and Rust for launching, discovery, process tracking and downloads. OS-specific code lives in `src-tauri/src/platform/` and `src-tauri/src/sources/`, and the UI asks `get_platform_capabilities` instead of assuming an OS.
@@ -69,9 +69,12 @@ Mochi is a cross-platform (Linux and macOS) desktop game launcher that sits abov
 - In-app notification centre plus desktop notifications (`notify-send` on Linux, `osascript` on macOS).
 - **Backlog and wishlist**: mark games Want to play / Playing / Finished / Dropped with notes, keep a wishlist of games you don't own yet, and let *What should I play?* pick by mood and time ([docs/backlog.md](docs/backlog.md)).
 - **Duplicate merge**: the same game from several sources (Steam, Heroic, Flatpak, desktop entries) can be merged into one entry with a *Play via* picker, and unmerged at any time ([docs/duplicates.md](docs/duplicates.md)).
+- **Missing path repair**: games synced from another machine whose files are not on this device get a *Missing on this device* flag, with *Locate...*, *Find automatically* (rescan and match by store ID) and a bulk *Fix missing paths* review ([docs/path-remap.md](docs/path-remap.md)).
+- **Source health**: Settings > Library tools shows whether each launcher's files can still be read, and a notice appears when a launcher's format change would hide games ([docs/source-health.md](docs/source-health.md)).
 - **Command palette** (Ctrl+K / Cmd+K): fuzzy-search games and run actions (theme, settings sections, mods, snapshots, Big Picture); type `>` for actions only ([docs/command-palette.md](docs/command-palette.md)).
 - **Per-game launch options**: environment variables, arguments, working directory, Proton/Wine runtime, GameMode, MangoHud and gamescope, with a live preview of the exact command and a ready-to-paste Steam launch option string ([docs/launch-options.md](docs/launch-options.md)).
 - **Save backups**: zip snapshots of Minecraft worlds, Steam userdata and any folder you add, with safe restore and automatic backup when a game closes ([docs/save-backups.md](docs/save-backups.md)).
+- **Save sync**: share save backups between computers through a folder you choose (Syncthing, Nextcloud, WebDAV), with nothing hosted by Mochi ([docs/save-sync.md](docs/save-sync.md)).
 - **Shortcuts**: create desktop shortcuts (Linux menu/Desktop, macOS .app) and add any game to Steam as a non-Steam game ([docs/shortcuts.md](docs/shortcuts.md)).
 - **Command line and deep links**: `mochi launch|open <game>`, `mochi list` and `mochi://launch|open/<game>` work with a running or closed Mochi; ambiguous names open a chooser ([docs/cli.md](docs/cli.md)).
 - **Per-game notes and links**: plain-text notes and web links in the game editor's Notes tab, shown on the game page and included in the library backup.
@@ -84,6 +87,7 @@ Mochi is a cross-platform (Linux and macOS) desktop game launcher that sits abov
 - **Keyboard-first library**: the grid is one Tab stop; arrow keys, Home/End, Page Up/Down and typing a game's name move between games, Enter opens, Shift+Enter plays, Ctrl/Cmd+D favourites and `/` goes to search. A controller uses the same cards. Press `?` for the full list.
 - **Crash suspects**: *Find suspect mods* in a game's Logs reads the log for the mods it names and offers a switch-off button for each (the quick-exit notification names them too). The existing pre-launch check still warns about duplicate, missing, incompatible and wrong-version mods.
 - **Windows prefix manager** (Linux, game editor > Launch options): where a game's Wine/Proton prefix is and how big, Wine settings, registry, repair (`wineboot -u`), a short list of winetricks components (Visual C++, .NET, DirectX, fonts), and a reset that keeps the old copy so you can restore it.
+- **Compatibility tools installer** (Linux, Settings > Compatibility tools): install Proton-GE and Wine-GE from GitHub with a SHA-512 check, list what is installed and remove it again ([docs/runtimes.md](docs/runtimes.md)).
 - **More store imports** (Linux): Epic games installed with Legendary or Rare and Amazon games installed with Nile, launched through those tools. **Find missing covers** (Settings > Data, or the palette) looks up every game that only has a generated cover.
 - **Settings backup**: export or import settings, themes, collections, wishlist and per-game choices as a zip; credentials are never included ([docs/settings-export.md](docs/settings-export.md)).
 
@@ -110,7 +114,7 @@ Short sounds for navigation, selection, dialogs, launches, downloads and achieve
 
 ### Playtime, stats and achievements
 - Playtime is credited when a game exits, for games Mochi starts directly and for games handed to another launcher (followed by process group or install folder; Linux and macOS). The Play button turns into **Stop**.
-- **Steam playtime import**: bring in the playtime Steam already recorded for your games (read from Steam's own local records), so switching launchers does not restart your history.
+- **Playtime import** ([docs](docs/playtime-import.md)): bring in the playtime Steam, Heroic, Lutris and GOG Galaxy already recorded for your games (read from their own local records), so switching launchers does not restart your history.
 - A **Stats** view shows playtime and activity.
 - **77 Mochi achievements** across Playtime, Streaks, Habits, Variety, Library, Explore, Mods and Steam categories, with rarities.
 - **Cloud saving** of achievements is a per-device toggle in Settings > Achievements (needs sign-in with cloud sync on); the same section can clear achievements data, locally and in the cloud.
@@ -135,6 +139,7 @@ Settings > Accessibility covers text and interface size (85-150%), high contrast
 Background check 10 seconds after start and every 6 hours (Settings > Updates > Auto-update), never installing without you pressing **Install & restart**. Updates are verified against an embedded public key. **Opening a newer build.** When you open a newer AppImage, or a `Mochi.app` outside `/Applications`, Mochi checks it against a signed `install-hashes.json` from that version's GitHub release. If it cannot verify the build it warns you; if you continue, it installs the build and restarts from the installed location. See [docs/updates.md](docs/updates.md) and [docs/release.md](docs/release.md).
 
 ### More library features
+- **Emulators and ROM libraries**: add ROM folders in Settings > Emulators, import them as games, and launch each ROM in RetroArch, Dolphin, PCSX2, DuckStation, PPSSPP, melonDS, mGBA, Flycast or MAME, with playtime tracked ([docs/emulators.md](docs/emulators.md)).
 - **ProtonDB** tier badge on Steam games (Linux), fetched on demand and never blocking.
 - **Tray / menu bar quick launch**: your most played and recently played games launch straight from the tray menu (Linux and macOS).
 - **Launch hooks**: optional pre- and post-launch commands per game, run as plain arguments (never through a shell) with a time limit; failures only notify.
@@ -150,6 +155,8 @@ Background check 10 seconds after start and every 6 hours (Settings > Updates > 
 - **Plugins**: small folders with a `plugin.json` and `main.js` that add command palette commands, run in a restricted worker with explicit permissions ([docs/plugins.md](docs/plugins.md)).
 
 ### Linux and macOS integration
+- **Flatpak** manifest and sandbox support (host launches through `flatpak-spawn`; [docs/flatpak.md](docs/flatpak.md)).
+
 Application-menu shortcuts (`mochi://launch/<id>`), start at login, tray icon, managed AppImage copy and `mochi://` handler on Linux; LaunchAgent, Dock reopen and menu-bar hiding on macOS. Experimental opt-in features live in Settings > Experimental ([docs/experimental-features.md](docs/experimental-features.md)).
 
 ## Screenshots
@@ -194,11 +201,11 @@ A **Piko** is a game in your library: name, artwork, genres, launch target, sour
 
 Battle.net, GOG Galaxy (macOS app bundles; offline installers under `~/GOG Games` on Linux) and Prism, Fjord, PolyMC and MultiMC Minecraft instances are imported too (see [docs/improvements/importers-round6.md](docs/improvements/importers-round6.md)); Battle.net and the Prism family are unverified on macOS hardware. The Whisky pin format was inferred from its source and is not verified on a real machine. Imports never move, copy or uninstall anything, and you can point Mochi at a library folder manually when detection misses it.
 
-Manually added games can target: executables, `.desktop` files, Flatpak IDs, `.sh`/`.bash`, `.py`, `.js`, macOS `.app` bundles, `.exe`/`.bat` through the Tofu's runtime (Wine or Proton, GameMode and MangoHud on Linux; CrossOver or Whisky on macOS), and the launcher URIs above. Runtimes are detected, not installed.
+Manually added games can target: executables, `.desktop` files, Flatpak IDs, `.sh`/`.bash`, `.py`, `.js`, macOS `.app` bundles, emulator ROMs (`mochi-emu://<system>?rom=<path>`, made by the Emulators import), `.exe`/`.bat` through the Tofu's runtime (Wine or Proton, GameMode and MangoHud on Linux; CrossOver or Whisky on macOS), and the launcher URIs above. Runtimes are detected, not installed (except Proton-GE and Wine-GE on Linux, see Settings > Compatibility tools).
 
 ## Accounts, cloud sync and offline use
 
-An account is optional. It enables sync of library metadata (profiles, Pikos, Tofus, including favourites, tags, artwork source and kind) through Supabase; game files and local paths are never uploaded, and a synced path may need fixing on another machine. Sign in with email/password, Google or GitHub, use TOTP multi-factor authentication where configured, and keep up to five saved accounts on a device. IGDB, SteamGridDB and Nexus keys are stored server-side in Supabase Vault and never returned to the app.
+An account is optional. It enables sync of library metadata (profiles, Pikos, Tofus, including favourites, tags, artwork source and kind) through Supabase; game files and local paths are never uploaded, and a synced path may need fixing on another machine, and Mochi flags such games and helps you fix them ([docs/path-remap.md](docs/path-remap.md)). Sign in with email/password, Google or GitHub, use TOTP multi-factor authentication where configured, and keep up to five saved accounts on a device. IGDB, SteamGridDB and Nexus keys are stored server-side in Supabase Vault and never returned to the app.
 
 Offline, the library, launching, playtime, stats, themes, settings, installed-mod management and cached artwork all work. Fonts for built-in themes are bundled, so themes render without a network. Metadata, Discover, sign-in, trailers and downloads need a connection and fail quietly. Full table: [docs/offline.md](docs/offline.md).
 
@@ -216,7 +223,7 @@ Verify what you downloaded before running it: see [Verify your download](#verify
 
 ### Linux
 
-AppImage, `.deb` and `.rpm` are published, and the repository has an Arch `PKGBUILD` (`packaging/arch`). For the AppImage: `chmod +x Mochi*.AppImage && ./Mochi*.AppImage`. The AppImage and the macOS app update themselves in place; deb, rpm and AUR installs only get an "Open release page" prompt.
+AppImage, `.deb` and `.rpm` are published, and the repository has an Arch `PKGBUILD` (`packaging/arch`). For the AppImage: `chmod +x Mochi*.AppImage && ./Mochi*.AppImage`. The AppImage and the macOS app update themselves in place; deb, rpm and AUR installs only get an "Open release page" prompt. A Flatpak manifest lives in `packaging/flatpak` (Flathub listing pending; see [docs/flatpak.md](docs/flatpak.md)); Flatpak installs are updated by Flathub, not by Mochi.
 
 ### macOS (12.0 or newer, Apple silicon and Intel)
 
@@ -230,7 +237,7 @@ You only need to do this once per downloaded copy. Details and file locations: [
 
 ## Verify your download
 
-Each release publishes three proofs; details and the one-time maintainer setup are in [docs/verify-downloads.md](docs/verify-downloads.md).
+Each release publishes three proofs plus CycloneDX SBOMs (`mochi-<version>-rust.cdx.json`, `mochi-<version>-npm.cdx.json`, also checksummed and signed; see [docs/reproducible-builds.md](docs/reproducible-builds.md)); details and the one-time maintainer setup are in [docs/verify-downloads.md](docs/verify-downloads.md).
 
 ```bash
 # 1. Checksums (SHA256SUMS.txt in the same folder; use shasum -a 256 on macOS)
@@ -262,11 +269,11 @@ The release key fingerprint is listed in [docs/verify-downloads.md](docs/verify-
 
 - Builds are unsigned and unnotarized; macOS needs the manual Gatekeeper steps above.
 - macOS support is newer and less tested than Linux; some paths (Whisky, entitlements) are unverified on real hardware.
-- Source scanners read other launchers' local formats and may break when those change. Battle.net, GOG Galaxy and Prism code paths are unverified on real macOS hardware.
-- Runtimes (Wine, Proton, CrossOver) are detected, not installed.
+- Runtimes are detected, not installed, except Proton-GE and Wine-GE on Linux, which you can install from Settings > Compatibility tools ([docs/runtimes.md](docs/runtimes.md)). Other Wine, Proton and CrossOver builds are installed outside Mochi.
+- Source scanners read other launchers' local formats and may break when those change; Settings > Library tools > Source health reports launchers whose files can no longer be read ([docs/source-health.md](docs/source-health.md)). Battle.net, GOG Galaxy and Prism code paths are unverified on real macOS hardware.
 - Nexus Mods requirements are read from the mod's Requirements data and installed like other dependencies only when you have a Nexus key (and Premium for downloads); otherwise they are shown as links.
 - Games handed to another launcher can only be stopped once Mochi detects them.
-- Synced paths may not work on another machine; sync is metadata-only.
+- Synced paths may not work on another machine; sync is metadata-only. Mochi flags games whose paths are missing and offers *Locate...* or *Find automatically* (Settings > Data > Fix missing paths); the fix stays on that device ([docs/path-remap.md](docs/path-remap.md)).
 - Storage formats and UI may change before a stable release.
 
 ## Roadmap
@@ -300,24 +307,24 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] Stable release
 - [ ] Theme marketplace / in-app theme gallery for browsing and installing community themes
 - [ ] Theme creator with live editing of colours, fonts and hooks, plus theme export
-- [ ] Built-in Proton-GE / Wine-GE installer, so runtimes no longer have to be installed outside Mochi
-- [ ] Synced path remapping: when a synced game's path is missing on this machine, locate it or rescan and match by store ID
-- [ ] Playtime import from Heroic, Lutris and GOG, alongside the existing Steam playtime import
-- [ ] Source scanner health check that reports when a launcher's file format has changed instead of silently missing games
-- [ ] Save sync to a folder you choose (Syncthing, Nextcloud, WebDAV) built on save backups, with nothing hosted by Mochi
-- [ ] Emulator and ROM libraries (RetroArch, Dolphin, PCSX2 and others) with ROM folder scanning
+- [x] Built-in Proton-GE / Wine-GE installer, so runtimes no longer have to be installed outside Mochi
+- [x] Synced path remapping: when a synced game's path is missing on this machine, locate it or rescan and match by store ID
+- [x] Playtime import from Heroic, Lutris and GOG, alongside the existing Steam playtime import
+- [x] Source scanner health check that reports when a launcher's file format has changed instead of silently missing games
+- [x] Save sync to a folder you choose (Syncthing, Nextcloud, WebDAV) built on save backups, with nothing hosted by Mochi
+- [x] Emulator and ROM libraries (RetroArch, Dolphin, PCSX2 and others) with ROM folder scanning
 - [ ] Plugins out of Experimental, including plugins that add new game sources
 - [ ] Discord Rich Presence
 - [ ] RetroAchievements support
 - [x] Per-game controller profiles for games that do not go through Steam Input
-- [ ] Flathub package
-- [ ] Release SBOM and reproducible builds
+- [x] Flathub package
+- [x] Release SBOM and reproducible builds
 
 ## Documentation index
 
 ### Everyday use
 
-[Accessibility](docs/accessibility.md) · [Backlog and wishlist](docs/backlog.md) · [Command palette](docs/command-palette.md) · [CLI and deep links](docs/cli.md) · [Controller](docs/controller.md) · [Duplicates](docs/duplicates.md) · [Launch options](docs/launch-options.md) · [Save backups](docs/save-backups.md) · [Settings export/import](docs/settings-export.md) · [Shortcuts](docs/shortcuts.md) · [Storage manager](docs/storage.md)
+[Accessibility](docs/accessibility.md) · [Backlog and wishlist](docs/backlog.md) · [CLI and deep links](docs/cli.md) · [Command palette](docs/command-palette.md) · [Controller](docs/controller.md) · [Duplicates](docs/duplicates.md) · [Emulators and ROMs](docs/emulators.md) · [Launch options](docs/launch-options.md) · [Path remap](docs/path-remap.md) · [Runtimes (Proton-GE, Wine-GE)](docs/runtimes.md) · [Save backups](docs/save-backups.md) · [Save sync](docs/save-sync.md) · [Settings export/import](docs/settings-export.md) · [Shortcuts](docs/shortcuts.md) · [Source health](docs/source-health.md) · [Storage manager](docs/storage.md)
 
 ### Discover, metadata and extras
 

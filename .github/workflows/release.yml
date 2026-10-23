@@ -43,14 +43,14 @@ jobs:
       - name: Commit the synced version to main (best effort)
         run: |
           git fetch origin main
-          if git diff --quiet -- package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml; then
+          if git diff --quiet -- package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock; then
             echo "Version metadata is already synced."
           elif [[ "$(git rev-parse origin/main)" != "$(git rev-parse HEAD)" ]]; then
             echo "::warning::Tag is not the tip of main; builds still use the tag's version, but main was not updated."
           else
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml
+            git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
             git commit -m "chore: sync app version to ${TAG#v}"
             git push origin HEAD:main || echo "::warning::Could not push the version commit (protected branch?). Builds are unaffected."
           fi
@@ -73,6 +73,7 @@ jobs:
             echo "- **macOS**: \`.dmg\` (universal: Apple silicon and Intel)"
             echo "- **Linux**: \`.AppImage\`, \`.deb\`, \`.rpm\`"
             echo "- \`SHA256SUMS.txt\` lists a checksum for every file."
+            echo "- CycloneDX SBOMs: \`mochi-${TAG#v}-rust.cdx.json\` and \`mochi-${TAG#v}-npm.cdx.json\`."
             if [[ "$HAS_GPG" == "true" ]]; then
               echo "- Every file has a GPG signature (\`.asc\`) and a GitHub build attestation. See *Verify your download* in the README."
             else
@@ -121,6 +122,11 @@ jobs:
           cache: npm
 
       - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable (2026-10-09)
+        with:
+          toolchain: 1.99.1
+
+      - name: Reproducible build settings
+        run: scripts/repro-env.sh >> "$GITHUB_ENV"
 
       - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
@@ -133,11 +139,11 @@ jobs:
         run: |
           if [[ -n "$TAURI_SIGNING_PRIVATE_KEY" ]]; then
             echo '{"bundle":{"createUpdaterArtifacts":true}}' > "$RUNNER_TEMP/with-updater.json"
-            echo "args=--config $RUNNER_TEMP/with-updater.json" >> "$GITHUB_OUTPUT"; echo "json=true" >> "$GITHUB_OUTPUT"
+            echo "args=--config $RUNNER_TEMP/with-updater.json -- --locked" >> "$GITHUB_OUTPUT"; echo "json=true" >> "$GITHUB_OUTPUT"
           else
             echo "::warning::TAURI_SIGNING_PRIVATE_KEY is not set: building without updater artifacts."
             echo '{"bundle":{"createUpdaterArtifacts":false}}' > "$RUNNER_TEMP/no-updater.json"
-            echo "args=--config $RUNNER_TEMP/no-updater.json" >> "$GITHUB_OUTPUT"; echo "json=false" >> "$GITHUB_OUTPUT"
+            echo "args=--config $RUNNER_TEMP/no-updater.json -- --locked" >> "$GITHUB_OUTPUT"; echo "json=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build and upload packages
@@ -183,7 +189,11 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable (2026-10-09)
         with:
+          toolchain: 1.99.1
           targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Reproducible build settings
+        run: scripts/repro-env.sh >> "$GITHUB_ENV"
 
       - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
@@ -226,11 +236,11 @@ jobs:
         run: |
           if [[ -n "$TAURI_SIGNING_PRIVATE_KEY" ]]; then
             echo '{"bundle":{"createUpdaterArtifacts":true}}' > "$RUNNER_TEMP/with-updater.json"
-            echo "args=--target universal-apple-darwin --config $RUNNER_TEMP/with-updater.json" >> "$GITHUB_OUTPUT"; echo "json=true" >> "$GITHUB_OUTPUT"
+            echo "args=--target universal-apple-darwin --config $RUNNER_TEMP/with-updater.json -- --locked" >> "$GITHUB_OUTPUT"; echo "json=true" >> "$GITHUB_OUTPUT"
           else
             echo "::warning::TAURI_SIGNING_PRIVATE_KEY is not set: building without updater artifacts."
             echo '{"bundle":{"createUpdaterArtifacts":false}}' > "$RUNNER_TEMP/no-updater.json"
-            echo "args=--target universal-apple-darwin --config $RUNNER_TEMP/no-updater.json" >> "$GITHUB_OUTPUT"; echo "json=false" >> "$GITHUB_OUTPUT"
+            echo "args=--target universal-apple-darwin --config $RUNNER_TEMP/no-updater.json -- --locked" >> "$GITHUB_OUTPUT"; echo "json=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build, sign and upload
@@ -290,9 +300,54 @@ jobs:
           grep -Eq '^[0-9a-f]{64}$' install-hash-macos.txt
           gh release upload "$TAG" install-hash-macos.txt --clobber
 
+  sbom:
+    name: SBOMs
+    needs: prepare
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Sync app version from tag
+        run: node scripts/sync-version.mjs "$TAG"
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: lts/*
+
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable (2026-10-09)
+        with:
+          toolchain: 1.99.1
+
+      - name: Generate CycloneDX SBOMs
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          mkdir sbom
+          cargo install --locked cargo-cyclonedx --version 0.5.9
+          # `--target all` covers every platform, so macOS-only crates are in the SBOM too (not just the Linux host).
+          cargo cyclonedx --manifest-path src-tauri/Cargo.toml --format json --spec-version 1.5 --target all \
+            --override-filename "mochi-$version-rust"
+          mv "src-tauri/mochi-$version-rust.json" "sbom/mochi-$version-rust.cdx.json"
+          # Production dependencies only, read straight from package-lock.json (no install needed).
+          npx --yes @cyclonedx/cyclonedx-npm@6.0.1 --package-lock-only --omit dev --spec-version 1.5 --output-format JSON \
+            --output-file "sbom/mochi-$version-npm.cdx.json" package.json
+          for f in sbom/*.cdx.json; do
+            jq -e '.bomFormat == "CycloneDX" and (.components | length) > 0' "$f" >/dev/null \
+              || { echo "::error::$f is not a valid CycloneDX document."; exit 1; }
+          done
+          ls -l sbom
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: sboms
+          path: sbom/*.cdx.json
+          if-no-files-found: error
+
   publish:
     name: Checksums, signatures and publish
-    needs: [prepare, linux, macos]
+    needs: [prepare, linux, macos, sbom]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -313,8 +368,14 @@ jobs:
           sparse-checkout: docs/release-signing-key.asc
           sparse-checkout-cone-mode: false
 
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: sboms
+          path: sboms
+
       - name: Download the release files and write SHA256SUMS.txt
         run: |
+          echo "TAG_VERSION=${TAG#v}" >> "$GITHUB_ENV"
           mkdir assets && cd assets
           gh release download "$TAG" --pattern '*.dmg' --pattern '*.AppImage' --pattern '*.deb' --pattern '*.rpm'
           ls -l
@@ -330,6 +391,8 @@ jobs:
             magic="$(od -An -tx1 -N4 "$appimage" | tr -d ' \n')"
             [[ "$magic" == "7f454c46" ]] || { echo "::error::AppImage is not an ELF executable: $appimage"; exit 1; }
           done
+          # The SBOMs are release files too: checksummed, GPG-signed and uploaded like the packages.
+          cp ../sboms/mochi-"${TAG#v}"-rust.cdx.json ../sboms/mochi-"${TAG#v}"-npm.cdx.json .
           sha256sum -- * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
@@ -421,6 +484,27 @@ jobs:
             assets/*.rpm
             assets/SHA256SUMS.txt
 
+      # Attach the SBOMs to the packages (shown by `gh attestation verify --predicate-type https://cyclonedx.org/bom`).
+      - name: Attest the Rust SBOM
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4
+        with:
+          subject-path: |
+            assets/*.dmg
+            assets/*.AppImage
+            assets/*.deb
+            assets/*.rpm
+          sbom-path: assets/mochi-${{ env.TAG_VERSION }}-rust.cdx.json
+
+      - name: Attest the npm SBOM
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4
+        with:
+          subject-path: |
+            assets/*.dmg
+            assets/*.AppImage
+            assets/*.deb
+            assets/*.rpm
+          sbom-path: assets/mochi-${{ env.TAG_VERSION }}-npm.cdx.json
+
       - name: Upload checksums and signatures
         run: |
           cd assets
@@ -428,7 +512,7 @@ jobs:
           # Every file exactly once: `*.asc` already covers install-hashes.json.asc (the GPG step
           # signs everything), so the old `install-hashes.json*` glob uploaded it twice in one
           # call and gh rejected the duplicate with HTTP 422.
-          gh release upload "$TAG" SHA256SUMS.txt *.asc install-hashes.json install-hashes.json.sig --clobber
+          gh release upload "$TAG" SHA256SUMS.txt *.asc install-hashes.json install-hashes.json.sig *.cdx.json --clobber
 
       - name: Add copy-and-paste verification commands to the release notes
         run: |
@@ -454,7 +538,7 @@ jobs:
             fi
             echo
             echo "# Build attestation"
-            for f in $(cd assets && ls | grep -v '\.asc$' | grep -v '^SHA256SUMS.txt$' | grep -v '^install-hashes\.json'); do echo "gh attestation verify $f --repo ${GH_REPO}"; done
+            for f in $(cd assets && ls | grep -v '\.asc$' | grep -v '^SHA256SUMS.txt$' | grep -v '^install-hashes\.json' | grep -v '\.cdx\.json$'); do echo "gh attestation verify $f --repo ${GH_REPO}"; done
             echo '```'
           } >> notes.md
           gh release edit "$TAG" --notes-file notes.md

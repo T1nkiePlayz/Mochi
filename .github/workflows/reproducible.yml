@@ -1,0 +1,102 @@
+name: Reproducible build check
+
+# Builds the Rust release binary and the frontend bundle twice, in two separate clones at different paths,
+# with the same SOURCE_DATE_EPOCH, and fails if the results differ. See docs/reproducible-builds.md.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 * * 1" # Mondays 04:17 UTC
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  reproduce:
+    name: Build twice and compare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update -o Acquire::Retries=3
+          sudo apt-get install -y --no-install-recommends -o Acquire::Retries=3 \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libudev-dev
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable (2026-10-09)
+        with:
+          toolchain: 1.99.1
+
+      - name: Make two fresh clones at different paths
+        run: |
+          set -euo pipefail
+          for dir in "$RUNNER_TEMP/build-one/mochi" "$RUNNER_TEMP/build-two-longer-path/mochi"; do
+            mkdir -p "$(dirname "$dir")"
+            git clone --quiet --no-local "$GITHUB_WORKSPACE" "$dir"
+            git -C "$dir" checkout --quiet "$GITHUB_SHA"
+          done
+
+      - name: Build both copies
+        run: |
+          set -euo pipefail
+          # One timestamp for both builds: the commit time, like a release build.
+          epoch="$(git log -1 --format=%ct "$GITHUB_SHA")"
+          echo "SOURCE_DATE_EPOCH=$epoch"
+          for dir in "$RUNNER_TEMP/build-one/mochi" "$RUNNER_TEMP/build-two-longer-path/mochi"; do
+            echo "::group::Build in $dir"
+            cd "$dir"
+            export SOURCE_DATE_EPOCH="$epoch"
+            # Tag runs: same version sync as the release workflow's prepare job, so Cargo.lock matches under --locked.
+            if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then node scripts/sync-version.mjs "$GITHUB_REF_NAME"; fi
+            # Sets RUSTFLAGS with --remap-path-prefix for this checkout, ~/.cargo and the rustup toolchain.
+            eval "$(scripts/repro-env.sh --shell)"
+            npm ci
+            # Tauri embeds dist/, so the frontend is built first.
+            npm run build
+            cargo build --release --locked --manifest-path src-tauri/Cargo.toml
+            echo "::endgroup::"
+          done
+
+      - name: Compare binaries and frontend bundles
+        run: |
+          set -uo pipefail
+          a="$RUNNER_TEMP/build-one/mochi"
+          b="$RUNNER_TEMP/build-two-longer-path/mochi"
+          status=0
+
+          bin_a="$a/src-tauri/target/release/mochi"
+          bin_b="$b/src-tauri/target/release/mochi"
+          sha_a="$(sha256sum "$bin_a" | cut -d' ' -f1)"
+          sha_b="$(sha256sum "$bin_b" | cut -d' ' -f1)"
+          echo "binary one: $sha_a ($(stat -c %s "$bin_a") bytes)"
+          echo "binary two: $sha_b ($(stat -c %s "$bin_b") bytes)"
+          if [[ "$sha_a" != "$sha_b" ]]; then
+            status=1
+            echo "::error::The Rust release binaries differ."
+            echo "First differing byte offsets (cmp -l, up to 20 lines: offset, octal byte one, octal byte two):"
+            cmp -l "$bin_a" "$bin_b" | head -n 20 || true
+            echo "Differing byte count: $(cmp -l "$bin_a" "$bin_b" | wc -l)"
+            echo "Hint: run 'strings -a' on both and diff them to spot embedded paths or timestamps."
+          fi
+
+          manifest() { (cd "$1/dist" && find . -type f | LC_ALL=C sort | xargs sha256sum); }
+          manifest "$a" > "$RUNNER_TEMP/dist-one.txt"
+          manifest "$b" > "$RUNNER_TEMP/dist-two.txt"
+          echo "frontend files: $(wc -l < "$RUNNER_TEMP/dist-one.txt") vs $(wc -l < "$RUNNER_TEMP/dist-two.txt")"
+          if ! diff -u "$RUNNER_TEMP/dist-one.txt" "$RUNNER_TEMP/dist-two.txt"; then
+            status=1
+            echo "::error::The frontend dist/ trees differ (files listed above)."
+            diff -rq "$a/dist" "$b/dist" || true
+          fi
+
+          if [[ "$status" -eq 0 ]]; then echo "Both builds are byte-for-byte identical."; fi
+          exit "$status"

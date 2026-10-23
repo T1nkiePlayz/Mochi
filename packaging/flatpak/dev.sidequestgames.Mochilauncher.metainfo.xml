@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.sidequestgames.Mochilauncher</id>
+  <name>Mochi</name>
+  <summary>One game library for Steam, Heroic, Lutris and more</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <developer id="io.github.t1nkieplayz">
+    <name>T1nkiePlayz</name>
+  </developer>
+  <description>
+    <p>Mochi is a desktop game launcher that sits above your existing game ecosystems instead of replacing them. It gives you one library for games that already live on your computer: Steam, Heroic, Epic, itch.io, Flatpak, Lutris, Bottles, plain executables, scripts and more.</p>
+    <p>Track playtime, group games into collections, browse mods, and use a controller-friendly Big Picture mode. Mochi starts games through their own launchers and never moves or uninstalls anything.</p>
+    <p>This Flatpak starts host programs through flatpak-spawn and reads other launchers' data in your home folder. Updates come from Flathub.</p>
+  </description>
+  <launchable type="desktop-id">dev.sidequestgames.Mochilauncher.desktop</launchable>
+  <url type="homepage">https://mochi.ashtontink.com</url>
+  <url type="bugtracker">https://github.com/T1nkiePlayz/Mochi/issues</url>
+  <url type="vcs-browser">https://github.com/T1nkiePlayz/Mochi</url>
+  <categories>
+    <category>Game</category>
+    <category>Utility</category>
+  </categories>
+  <provides>
+    <binary>mochi</binary>
+  </provides>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <control>gamepad</control>
+  </supports>
+  <content_rating type="oars-1.1"/>
+  <!-- Submission TODO: Flathub requires PNG or JPEG screenshots; the repository only has WebP files in
+       docs/screenshots. Convert them to PNG, commit them, and point these URLs at the PNGs. -->
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/T1nkiePlayz/Mochi/main/docs/screenshots/library.webp</image>
+      <caption>Your library</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/T1nkiePlayz/Mochi/main/docs/screenshots/game-details.webp</image>
+      <caption>Game details</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/T1nkiePlayz/Mochi/main/docs/screenshots/big-picture.webp</image>
+      <caption>Big Picture mode</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="0.1.1" date="2026-10-13"/>
+  </releases>
+</component>

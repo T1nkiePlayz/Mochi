@@ -9,6 +9,7 @@ import { requestPicker } from "./pickerRequest";
 import { isNextUp } from "./backlog";
 import { selectLaunchProfile } from "./launchProfiles";
 import type { Piko } from "../models";
+import { openPathReview } from "./pathRemapStore";
 import { gameSearchAvailable, gameSearchBackendOverride, openGameSearch } from "./gameSearch";
 
 const DOCS_URL = "https://github.com/T1nkiePlayz/Mochi/tree/main/docs";
@@ -47,6 +48,7 @@ export function registerBuiltinCommands(): () => void {
   const off: Array<() => void> = [];
   for (const [nav, title, keywords] of NAV) off.push(register(`nav.${nav.toLowerCase()}`, title, keywords, "Navigate", ({ app }) => app().setActiveNav(nav)));
   for (const [id, title, keywords] of SETTINGS_SECTIONS) off.push(register(`settings.${id}`, `Settings: ${title}`, ["open", ...keywords], "Settings", ({ app }) => { app().setActiveNav("Settings"); scrollToSettingsSection(id); }));
+  off.push(register("library.fixpaths", "Fix missing paths", ["missing", "locate", "remap", "moved", "synced", "broken"], "Library", () => openPathReview()));
   off.push(register("library.add", "Add game", ["new", "piko", "custom"], "Library", ({ app }) => { const a = app(); a.setActiveNav("Library"); a.add.setShowAddPiko(true); }));
   off.push(register("library.import", "Import games", ["steam", "launcher", "scan", "heroic", "lutris"], "Library", ({ app }) => { const a = app(); a.setActiveNav("Library"); a.add.openImportPicker("games"); }));
   off.push(register("mods.discover", "Install mod…", ["install", "mod", "search", "discover", "download"], "Mods", async ({ app }) => { const { openDiscoverWithQuery } = await import("./discoverQuery"); openDiscoverWithQuery("", app().setActiveNav); }));
