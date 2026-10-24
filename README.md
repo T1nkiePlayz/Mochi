@@ -301,6 +301,16 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [x] Accounts, optional metadata-only cloud sync, TOTP MFA, provider credential management and offline library use
 - [x] Linux packages, universal macOS DMG, update verification and release checksums/signatures/attestations
 - [x] First public release: v0.1.1 (AppImage, deb, rpm and a universal macOS DMG, with checksums, GPG signatures and build attestations)
+- [x] v0.1.2: built-in Proton-GE / Wine-GE installer, so runtimes no longer have to be installed outside Mochi
+- [x] v0.1.2: synced path remapping: when a synced game's path is missing on this machine, locate it or rescan and match by store ID
+- [x] v0.1.2: playtime import from Heroic, Lutris and GOG Galaxy, alongside the existing Steam playtime import
+- [x] v0.1.2: source scanner health check that reports when a launcher's file format has changed instead of silently missing games
+- [x] v0.1.2: save sync to a folder you choose (Syncthing, Nextcloud, WebDAV) built on save backups, with nothing hosted by Mochi
+- [x] v0.1.2: emulator and ROM libraries (RetroArch, Dolphin, PCSX2 and others) with ROM folder scanning
+- [x] v0.1.2: RetroAchievements support
+- [x] v0.1.2: per-game controller profiles for games that do not go through Steam Input
+- [x] v0.1.2: Flatpak manifest and sandbox support, ready for Flathub
+- [x] v0.1.2: release SBOMs and reproducible builds
 
 ### Planned
 
@@ -308,18 +318,9 @@ The checklist below tracks broad milestones, not promises or delivery dates. Fea
 - [ ] Stable release
 - [ ] Theme marketplace / in-app theme gallery for browsing and installing community themes
 - [ ] Theme creator with live editing of colours, fonts and hooks, plus theme export
-- [x] Built-in Proton-GE / Wine-GE installer, so runtimes no longer have to be installed outside Mochi
-- [x] Synced path remapping: when a synced game's path is missing on this machine, locate it or rescan and match by store ID
-- [x] Playtime import from Heroic, Lutris and GOG, alongside the existing Steam playtime import
-- [x] Source scanner health check that reports when a launcher's file format has changed instead of silently missing games
-- [x] Save sync to a folder you choose (Syncthing, Nextcloud, WebDAV) built on save backups, with nothing hosted by Mochi
-- [x] Emulator and ROM libraries (RetroArch, Dolphin, PCSX2 and others) with ROM folder scanning
+- [ ] Mochi on Flathub (the manifest is ready; the listing is pending review)
 - [ ] Plugins out of Experimental, including plugins that add new game sources
 - [ ] Discord Rich Presence
-- [x] RetroAchievements support
-- [x] Per-game controller profiles for games that do not go through Steam Input
-- [x] Flathub package
-- [x] Release SBOM and reproducible builds
 
 ## Documentation index
 
